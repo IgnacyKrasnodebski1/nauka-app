@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>NAUKA — krypto</title>
+<style>
+/* ============================================================
+   NAUKA — wieloprzedmiotowa platforma do nauki (gen-z brainrot)
+   Wspólne style dla silnika. Motyw per przedmiot przez --accent.
+   ============================================================ */
+:root{
+  --bg:#0a0a12; --bg2:#12121f; --card:#1a1a2e; --card2:#222238;
+  --txt:#f2f2fa; --muted:#9a9ab8;
+  --pink:#ff2d95; --purple:#a855f7; --cyan:#22d3ee; --lime:#aaff00; --orange:#ff7a00; --red:#ff3b5c; --green:#1ed760;
+  --accent:linear-gradient(135deg,#ff2d95,#a855f7,#22d3ee);
+  --accent1:#ff2d95; --accent2:#22d3ee;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif;
+  background:radial-gradient(1200px 600px at 50% -10%,#1c1030 0%,var(--bg) 55%),var(--bg);
+  color:var(--txt);overflow:hidden;-webkit-font-smoothing:antialiased;
+}
+#app{height:100dvh;display:flex;flex-direction:column;max-width:560px;margin:0 auto;position:relative}
+
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 8px;gap:10px;z-index:30}
+.logo{font-weight:900;font-size:18px;letter-spacing:-.5px;line-height:1;display:flex;align-items:center;gap:8px}
+.logo .g{background:var(--accent);-webkit-background-clip:text;background-clip:text;color:transparent}
+.backbtn{background:var(--card);border:1px solid #ffffff14;color:var(--txt);width:38px;height:38px;border-radius:50%;font-size:18px;font-weight:800;cursor:pointer;flex:none}
+.pills{display:flex;align-items:center;gap:7px;flex:none}
+.streak{display:flex;align-items:center;gap:5px;background:var(--card);border:1px solid #ffffff14;padding:7px 11px;border-radius:999px;font-weight:800;font-size:14px;white-space:nowrap}
+.streak small{color:var(--muted);font-weight:600}
+@media(max-width:380px){.pills{gap:5px}.streak{padding:6px 9px;font-size:13px}.logo{font-size:16px}}
+
+.screen{flex:1;min-height:0;overflow:hidden;position:relative;display:none}
+.screen.active{display:block}
+.scroll{height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:6px 16px 110px}
+
+/* ---------- HOME: wybór przedmiotu ---------- */
+.hero{padding:14px 4px 18px}
+.hero h1{font-size:27px;font-weight:900;letter-spacing:-.6px;line-height:1.1}
+.hero p{color:var(--muted);font-size:15px;margin-top:6px;line-height:1.4}
+.subjcard{display:flex;align-items:center;gap:16px;background:linear-gradient(150deg,var(--card2),var(--card));border:1px solid #ffffff12;border-radius:22px;padding:18px;margin-bottom:14px;cursor:pointer;position:relative;overflow:hidden;transition:transform .12s}
+.subjcard:active{transform:scale(.98)}
+.subjcard::before{content:"";position:absolute;inset:0;background:var(--sa,var(--accent));opacity:.10}
+.subjcard>*{position:relative;z-index:1}
+.subjemoji{font-size:42px;width:64px;height:64px;display:flex;align-items:center;justify-content:center;background:#00000033;border-radius:18px;flex:none}
+.subjmeta{flex:1;min-width:0}
+.subjmeta h3{font-size:19px;font-weight:900;letter-spacing:-.3px}
+.subjmeta .sub{color:var(--muted);font-size:13.5px;margin-top:3px;line-height:1.35}
+.subjprog{margin-top:9px;display:flex;align-items:center;gap:8px}
+.subjprog .bar{flex:1;height:7px;background:#ffffff14;border-radius:999px;overflow:hidden}
+.subjprog .bar i{display:block;height:100%;background:var(--sa,var(--accent));border-radius:999px}
+.subjprog small{font-size:12px;font-weight:800;color:var(--muted);white-space:nowrap}
+.subjcard .chev{font-size:24px;color:var(--muted);flex:none}
+.addcard{display:flex;align-items:center;gap:14px;border:1.5px dashed #ffffff22;border-radius:22px;padding:16px 18px;color:var(--muted);font-weight:700;font-size:14.5px}
+.addcard .subjemoji{background:#ffffff08;font-size:30px}
+
+/* ---------- SUBJECT sub-tabs ---------- */
+.subtabs{display:flex;gap:7px;overflow-x:auto;padding:4px 16px 10px;scrollbar-width:none}
+.subtabs::-webkit-scrollbar{display:none}
+.subtab{flex:none;padding:9px 15px;border-radius:999px;background:#ffffff0d;border:1px solid #ffffff14;color:var(--muted);font-size:13.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+.subtab.active{background:var(--accent);color:#fff;border-color:transparent}
+
+/* ---------- ŚCIEŻKA (Duolingo path) ---------- */
+.path{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 16px 120px}
+.pathnode{display:flex;flex-direction:column;align-items:center;gap:6px;position:relative}
+.nodebtn{width:84px;height:84px;border-radius:50%;border:none;cursor:pointer;font-size:34px;display:flex;align-items:center;justify-content:center;position:relative;box-shadow:0 6px 0 #00000055;transition:transform .1s}
+.nodebtn:active{transform:translateY(3px);box-shadow:0 3px 0 #00000055}
+.node-done{background:var(--accent)}
+.node-open{background:linear-gradient(150deg,var(--card2),#2c2c48);border:2px solid var(--accent2)}
+.node-lock{background:#1a1a28;color:#55556e;box-shadow:0 6px 0 #00000033;cursor:not-allowed}
+.nodebtn .stars{position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:13px;white-space:nowrap;filter:drop-shadow(0 1px 1px #000)}
+.nodelabel{font-size:13.5px;font-weight:800;text-align:center;max-width:180px;line-height:1.2}
+.nodelabel small{display:block;color:var(--muted);font-weight:600;font-size:11.5px}
+.connector{width:4px;height:26px;background:#ffffff14;border-radius:2px}
+.connector.done{background:var(--accent2)}
+.pathzig:nth-child(odd){transform:translateX(-46px)}
+.pathzig:nth-child(even){transform:translateX(46px)}
+
+/* ---------- karty / tagi (wspólne) ---------- */
+.tag{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;padding:5px 11px;border-radius:999px;background:#ffffff14;color:var(--txt);margin-bottom:14px}
+.progressrow{display:flex;align-items:center;gap:10px;margin:0 0 12px}
+.bar{flex:1;height:8px;background:#ffffff12;border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);border-radius:999px;transition:width .35s}
+.counter{font-size:13px;font-weight:800;color:var(--muted);white-space:nowrap}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;padding:8px 14px;border-radius:999px;background:#ffffff0d;border:1px solid #ffffff14;color:var(--muted);font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap}
+.chip.active{background:var(--accent);color:#fff;border-color:transparent}
+
+/* FEED / lekcja-feed */
+.feedwrap{height:100%;overflow-y:scroll;-webkit-overflow-scrolling:touch;scroll-snap-type:y mandatory}
+.feedwrap::-webkit-scrollbar{display:none}
+.slide{height:100%;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;padding:18px 18px 110px}
+.fcard{background:linear-gradient(160deg,var(--card2),var(--card));border:1px solid #ffffff12;border-radius:26px;padding:24px 22px;position:relative;overflow:hidden;box-shadow:0 20px 60px #00000066}
+.fcard::before{content:"";position:absolute;inset:0;background:var(--accent);opacity:.10}
+.fcard>*{position:relative;z-index:1}
+.ftitle{font-size:24px;font-weight:900;line-height:1.14;letter-spacing:-.5px;margin-bottom:14px}
+.fbody{font-size:16px;line-height:1.5;color:#e7e7f4}
+.fbody b{color:#fff}
+.real{margin-top:16px;padding:13px 15px;background:#00000033;border-left:3px solid var(--accent2);border-radius:12px;font-size:14.5px;line-height:1.45;color:#dcdcf0}
+.real .lbl{font-weight:800;color:var(--accent2);font-size:12px;text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:3px}
+.mnemo{margin-top:12px;padding:12px 15px;background:#2a230066;border-left:3px solid var(--lime);border-radius:12px;font-size:14.5px;line-height:1.45}
+.mnemo .lbl{font-weight:800;color:var(--lime);font-size:12px;text-transform:uppercase;letter-spacing:.6px;display:block;margin-bottom:3px}
+
+/* FISZKI */
+.flip{flex:1;perspective:1600px;margin-bottom:14px;min-height:0}
+.flipinner{position:relative;width:100%;height:100%;transition:transform .55s cubic-bezier(.4,2,.5,1);transform-style:preserve-3d;cursor:pointer}
+.flip.flipped .flipinner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;border-radius:26px;padding:26px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;border:1px solid #ffffff12;overflow-y:auto}
+.front{background:linear-gradient(160deg,#2a1840,#1a1a2e)}
+.back{background:linear-gradient(160deg,#0f2f33,#1a1a2e);transform:rotateY(180deg)}
+.face .tag{position:absolute;top:18px;left:18px;margin:0}
+.term{font-size:25px;font-weight:900;letter-spacing:-.5px;line-height:1.15}
+.deftxt{font-size:16.5px;line-height:1.5;color:#eaeaf6}
+.deftxt b{color:var(--accent2)}
+.tapomat{position:absolute;bottom:16px;left:0;right:0;text-align:center;color:var(--muted);font-size:12.5px;font-weight:600}
+.fbtns{display:flex;gap:10px}
+.fbtn{flex:1;padding:15px;border:none;border-radius:16px;font-size:15px;font-weight:800;cursor:pointer;color:#fff;transition:transform .1s}
+.fbtn:active{transform:scale(.96)}
+.fbtn.no{background:#33222e;color:#ff7a99;border:1px solid #ff3b5c40}
+.fbtn.yes{background:#16331f;color:#7dffa6;border:1px solid #1ed76040}
+
+/* QUIZ */
+.qcard{background:linear-gradient(160deg,var(--card2),var(--card));border:1px solid #ffffff12;border-radius:24px;padding:22px 20px;display:flex;flex-direction:column}
+.qq{font-size:20px;font-weight:900;line-height:1.22;letter-spacing:-.3px;margin:8px 0 18px}
+.opts{display:flex;flex-direction:column;gap:11px}
+.opt{text-align:left;padding:15px 16px;border-radius:15px;background:#ffffff0a;border:1.5px solid #ffffff14;color:var(--txt);font-size:15.5px;font-weight:600;line-height:1.35;cursor:pointer;transition:all .15s;display:flex;gap:12px;align-items:flex-start}
+.opt .k{font-weight:900;color:var(--purple);flex:none}
+.opt:active{transform:scale(.985)}
+.opt.correct{background:#13351f;border-color:var(--green);color:#c9ffd9}
+.opt.correct .k{color:var(--green)}
+.opt.wrong{background:#35161f;border-color:var(--red);color:#ffd0da}
+.opt.wrong .k{color:var(--red)}
+.opt.sel{background:#2a2350;border-color:var(--purple)}
+.opt.dim{opacity:.45}
+.explain{margin-top:16px;padding:14px 16px;background:#00000040;border-radius:14px;font-size:14.5px;line-height:1.5;color:#e3e3f2;display:none}
+.explain.show{display:block;animation:pop .3s}
+.explain b{color:var(--lime)}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes bob{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(7px);opacity:1}}
+.pill{padding:15px;border:none;border-radius:16px;background:var(--accent);color:#fff;font-size:16px;font-weight:900;cursor:pointer;width:100%}
+.pill:active{transform:scale(.97)}
+.pill.ghost{background:#ffffff10;border:1px solid #ffffff20}
+.qnext{margin-top:14px;display:none}
+.qnext.show{display:block;animation:pop .3s}
+
+/* WYNIK */
+.result{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;padding:24px}
+.result .big{font-size:60px}
+.result h2{font-size:26px;font-weight:900;letter-spacing:-.5px}
+.result p{color:var(--muted);font-size:15.5px;line-height:1.5;max-width:340px}
+.result .score{font-size:19px;font-weight:900}
+.result .score b{background:var(--accent);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* EGZAMIN */
+.examhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:10px}
+.timer{font-weight:900;font-size:16px;background:var(--card);border:1px solid #ffffff14;padding:7px 13px;border-radius:999px;white-space:nowrap}
+.timer.warn{color:var(--red);border-color:var(--red);animation:bob 1s infinite}
+.specs{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin:4px 0}
+.spec{background:var(--card);border:1px solid #ffffff14;border-radius:14px;padding:10px 16px;font-weight:800;font-size:14px;text-align:center}
+.spec small{display:block;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.review{margin-top:18px;text-align:left;width:100%}
+.review h3{font-size:14px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:10px;font-weight:800}
+.ritem{background:var(--card);border:1px solid #ffffff12;border-radius:14px;padding:13px 15px;margin-bottom:9px;font-size:14px;line-height:1.45}
+.ritem .rq{font-weight:800;margin-bottom:5px}
+.ritem .rbad{color:#ff8aa3}
+.ritem .rgood{color:#7dffa6}
+.ritem .rsrc{color:var(--muted);font-size:12px;margin-top:5px}
+
+/* INFO */
+.zbox{background:var(--card);border:1px solid #ffffff12;border-radius:18px;padding:16px 18px;margin-bottom:12px}
+.zbox h3{font-size:14px;text-transform:uppercase;letter-spacing:.6px;color:var(--accent2);margin-bottom:9px;font-weight:800}
+.zbox p,.zbox li{font-size:15px;line-height:1.55;color:#e7e7f4}
+.zbox ul{margin-left:18px;margin-top:4px}
+.gradetbl{width:100%;border-collapse:collapse;font-size:14.5px}
+.gradetbl td{padding:6px 4px;border-bottom:1px solid #ffffff10}
+.gradetbl td:last-child{text-align:right;font-weight:900;color:var(--lime)}
+
+/* LEKCJA modal */
+.lesson{position:absolute;inset:0;background:var(--bg);z-index:60;display:none;flex-direction:column}
+.lesson.open{display:flex;animation:pop .25s}
+.lessonhead{display:flex;align-items:center;gap:12px;padding:14px 16px}
+.lessonhead .x{width:36px;height:36px;border-radius:50%;background:#ffffff14;border:none;color:#fff;font-size:18px;font-weight:800;cursor:pointer;flex:none}
+.lessonhead .bar{flex:1}
+.lessonbody{flex:1;min-height:0;position:relative;display:flex;flex-direction:column;padding:0 16px 16px}
+.lessonfoot{padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+
+.nav{position:absolute;bottom:0;left:0;right:0;display:flex;background:rgba(16,16,28,.92);backdrop-filter:blur(14px);border-top:1px solid #ffffff12;padding:8px 6px calc(8px + env(safe-area-inset-bottom));z-index:40}
+.nav button{flex:1;background:none;border:none;color:var(--muted);font-size:10.5px;font-weight:800;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;border-radius:12px}
+.nav button .ic{font-size:21px;line-height:1}
+.nav button.active{color:var(--txt)}
+
+.toast{position:absolute;top:64px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--card2);border:1px solid #ffffff20;padding:10px 18px;border-radius:999px;font-weight:800;font-size:14px;z-index:90;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.swipehint{position:absolute;bottom:80px;left:0;right:0;text-align:center;color:var(--muted);font-size:13px;font-weight:600;animation:bob 1.6s infinite;pointer-events:none;z-index:20}
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ============================================================
+   PRZEDMIOT: Wprowadzenie do kryptowalut i NFT (blockchain dla banku)
+   Źródło: 8 prezentacji dr. hab. Krzysztofa Piecha (Uczelnia Łazarskiego / szkolenie Deutsche Bank)
+   ============================================================ */
+window.SUBJECTS = window.SUBJECTS || [];
+window.SUBJECTS.push({
+  id:"krypto",
+  name:"Wprowadzenie do krypto i NFT",
+  short:"Krypto",
+  emoji:"₿",
+  tagline:"Blockchain, konsensus, kryptografia, kryptoaktywa, rynek, stablecoiny — z perspektywy banku.",
+  accent:"linear-gradient(135deg,#f7931a,#a855f7,#22d3ee)",
+  accent2:"#f7931a",
+  grading:{pass:50,examMin:20,scale:[[90,"5 / bdb"],[80,"4,5"],[70,"4 / db"],[60,"3,5"],[50,"3 / dst"]],failLabel:"2 — niezaliczone"},
+  info:`
+    <div class="zbox"><h3>⚠️ Zakres testu</h3>
+      <p>Prowadzący (dr hab. K. Piech) napisał wprost: <b>test końcowy obejmuje tylko materiał OMÓWIONY na zajęciach</b> — nie te prezentacje, które zostały udostępnione, ale nieomówione.<br><br>Ta apka pokrywa wszystkie 8 udostępnionych prezek. Skup się na poziomach, które realnie były omawiane — resztę traktuj jako bonus.</p></div>
+    <div class="zbox"><h3>Kluczowy kontekst (cz.1)</h3>
+      <p>Pytanie przewodnie kursu: <b>„Czy blockchain rozwiązuje realny problem, czy tworzy nowy?”</b><br>Logika: jak działa → jak jest wykorzystywany → jakie generuje ryzyka → co to oznacza dla banku.</p></div>
+    <div class="zbox"><h3>Regulacje, które padają najczęściej</h3>
+      <p><b>MiCA</b> (ART + EMT), TFR, DAC8, DORA. MiCA dla stablecoinów obowiązuje od <b>30.06.2024</b>, pełna stosowalność od <b>30.12.2024</b>.</p></div>`,
+  levels:[
+    /* ---------------- L1 ---------------- */
+    {id:"k1",title:"Blockchain — podstawy",emoji:"⛓️",
+     feed:[
+      {title:"Czym jest blockchain",body:"<b>Zdecentralizowany, rozproszony rejestr cyfrowy</b> zapisujący transakcje na wielu komputerach. Cztery filary: <b>decentralizacja</b> (brak jednego właściciela), <b>transparentność</b>, <b>niezmienność</b>, <b>mechanizm konsensusu</b> (PoW/PoS).",real:"Wspólny zeszyt, którego kopię ma każdy i nikt nie może po cichu wymazać wpisu.",mnemo:"<b>DE-TRANS-NIE-KON</b>: Decentralizacja, Transparencja, Niezmienność, Konsensus."},
+      {title:"Linia czasu (must-know daty)",body:"<b>2008</b> — biała księga Bitcoina (Satoshi Nakamoto)<br><b>2009</b> — start sieci, Genesis Block<br><b>2013/2015</b> — Ethereum (Buterin), dApps<br><b>2017</b> — ICO<br><b>2020</b> — boom DeFi<br><b>2021</b> — NFT mainstream.",real:"Bitcoin 2008/2009, Ethereum 2015 — te dwie daty musisz znać."},
+      {title:"Po co w ogóle Bitcoin? Problem zaufania",body:"Tradycyjny system finansowy opiera się na <b>pośrednikach</b> (banki, izby rozliczeniowe) — koszty i konieczność zaufania instytucjom. <b>Kryzys 2008</b> (upadek Lehman Brothers, bailouty, moral hazard) podkopał to zaufanie → biała księga Bitcoina jako odpowiedź.",real:"Bitcoin = 'nie ufaj bankom, ufaj matematyce'. Powstał wprost z gruzów kryzysu 2008."},
+      {title:"Problem podwójnego wydatkowania",body:"Cyfrowy plik łatwo skopiować → jak zapobiec wydaniu tej samej monety dwa razy (<b>double spending</b>)? Tradycyjnie: centralny rejestr (bank). Bitcoin: <b>rozproszony publiczny rejestr</b> + konsensus, bez centralnego organu.",real:"Maila możesz wysłać 1000 razy. Pieniądza nie możesz wydać dwa razy — to rozwiązuje blockchain."}
+     ],
+     flashcards:[
+      {t:"Blockchain",d:"Zdecentralizowany, rozproszony rejestr cyfrowy zapisujący transakcje na wielu węzłach. Filary: decentralizacja, transparentność, niezmienność, konsensus."},
+      {t:"Satoshi Nakamoto",d:"Anonimowy twórca Bitcoina. 2008 — biała księga, 2009 — uruchomienie sieci. Tożsamość nieznana."},
+      {t:"Double spending",d:"Problem podwójnego wydatkowania — ryzyko wydania tej samej jednostki cyfrowej dwa razy. Bitcoin rozwiązuje go rozproszonym rejestrem + konsensusem zamiast centralnego organu."},
+      {t:"Kryzys 2008 a Bitcoin",d:"Upadek Lehman Brothers, bailouty i moral hazard podkopały zaufanie do scentralizowanego systemu. Biała księga Bitcoina (X 2008) to bezpośrednia odpowiedź."},
+      {t:"Genesis Block",d:"Pierwszy blok sieci Bitcoin, wydobyty w 2009 r."},
+      {t:"Ethereum",d:"Platforma blockchain (Buterin, propozycja 2013, start 2015) umożliwiająca smart kontrakty i zdecentralizowane aplikacje (dApps). Baza dla większości tokenów i DeFi."}
+     ],
+     quiz:[
+      {q:"Cztery kluczowe cechy blockchaina to:",a:["centralizacja, prywatność, zmienność, kontrola","decentralizacja, transparentność, niezmienność, konsensus","szybkość, anonimowość, darmowość, prostota","regulacja, nadzór, gwarancje, ubezpieczenie"],c:1,e:"Decentralizacja, transparentność, niezmienność, mechanizm konsensusu."},
+      {q:"W którym roku opublikowano białą księgę Bitcoina?",a:["2008","2013","2015","2020"],c:0,e:"2008 (Satoshi Nakamoto); sieć ruszyła 2009."},
+      {q:"Problem 'double spending' to:",a:["podwójne opodatkowanie krypto","ryzyko wydania tej samej jednostki cyfrowej dwa razy","podwójne szyfrowanie danych","dwa portfele na jednym urządzeniu"],c:1,e:"Bitcoin rozwiązuje go rozproszonym rejestrem + konsensusem."},
+      {q:"Co było bezpośrednim katalizatorem powstania Bitcoina?",a:["pandemia COVID","kryzys finansowy 2008 i spadek zaufania do banków","wojna w Ukrainie","wprowadzenie MiCA"],c:1,e:"Upadek Lehman Brothers, bailouty, moral hazard → biała księga 2008."}
+     ]},
+    /* ---------------- L2 ---------------- */
+    {id:"k2",title:"Konsensus: PoW i PoS",emoji:"⚙️",
+     feed:[
+      {title:"Po co konsensus?",body:"W sieci rozproszonej wiele kopii danych, brak centralnego administratora. <b>Mechanizm konsensusu</b> = zbiór reguł, dzięki którym węzły uzgadniają <b>wspólny stan</b>: które transakcje są ważne i która wersja łańcucha obowiązuje.",real:"Bez konsensusu = chaos i sprzeczne wersje historii. To 'sędzia' bez sędziego."},
+      {title:"Proof of Work (PoW)",body:"Górnicy <b>rywalizują w rozwiązywaniu zadań obliczeniowych</b> (hashowanie). Kosztowne do wykonania, tanie do weryfikacji. Bezpieczeństwo = wysoki koszt fizyczny ataku (energia, sprzęt). Bitcoin.",real:"Kto włożył najwięcej prądu i sprzętu, dostaje prawo dopisać blok. Atak = spalić fortunę.",mnemo:"<b>PoW = Praca/prąd</b> (Work)."},
+      {title:"Proof of Stake (PoS)",body:"Zamiast energii — <b>kapitał (stake)</b>. Walidator blokuje krypto; im większy stake, tym większa szansa walidacji. Nieuczciwość = <b>slashing</b> (utrata części stake). Ethereum 2.0.",real:"Wpłacasz kaucję. Oszukasz — tracisz kaucję. Dużo taniej energetycznie niż PoW.",mnemo:"<b>PoS = Stake/kasa</b> (Stake)."},
+      {title:"PoW vs PoS — jeden trade-off",body:"PoW: zasób = energia/sprzęt, koszt ataku = fizyczny, finalność probabilistyczna, ryzyko = mining pools. PoS: zasób = kapitał, koszt ataku = kapitał + slashing, finalność szybsza, ryzyko = koncentracja stake.",real:"To nie 'lepsze–gorsze', tylko dwa różne modele bezpieczeństwa: bezpieczeństwo vs energia vs koncentracja kapitału."}
+     ],
+     flashcards:[
+      {t:"Mechanizm konsensusu",d:"Zbiór reguł pozwalający węzłom zdecentralizowanej sieci uzgodnić wspólny stan: które transakcje są ważne i która wersja łańcucha obowiązuje."},
+      {t:"Proof of Work (PoW)",d:"Górnicy rywalizują w hashowaniu (kosztowne obliczenia). Bezpieczeństwo = wysoki koszt fizyczny ataku (energia, sprzęt). Bitcoin. Wada: zużycie energii."},
+      {t:"Proof of Stake (PoS)",d:"Walidatorzy blokują kapitał (stake); szansa walidacji rośnie ze stake. Slashing karze nieuczciwych. Ethereum. Zaleta: niskie zużycie energii."},
+      {t:"Slashing",d:"Mechanizm kary w PoS — odebranie części stake walidatorowi, który oszukuje lub łamie reguły. Atak = ryzyko utraty własnego kapitału."},
+      {t:"Inne mechanizmy konsensusu",d:"DPoS (delegowanie głosów reprezentantom), PoA (walidacja przez autoryzowane węzły o zweryfikowanej tożsamości), BFT (odporność na złośliwych uczestników)."},
+      {t:"Mining (kopanie)",d:"Konkurowanie o prawo dodania bloku przez hashowanie nagłówka, aż wynik spełni warunek trudności. Nagroda: nowe monety + opłaty transakcyjne. Łączy emisję, zabezpieczenie i konkurencję o przychód."}
+     ],
+     quiz:[
+      {q:"Na czym opiera się bezpieczeństwo w Proof of Work?",a:["na kapitale zablokowanym w sieci","na wysokim koszcie fizycznym (energia, sprzęt) potrzebnym do ataku","na zaufaniu do banku centralnego","na anonimowości górników"],c:1,e:"PoW: atak wymaga ogromnych zasobów obliczeniowych i energii."},
+      {q:"Czym jest slashing w Proof of Stake?",a:["nagrodą za wydobycie bloku","karą — utratą części stake przez nieuczciwego walidatora","opłatą transakcyjną","procesem kopania"],c:1,e:"Slashing zniechęca do oszustwa: oszukasz → tracisz kapitał."},
+      {q:"Główna różnica zasobu konkurencji PoW vs PoS:",a:["PoW = kapitał, PoS = energia","PoW = energia/sprzęt, PoS = kapitał/stake","oba używają energii","oba używają kapitału"],c:1,e:"PoW konkuruje energią/sprzętem, PoS kapitałem (stake)."},
+      {q:"Który mechanizm zużywa znacznie mniej energii?",a:["Proof of Work","Proof of Stake","oba tyle samo","Proof of Work z ASIC"],c:1,e:"PoS nie wymaga energochłonnego hashowania — stąd Ethereum 2.0 przeszło na PoS."}
+     ]},
+    /* ---------------- L3 ---------------- */
+    {id:"k3",title:"Kryptografia i klucze",emoji:"🔐",
+     feed:[
+      {title:"Hash i SHA-256",body:"Funkcja hashująca zamienia dane dowolnej długości w skrót stałej długości (SHA-256 = 256 bitów = 64 znaki hex). Cechy: <b>deterministyczna</b>, <b>nieodwracalna</b>, <b>efekt lawiny</b> (mała zmiana → zupełnie inny hash), odporna na kolizje. Nie szyfruje!",real:"Cyfrowy odcisk palca danych. Zmień jedną literę → hash zupełnie inny. MD5/SHA-1 = przestarzałe.",mnemo:"Hash ≠ szyfrowanie. Hash sprawdza integralność, nie da się go 'odszyfrować'."},
+      {title:"Klucz prywatny vs publiczny",body:"Kryptografia <b>asymetryczna</b>: klucz <b>prywatny</b> podpisuje (tajny!), klucz <b>publiczny</b> weryfikuje. Publiczny wyprowadza się z prywatnego, ale <b>NIE odwrotnie</b> (problem logarytmu dyskretnego, krzywe eliptyczne secp256k1).",real:"Prywatny = Twój podpis i kontrola środków. Ujawnisz = ktoś wyda Twoje krypto.",mnemo:"Prywatny PODPISUJE, publiczny WERYFIKUJE."},
+      {title:"Seed phrase (BIP-39)",body:"Czytelna dla człowieka kopia zapasowa kluczy: <b>12–24 słów</b> (BIP-39). Koduje losową entropię (12 słów = 128 bitów + suma kontrolna, 24 = 256 bitów). Z seeda portfel deterministyczny (BIP-32) wyprowadza całą hierarchię kluczy.",real:"Utrata seed = utrata WSZYSTKICH środków. Przejęcie seed = ktoś przejmuje cały portfel, nie jeden adres."},
+      {title:"Portfel NIE przechowuje krypto",body:"Środki są w blockchainie, nie 'w portfelu'. Portfel <b>zarządza kluczami i tworzy podpisy</b>. <b>Hot wallet</b> = online (wygodny, ryzyko ataku), <b>cold wallet</b> = offline (bezpieczniejszy, mniej wygodny).",real:"Portfel to pęk kluczy, nie sejf z monetami. 'Portfel kryptowalut' to językowy skrót myślowy."}
+     ],
+     flashcards:[
+      {t:"Funkcja hashująca",d:"Zamienia dane dowolnej długości w skrót stałej długości. Deterministyczna, nieodwracalna, efekt lawiny, odporna na kolizje. NIE szyfruje — służy do kontroli integralności."},
+      {t:"SHA-256",d:"Kryptograficzna funkcja skrótu: 256 bitów = 64 znaki hex. Stosowana w Bitcoinie (nagłówki bloków, adresy). MD5/SHA-1 są przestarzałe — używać SHA-2/SHA-3."},
+      {t:"Kryptografia asymetryczna",d:"Para kluczy: prywatny (podpisuje, tajny) i publiczny (weryfikuje). Publiczny wyprowadza się z prywatnego, ale nie odwrotnie (krzywe eliptyczne secp256k1)."},
+      {t:"Podpis cyfrowy",d:"Potwierdza, że posiadacz klucza prywatnego autoryzował transakcję. Węzły weryfikują kluczem publicznym. Ujawnienie podpisu nie ujawnia klucza prywatnego. ECDSA / Schnorr."},
+      {t:"Seed phrase (BIP-39)",d:"Czytelna kopia zapasowa kluczy: 12–24 słów kodujących losową entropię. Z seeda portfel deterministyczny (BIP-32) wyprowadza całą hierarchię kluczy. Utrata = utrata wszystkiego."},
+      {t:"Klucz publiczny vs adres",d:"Klucz publiczny = warstwa kryptograficzna (weryfikacja podpisu). Adres = uproszczona, zakodowana reprezentacja do odbioru środków (w Bitcoinie z hasha klucza publicznego: SHA-256 + RIPEMD-160)."},
+      {t:"Hot wallet vs cold wallet",d:"Hot = połączony z internetem (wygodny, większe ryzyko phishingu/malware). Cold = offline (bezpieczniejszy, mniej wygodny). W instytucji liczy się zarządzanie kluczami, nie samo 'cold'."}
+     ],
+     quiz:[
+      {q:"Która cecha NIE opisuje funkcji hashującej?",a:["deterministyczna (ten sam input → ten sam hash)","efekt lawiny","odwracalna (można odzyskać dane z hasha)","odporna na kolizje"],c:2,e:"Hash jest NIEodwracalny — to jego kluczowa właściwość."},
+      {q:"Klucz prywatny a publiczny:",a:["publiczny podpisuje, prywatny weryfikuje","prywatny podpisuje (tajny), publiczny weryfikuje","oba są jawne","oba muszą być tajne"],c:1,e:"Prywatny podpisuje i musi być chroniony; publiczny weryfikuje."},
+      {q:"Co to seed phrase?",a:["hasło do giełdy","12–24 słów = kopia zapasowa kluczy portfela (BIP-39)","adres do odbioru środków","numer transakcji"],c:1,e:"Z seeda odtwarza się cała hierarchia kluczy. Utrata = utrata środków."},
+      {q:"Gdzie naprawdę są Twoje kryptowaluty?",a:["w pliku portfela na dysku","w blockchainie — portfel tylko zarządza kluczami i podpisami","na serwerze giełdy zawsze","w chmurze producenta portfela"],c:1,e:"Portfel przechowuje klucze, nie monety. Środki są w rejestrze."},
+      {q:"Ile bitów ma skrót SHA-256?",a:["128","256","512","64"],c:1,e:"256 bitów = 32 bajty = 64 znaki szesnastkowe."}
+     ]},
+    /* ---------------- L4 ---------------- */
+    {id:"k4",title:"Bezpieczeństwo i finalność",emoji:"🛡️",
+     feed:[
+      {title:"Walidacja ≠ wybór łańcucha",body:"Dwa różne problemy: <b>walidacja</b> ('czy ta transakcja jest poprawna?') i <b>konsensus/wybór łańcucha</b> ('która historia jest oficjalna?'). Transakcja poprawna kryptograficznie może zostać cofnięta przez reorganizację.",real:"Poprawny podpis nie wystarczy — sieć musi jeszcze uzgodnić, która wersja historii wygrywa."},
+      {title:"Finalność i potwierdzenia",body:"<b>Finalność</b> = transakcji nie da się już usunąć z historii. Bitcoin: <b>probabilistyczna</b> (im więcej bloków nad transakcją, tym pewniej). Ethereum PoS: finalizacja oparta na stake. Dlatego liczba potwierdzeń ma znaczenie.",real:"'Wysłane' ≠ 'rozliczone'. Bank pyta: kiedy ryzyko cofnięcia jest akceptowalnie niskie?"},
+      {title:"Forki, reorg, atak 51%",body:"<b>Fork</b> = rozwidlenie (soft = zgodny wstecznie, hard = niezgodny). <b>Reorganizacja</b> = sieć porzuca jedną wersję bloków na rzecz 'silniejszej'. <b>Atak 51%</b> (dominacja mocy): reorg historii, cenzura, double spending — ale w dużych sieciach ekonomicznie nieopłacalny.",real:"Krótkie forki to normalka, nie błąd. Atak 51% jest realny głównie w MAŁYCH sieciach."},
+      {title:"UTXO vs model kontowy + custody",body:"<b>UTXO</b> (Bitcoin): saldo = suma niewydanych wyjść, jak zbiór banknotów. <b>Model kontowy</b> (Ethereum): saldo na koncie, intuicyjny dla bankowców. Custody instytucjonalne: <b>multisig</b> (np. 2 z 3) i <b>MPC</b> (podpis z udziałów bez jednego pełnego klucza).",real:"Dla banku liczy się nie 'przechowanie pliku', tylko KONTROLA nad podpisem (kto może wydać środki)."}
+     ],
+     flashcards:[
+      {t:"Walidacja vs konsensus",d:"Walidacja: 'czy transakcja jest poprawna?'. Konsensus/wybór łańcucha: 'która historia transakcji jest oficjalna?'. To dwa odrębne problemy."},
+      {t:"Finalność",d:"Stan, w którym transakcji nie da się już usunąć. Bitcoin = probabilistyczna (rośnie z liczbą potwierdzeń). Ethereum PoS = finalizacja oparta na stake. Finalność ≠ potwierdzenie."},
+      {t:"Fork",d:"Rozwidlenie łańcucha. Soft fork = zmiana reguł zgodna wstecznie. Hard fork = niezgodna wstecznie, może trwale rozdzielić sieć. Krótkie forki są naturalne."},
+      {t:"Reorganizacja (reorg)",d:"Sieć porzuca lokalnie zaakceptowaną wersję bloków na rzecz 'silniejszej'. Świeże transakcje mogą wypaść z historii — dlatego liczba potwierdzeń ma znaczenie."},
+      {t:"Atak 51%",d:"Dominacja mocy/stake pozwala: preferować własny łańcuch, reorganizować historię, cenzurować transakcje, double spending. W dużych sieciach ekonomicznie nieopłacalny; groźniejszy w małych."},
+      {t:"UTXO vs model kontowy",d:"UTXO (Bitcoin): saldo = suma niewydanych wyjść (jak banknoty). Account model (Ethereum): saldo i stan konta (intuicyjny dla bankowców, smart kontrakty)."},
+      {t:"Multisig",d:"Wielopodpis — polityka wymagająca wielu niezależnych podpisów (np. 2 z 3). Rozdziela władzę, zmniejsza ryzyko pojedynczego punktu kompromitacji ('zasada wielu oczu')."},
+      {t:"MPC (Multi-Party Computation)",d:"Podpis powstaje wspólnie z udziałów (shares) bez rekonstrukcji jednego pełnego klucza w jednym miejscu. Ogranicza 'single point of compromise' — kluczowa technologia custody instytucjonalnego."}
+     ],
+     quiz:[
+      {q:"Czym różni się walidacja od konsensusu?",a:["to to samo","walidacja = czy transakcja poprawna; konsensus = która historia jest oficjalna","walidacja dotyczy tylko PoS","konsensus dotyczy tylko portfeli"],c:1,e:"Poprawna transakcja może i tak wypaść przy reorganizacji łańcucha."},
+      {q:"Finalność w Bitcoinie ma charakter:",a:["natychmiastowy i absolutny","probabilistyczny — rośnie z liczbą potwierdzeń","gwarantowany przez bank centralny","deterministyczny od pierwszego bloku"],c:1,e:"Im więcej bloków nad transakcją, tym mniejsze ryzyko cofnięcia."},
+      {q:"Atak 51% jest najbardziej realny w:",a:["dużych sieciach jak Bitcoin","małych sieciach o niskim hashrate/stake","sieciach PoA","stablecoinach"],c:1,e:"W dużych sieciach koszt ataku rośnie radykalnie; groźny głównie w małych."},
+      {q:"Model UTXO (Bitcoin) działa jak:",a:["jedno konto z saldem","zbiór niewydanych wyjść (jak banknoty)","baza danych banku","smart kontrakt"],c:1,e:"UTXO = konsumujesz konkretne wyjścia i tworzysz nowe; Ethereum = model kontowy."},
+      {q:"Czym jest MPC w kontekście custody?",a:["rodzajem stablecoina","podpisem tworzonym wspólnie z udziałów, bez jednego pełnego klucza","giełdą zdecentralizowaną","mechanizmem konsensusu"],c:1,e:"MPC ogranicza ryzyko pojedynczego punktu kompromitacji klucza."}
+     ]},
+    /* ---------------- L5 ---------------- */
+    {id:"k5",title:"Kryptoaktywa: coin, token, NFT",emoji:"🪙",
+     feed:[
+      {title:"Kryptowaluta vs kryptoaktywo",body:"<b>Kryptowaluta</b> = natywny token blockchaina, transfer wartości (BTC, ETH). <b>Kryptoaktywo</b> = szersza kategoria: kryptowaluty + tokeny użytkowe + inwestycyjne + NFT + aktywa tokenizowane.",real:"'Kryptowaluta' to potoczny skrót. Precyzja klasyfikacji = mniej problemów regulacyjnych."},
+      {title:"Moneta (coin) vs token",body:"<b>Coin</b> = działa na <b>własnym</b> blockchainie, 'paliwo' sieci (BTC, ETH, SOL). <b>Token</b> = na <b>cudzym</b> blockchainie / w smart kontrakcie (USDT, UNI, LINK). Funkcjonalnie: payment / utility / asset (investment) tokens.",real:"Coin ma własną sieć. Token żyje na cudzej (np. USDT na Ethereum).",mnemo:"<b>Coin = własna sieć, Token = gość na cudzej sieci.</b>"},
+      {title:"NFT — czym NIE jest",body:"<b>Non-Fungible Token</b> = unikalny, niezamienny token. <b>NFT ≠ dzieło sztuki</b> — to zapis własności/identyfikator. Zwykle <b>nie daje praw autorskich</b>. Wartość spekulacyjna, zależna od infrastruktury (serwery, metadane).",real:"Kupujesz wpis 'to jest moje', a nie sam obrazek ani prawa do niego."},
+      {title:"MiCA — klasyfikacja regulacyjna",body:"Rozporządzenie UE. Trzy kategorie: <b>crypto-assets</b> (ogólna), <b>ART</b> (Asset-Referenced Tokens — odnoszą się do koszyka aktywów/walut), <b>EMT</b> (E-Money Tokens — jedna waluta urzędowa, jak e-pieniądz).",real:"Ekonomicznie token może być 'utility', a regulacyjnie 'security' — przepisy nie nadążają za techem.",mnemo:"<b>ART = koszyk, EMT = jedna waluta (e-money).</b>"}
+     ],
+     flashcards:[
+      {t:"Kryptowaluta vs kryptoaktywo",d:"Kryptowaluta = natywny token blockchaina (transfer wartości, BTC/ETH). Kryptoaktywo = szersza kategoria: + tokeny użytkowe, inwestycyjne, NFT, aktywa tokenizowane."},
+      {t:"Coin vs token",d:"Coin działa na własnym blockchainie (BTC, ETH, SOL). Token działa na cudzym blockchainie / w smart kontrakcie (USDT, UNI, LINK)."},
+      {t:"Payment / utility / asset tokens",d:"Payment = transfer wartości (kryptowaluty). Utility = dostęp do usługi/platformy. Asset/investment = prawa ekonomiczne (często regulacja rynku kapitałowego). To klasyfikacja ekonomiczna, nie zawsze = regulacyjna."},
+      {t:"NFT (Non-Fungible Token)",d:"Unikalny, niezamienny token — zapis własności lub identyfikator. NIE jest dziełem sztuki i zwykle nie daje praw autorskich. Wartość spekulacyjna, zależna od infrastruktury."},
+      {t:"Tokenizacja",d:"Cyfrowa reprezentacja aktywa na blockchainie. Niekoniecznie oznacza decentralizację ani brak emitenta (np. tokenizowana obligacja ≠ kryptowaluta). To narzędzie, nie samo aktywo."},
+      {t:"MiCA: ART vs EMT",d:"ART (Asset-Referenced Token) = odnosi się do koszyka aktywów/walut/towarów. EMT (E-Money Token) = odnosi się do jednej waluty urzędowej, przypomina pieniądz elektroniczny."}
+     ],
+     quiz:[
+      {q:"Czym różni się coin od tokena?",a:["coin jest droższy","coin działa na własnym blockchainie, token na cudzym","token jest zawsze stabilny","nie ma różnicy"],c:1,e:"Coin = własna sieć (BTC, ETH). Token = na cudzej sieci (USDT na Ethereum)."},
+      {q:"NFT to przede wszystkim:",a:["dzieło sztuki","unikalny, niezamienny token = zapis własności/identyfikator","kryptowaluta o stałej wartości","rodzaj stablecoina"],c:1,e:"NFT ≠ dzieło i zwykle nie daje praw autorskich."},
+      {q:"W MiCA EMT (E-Money Token) odnosi się do:",a:["koszyka różnych aktywów","jednej waluty urzędowej (jak e-pieniądz)","wyłącznie NFT","tokenów użytkowych"],c:1,e:"EMT = jedna waluta urzędowa. ART = koszyk aktywów/walut."},
+      {q:"Token użytkowy (utility) jest:",a:["zawsze zwolniony z regulacji","niekoniecznie zwolniony z regulacji; bywa też faktycznie spekulacyjny","zawsze papierem wartościowym","tym samym co coin"],c:1,e:"Decentralizacja ≠ brak odpowiedzialności; utility ≠ brak regulacji."}
+     ]},
+    /* ---------------- L6 ---------------- */
+    {id:"k6",title:"Rynek kryptoaktywów",emoji:"📈",
+     feed:[
+      {title:"Skala i koncentracja rynku",body:"Kapitalizacja rzędu <b>~2,7 bln USD</b>, mocno cykliczna. <b>BTC + ETH = 60–70%</b> rynku (efekty sieciowe, infrastruktura). Reszta to 'długi ogon' altcoinów — niższa płynność, wyższe ryzyko.",real:"Kilku gigantów rządzi. Tysiące altcoinów to ryzykowny ogon."},
+      {title:"Warstwy i segmenty",body:"<b>Layer 1</b> = podstawowe blockchainy (Bitcoin, Ethereum, Solana). <b>Layer 2</b> = skalowanie (tańsze/szybsze transakcje poza głównym łańcuchem). Dalej: <b>stablecoiny</b>, <b>DeFi</b>, infrastruktura (giełdy, custody, brokerzy).",real:"Layer 1 = autostrada. Layer 2 = obwodnice, żeby odkorkować i potaniać."},
+      {title:"CEX vs DEX",body:"<b>CEX</b> (scentralizowana giełda) = pośrednik, depozyt po stronie platformy, wygodna, ale centralny punkt awarii. <b>DEX</b> (zdecentralizowana) = bez pośrednika, self-custody, większa złożoność.",real:"CEX = bank krypto (wygodnie, ale ufasz im). DEX = sam trzymasz klucze (więcej wolności, więcej ryzyka)."},
+      {title:"DeFi i custody",body:"<b>DeFi</b> = usługi finansowe bez centralnego pośrednika (lending, trading, staking). Ryzyka: luki w smart kontraktach, płynność, brak nadzoru. <b>Custody</b> (bezpieczne przechowywanie kluczy) = strategiczny punkt wejścia banków.",real:"Dla banku najważniejszy nie sam token, tylko infrastruktura i usługi (custody, rozliczenia)."}
+     ],
+     flashcards:[
+      {t:"Koncentracja rynku krypto",d:"Kapitalizacja ~2,7 bln USD, silnie cykliczna. BTC + ETH stanowią 60–70% rynku. Reszta = 'długi ogon' altcoinów o niższej płynności i wyższym ryzyku."},
+      {t:"Layer 1 vs Layer 2",d:"Layer 1 = podstawowy blockchain (Bitcoin, Ethereum, Solana). Layer 2 = rozwiązania skalujące (transakcje poza głównym łańcuchem → tańsze i szybsze)."},
+      {t:"CEX vs DEX",d:"CEX = giełda scentralizowana (pośrednik, depozyt po stronie platformy, wygoda, centralny punkt awarii). DEX = zdecentralizowana (bez pośrednika, self-custody, większa złożoność)."},
+      {t:"DeFi",d:"Zdecentralizowane finanse — usługi (pożyczki, handel, staking) bez centralnego pośrednika. Ryzyka: luki w smart kontraktach, zmienność płynności, brak nadzoru regulacyjnego."},
+      {t:"Custody (krypto)",d:"Bezpieczne przechowywanie kluczy prywatnych i zarządzanie dostępem do aktywów. Strategiczny punkt wejścia banków na rynek krypto — wymaga najwyższych standardów bezpieczeństwa."},
+      {t:"Gdzie powstaje wartość na rynku",d:"Infrastruktura (technologia, bezpieczeństwo), płynność (animatorzy rynku, pule), dostęp (portfele, rampy fiat-krypto, edukacja). Często ważniejsze strategicznie niż same aktywa bazowe."}
+     ],
+     quiz:[
+      {q:"Jaki udział w rynku mają łącznie BTC i ETH?",a:["10–20%","30–40%","60–70%","ponad 95%"],c:2,e:"Dwaj liderzy to 60–70% kapitalizacji — silna koncentracja."},
+      {q:"Layer 2 służy przede wszystkim do:",a:["tworzenia nowych monet","skalowania — tańszych i szybszych transakcji poza głównym łańcuchem","przechowywania kluczy","regulacji rynku"],c:1,e:"L2 odciąża Layer 1: większa przepustowość, niższe opłaty."},
+      {q:"Główna różnica CEX vs DEX:",a:["CEX jest darmowa","CEX = pośrednik i depozyt po stronie platformy; DEX = self-custody bez pośrednika","DEX jest zawsze bezpieczniejsza","nie ma różnicy"],c:1,e:"CEX wygodna ale centralny punkt awarii; DEX = sam trzymasz klucze."},
+      {q:"Który obszar jest strategicznym punktem wejścia banków?",a:["kopanie Bitcoina","custody (przechowywanie kluczy/aktywów)","tworzenie memecoinów","spekulacja na NFT"],c:1,e:"Banki zaczynają zwykle od custody, potem trading."}
+     ]},
+    /* ---------------- L7 ---------------- */
+    {id:"k7",title:"Stablecoiny",emoji:"💵",
+     feed:[
+      {title:"Czym jest stablecoin",body:"Kryptoaktywo zaprojektowane do <b>stabilnej wartości</b> wobec aktywa referencyjnego (np. USD). Stabilność NIE jest cechą blockchaina — wynika z <b>rezerw, mechanizmu wykupu, płynności, zaufania do emitenta i konstrukcji prawnej</b>. Stablecoin ≠ depozyt bankowy.",real:"To 'cyfrowy dolar' prywatnej firmy. Stabilny dopóki ufasz, że odkupią go za 1 USD."},
+      {title:"Trzy modele stablecoinów",body:"<b>Fiat-backed</b>: rezerwy w walucie/aktywach płynnych (USDT, USDC) — ryzyko jakości rezerw i wykupu. <b>Crypto-backed</b>: nadzabezpieczenie krypto (DAI) — ryzyko zmienności, likwidacji. <b>Algorithmic</b>: algorytm podaży (TerraUSD) — ryzyko spirali utraty zaufania.",real:"Fiat = realne rezerwy. Crypto = nadmiar zastawu. Algo = obietnica matematyki (najbardziej kruche).",mnemo:"<b>FIAT · CRYPTO · ALGO</b> — od najbezpieczniejszego do najbardziej ryzykownego."},
+      {title:"TerraUSD/Luna i 'run'",body:"<b>TerraUSD</b> (algorytmiczny) utracił peg w maju 2022 → spirala sprzedaży i upadek. Mechanizm <b>'runu'</b> jak run bankowy: pogłoska → masowy wykup → wyprzedaż rezerw → utrata pegu → panika. Ale bez publicznych zabezpieczeń (gwarancji depozytów).",real:"'Stable' w nazwie nie gwarantuje stabilności. Algo-stablecoiny potrafią wyparować w dni."},
+      {title:"Stablecoiny vs banki + MiCA",body:"Stablecoiny przejmują funkcje banków (płatności, transfery), ale <b>bez gwarancji depozytów, dostępu do banku centralnego, kreacji pieniądza</b>. MiCA dzieli je na <b>ART i EMT</b> (od 30.06.2024 / pełna stosowalność 30.12.2024). Alternatywa banków: <b>tokenizowane depozyty</b>.",real:"~99% stablecoinów w USD = wyzwanie dla suwerenności euro. Banki kontrują tokenizowanymi depozytami."}
+     ],
+     flashcards:[
+      {t:"Stablecoin",d:"Kryptoaktywo o stabilnej wartości wobec aktywa referencyjnego (np. USD). Stabilność wynika z rezerw, wykupu, płynności, zaufania i konstrukcji prawnej — nie z technologii. ≠ depozyt bankowy."},
+      {t:"Fiat-backed stablecoin",d:"Zabezpieczony rezerwami w walucie fiat/aktywach płynnych (USDT, USDC). Główne ryzyko: jakość i płynność rezerw, realność wykupu, wiarygodność emitenta."},
+      {t:"Crypto-backed stablecoin",d:"Oparty na nadzabezpieczeniu kryptoaktywami (DAI), bo są zmienne. Ryzyko: gwałtowny spadek zabezpieczenia, kaskadowe likwidacje, błędy smart kontraktów."},
+      {t:"Algorithmic stablecoin",d:"Stabilizacja przez algorytm podaży/arbitraż (TerraUSD). Brak pełnych rezerw — peg zależy od ciągłego zaufania. Najbardziej podatny na nagłe załamania."},
+      {t:"TerraUSD / Luna (2022)",d:"Algorytmiczny stablecoin, który utracił peg w maju 2022 → spirala sprzedaży i upadek. Ilustracja kruchości stabilności algorytmicznej i ryzyka nazwy 'stable' bez pokrycia."},
+      {t:"Run na stablecoin",d:"Jak run bankowy: pogłoska → masowy wykup → wyprzedaż rezerw → utrata pegu → panika. Ale bez publicznych zabezpieczeń (gwarancji depozytów, dostępu do banku centralnego)."},
+      {t:"Stablecoin vs tokenizowany depozyt",d:"Stablecoin = emitowany przez podmiot prywatny, poza systemem depozytowym. Tokenizowany depozyt = cyfrowa reprezentacja depozytu, zobowiązanie banku wobec klienta, w ramach systemu bankowego i regulacji."}
+     ],
+     quiz:[
+      {q:"Z czego wynika stabilność stablecoina?",a:["z samej technologii blockchain","z rezerw, mechanizmu wykupu, płynności, zaufania i konstrukcji prawnej","z mocy obliczeniowej sieci","z liczby użytkowników"],c:1,e:"Stabilność to mechanizmy finansowo-prawne, nie cecha blockchaina."},
+      {q:"Który model stablecoina jest najbardziej podatny na nagłe załamanie?",a:["fiat-backed (USDC)","crypto-backed (DAI)","algorytmiczny (TerraUSD)","tokenizowany depozyt"],c:2,e:"Algo opiera się na zaufaniu i arbitrażu bez pełnych rezerw — patrz TerraUSD 2022."},
+      {q:"Czego stablecoiny NIE oferują w przeciwieństwie do banków?",a:["płatności","transferów transgranicznych","gwarancji depozytów i dostępu do banku centralnego","przechowywania wartości"],c:2,e:"Brak ochrony depozytów, dostępu do banku centralnego i kreacji pieniądza."},
+      {q:"MiCA dzieli stablecoiny na:",a:["BTC i ETH","ART i EMT","CEX i DEX","PoW i PoS"],c:1,e:"ART (koszyk aktywów) i EMT (jedna waluta urzędowa, e-money)."},
+      {q:"Mechanizm 'runu' na stablecoin przypomina:",a:["atak 51%","run bankowy — masowy wykup i wyprzedaż rezerw","mining","slashing"],c:1,e:"Pogłoska → masowy wykup → wyprzedaż rezerw → utrata pegu → panika."}
+     ]}
+  ]
+});
+
+</script>
+<script>
+/* ============================================================
+   NAUKA — silnik wieloprzedmiotowej platformy do nauki
+   Dane przedmiotów rejestrują się w window.SUBJECTS (patrz data/*.js)
+   Tryby: Ścieżka (Duolingo) + Fiszki + Quiz + Egzamin + Info
+   ============================================================ */
+(function(){
+"use strict";
+
+/* ---------- bezpieczny storage (iOS file:// potrafi rzucać) ---------- */
+const STORE=(()=>{try{const ls=globalThis['localStorage'];const t='__nk_t';ls.setItem(t,'1');ls.removeItem(t);return ls;}catch(e){const m={};return{getItem:k=>k in m?m[k]:null,setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];}};}})();
+const PKEY='nauka_progress_v1';
+let PROGRESS=(()=>{try{return JSON.parse(STORE.getItem(PKEY)||'{}');}catch(e){return {};}})();
+function saveProgress(){try{STORE.setItem(PKEY,JSON.stringify(PROGRESS));}catch(e){}}
+function subjState(id){ if(!PROGRESS[id])PROGRESS[id]={xp:0,levels:{}}; return PROGRESS[id]; }
+
+/* ---------- daily streak (osobny klucz, nie rusza postępów) ---------- */
+const MKEY='nauka_meta_v1';
+let META=(()=>{try{return JSON.parse(STORE.getItem(MKEY)||'{}');}catch(e){return {};}})();
+function saveMeta(){try{STORE.setItem(MKEY,JSON.stringify(META));}catch(e){}}
+function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function dayDiff(a,b){const pa=a.split('-').map(Number),pb=b.split('-').map(Number);return Math.round((Date.UTC(pb[0],pb[1]-1,pb[2])-Date.UTC(pa[0],pa[1]-1,pa[2]))/86400000);}
+/* aktualna „żywa” seria do wyświetlenia (0 jeśli wygasła) */
+function streakDisplay(){ if(!META.lastDay)return 0; const d=dayDiff(META.lastDay,todayStr()); return (d===0||d===1)?(META.streak||0):0; }
+/* odnotuj aktywność dziś; zwraca true gdy seria została dziś przedłużona/zaczęta */
+function touchStreak(){
+  const t=todayStr();
+  if(META.lastDay===t)return false; // już policzone dzisiaj
+  if(META.lastDay){const d=dayDiff(META.lastDay,t); META.streak=(d===1)?(META.streak||0)+1:1;}
+  else META.streak=1;
+  META.lastDay=t; META.best=Math.max(META.best||0,META.streak); saveMeta();
+  return true;
+}
+
+/* ---------- helpers ---------- */
+const SUBJECTS = (window.SUBJECTS||[]);
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+const shuffle=a=>[...a].sort(()=>Math.random()-0.5);
+const keys=['A','B','C','D','E'];
+let app, current=null, curTab='path';
+
+function toast(t){let el=document.getElementById('toast');el.textContent=t;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),1500);}
+function addXP(id,n){const s=subjState(id);s.xp+=n;saveProgress();const ext=touchStreak();updateXP();updateStreakUI();if(ext&&META.streak>1)setTimeout(()=>toast('🔥 seria '+META.streak+' dni z rzędu!'),1600);}
+function updateXP(){const x=document.getElementById('xpNum');if(x&&current)x.textContent=subjState(current.id).xp;}
+function updateStreakUI(){const n=streakDisplay();document.querySelectorAll('[id="streakNum"]').forEach(e=>e.textContent=n);}
+
+/* pula wszystkich elementów danego przedmiotu (ze wszystkich poziomów) */
+function allCards(s){return s.levels.flatMap(l=>(l.flashcards||[]).map(c=>({...c,lvl:l.title})));}
+function allQuiz(s){return s.levels.flatMap(l=>(l.quiz||[]).map(q=>({...q,lvl:l.title})));}
+function allFeed(s){return s.levels.flatMap(l=>(l.feed||[]).map(f=>({...f,lvl:l.title})));}
+
+function applyTheme(s){
+  const r=document.documentElement.style;
+  r.setProperty('--accent', s.accent || 'linear-gradient(135deg,#ff2d95,#a855f7,#22d3ee)');
+  r.setProperty('--accent2', s.accent2 || '#22d3ee');
+}
+
+/* ============================================================ HOME */
+function renderHome(){
+  current=null;
+  document.documentElement.style.setProperty('--accent','linear-gradient(135deg,#ff2d95,#a855f7,#22d3ee)');
+  document.documentElement.style.setProperty('--accent2','#22d3ee');
+  app.innerHTML='';
+  const top=el('div','topbar');
+  top.appendChild(el('div','logo','📚 <span class="g">NAUKA</span>'));
+  let totXP=Object.values(PROGRESS).reduce((a,s)=>a+(s.xp||0),0);
+  const pills=el('div','pills');
+  pills.appendChild(el('div','streak',`🔥 <span id="streakNum">${streakDisplay()}</span> <small>dni</small>`));
+  pills.appendChild(el('div','streak',`⚡ <span>${totXP}</span> <small>xp</small>`));
+  top.appendChild(pills);
+  app.appendChild(top);
+
+  const sc=el('div','screen active');const scroll=el('div','scroll');
+  const hero=el('div','hero');
+  hero.innerHTML='<h1>Wybierz przedmiot 👇</h1><p>Ucz się w stylu gen-z: poziomy jak w Duolingo, fiszki, quizy i symulacja egzaminu. Wszystko z prezek z zajęć.</p>';
+  scroll.appendChild(hero);
+
+  SUBJECTS.forEach(s=>{
+    const st=subjState(s.id);
+    const total=s.levels.length;
+    const done=s.levels.filter(l=>st.levels[l.id]&&st.levels[l.id].done).length;
+    const pct=total?Math.round(done/total*100):0;
+    const card=el('div','subjcard');
+    card.style.setProperty('--sa', s.accent);
+    card.innerHTML=`<div class="subjemoji">${s.emoji}</div>
+      <div class="subjmeta">
+        <h3>${s.name}</h3>
+        <div class="sub">${s.tagline||''}</div>
+        <div class="subjprog"><div class="bar"><i style="width:${pct}%"></i></div><small>${done}/${total} poziomów</small></div>
+      </div><div class="chev">›</div>`;
+    card.onclick=()=>openSubject(s.id);
+    scroll.appendChild(card);
+  });
+  const add=el('div','addcard');
+  add.innerHTML='<div class="subjemoji">＋</div><div>Kolejny przedmiot?<br><span style="font-size:12.5px;font-weight:600">Dodaj plik w <b>data/</b> (patrz README) i pojawi się tutaj.</span></div>';
+  scroll.appendChild(add);
+  sc.appendChild(scroll);app.appendChild(sc);
+}
+
+/* ============================================================ SUBJECT shell */
+function openSubject(id){
+  current=SUBJECTS.find(s=>s.id===id);
+  if(!current)return renderHome();
+  applyTheme(current);
+  curTab='path';
+  renderSubject();
+}
+function renderSubject(){
+  const s=current;
+  app.innerHTML='';
+  const top=el('div','topbar');
+  const back=el('button','backbtn','‹');back.onclick=renderHome;
+  top.appendChild(back);
+  top.appendChild(el('div','logo',`${s.emoji} <span class="g">${s.short||s.name}</span>`));
+  const pills=el('div','pills');
+  pills.appendChild(el('div','streak',`🔥 <span id="streakNum">${streakDisplay()}</span> <small>dni</small>`));
+  pills.appendChild(el('div','streak',`⚡ <span id="xpNum">${subjState(s.id).xp}</span> <small>xp</small>`));
+  top.appendChild(pills);
+  app.appendChild(top);
+
+  const tabs=el('div','subtabs');
+  [['path','🗺️ Ścieżka'],['fiszki','🎴 Fiszki'],['quiz','🧠 Quiz'],['egzamin','🎯 Egzamin'],['info','📋 Info']].forEach(([k,lab])=>{
+    const b=el('div','subtab'+(curTab===k?' active':''),lab);
+    b.onclick=()=>{curTab=k;renderSubject();};
+    tabs.appendChild(b);
+  });
+  app.appendChild(tabs);
+
+  const sc=el('div','screen active');sc.id='subjscreen';
+  app.appendChild(sc);
+  if(curTab==='path')renderPath(sc);
+  else if(curTab==='fiszki')renderFiszki(sc);
+  else if(curTab==='quiz')renderQuiz(sc);
+  else if(curTab==='egzamin')renderEgzamin(sc);
+  else if(curTab==='info')renderInfo(sc);
+
+  // toast + lesson container
+  app.appendChild(el('div','toast',''));app.lastChild.id='toast';
+  const lesson=el('div','lesson');lesson.id='lesson';app.appendChild(lesson);
+}
+
+/* ---------- ŚCIEŻKA (Duolingo) ---------- */
+function levelUnlocked(s,idx){
+  if(idx===0)return true;
+  const prev=s.levels[idx-1];
+  const st=subjState(s.id);
+  return !!(st.levels[prev.id]&&st.levels[prev.id].done);
+}
+function renderPath(sc){
+  const s=current;const st=subjState(s.id);
+  const wrap=el('div','scroll');
+  const path=el('div','path');
+  s.levels.forEach((lv,i)=>{
+    if(i>0){const c=el('div','connector'+( (st.levels[s.levels[i-1].id]||{}).done?' done':''));path.appendChild(c);}
+    const unlocked=levelUnlocked(s,i);
+    const done=(st.levels[lv.id]||{}).done;
+    const stars=(st.levels[lv.id]||{}).stars||0;
+    const node=el('div','pathnode pathzig');
+    const cls = done?'node-done':(unlocked?'node-open':'node-lock');
+    const btn=el('button','nodebtn '+cls, done?'✓':(unlocked?(lv.emoji||'📘'):'🔒'));
+    if(done){btn.innerHTML+=`<span class="stars">${'⭐'.repeat(stars)}${'·'.repeat(Math.max(0,3-stars))}</span>`;}
+    if(unlocked){btn.onclick=()=>startLesson(lv);}else{btn.onclick=()=>toast('Najpierw zalicz poprzedni poziom 🔒');}
+    node.appendChild(btn);
+    node.appendChild(el('div','nodelabel',`${lv.title}<small>${(lv.quiz||[]).length} pytań · ${(lv.flashcards||[]).length} fiszek</small>`));
+    path.appendChild(node);
+  });
+  wrap.appendChild(path);sc.appendChild(wrap);
+}
+
+/* ---------- LEKCJA: feed -> quiz bramka ---------- */
+let lessonState=null;
+function startLesson(lv){
+  lessonState={lv,phase:'feed',feedIdx:0,quiz:shuffle(lv.quiz||[]).slice(0,Math.min(6,(lv.quiz||[]).length)),qIdx:0,score:0,answered:false};
+  if(!lessonState.quiz.length){ // brak quizu — sam feed
+    lessonState.quiz=[];
+  }
+  const L=document.getElementById('lesson');L.classList.add('open');
+  renderLesson();
+}
+function closeLesson(){document.getElementById('lesson').classList.remove('open');renderSubject();}
+function renderLesson(){
+  const L=document.getElementById('lesson');const s=current;const ls=lessonState;const lv=ls.lv;
+  const totalFeed=(lv.feed||[]).length;
+  let progPct;
+  if(ls.phase==='feed') progPct = totalFeed?ls.feedIdx/(totalFeed+ls.quiz.length)*100:0;
+  else progPct = (totalFeed+ls.qIdx)/(totalFeed+ls.quiz.length)*100;
+  L.innerHTML='';
+  const head=el('div','lessonhead');
+  const x=el('button','x','✕');x.onclick=closeLesson;head.appendChild(x);
+  head.appendChild(el('div','bar',`<i style="width:${progPct}%"></i>`));
+  L.appendChild(head);
+  const body=el('div','lessonbody');L.appendChild(body);
+
+  if(ls.phase==='feed'){
+    const f=lv.feed[ls.feedIdx];
+    const fw=el('div');fw.style.cssText='flex:1;display:flex;flex-direction:column;justify-content:center;overflow-y:auto';
+    const card=el('div','fcard');
+    card.innerHTML=`<span class="tag">${lv.title} · ${ls.feedIdx+1}/${totalFeed}</span>
+      <div class="ftitle">${f.title}</div><div class="fbody">${f.body}</div>
+      ${f.real?`<div class="real"><span class="lbl">po ludzku 🗣️</span>${f.real}</div>`:''}
+      ${f.mnemo?`<div class="mnemo"><span class="lbl">zapamiętaj 🧠</span>${f.mnemo}</div>`:''}`;
+    fw.appendChild(card);body.appendChild(fw);
+    const foot=el('div','lessonfoot');
+    const b=el('button','pill', ls.feedIdx+1<totalFeed?'dalej →':(ls.quiz.length?'lecimy z quizem 🧠':'zakończ ✅'));
+    b.onclick=()=>{ if(ls.feedIdx+1<totalFeed){ls.feedIdx++;renderLesson();} else if(ls.quiz.length){ls.phase='quiz';renderLesson();} else finishLesson(); };
+    foot.appendChild(b);L.appendChild(foot);
+  } else if(ls.phase==='quiz'){
+    if(ls.qIdx>=ls.quiz.length)return finishLesson();
+    const q=ls.quiz[ls.qIdx];ls.answered=false;
+    const qc=el('div','qcard');qc.style.cssText='flex:1;overflow-y:auto';
+    qc.innerHTML=`<span class="tag">pytanie ${ls.qIdx+1}/${ls.quiz.length}</span>
+      <div class="qq">${q.q}</div>
+      <div class="opts">${q.a.map((o,i)=>`<button class="opt" data-i="${i}"><span class="k">${keys[i]}</span><span>${o}</span></button>`).join('')}</div>
+      <div class="explain" id="lexp"><b>czemu:</b> ${q.e||''}</div>`;
+    body.appendChild(qc);
+    const foot=el('div','lessonfoot');
+    const nb=el('button','pill qnext','dalej →');nb.id='lnext';
+    nb.onclick=()=>{ls.qIdx++;renderLesson();};
+    foot.appendChild(nb);L.appendChild(foot);
+    qc.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{
+      if(ls.answered)return;ls.answered=true;const i=+o.dataset.i;
+      qc.querySelectorAll('.opt').forEach(x=>{const xi=+x.dataset.i;if(xi===q.c)x.classList.add('correct');else if(xi===i)x.classList.add('wrong');else x.classList.add('dim');});
+      if(i===q.c){ls.score++;addXP(s.id,5);toast('GIT +5xp 🟢');}else{toast('mid, czytaj wyjaśnienie 👇');}
+      document.getElementById('lexp').classList.add('show');
+      const nx=document.getElementById('lnext');nx.classList.add('show');nx.textContent=(ls.qIdx+1>=ls.quiz.length)?'zobacz wynik 🏁':'dalej →';
+    });
+  }
+}
+function finishLesson(){
+  const s=current;const ls=lessonState;const lv=ls.lv;
+  const total=ls.quiz.length||1;const pct=ls.quiz.length?Math.round(ls.score/ls.quiz.length*100):100;
+  const stars = pct>=90?3:(pct>=70?2:(pct>=50?1:0));
+  const passed = ls.quiz.length?pct>=50:true;
+  const st=subjState(s.id);const prev=st.levels[lv.id]||{};
+  if(passed){
+    st.levels[lv.id]={done:true,stars:Math.max(stars,prev.stars||0),best:Math.max(pct,prev.best||0)};
+    if(!prev.done)addXP(s.id,15);
+    saveProgress();
+  }
+  const L=document.getElementById('lesson');
+  const emoji = !passed?'😵':(pct>=90?'👑':pct>=70?'🔥':'✅');
+  const verdict = !passed?'Poniżej 50% — poziom niezaliczony. Przejedź feed jeszcze raz i spróbuj ponownie, dasz radę.':
+    (pct>=90?'Mistrzostwo. Trzy gwiazdki, profesor by płakał ze szczęścia.':pct>=70?'Solidnie! Poziom zaliczony, lecimy dalej.':'Zaliczone na styk — wróć kiedyś po więcej gwiazdek.');
+  L.innerHTML=`<div class="lessonhead"><button class="x" id="lx">✕</button><div class="bar"><i style="width:100%"></i></div></div>
+   <div class="lessonbody"><div class="result">
+     <div class="big">${emoji}</div>
+     <h2>${lv.title}</h2>
+     ${ls.quiz.length?`<div class="score">Trafione <b>${ls.score}/${ls.quiz.length}</b> (${pct}%) ${passed?'· '+'⭐'.repeat(stars):''}</div>`:''}
+     <p>${verdict}</p>
+   </div></div>
+   <div class="lessonfoot">${passed?'<button class="pill" id="lcont">dalej na ścieżkę 🗺️</button>':'<button class="pill" id="lretry">spróbuj jeszcze raz 🔁</button>'}</div>`;
+  document.getElementById('lx').onclick=closeLesson;
+  const cont=document.getElementById('lcont');if(cont)cont.onclick=closeLesson;
+  const retry=document.getElementById('lretry');if(retry)retry.onclick=()=>startLesson(lv);
+}
+
+/* ---------- FISZKI (cały przedmiot, filtr po poziomach) ---------- */
+let fState=null;
+function renderFiszki(sc){
+  const s=current;
+  if(!fState||fState.subj!==s.id)fState={subj:s.id,lvl:'all',idx:0,flipped:false};
+  const wrap=el('div','scroll');
+  const chips=el('div','chips');
+  const mk=(id,name)=>{const c=el('div','chip'+(fState.lvl===id?' active':''),name);c.onclick=()=>{fState.lvl=id;fState.idx=0;renderFiszki(sc);};return c;};
+  chips.appendChild(mk('all','Wszystko 🌀'));
+  s.levels.forEach(l=>chips.appendChild(mk(l.id,l.title)));
+  wrap.appendChild(chips);
+  const list = fState.lvl==='all'?allCards(s):(s.levels.find(l=>l.id===fState.lvl).flashcards||[]).map(c=>({...c,lvl:s.levels.find(l=>l.id===fState.lvl).title}));
+  if(fState.idx>=list.length)fState.idx=0;
+  const c=list[fState.idx]||{t:'—',d:'Brak fiszek'};
+  wrap.appendChild(el('div','progressrow',`<div class="bar"><i style="width:${list.length?fState.idx/list.length*100:0}%"></i></div><div class="counter">${list.length?fState.idx+1:0}/${list.length}</div>`));
+  const flip=el('div','flip'+(fState.flipped?' flipped':''));flip.style.height='calc(100dvh - 320px)';
+  flip.innerHTML=`<div class="flipinner">
+    <div class="face front"><span class="tag">${c.lvl||''}</span><div class="term">${c.t}</div><div class="tapomat">tapnij = odpowiedź 👀</div></div>
+    <div class="face back"><span class="tag">odpowiedź ✅</span><div class="deftxt">${c.d}</div><div class="tapomat">tapnij = wróć ↩</div></div></div>`;
+  flip.onclick=()=>{fState.flipped=!fState.flipped;flip.classList.toggle('flipped');};
+  wrap.appendChild(flip);
+  const btns=el('div','fbtns');
+  const no=el('button','fbtn no','jeszcze nie 😵');const yes=el('button','fbtn yes','umiem 💪');
+  const next=(known)=>{if(known){addXP(s.id,2);toast('+2xp 💪');}fState.flipped=false;fState.idx=(fState.idx+1)%Math.max(1,list.length);renderFiszki(sc);};
+  no.onclick=()=>next(false);yes.onclick=()=>next(true);
+  btns.appendChild(no);btns.appendChild(yes);wrap.appendChild(btns);
+  sc.innerHTML='';sc.appendChild(wrap);
+}
+
+/* ---------- QUIZ (cały przedmiot, filtr po poziomach) ---------- */
+let qState=null;
+function renderQuiz(sc){
+  const s=current;
+  if(!qState||qState.subj!==s.id)qState={subj:s.id,lvl:'all',list:null,idx:0,score:0,answered:false};
+  if(!qState.list){
+    qState.list = qState.lvl==='all'?shuffle(allQuiz(s)):shuffle((s.levels.find(l=>l.id===qState.lvl).quiz||[]));
+    qState.idx=0;qState.score=0;
+  }
+  const wrap=el('div','scroll');
+  const chips=el('div','chips');
+  const mk=(id,name)=>{const c=el('div','chip'+(qState.lvl===id?' active':''),name);c.onclick=()=>{qState.lvl=id;qState.list=null;renderQuiz(sc);};return c;};
+  chips.appendChild(mk('all','Wszystko 🌀'));
+  s.levels.forEach(l=>chips.appendChild(mk(l.id,l.title)));
+  wrap.appendChild(chips);
+  wrap.appendChild(el('div','progressrow',`<div class="bar"><i style="width:${qState.list.length?qState.idx/qState.list.length*100:0}%"></i></div><div class="counter">${Math.min(qState.idx+1,qState.list.length)}/${qState.list.length}</div>`));
+  const card=el('div','qcard');
+  if(qState.idx>=qState.list.length){
+    const pct=qState.list.length?Math.round(qState.score/qState.list.length*100):0;
+    card.innerHTML=`<div class="result"><div class="big">${pct>=70?'🔥':pct>=50?'😎':'💀'}</div><h2>Wynik</h2>
+      <div class="score">Trafione <b>${qState.score}/${qState.list.length}</b> (${pct}%)</div>
+      <p>${pct>=70?'Solidnie ogarniasz ten przedmiot.':pct>=50?'Spoko, ale przejedź jeszcze fiszki.':'Wróć do fiszek i ścieżki, potem tu wróć.'}</p>
+      <button class="pill" id="qre">jeszcze raz 🔁</button></div>`;
+    wrap.appendChild(card);sc.innerHTML='';sc.appendChild(wrap);
+    document.getElementById('qre').onclick=()=>{qState.list=null;renderQuiz(sc);};
+    return;
+  }
+  const q=qState.list[qState.idx];qState.answered=false;
+  card.innerHTML=`<span class="tag">${q.lvl||''}</span><div class="qq">${q.q}</div>
+    <div class="opts">${q.a.map((o,i)=>`<button class="opt" data-i="${i}"><span class="k">${keys[i]}</span><span>${o}</span></button>`).join('')}</div>
+    <div class="explain" id="qexp"><b>czemu:</b> ${q.e||''}</div>
+    <button class="pill qnext" id="qnext" style="margin-top:14px">dalej →</button>`;
+  wrap.appendChild(card);sc.innerHTML='';sc.appendChild(wrap);
+  card.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{
+    if(qState.answered)return;qState.answered=true;const i=+o.dataset.i;
+    card.querySelectorAll('.opt').forEach(x=>{const xi=+x.dataset.i;if(xi===q.c)x.classList.add('correct');else if(xi===i)x.classList.add('wrong');else x.classList.add('dim');});
+    if(i===q.c){qState.score++;addXP(s.id,3);toast('GIT +3xp 🟢');}else toast('mid 👇');
+    document.getElementById('qexp').classList.add('show');
+    const n=document.getElementById('qnext');n.classList.add('show');n.textContent=(qState.idx+1>=qState.list.length)?'wynik 🏁':'dalej →';
+  });
+  document.getElementById('qnext').onclick=()=>{qState.idx++;renderQuiz(sc);};
+}
+
+/* ---------- EGZAMIN ---------- */
+let exState=null,exInt=null;
+function fmt(s){const m=Math.floor(s/60),x=s%60;return m+':'+String(x).padStart(2,'0');}
+function exGrade(s,pct){
+  const sc=s.grading&&s.grading.scale; // [[min,label],...] malejąco
+  if(sc){for(const[min,lab]of sc){if(pct>=min)return lab;}return s.grading.failLabel||'2 — niezaliczone';}
+  if(pct>=90)return'5';if(pct>=70)return'4';if(pct>=50)return'3';return'2 — niezaliczone';
+}
+function renderEgzamin(sc){
+  const s=current;clearInterval(exInt);exState=null;
+  const wrap=el('div','scroll');
+  const N=Math.min(20,allQuiz(s).length);
+  const lim=(s.grading&&s.grading.examMin)||20;
+  wrap.innerHTML=`<div class="result"><div class="big">🎯</div><h2>Symulacja egzaminu</h2>
+    <div class="specs"><div class="spec">${N}<small>pytań losowo</small></div><div class="spec">${lim}:00<small>na czas</small></div><div class="spec">${(s.grading&&s.grading.pass)||50}%<small>żeby zaliczyć</small></div></div>
+    <p>Losuję ${N} pytań z całego przedmiotu, bez podpowiedzi w trakcie. Na końcu % i ocena wg siatki + przegląd błędów.</p>
+    <button class="pill" id="exstart">start egzaminu 🚀</button></div>`;
+  sc.innerHTML='';sc.appendChild(wrap);
+  document.getElementById('exstart').onclick=()=>beginExam(sc,N,lim*60);
+}
+function beginExam(sc,N,limit){
+  const s=current;
+  exState={pool:shuffle(allQuiz(s)).slice(0,N),idx:0,pick:[],left:limit};
+  exState.pick=new Array(exState.pool.length).fill(null);
+  clearInterval(exInt);
+  exInt=setInterval(()=>{exState.left--;const t=document.getElementById('extimer');if(t){t.textContent='⏱ '+fmt(exState.left);t.classList.toggle('warn',exState.left<=60);}if(exState.left<=0){clearInterval(exInt);examFinish(sc);}},1000);
+  renderExamQ(sc);
+}
+function renderExamQ(sc){
+  const s=current;const ex=exState;
+  if(ex.idx>=ex.pool.length)return examFinish(sc);
+  const q=ex.pool[ex.idx];const sel=ex.pick[ex.idx];const last=ex.idx+1>=ex.pool.length;
+  const wrap=el('div','scroll');
+  wrap.innerHTML=`<div class="examhead"><div class="counter">Pytanie ${ex.idx+1}/${ex.pool.length}</div><div class="timer" id="extimer">⏱ ${fmt(ex.left)}</div></div>
+    <div class="progressrow"><div class="bar"><i style="width:${ex.idx/ex.pool.length*100}%"></i></div></div>
+    <div class="qcard"><span class="tag">${q.lvl||''}</span><div class="qq">${q.q}</div>
+      <div class="opts">${q.a.map((o,i)=>`<button class="opt${sel===i?' sel':''}" data-i="${i}"><span class="k">${keys[i]}</span><span>${o}</span></button>`).join('')}</div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        ${ex.idx>0?'<button class="pill ghost" style="flex:1" id="exprev">← wstecz</button>':''}
+        <button class="pill" style="flex:2" id="exnext">${last?'zakończ i sprawdź 🏁':'dalej →'}</button></div></div>`;
+  sc.innerHTML='';sc.appendChild(wrap);
+  wrap.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{ex.pick[ex.idx]=+o.dataset.i;wrap.querySelectorAll('.opt').forEach(x=>x.classList.toggle('sel',+x.dataset.i===ex.pick[ex.idx]));});
+  const nx=document.getElementById('exnext');nx.onclick=()=>{if(last)examFinish(sc);else{ex.idx++;renderExamQ(sc);}};
+  const pv=document.getElementById('exprev');if(pv)pv.onclick=()=>{ex.idx--;renderExamQ(sc);};
+}
+function examFinish(sc){
+  clearInterval(exInt);const s=current;const ex=exState;
+  let correct=0;const wrong=[];
+  ex.pool.forEach((q,i)=>{if(ex.pick[i]===q.c)correct++;else wrong.push({q,sel:ex.pick[i]});});
+  const pct=Math.round(correct/ex.pool.length*100);
+  const grade=exGrade(s,pct);const pass=(s.grading&&s.grading.pass)||50;
+  const emoji=pct>=90?'👑':pct>=70?'🔥':pct>=pass?'😮‍💨':'💀';
+  addXP(s.id,correct*3);
+  const rev = wrong.length? wrong.map(w=>`<div class="ritem"><div class="rq">${w.q.q}</div>
+      <div class="rbad">Twoja: ${w.sel==null?'— (brak)':keys[w.sel]+'. '+w.q.a[w.sel]}</div>
+      <div class="rgood">Dobra: ${keys[w.q.c]}. ${w.q.a[w.q.c]}</div>
+      <div class="rsrc">${w.q.lvl||''} · ${w.q.e||''}</div></div>`).join('') : '<div class="ritem rgood">Zero błędów. Clean sweep 🧼</div>';
+  const wrap=el('div','scroll');
+  wrap.innerHTML=`<div class="result"><div class="big">${emoji}</div><h2>Ocena: ${grade}</h2>
+    <div class="score">Trafione <b>${correct}/${ex.pool.length}</b> (${pct}%)</div>
+    <p>${pct>=pass?'Zdane! 🎉':'Poniżej progu — wróć do ścieżki i fiszek.'}</p>
+    <button class="pill" id="exagain">jeszcze raz 🔁</button></div>
+    <div class="review"><h3>Przegląd błędów (${wrong.length})</h3>${rev}</div>`;
+  sc.innerHTML='';sc.appendChild(wrap);
+  document.getElementById('exagain').onclick=()=>renderEgzamin(sc);
+  toast(pct>=pass?'zdane! ocena '+grade+' 🎉':'niezaliczone 💀');
+}
+
+/* ---------- INFO ---------- */
+function renderInfo(sc){
+  const s=current;const wrap=el('div','scroll');
+  wrap.innerHTML=`<div class="hero" style="padding-bottom:8px"><h1>${s.emoji} ${s.name}</h1><p>${s.tagline||''}</p></div>${s.info||'<div class="zbox"><p>Brak dodatkowych informacji.</p></div>'}`;
+  sc.innerHTML='';sc.appendChild(wrap);
+}
+
+/* ---------- INIT ---------- */
+document.addEventListener('DOMContentLoaded',()=>{
+  app=document.getElementById('app');
+  if(!SUBJECTS.length){app.innerHTML='<div class="topbar"><div class="logo">📚 NAUKA</div></div><div class="scroll"><div class="zbox"><p>Brak załadowanych przedmiotów. Dodaj plik danych w <b>data/</b> (np. data/makro.js).</p></div></div>';return;}
+  renderHome();
+});
+})();
+
+</script>
+</body>
+</html>
