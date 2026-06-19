@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NAUKA — makro</title>
+<title>NAUKA — angielski</title>
 <style>
 /* ============================================================
    NAUKA — wieloprzedmiotowa platforma do nauki (gen-z brainrot)
@@ -238,277 +238,244 @@ body{
 <div id="app"></div>
 <script>
 /* ============================================================
-   PRZEDMIOT: Polityka makroekonomiczna dla zrównoważonego rozwoju
-   Źródło: 7 prezentacji dr. Witolda Siekierzyńskiego (Uczelnia Łazarskiego)
-   + 43 pytania testowe z prezentacji zespołowych (~40% testu)
+   PRZEDMIOT: Angielski biznesowy B2+ — Business Partner B2 (Pearson)
+   ZAKRES: UNIT 3 (Finance) + UNIT 4 (Digital business)
+   Słownictwo i gramatyka SPRAWDZONE 1:1 ze zdjęciami stron podręcznika (ramki Vocabulary/Grammar/Functional language).
+   Gramatyka z kanału: tryby warunkowe (Unit 4.2) + alternatywy do "if". Prowadzący: Przemysław Cygan.
    ============================================================ */
 window.SUBJECTS = window.SUBJECTS || [];
 window.SUBJECTS.push({
-  id:"makro",
-  name:"Polityka makroekonomiczna",
-  short:"Makro",
-  emoji:"📊",
-  tagline:"Zrównoważony rozwój, doktryny, fiskalna, ESG, praca, innowacje + behawioralka.",
-  accent:"linear-gradient(135deg,#ff2d95,#a855f7,#22d3ee)",
-  accent2:"#22d3ee",
-  grading:{pass:50,examMin:20,scale:[[98,"5,5"],[90,"5"],[80,"4,5"],[70,"4"],[60,"3,5"],[50,"3"]],failLabel:"2 — niezaliczone"},
+  id:"angielski",
+  name:"Angielski B2+ (Unit 3 & 4)",
+  short:"English",
+  emoji:"🇬🇧",
+  tagline:"Business Partner B2 — Unit 3 Finance + Unit 4 Digital Business + tryby warunkowe. Słówka 1:1 z książki.",
+  accent:"linear-gradient(135deg,#1e3a8a,#3b82f6,#06b6d4)",
+  accent2:"#3b82f6",
+  lang:true,
+  grading:{pass:50,examMin:20,scale:[[90,"5 / bdb"],[80,"4,5"],[70,"4 / db"],[60,"3,5"],[50,"3 / dst"]],failLabel:"2 — niezaliczone"},
   info:`
-    <div class="zbox"><h3>Jak liczy się ocena</h3>
-      <p>🧪 <b>Sprawdzian końcowy = 60% oceny</b> (test, min. <b>50%</b> zalicza)<br>
-      🎤 <b>Prezentacja zespołowa = 40% oceny</b><br>
-      📌 Dozwolone łącznie <b>2 nieobecności</b> na warsztatach.</p></div>
-    <div class="zbox"><h3>⚡ Najważniejszy cheat</h3>
-      <p>4 pytania testowe z ostatniego slajdu KAŻDEJ prezentacji zespołowej (wszystkich grup, <b>łącznie z Twoją</b>) to <b>~40% pytań na teście</b>. Wszystkie wrzucone do poziomu <b>🎤 Pytania grup</b> i do quizu.</p></div>
-    <div class="zbox"><h3>Siatka ocen (test)</h3>
-      <table class="gradetbl">
-        <tr><td>50–59%</td><td>3</td></tr><tr><td>60–69%</td><td>3,5</td></tr><tr><td>70–79%</td><td>4</td></tr>
-        <tr><td>80–89%</td><td>4,5</td></tr><tr><td>90–97%</td><td>5</td></tr><tr><td>98–100%</td><td>5,5</td></tr></table></div>`,
+    <div class="zbox"><h3>📕 Zakres</h3>
+      <p>Tylko <b>Unit 3 — Finance</b> i <b>Unit 4 — Digital business</b> z <b>Business Partner B2</b> (Pearson). Słownictwo i gramatyka wzięte <b>dokładnie z Twoich zdjęć stron</b> (ramki Vocabulary / Grammar / Functional language). Prowadzący: Przemysław Cygan.</p></div>
+    <div class="zbox"><h3>🔑 Gramatyka (priorytet)</h3>
+      <p>Tryby warunkowe: zero / first / second + first vs second + alternatywy do „if” (Unit 4.2). Z Unitu 3: certainty & probability + position of adverbs (3.2) i articles a/an/the/ø (3.5).</p></div>
+    <div class="zbox"><h3>💰 Unit 3 — Finance</h3>
+      <p>3.1 finanse i kryzysy · 3.2 catching up with rivals (certainty/probability) · 3.3 managing bad news · 3.4 telephoning to clarify · 3.5 annual report summary (articles).</p></div>
+    <div class="zbox"><h3>💻 Unit 4 — Digital business</h3>
+      <p>4.1 digital disruptors (tech + word building) · 4.2 conditionals + linkers · 4.3 handling difficult communicators · 4.4 negotiating strategies · 4.5 short business proposal.</p></div>
+    <div class="zbox"><h3>📝 Homework (deadline 20.06)</h3>
+      <p>Przeczytać teksty + odpowiedzieć na pytania oraz napisać jedną odpowiedź „Over to you” na <b>150–180 słów</b>. Wysłać przez Teams.</p></div>`,
   levels:[
-    /* ---------------- L1 ---------------- */
-    {id:"l1",title:"Podstawy",emoji:"🧩",
+    /* ===================== CONDITIONALS (Unit 4.2) ===================== */
+    {id:"a1",title:"Zero conditional",emoji:"0️⃣",
      feed:[
-      {title:"Makro vs społeczna — o co biega",body:"<b>Polityka makroekonomiczna</b> = zarządzanie całą gospodarką państwa (alokacja zasobów, dług = wiarygodność fiskalna, stopy = polityka pieniężna).<br><br><b>Polityka społeczna</b> = państwo kształtuje warunki życia i łagodzi nierówności. Pomoc + inwestycja w kapitał ludzki (zdrowie, edukacja).",real:"Makro = pilnowanie kasy państwa. Społeczna = pilnowanie ludzi."},
-      {title:"Kwestia społeczna to nie jeden problem",body:"<b>Kwestia społeczna</b> = wspólne podłoże problemów (bezrobocie, kryzys mieszkaniowy, ubóstwo). Systemowa sprzeczność w strukturze społeczeństwa (Rysz-Kowalczyk).",real:"Nie 'jeden ma pecha', tylko 'system tak ustawiony, że produkuje te problemy'."},
-      {title:"Zrównoważony rozwój = 3 sfery",body:"Równowaga: 💰 <b>ekonomicznej</b>, 👥 <b>społecznej</b>, 🌍 <b>ekologicznej</b>. Rozwój, który nie zagraża przyszłym pokoleniom.",real:"3 nogi stołka — wywal jedną i rozwój się wywraca. Motyw całego kursu.",mnemo:"<b>EKO-SPO-EKO</b>: Ekonomia, Społeczeństwo, Ekologia."},
-      {title:"Polityka społeczna ma pipeline",body:"<b>Diagnoza → Analiza przyczyn → Propozycje → Decyzja → Legislacja → Wdrożenie → Ewaluacja.</b> Na końcu: zadziałało? Co poprawić?",real:"Jak roadmapa produktu: od 'co zepsute' do 'czy nasza łatka pomogła'."},
-      {title:"4 narzędzia polityki społecznej",body:"💸 <b>Ekonomiczne</b> (podatki, zasiłki, dotacje)<br>⚖️ <b>Prawne</b> (Kodeks pracy, ustawy)<br>📢 <b>Informacyjne</b> (kampanie, poradnictwo)<br>👷 <b>Kadrowe</b> (pracownicy socjalni, urzędnicy)",mnemo:"<b>KASA · PRAWO · GADANIE · LUDZIE</b> = cztery dźwignie państwa."},
-      {title:"Ludzie NIE są homo economicus",body:"Realny człowiek ≠ kalkulator. Działa na <b>racjonalności ograniczonej</b>, <b>heurystykach</b>, <b>status quo bias</b> ('zawsze tak robiliśmy') i normach.",real:"Behawioralka wraca w KAŻDEJ części kursu — ogarnij raz, masz darmowe punkty wszędzie."}
+      {title:"Zero conditional = fakty i prawdy ogólne",body:"Schemat: <b>If + present, … present.</b> Coś <b>zawsze prawdziwego</b>.<br><i>If the food <b>is</b> out of date, I <b>don't eat</b> it.</i>",mnemo:"Zero = zero wątpliwości. <b>if ≈ when</b>."},
+      {title:"Przecinek",body:"If na początku → przecinek: <i>If you are talking, I can't concentrate.</i> · Main clause pierwsze → bez przecinka.",real:"Ta sama zasada w zero/first/second."}
      ],
      flashcards:[
-      {t:"Polityka makroekonomiczna",d:"Zarządzanie gospodarką państwa jako całością: alokacja zasobów, wiarygodność fiskalna (dług), polityka pieniężna (stopy)."},
-      {t:"Polityka społeczna",d:"Działalność państwa kształtująca warunki życia i łagodząca nierówności. Pomoc + inwestycja w kapitał ludzki. Opiera się na wiedzy i wartościach (aksjologii)."},
-      {t:"Kwestia społeczna",d:"Wspólne podłoże różnych problemów (bezrobocie, ubóstwo, mieszkania). Systemowa sprzeczność w strukturze społeczeństwa (Rysz-Kowalczyk)."},
-      {t:"Zrównoważony rozwój",d:"Równowaga 3 sfer: ekonomicznej, społecznej i ekologicznej. Rozwój niezagrażający przyszłym pokoleniom."},
-      {t:"4 instrumenty polityki społecznej",d:"<b>Ekonomiczne</b> (podatki, zasiłki), <b>prawne</b> (ustawy), <b>informacyjne</b> (kampanie), <b>kadrowe</b> (pracownicy socjalni). Mnemo: KASA, PRAWO, GADANIE, LUDZIE."},
-      {t:"Racjonalność ograniczona",d:"Bounded rationality — człowiek nie jest idealnym kalkulatorem; decyduje na podstawie heurystyk i skrótów myślowych."},
-      {t:"Status quo bias",d:"Skłonność do trzymania się obecnego stanu — 'zawsze tak robiliśmy'. Opór przed zmianą."}
+      {t:"Zero conditional — schemat",d:"If + present, … present. Prawdy ogólne / fakty."},
+      {t:"If you heat ice, it melts.",d:"Jeśli podgrzejesz lód, topnieje. (zero)"},
+      {t:"if = when (zero cond.)",d:"Można zamienić 'if' na 'when'."},
+      {t:"Przecinek",d:"If na początku → przecinek; main clause na początku → bez."}
      ],
      quiz:[
-      {q:"Czym różni się polityka makroekonomiczna od społecznej?",a:["Makro = zarządzanie całą gospodarką; społeczna = warunki życia i nierówności","Makro = tylko podatki; społeczna = tylko emerytury","To dokładnie to samo","Makro dotyczy gmin, społeczna państwa"],c:0,e:"Makro = gospodarka jako całość (dług, stopy). Społeczna = warunki życia i nierówności."},
-      {q:"Ile rodzajów instrumentów ma polityka społeczna?",a:["3: prawne, kadrowe, militarne","4: ekonomiczne, prawne, informacyjne, kadrowe","2: podatki i zasiłki","5: w tym cyfrowe"],c:1,e:"Cztery: KASA, PRAWO, GADANIE, LUDZIE."},
-      {q:"Co znaczy, że człowiek nie jest 'homo economicus'?",a:["Że nie zna ekonomii","Że działa na heurystykach i biasach, nie jak idealny kalkulator","Że zawsze decyduje racjonalnie","Że nie płaci podatków"],c:1,e:"Racjonalność ograniczona, heurystyki, status quo bias, normy."},
-      {q:"Trzy sfery zrównoważonego rozwoju to:",a:["polityczna, militarna, kulturowa","ekonomiczna, społeczna, ekologiczna","lokalna, krajowa, globalna","prawna, fiskalna, monetarna"],c:1,e:"Równowaga 3 sfer — rozwój niezagrażający przyszłym pokoleniom."}
+      {q:"„If you heat water to 100°C, it ___.”",a:["will boil","boils","would boil","boiled"],c:1,e:"Zero: if + present, present → boils."},
+      {q:"Zero conditional dotyczy:",a:["hipotezy","prawdy ogólnej / faktu","planu na jutro","przeszłości"],c:1,e:"Coś zawsze prawdziwego."},
+      {q:"'if' w zero conditional ≈",a:["when","unless","would","will"],c:0,e:"If ≈ when."},
+      {q:"Poprawny przecinek:",a:["I don't drive, if I drink.","If I drink I don't drive.","If I drink, I don't drive.","none"],c:2,e:"If pierwszy → przecinek."}
      ]},
-    /* ---------------- L2 ---------------- */
-    {id:"l2",title:"Doktryny",emoji:"🏛️",
+    {id:"a2",title:"First conditional",emoji:"1️⃣",
      feed:[
-      {title:"Ordoliberalizm = liberalizm uporządkowany",body:"Szkoła fryburska (Eucken, Böhm). Państwo świadomie tworzy <b>ramy</b> dla wolnego rynku, bo rynek sam się niszczy (monopole). Państwo = <b>strażnik ładu</b>, ustala reguły gry.",real:"Państwo = sędzia na meczu, nie zawodnik. Nie strzela goli, pilnuje zasad."},
-      {title:"SGR: 'Dobrobyt przez konkurencję'",body:"<b>Społeczna Gospodarka Rynkowa</b> (Erhard) = praktyczne wdrożenie ordoliberalizmu. Fundament: <b>subsydiarność</b> — państwo pomaga TYLKO gdy jednostka/rodzina nie da rady.",real:"Pomoc tak, rozpieszczanie nie. Najpierw ty/rodzina, na końcu państwo."},
-      {title:"Welfare state — i jego haczyk",body:"<b>Państwo opiekuńcze</b> = aktywny protektor, szeroka redystrybucja, 'solidarność transferowa'. Krytyka ordo: <b>moral hazard</b>, zabija bodźce; 'państwo podatków' → 'państwo długu' (Streeck).",real:"Dużo dawania = ludzie przywykają, kasa się kończy → kredyt na koszt wnuków."}
+      {title:"First conditional = realna przyszłość",body:"Schemat: <b>If + present, … will/imperative/modal.</b> Coś <b>prawdopodobnego</b>.<br><i>If you <b>study</b>, you <b>will pass</b>.</i>",mnemo:"Warunek present, skutek <b>will</b> + bezokolicznik."},
+      {title:"NIE 'will' po if",body:"<s>If you will study…</s> ❌ → <i>If you study…</i> ✅",real:"Will tylko w części głównej."}
      ],
      flashcards:[
-      {t:"Ordoliberalizm",d:"'Liberalizm uporządkowany' (szkoła fryburska: Eucken, Böhm). Państwo tworzy ramy (ład) dla wolnego rynku, bo rynek sam się niszczy. Państwo = strażnik ładu."},
-      {t:"Społeczna Gospodarka Rynkowa (SGR)",d:"Wdrożenie ordoliberalizmu (Erhard). 'Dobrobyt przez konkurencję'. Łączy wolność rynku z równością społeczną. Fundament: subsydiarność."},
-      {t:"Zasada subsydiarności",d:"Pomocniczość — państwo pomaga tylko tam, gdzie jednostka lub mniejsza wspólnota (rodzina) absolutnie nie da rady sama."},
-      {t:"Państwo opiekuńcze (welfare state)",d:"Aktywny gracz i protektor, szeroka redystrybucja, 'solidarność transferowa'. Krytyka: moral hazard, dezaktywizacja, ryzyko 'państwa długu'."},
-      {t:"Moral hazard",d:"Pokusa nadużycia — kto czerpie zyski, ten musi ponosić ryzyko strat. Ratowanie źle zarządzanych firm z kasy podatników niszczy tę zasadę."},
-      {t:"7 zasad konstytuujących (Eucken)",d:"Fundamenty ładu: system cen, stabilność pieniądza, otwarte rynki, własność prywatna, swoboda umów, odpowiedzialność materialna, konstancja (stałość) polityki. Mnemo: Ceny, Pieniądz, Rynki, Własność, Umowy, Odpowiedzialność, Stałość."},
-      {t:"4 zasady regulujące (Eucken)",d:"Wyjątki gdy państwo MUSI interweniować (zgodnie z rynkiem): polityka antymonopolowa, korekta różnic dochodowych, internalizacja efektów zewnętrznych, interwencje na rynku pracy."}
+      {t:"First conditional — schemat",d:"If + present, … will/imperative/modal. Realna przyszłość."},
+      {t:"If you study, you will pass.",d:"Jeśli będziesz się uczyć, zdasz."},
+      {t:"Po 'if' NIE ma 'will'",d:"If you study (✓), nie 'If you will study' (✗)."},
+      {t:"'ll / won't",d:"will → 'll; will not → won't."}
      ],
      quiz:[
-      {q:"Jaka jest rola państwa w ordoliberalizmie?",a:["Bezpośredni gracz rynkowy","Strażnik ładu — ustala reguły, nie gra sam","Państwo powinno zniknąć","Właściciel wszystkich firm"],c:1,e:"Strażnik ładu — bo rynek sam ma skłonność do samozniszczenia (monopole)."},
-      {q:"Hasło Społecznej Gospodarki Rynkowej (Erhard):",a:["'Równość przez redystrybucję'","'Dobrobyt przez konkurencję'","'Państwo ponad wszystko'","'Wolny rynek bez granic'"],c:1,e:"SGR = wdrożenie ordoliberalizmu, fundament: subsydiarność."},
-      {q:"Co krytycy SGR zarzucają państwu opiekuńczemu?",a:["Że jest za tanie","Że generuje moral hazard i może stać się 'państwem długu'","Że za mało redystrybuuje","Że nie istnieje"],c:1,e:"Moral hazard, dezaktywizacja, ewolucja w 'państwo długu' (Streeck)."},
-      {q:"Ile zasad konstytuujących wymienił Eucken?",a:["3","5","7","10"],c:2,e:"Siedem fundamentów ładu konkurencyjnego."}
+      {q:"„If it ___ tomorrow, we'll stay home.”",a:["will rain","rains","would rain","rained"],c:1,e:"If + present (rains)."},
+      {q:"Które POPRAWNE?",a:["If you will help me, I finish faster.","If you help me, I'll finish faster.","If you help me, I finish faster.","If you helped me, I'll finish faster."],c:1,e:"If + present, will + bezokolicznik."},
+      {q:"First conditional opisuje:",a:["nierealne marzenia","realną przyszłość","prawdy ogólne","przeszłość"],c:1,e:"Coś realnie możliwego."},
+      {q:"„Jeśli skończysz raport, wyślij mi go.”",a:["If you will finish it, send it.","If you finish the report, send it to me.","If you finished it, send it.","none"],c:1,e:"First + tryb rozkazujący."}
      ]},
-    /* ---------------- L3 ---------------- */
-    {id:"l3",title:"Polityka fiskalna",emoji:"💰",
+    {id:"a3",title:"Second conditional",emoji:"2️⃣",
      feed:[
-      {title:"Magiczny Czworokąt (Kaldor 1967)",body:"4 klasyczne cele makro: 📈 wzrost PKB, 👔 pełne zatrudnienie, 💵 stabilność cen (~2–2,5%), ⚖️ równowaga bilansu płatniczego. W XXI w. + ekologia i spójność społeczna.",real:"'Magiczny' bo trudno mieć wszystkie 4 naraz — pociągniesz jeden, drugi spada.",mnemo:"<b>WZROST · PRACA · CENY · BILANS</b>."},
-      {title:"Deficit bias — czemu politycy lubią dług",body:"System demokratyczny ma wbudowaną <b>skłonność do deficytu</b>. Wydatki/niższe podatki = głosy TERAZ, koszty (dług) na przyszłe pokolenia. Skutek: rynki żądają wyższych odsetek.",real:"Politycy = present bias na sterydach. Cukierek dziś, rachunek nienarodzonym."},
-      {title:"Trójkąt wiarygodności fiskalnej",body:"📏 <b>Reguły fiskalne</b> (limity) + 🏛️ <b>niezależne instytucje</b> (Rady Fiskalne) + 🔍 <b>przejrzystość budżetu</b>.<br>UE: Pakt Stabilności = deficyt max <b>3% PKB</b>, dług max <b>60% PKB</b>.",real:"3% i 60% — znaj na pamięć, padają na teście jak nic."},
-      {title:"Wypychanie długu poza budżet",body:"Polska klasyka: wydatki przez <b>BGK</b> (Fundusz COVID, Krajowy Fundusz Drogowy) i <b>PFR</b> (Tarcza). Emisja obligacji POZA deficytem, ale dolicza się do długu sektora. Fundusz COVID > 180 mld zł.",real:"Budżet wygląda chudo, realny dług grubszy. Rynki i tak to widzą."}
+      {title:"Second conditional = nierealne / hipotetyczne",body:"Schemat: <b>If + past, … would/could/might + bezokolicznik.</b><br><i>If I <b>won</b> the lottery, I <b>would buy</b> a yacht.</i>",mnemo:"Past w 'if', <b>would/could/might</b> w głównej."},
+      {title:"'If I were you…'",body:"<b>were</b> dla wszystkich osób: <i>If I <b>were</b> you, I would talk to the boss.</i>",real:"Gotowy zwrot na radę."}
      ],
      flashcards:[
-      {t:"Magiczny Czworokąt (Kaldor 1967)",d:"4 cele makro: wzrost PKB, pełne zatrudnienie, stabilność cen (~2–2,5%), równowaga bilansu płatniczego. 'Magiczny' bo trudno mieć wszystkie naraz."},
-      {t:"Deficit bias",d:"Systemowa skłonność polityków do generowania deficytu — wydatki/niższe podatki dają głosy teraz, koszty (dług) spadają na przyszłe pokolenia."},
-      {t:"Wiarygodność fiskalna",d:"Zdolność państwa do przekonania rynków, że spłaci długi bez hiperinflacji. Trójkąt: reguły + niezależne instytucje + przejrzystość budżetu."},
-      {t:"Pakt Stabilności i Wzrostu UE",d:"Limity: deficyt max 3% PKB, dług max 60% PKB."},
-      {t:"Dyskrecjonalna vs reguły fiskalne",d:"Dyskrecjonalna = decyzje 'z bieżącej ręki' (elastyczna, ryzyko deficit bias; tarcze COVID). Reguły = sztywne formalne zasady (wiarygodna; reguła wydatkowa)."}
+      {t:"Second conditional — schemat",d:"If + past, … would/could/might + bezokolicznik. Nierealne/hipotetyczne."},
+      {t:"If I won the lottery, I would buy a yacht.",d:"Gdybym wygrał, kupiłbym jacht."},
+      {t:"If I were you, I would…",d:"Na Twoim miejscu bym… ('were' dla każdej osoby)"},
+      {t:"would / could / might",d:"would = bym; could = mógłbym; might = może."}
      ],
      quiz:[
-      {q:"Limity Paktu Stabilności i Wzrostu UE to:",a:["deficyt 5% PKB, dług 80% PKB","deficyt 3% PKB, dług 60% PKB","deficyt 2% PKB, dług 50% PKB","brak limitów"],c:1,e:"Deficyt max 3% PKB, dług max 60% PKB."},
-      {q:"Czym jest 'deficit bias'?",a:["Błąd księgowy","Systemowa skłonność polityków do deficytu (głosy teraz, dług na przyszłość)","Zakaz zadłużania państwa","Nadwyżka budżetowa"],c:1,e:"Wydatki dają głosy natychmiast, koszty długu spadają na przyszłe pokolenia."},
-      {q:"Trójkąt wiarygodności fiskalnej to:",a:["podatki, wydatki, dług","reguły fiskalne, niezależne instytucje, przejrzystość budżetu","ZUS, NBP, GUS","deficyt, inflacja, bezrobocie"],c:1,e:"Reguły + Rady Fiskalne + przejrzystość."},
-      {q:"Magiczny Czworokąt celów makro (Kaldor) NIE obejmuje:",a:["wzrostu PKB","pełnego zatrudnienia","stabilności cen","maksymalizacji eksportu zbrojeniowego"],c:3,e:"4 cele: wzrost, zatrudnienie, stabilne ceny, równowaga bilansu płatniczego."}
+      {q:"„If I ___ rich, I would travel the world.”",a:["am","will be","were","be"],c:2,e:"if + past (were), would."},
+      {q:"„Gdybym miał czas, pomógłbym ci.”",a:["If I have time, I will help.","If I had time, I would help.","If I had time, I will help.","none"],c:1,e:"if + past, would."},
+      {q:"Second conditional = sytuacje:",a:["realne","nierealne / hipotetyczne","zawsze prawdziwe","przeszłe"],c:1,e:"Hipotetyczne/nierealne."},
+      {q:"„Na Twoim miejscu bym odszedł”",a:["If I am you, I will leave.","If I was you, I leave.","If I were you, I would leave.","none"],c:2,e:"If I were you, I would + bezokolicznik."}
      ]},
-    /* ---------------- L4 ---------------- */
-    {id:"l4",title:"Polska: demografia i mieszkania",emoji:"🇵🇱",
+    {id:"a4",title:"First vs Second",emoji:"⚔️",
      feed:[
-      {title:"Od Kuroniówki do 800+",body:"Ewolucja po 1989: od <b>osłon socjalnych</b> (Kuroniówka) do <b>aktywnej polityki</b> i 500+/800+.<br>Dwa systemy: <b>ubezpieczeniowy</b> (składkowy — ZUS) i <b>zaopatrzeniowy</b> (podatkowy — zasiłki, pomoc społeczna).",real:"Składkowy = płacisz składki, dostajesz później. Zaopatrzeniowy = z budżetu dla potrzebujących."},
-      {title:"Czemu 800+ NIE podniosło dzietności",body:"Cel: więcej dzieci + mniej ubóstwa. Efekt: <b>ubóstwo dziecięce ↓ mocno</b>, dzietność ledwo drgnęła. Behawioralka: loss aversion, reference point, mental accounting, dezaktywizacja kobiet.",real:"Forsa pomogła portfelom, nie zmieniła decyzji 'czy mieć dziecko'."},
-      {title:"TFR 1,16 — Polska się nie odtwarza",body:"<b>TFR</b> = przeciętna liczba dzieci na kobietę. PL ≈ <b>1,16</b> (2023), 2024 ~1,1. Próg zastępowalności pokoleń = <b>2,1</b>. Starzenie się, rosnące wydatki na emerytury i zdrowie.",real:"1,16 i 2,1 — zapamiętaj. Bomba demograficzna pod systemem emerytalnym."},
-      {title:"Kwestia mieszkaniowa (cz.3 + grupa OJ)",body:"Programy dopłat (np. <b>Bezpieczny Kredyt 2%</b>) często <b>podbijają ceny</b> zamiast rozwiązać problem. Rola budownictwa społecznego: <b>TBS</b> (Towarzystwa Budownictwa Społecznego) i <b>SIM</b> (Społeczne Inicjatywy Mieszkaniowe). Wzór: Wiener Wohnen (Wiedeń).",real:"Mieszkanie = towar czy prawo? Sam rynek nie da mieszkań dla wszystkich — stąd najem społeczny."}
+      {title:"Możliwe vs nierealne",body:"<b>First</b> = możliwe: <i>If I study, I will pass.</i><br><b>Second</b> = nierealne: <i>If I studied medicine, I would become a doctor.</i>",mnemo:"First → present+will. Second → past+would."},
+      {title:"Inny dystans",body:"<i>If I have time, I'll call.</i> (realnie) vs <i>If I had time, I'd call.</i> (raczej nie mam).",real:"Wybór pokazuje prawdopodobieństwo."}
      ],
      flashcards:[
-      {t:"Ryzyko socjalne",d:"Zdarzenie losowe (choroba, starość) powodujące utratę dochodu lub wzrost potrzeb, wymagające zabezpieczenia społecznego (Samoraj-Charitonow)."},
-      {t:"Ubezpieczeniowy vs zaopatrzeniowy",d:"Ubezpieczeniowy = składkowy (emerytury, ZUS). Zaopatrzeniowy = podatkowy (zasiłki rodzinne, pomoc społeczna)."},
-      {t:"Dlaczego 500+/800+ nie podniosło dzietności",d:"Mocno zredukowało ubóstwo dziecięce, ale dzietność ledwo drgnęła. Mechanizmy: loss aversion, reference point, mental accounting, dezaktywizacja."},
-      {t:"TFR (współczynnik dzietności)",d:"Przeciętna liczba dzieci na kobietę przy obecnych wzorcach. PL ≈ 1,16; próg zastępowalności pokoleń = 2,1."},
-      {t:"Mediana wieku",d:"Wiek dzielący populację na dwie równe części (młodszą i starszą). Rośnie = społeczeństwo się starzeje."},
-      {t:"TBS i SIM",d:"Formy najmu społecznego o umiarkowanym czynszu. TBS = starszy model; SIM (Społeczne Inicjatywy Mieszkaniowe) = nowszy, przy wsparciu państwa i samorządów, dla średnich dochodów."}
+      {t:"First = ?",d:"Możliwe/prawdopodobne. If + present, will."},
+      {t:"Second = ?",d:"Nierealne/hipotetyczne. If + past, would."},
+      {t:"If I have time, I'll call.",d:"Realnie (first)."},
+      {t:"If I had time, I'd call.",d:"Raczej nie mam czasu (second)."}
      ],
      quiz:[
-      {q:"Dlaczego 800+ NIE podniosło znacząco dzietności?",a:["Był za mały finansowo","Zadziałały mechanizmy behawioralne — zredukował ubóstwo, ale nie zmienił decyzji o dzieciach","Nikt o nim nie wiedział","Bo go odebrano"],c:1,e:"Ubóstwo dziecięce ↓, dzietność ledwo drgnęła. Loss aversion, reference point, dezaktywizacja."},
-      {q:"TFR w Polsce wynosi ok.:",a:["2,1","1,16","3,0","0,5"],c:1,e:"≈1,16 (2023). Próg zastępowalności pokoleń to 2,1."},
-      {q:"Ubezpieczeniowy vs zaopatrzeniowy system zabezpieczenia:",a:["Ubezpieczeniowy = składkowy (ZUS); zaopatrzeniowy = podatkowy (zasiłki, pomoc społeczna)","Oba składkowe","Ubezpieczeniowy dla bogatych","Nie ma różnicy"],c:0,e:"Składkowy = emerytury z ZUS. Zaopatrzeniowy = z podatków."},
-      {q:"Jaki jest cel społecznych form najmu (TBS, SIM)?",a:["Budowa premium w centrach","Zapewnienie dostępnych mieszkań osobom o średnich i niższych dochodach","Zwiększenie zysków deweloperów","Likwidacja rynku najmu"],c:1,e:"TBS i SIM = najem o umiarkowanym czynszu dla średnich/niższych dochodów."}
+      {q:"„Jeśli dostanę podwyżkę (realne), kupię auto.”",a:["If I get a raise, I'll buy a car.","If I got a raise, I'd buy a car.","If I get a raise, I bought a car.","none"],c:0,e:"Realne → first."},
+      {q:"„Gdybym był prezesem (nierealne)…”",a:["If I am CEO, I'll…","If I were CEO, I would…","If I was CEO, I change…","none"],c:1,e:"Nierealne → second."},
+      {q:"First vs second:",a:["bez różnicy","first=możliwe; second=nierealne","first=przeszłość","first=pytania"],c:1,e:"First realne, second nierealne."},
+      {q:"Które = małe prawdopodobieństwo?",a:["If I finish early, I'll join you.","If I finished early, I'd join you.","If I finish early, I join you.","none"],c:1,e:"Second = niskie prawdopodobieństwo."}
      ]},
-    /* ---------------- L5 ---------------- */
-    {id:"l5",title:"Modele welfare + Zielony Ład",emoji:"🌍",
+    {id:"a5",title:"Alternatywy do „if”",emoji:"🔀",
      feed:[
-      {title:"4 modele welfare (Esping-Andersen)",body:"❄️ <b>Nordycki</b> — wysokie podatki, uniwersalne usługi, max dekomodyfikacja (Szwecja)<br>🏭 <b>Konserwatywny</b> — ubezpieczenia wg statusu, rola rodziny (Niemcy)<br>🦅 <b>Liberalny</b> — niskie podatki, pomoc tylko biednym (USA, UK)<br>👨‍👩‍👧 <b>Śródziemnomorski</b> (Ferrara 1996) — rodzina jako siatka (Włochy)",mnemo:"<b>NORD · KONSERWA · LIBERAŁ · POŁUDNIE</b>."},
-      {title:"Celtycki Tygrys — wzlot i upadek Irlandii",body:"Pakt społeczny od 1987 (umiar płacowy za niższe podatki) + <b>FDI</b> (niski CIT, angielski, UE) → Big Tech. PKB ~9,4%/rok. Ale krach 2008–2013 (PKB −14%).",real:"Model liberalny. Wzrost na jednej nodze (kapitał zagraniczny + nieruchomości) = kruchy."},
-      {title:"European Green Deal",body:"Strategia UE: <b>neutralność klimatyczna do 2050</b> + oddzielenie wzrostu od zużycia zasobów. Rozwija SGR w <b>S-EGR</b> (Społeczno-Ekologiczną). Traktat z Lizbony (2009) = 3 filary: gospodarczy, społeczny, ekologiczny.",real:"SGR dostał trzecią nogę — eko."},
-      {title:"Czemu wiesz że eko, a nie robisz",body:"Bariery: present bias, status quo bias, information overload, psychological distance. Narzędzia: <b>default options</b> (OZE domyślnie → 80–95% nie zmienia), <b>social comparison</b>, <b>loss framing</b> ('tracisz 500 zł' > 'zaoszczędzisz').",real:"Nudge > kazanie. Ustaw dobry default, większość przy nim zostanie."}
+      {title:"unless / in case",body:"<b>unless</b> = if not (chyba że): <i>I won't go <b>unless</b> you go too.</i><br><b>in case</b> = na wypadek gdyby: <i>Take an umbrella <b>in case</b> it rains.</i>",mnemo:"unless = chyba że; in case = na wszelki wypadek (NIE 'jeśli')."},
+      {title:"as long as / provided / even if",body:"<b>as long as / provided (that) / providing (that) / on condition that</b> = pod warunkiem że (= only if).<br><b>even if</b> = nawet jeśli. <b>whether or not</b> = niezależnie czy.",real:"provided/providing that = mocniejsze 'only if'."},
+      {title:"suppose / supposing",body:"<b>suppose / supposing (that)</b> = załóżmy, że / a gdyby tak.",real:"Często z second conditional."}
      ],
      flashcards:[
-      {t:"Typologia Esping-Andersena",d:"3 reżimy: socjaldemokratyczny (nordycki), konserwatywny (korporatystyczny), liberalny. Ferrara (1996) dodał 4. — śródziemnomorski."},
-      {t:"Model nordycki",d:"Wysokie progresywne podatki, uniwersalne usługi, najwyższa dekomodyfikacja, egalitaryzm. Szwecja, Dania, Norwegia, Finlandia."},
-      {t:"Model konserwatywny/korporatystyczny",d:"Ubezpieczenia wg statusu zawodowego, silna rola rodziny, korporatyzm. Niemcy, Francja, Austria."},
-      {t:"Model liberalny",d:"Niskie podatki/wydatki, testy dochodowe, welfare stigma, rynek prywatny, niska dekomodyfikacja. USA, UK, Kanada, Irlandia."},
-      {t:"Model śródziemnomorski (Ferrara 1996)",d:"Słabe, fragmentaryczne zabezpieczenia, rodzina jako bufor, insiderzy vs outsiderzy. Włochy, Hiszpania, Grecja, Portugalia."},
-      {t:"Dekomodyfikacja",d:"Stopień, w jakim obywatel może 'wyjść z rynku pracy' bez utraty dochodu i statusu. Najwyższa w modelu nordyckim."},
-      {t:"Celtycki Tygrys",d:"Boom Irlandii (~1995–2008) na pakcie społecznym i FDI (niski CIT). Krach 2008–2013. Model liberalny."},
-      {t:"Europejski Zielony Ład",d:"Strategia UE: neutralność klimatyczna do 2050 + oddzielenie wzrostu od zużycia zasobów. Po wojnie w Ukrainie + bezpieczeństwo energetyczne (REPowerEU)."},
-      {t:"S-EGR",d:"Społeczno-Ekologiczna Gospodarka Rynkowa — rozwinięcie SGR o filar ekologiczny (internalizacja kosztów CO₂)."},
-      {t:"Traktat z Lizbony",d:"Reforma traktatów UE (podpisany 2007, obowiązuje od 2009). Ustanowił 3 filary: gospodarczy, społeczny, ekologiczny."},
-      {t:"Default options (nudge)",d:"Opcja domyślna (np. OZE opt-out zamiast opt-in). 80–95% klientów nie zmienia domyślnego wyboru."}
+      {t:"unless",d:"jeśli nie / chyba że (= if not)."},{t:"in case",d:"na wypadek gdyby (zapobiegawczo)."},
+      {t:"as long as / provided (that)",d:"pod warunkiem że (= only if)."},{t:"even if",d:"nawet jeśli."},
+      {t:"whether or not",d:"niezależnie czy."},{t:"suppose / supposing",d:"załóżmy, że / a gdyby."}
      ],
      quiz:[
-      {q:"Który kraj reprezentuje model nordycki?",a:["USA","Szwecja","Włochy","Niemcy"],c:1,e:"Nordycki = wysokie podatki, uniwersalne usługi, max dekomodyfikacja."},
-      {q:"Co to dekomodyfikacja?",a:["Prywatyzacja usług","Stopień, w jakim można 'wyjść z rynku pracy' bez utraty dochodu","Podatek od towarów","Likwidacja rynku"],c:1,e:"Najwyższa w modelu nordyckim."},
-      {q:"Kto dodał model śródziemnomorski do typologii?",a:["Keynes","Ferrara (1996)","Hayek","Mazzucato"],c:1,e:"Esping-Andersen miał 3 modele; Ferrara (1996) dodał 4."},
-      {q:"Główny cel Europejskiego Zielonego Ładu:",a:["neutralność klimatyczna do 2050","wzrost PKB o 10%","likwidacja UE","powrót do węgla"],c:0,e:"Neutralność do 2050 + oddzielenie wzrostu od zużycia zasobów."},
-      {q:"Celtycki Tygrys — kluczowa lekcja?",a:["Wysokie podatki gwarantują wzrost","Model oparty na FDI i bańce nieruchomości okazał się kruchy (krach 2008)","Państwo opiekuńcze zawsze wygrywa","FDI nie ma znaczenia"],c:1,e:"Boom na FDI, krach 2008–2013. Model liberalny."}
+      {q:"„___ you hurry, you'll miss the bus.” (jeśli się nie pospieszysz)",a:["Unless","As long as","Even if","In case"],c:0,e:"unless = if not."},
+      {q:"„Weź gotówkę ___ karta nie zadziała.”",a:["unless","in case","provided that","even if"],c:1,e:"in case = na wypadek gdyby."},
+      {q:"„Pożyczę ci to, ___ oddasz jutro.”",a:["unless","even if","as long as","whether or not"],c:2,e:"as long as / provided that."},
+      {q:"„unless” znaczy:",a:["jeśli","jeśli nie / chyba że","na wypadek gdyby","nawet jeśli"],c:1,e:"unless = if not."}
      ]},
-    /* ---------------- L6 ---------------- */
-    {id:"l6",title:"ESG + Ekonomia Obwarzanka",emoji:"🍩",
+    /* ===================== UNIT 3 — FINANCE 💰 (słówka z książki) ===================== */
+    {id:"a6",title:"💰 U3.1: Finanse i kryzysy",emoji:"📉",
      feed:[
-      {title:"Keynes vs Hayek o Zielonym Ładzie",body:"🟥 <b>Keynes</b> — regulacje, zakazy, dotacje do OZE. Państwo = sterownik. Ryzyko: nieefektywność, lobby.<br>🟦 <b>Hayek</b> — ceny i handel emisjami, podatek węglowy. Ryzyko: za wolno.<br>UE = <b>HYBRYDA</b>: zakaz aut spalinowych + EU ETS.",real:"Nie 'albo-albo'. UE bierze najlepsze z obu — zakazy PLUS cena CO₂."},
-      {title:"ESG = 3 litery oceny firmy",body:"<b>E</b>nvironmental · <b>S</b>ocial · <b>G</b>overnance. Ocena pozafinansowa. 'Zielone finanse', raportowanie wg <b>CSRD</b>. Globalny język: <b>Agenda 2030 ONZ — 17 celów (SDGs)</b>.",real:"ESG = 'jak firma wpływa na świat poza zarabianiem'. Gen Z coraz częściej na to patrzy.",mnemo:"<b>E-S-G</b>: Earth (środowisko), Society (ludzie), Governance (zarządzanie)."},
-      {title:"Greenwashing = ESG na ściemę",body:"Firmy zmieniają się przez: reputację, uwagę inwestorów (social signalling), herding ('wszyscy już to robią'), wyprzedzanie regulacji. ALE <b>greenwashing</b> = zarządzanie wrażeniem (zielony kolor, ładne foto, ogólniki).",real:"Certyfikat poświadcza zgodność tylko w momencie certyfikacji. Zielony ≠ realnie eko."},
-      {title:"Ekonomia Obwarzanka (Raworth)",body:"Rozwój między 🍩 <b>'podłogą' społeczną</b> (potrzeby ludzi) a <b>'sufitem' ekologicznym</b> (granice planety). 'Beyond GDP' — PKB to środek, nie cel. <b>Amsterdam</b> jako pierwsze miasto przyjął model.",real:"Nie za mało (ludzie cierpią), nie za dużo (planeta cierpi). Życie w pierścieniu."}
+      {title:"Vocabulary box (3.1, ćw. 5)",body:"Dokładne słówka z ramki: <b>bankruptcy</b> – bankructwo · <b>credit crunch</b> – kryzys kredytowy · <b>depression</b> – wielki kryzys/depresja · <b>investment</b> – inwestycja · <b>loan</b> – pożyczka · <b>losses</b> – straty · <b>mortgage</b> – kredyt hipoteczny · <b>recession</b> – recesja · <b>savings</b> – oszczędności · <b>stock market</b> – giełda",mnemo:"To są dokładnie słowa z ramki Vocabulary 3.1 — kluczowe na test."},
+      {title:"Czasowniki finansowe (3.1)",body:"<b>to go bankrupt</b> – zbankrutować · <b>to bail (sb) out</b> – ratować dofinansowaniem · <b>to recover</b> – wyjść z kryzysu · <b>to invest</b> – inwestować · <b>shares / bonds</b> – akcje / obligacje · <b>interest rates</b> – stopy procentowe · <b>debt</b> – dług · <b>profit</b> – zysk",real:"Wall Street Crash 1929, Black Monday 1987, kryzys 2008 — pojawiają się w tekście/wideo 3.1."}
      ],
      flashcards:[
-      {t:"Keynes vs Hayek (Zielony Ład)",d:"Keynes = interwencja (regulacje, dotacje, państwo sterownik). Hayek = rynek (handel emisjami, cena węgla). UE = hybryda obu."},
-      {t:"ESG",d:"Kryteria oceny pozafinansowej firm: Environmental (środowisko), Social (odpowiedzialność), Governance (ład korporacyjny)."},
-      {t:"Agenda 2030 / SDGs",d:"17 Celów Zrównoważonego Rozwoju ONZ jako globalny język (koniec ubóstwa, czysta energia, działania klimatyczne, mniej nierówności...)."},
-      {t:"Greenwashing",d:"Zarządzanie wrażeniem — pozorowanie ekologiczności (zielony kolor, foto, ogólniki). Gra na heurystykach konsumenta."},
-      {t:"Ekonomia Obwarzanka (Raworth)",d:"Rozwój między 'podłogą' społeczną (potrzeby) a 'sufitem' ekologicznym (granice planety). Beyond GDP."},
-      {t:"Beyond GDP",d:"Odejście od fetyszyzacji PKB na rzecz mierników dobrobytu (HDI, GPI). PKB jest środkiem, nie celem."},
-      {t:"Amsterdam jako obwarzanek",d:"Pierwsze miasto, które oficjalnie przyjęło model Raworth (po pandemii). Cele: −50% surowców do 2030, 100% cyrkularności do 2050."},
-      {t:"5 faz akceptacji regulacji przez biznes",d:"Od zaprzeczania do akceptacji — firmy przechodzą przez fazy oporu wobec nowej regulacji (zaprzeczanie → opór → targowanie → adaptacja → akceptacja), zanim ją wdrożą."},
-      {t:"Model COM-B",d:"Rama zmiany zachowań (Michie i in. 2011): zachowanie (Behaviour) wynika z Capability (możliwości), Opportunity (okazji) i Motivation (motywacji). Podstawa interwencji behawioralnych."}
+      {t:"bankruptcy",d:"bankructwo (to go bankrupt = zbankrutować)"},{t:"credit crunch",d:"kryzys kredytowy (banki przestają pożyczać)"},
+      {t:"depression",d:"depresja / wielki kryzys gospodarczy"},{t:"investment",d:"inwestycja"},{t:"loan",d:"pożyczka, kredyt"},
+      {t:"losses",d:"straty"},{t:"mortgage",d:"kredyt hipoteczny"},{t:"recession",d:"recesja"},{t:"savings",d:"oszczędności"},
+      {t:"stock market",d:"giełda papierów wartościowych"},{t:"to bail (sb) out",d:"ratować dofinansowaniem (np. bank)"},
+      {t:"to recover",d:"wyjść z kryzysu / odbić się"},{t:"interest rates",d:"stopy procentowe"},{t:"shares / bonds",d:"akcje / obligacje"}
      ],
      quiz:[
-      {q:"Co oznacza skrót ESG?",a:["Economy, Society, Growth","Environmental, Social, Governance","Energy, Sustainability, Green","European Standard Group"],c:1,e:"Environmental, Social, Governance — ocena pozafinansowa firm."},
-      {q:"Jak UE łączy Keynesa i Hayeka w klimacie?",a:["Tylko regulacje","Hybryda: regulacje (zakaz aut spalinowych) + rynki (EU ETS)","Tylko rynek","Rezygnuje z obu"],c:1,e:"Twarde zakazy + bodźce rynkowe (handel emisjami)."},
-      {q:"Ekonomia Obwarzanka zakłada rozwój:",a:["maksymalizujący PKB za wszelką cenę","między 'podłogą' społeczną a 'sufitem' ekologicznym","bez żadnych granic","tylko ekologiczny, bez ludzi"],c:1,e:"Beyond GDP — PKB to środek, nie cel."},
-      {q:"Greenwashing to:",a:["realna transformacja ekologiczna","pozorowanie ekologiczności bez realnej treści","mycie paneli słonecznych","certyfikat ISO"],c:1,e:"Gra na heurystykach: zielony kolor, foto, ogólniki."},
-      {q:"Model COM-B tłumaczy zachowanie przez:",a:["Capital, Output, Money, Balance","Capability, Opportunity, Motivation → Behaviour","Cost, Margin, Benefit","Control, Order, Market"],c:1,e:"Zachowanie = możliwości + okazja + motywacja (Michie i in.)."}
+      {q:"„credit crunch” to:",a:["wzrost oszczędności","kryzys kredytowy (banki przestają pożyczać)","spłata kredytu","wysoki zysk"],c:1,e:"credit crunch = nagłe ograniczenie dostępu do kredytu."},
+      {q:"„mortgage” to:",a:["pożyczka studencka","kredyt hipoteczny","giełda","strata"],c:1,e:"mortgage = kredyt na mieszkanie/dom."},
+      {q:"„to go bankrupt” znaczy:",a:["zbankrutować","zainwestować","oszczędzać","odbić się"],c:0,e:"go bankrupt = zbankrutować."},
+      {q:"„stock market” to:",a:["sklep","giełda","magazyn","bank centralny"],c:1,e:"stock market = giełda."},
+      {q:"„savings” to:",a:["straty","długi","oszczędności","podatki"],c:2,e:"savings = oszczędności."}
      ]},
-    /* ---------------- L7 ---------------- */
-    {id:"l7",title:"Zrównoważony rozwój a praca",emoji:"👷",
+    {id:"a7",title:"💰 U3.2: Certainty & probability + articles",emoji:"🎯",
      feed:[
-      {title:"Flexicurity i godna praca",body:"<b>Godna praca</b> — w warunkach wolności, równości, bezpieczeństwa, godności.<br><b>Flexicurity</b> = <b>elastyczność</b> dla firm (łatwiej zwolnić) + <b>bezpieczeństwo</b> dla ludzi (zasiłki, przekwalifikowanie).<br><b>Mitbestimmung</b> = współdecydowanie pracowników.",real:"Etat = stabilność ale sztywno. Gig (Uber, Glovo) = elastycznie ale prekaryzacja. Flexicurity godzi oba."},
-      {title:"Czemu tkwisz w złej robocie",body:"<b>Status quo bias</b> ('lepsze znane piekło'), <b>loss aversion</b> (nowa praca musi być 2–3× lepsza), <b>scarcity mindset</b> (brak kasy/czasu zabija planowanie), <b>sunk cost</b> ('przepracowałem tu 10 lat').",real:"Te same biasy co w grindach. Mózg nie cierpi zmian, nawet dobrych."},
-      {title:"Turkusowe organizacje (Laloux)",body:"Od hierarchii ('zasób ludzki') do turkusu: 🔄 <b>samoorganizacja</b> (brak szefów), 🧘 <b>pełnia</b> (podmiotowość), 🎯 <b>cel ewolucyjny</b> (zysk = skutek uboczny). Case: <b>Buurtzorg</b> — pielęgniarki bez menedżerów.",real:"Firma bez szefów, a działa. Buurtzorg robi to naprawdę: wyższa satysfakcja, niższe koszty."}
+      {title:"Catching up with rivals (3.2 słówka)",body:"<b>to boost</b> – zwiększyć/podbić · <b>bottom line</b> – wynik finansowy (zysk/strata) · <b>to make up ground</b> – nadrobić zaległości · <b>to make your mark</b> – zaznaczyć swoją obecność · <b>profitability</b> – rentowność · <b>revenue</b> – przychód · <b>targets</b> – cele",mnemo:"bottom line = ostateczny wynik finansowy firmy."},
+      {title:"Expressing certainty & probability (Grammar 3.2)",body:"Pewne: <b>will / won't</b>, <b>is bound to / is certain to</b>.<br>Prawdopodobne: <b>is likely to</b>, <b>will probably</b>.<br>Możliwe: <b>may / might / could</b>.<br>Mało prawdopodobne: <b>is unlikely to</b>, <b>probably won't</b>.",mnemo:"Skala: will / bound to → likely to → may/might/could → unlikely to → won't."},
+      {title:"Position of adverbs + Articles (3.5)",body:"Przysłówki <b>definitely/probably/certainly</b>: PO 'will/be', PRZED zwykłym czasownikiem (<i>They will <b>definitely</b> win</i>).<br><b>Articles:</b> a/an (pierwszy raz, zawód) · the (konkretny/jedyny) · ø (ogólnie, l.mn./niepoliczalne).",real:"Grammar 3.5 = articles a/an, the, no article."}
      ],
      flashcards:[
-      {t:"Godna praca (decent work)",d:"Praca produktywna w warunkach wolności, równości, bezpieczeństwa i godności ludzkiej."},
-      {t:"Mitbestimmung",d:"Współdecydowanie — instytucjonalny udział pracowników w zarządzaniu firmą (rady zakładowe, rady nadzorcze)."},
-      {t:"Flexicurity",d:"Równowaga: elastyczność zatrudnienia dla firm (łatwiej zwolnić) + bezpieczeństwo socjalne dla pracowników (zasiłki, przekwalifikowanie)."},
-      {t:"Tradycyjne vs atypowe zatrudnienie",d:"Etat = stabilność, ochrona, ale sztywność. Atypowe (B2B, gig, Uber/Glovo) = elastyczność i wyższe stawki, ale prekaryzacja i brak zabezpieczeń."},
-      {t:"Bariery mobilności zawodowej",d:"Status quo bias, loss aversion (nowa praca musi być 2–3× lepsza), scarcity mindset, sunk cost fallacy, normy/tożsamość."},
-      {t:"Turkusowe organizacje (Laloux)",d:"Firmy bez hierarchii: samoorganizacja, pełnia (podmiotowość), cel ewolucyjny (zysk = skutek uboczny). Case: Buurtzorg (Holandia)."},
-      {t:"Endowment effect",d:"Efekt posiadania — cenimy to, co mamy, wyżej niż gdybyśmy mieli to dopiero kupić. Utrudnia współdzielenie i gospodarkę cyrkularną."}
+      {t:"to boost",d:"zwiększyć, podbić (np. sprzedaż)"},{t:"bottom line",d:"wynik finansowy (zysk lub strata)"},
+      {t:"to make up ground",d:"nadrobić zaległości / dogonić"},{t:"to make your mark",d:"zaznaczyć swoją obecność, zostawić ślad"},
+      {t:"profitability",d:"rentowność"},{t:"revenue",d:"przychód"},
+      {t:"is bound to / is certain to",d:"na pewno coś zrobi (wysoka pewność)"},{t:"is likely to",d:"prawdopodobnie (= will probably)"},
+      {t:"may / might / could",d:"może (możliwość)"},{t:"is unlikely to",d:"mało prawdopodobne, że"},
+      {t:"a / an / the / ø",d:"a/an = pierwszy raz/zawód; the = konkretny/jedyny; ø = ogólnie (l.mn./niepoliczalne)"}
      ],
      quiz:[
-      {q:"Czym jest flexicurity?",a:["Elastyczność dla firm + bezpieczeństwo socjalne dla pracowników","Tylko ochrona przed zwolnieniem","System bez zasiłków","Zakaz umów cywilnych"],c:0,e:"Balans elastyczności i bezpieczeństwa (zasiłki, przekwalifikowanie)."},
-      {q:"Dlaczego ludzie tkwią w złej pracy (behawioralnie)?",a:["Bo lubią cierpieć","Status quo bias, loss aversion, scarcity mindset, sunk cost","Bo prawo zabrania zmiany","Bo nie ma ofert"],c:1,e:"'Lepsze znane piekło niż nieznany raj'."},
-      {q:"Turkusowe organizacje opierają się na:",a:["sztywnej hierarchii","samoorganizacji, pełni i celu ewolucyjnym","maksymalizacji zysku za wszelką cenę","jednym wszechmocnym szefie"],c:1,e:"Brak szefów, podmiotowość, zysk = skutek uboczny. Case: Buurtzorg."},
-      {q:"Atypowe formy zatrudnienia (gig, B2B) cechuje:",a:["pełna ochrona i ubezpieczenia","elastyczność i wyższe stawki, ale prekaryzacja","wyłącznie stabilność","spadek udziału na rynku"],c:1,e:"Uber, Glovo — rosnący udział, brak zabezpieczeń."}
+      {q:"„bottom line” w biznesie to:",a:["ostatnie zdanie maila","wynik finansowy (zysk/strata)","podpis","termin"],c:1,e:"bottom line = ostateczny wynik finansowy."},
+      {q:"„Sprzedaż prawdopodobnie wzrośnie.”",a:["Sales are bound to rise.","Sales are likely to rise.","Sales won't rise.","Sales are unlikely to rise."],c:1,e:"is likely to = prawdopodobnie."},
+      {q:"Najwyższa pewność:",a:["might","could","is bound to","is unlikely to"],c:2,e:"is bound to / is certain to."},
+      {q:"Poprawna pozycja przysłówka:",a:["They definitely will win.","They will definitely win.","Definitely they will win.","They will win definitely."],c:1,e:"Po 'will': will definitely win."},
+      {q:"„She's ___ accountant.”",a:["a","an","the","ø"],c:1,e:"Zawód + samogłoska → 'an accountant'."}
      ]},
-    /* ---------------- L8 ---------------- */
-    {id:"l8",title:"Innowacje + Przyszłość",emoji:"🤖",
+    {id:"a8",title:"💰 U3.3–3.4: Złe wieści i telefon",emoji:"📞",
      feed:[
-      {title:"Państwo przedsiębiorcze (Mazzucato)",body:"Mit: innowacje robi tylko biznes. Real: <b>państwo kreuje rynki</b> i bierze największe ryzyko (badania podstawowe), a korporacje <b>prywatyzują zyski</b>.",real:"Podatnik finansuje ryzyko, kasę zgarnia firma. Postulat: państwo powinno mieć zwrot (udziały, tantiemy)."},
-      {title:"Kto NAPRAWDĘ wynalazł iPhone'a",body:"Apple genialnie ZINTEGROWAŁ, ale rdzeń to granty publiczne/wojskowe: 🌐 Internet (ARPANET/DARPA), 📍 GPS (marynarka USA), 👆 ekran dotykowy (NSF+CIA), 🗣️ Siri (DARPA).",real:"'Wolnorynkowa innowacja' stała na publicznych pieniądzach. Plot twist stulecia."},
-      {title:"Polska jako państwo przedsiębiorcze",body:"Instytucje: <b>NCBiR</b> (projekty B+R nauka↔przemysł), <b>Sieć Łukasiewicz</b> (37 instytutów, polski Fraunhofer), <b>NCN</b> (badania podstawowe, polski NSF), Fundusz Polskich Technologii Krytycznych. Słabość: wydatki B+R poniżej średniej UE, brak mechanizmów zwrotu.",real:"Mamy instytucje, ale finansujemy ryzyko i rzadko odzyskujemy zyski (brak equity/royalties)."},
-      {title:"Paradoks AI — 'zerwana drabina'",body:"AI ogarnia zadania juniorów (kod, research, copy). 🪜 bariera wejścia (junior 'za drogi' vs AI), 👴 Senior Shortage 2040 (bez juniora nie ma seniora), 🎓 erozja mentoringu.",real:"Wytnij dolny szczebel drabiny — nikt nie wejdzie na górę. Ryzyko 'straconego pokolenia'."},
-      {title:"Zombie-idee i wojna kognitywna",body:"<b>Zombie-idee</b> (Krugman) — poglądy szkodliwe, ale wciąż żywe (confirmation bias, groupthink). <b>Wojna kognitywna</b> — social media promują skrajne emocje, farmy trolli, bańki → niszczą zaufanie do instytucji. <b>Techno-feudalizm</b> = Big Tech silniejszy niż rządy.",real:"Bez zaufania społecznego nie zrobisz trudnych reform (np. transformacji energetycznej)."}
+      {title:"Managing & responding to bad news (3.3)",body:"Przekazywanie: <i>I'm afraid… / Unfortunately… / I'm sorry to say…</i><br>Balans (+ i −): <i>The good news is… , however… / On the plus side…</i><br>Reakcja: <i>I see. / That's a shame. / Let's see what we can do.</i>",mnemo:"Złe wieści 'kanapką': pozytyw → zła wiadomość → plan."},
+      {title:"Telephoning to clarify — słówka (3.4)",body:"Z ramki ćw. 3: <b>average</b> – średnia · <b>column</b> – kolumna · <b>gross</b> – brutto · <b>margin</b> – marża · <b>net</b> – netto · <b>quarter</b> – kwartał · <b>row</b> – wiersz. Plus: <b>bottom line</b>, <b>ROI</b> (return on investment), <b>product categories</b>.",real:"gross = brutto, net = netto; quarter = kwartał; margin = marża."},
+      {title:"Asking for clarification & paraphrasing (3.4)",body:"<i>Sorry, could you repeat that? / Could you go over that again?</i><br>Parafraza: <i>So what you're saying is… / If I understand correctly… / Do you mean…? / Just to confirm…</i>",real:"Parafraza = powtórz własnymi słowami, by potwierdzić zrozumienie."}
      ],
      flashcards:[
-      {t:"Państwo przedsiębiorcze (Mazzucato)",d:"Państwo nie tylko 'naprawia rynki', ale aktywnie kreuje rynki i bierze największe ryzyko (badania podstawowe). Korporacje prywatyzują zyski."},
-      {t:"Przemysł 4.0",d:"Czwarta Rewolucja Przemysłowa — integracja świata fizycznego, cyfrowego i biologicznego. Kluczowe: AI, IoT, biotechnologie."},
-      {t:"Potrójna Helisa (Triple Helix)",d:"System innowacji = współpraca 3 sektorów: Nauka (uczelnie, B+R), Biznes (komercjalizacja), Państwo (granty, regulacje)."},
-      {t:"Efekty sieciowe",d:"W gospodarce cyfrowej usługa zyskuje, im więcej osób z niej korzysta → 'zwycięzca bierze wszystko' → monopole naturalne (GAFAM)."},
-      {t:"Uspołecznienie ryzyka, prywatyzacja zysków",d:"Podatnicy finansują ryzykowne badania (Internet, GPS), zyski z komercjalizacji trafiają do prywatnych firm. Mazzucato: państwo powinno mieć zwrot."},
-      {t:"Polskie instytucje innowacji",d:"NCBiR (B+R nauka↔przemysł), Sieć Łukasiewicz (37 instytutów, polski Fraunhofer), NCN (badania podstawowe, polski NSF), Fundusz Polskich Technologii Krytycznych."},
-      {t:"Paradoks AI / 'zerwana drabina'",d:"AI automatyzuje zadania juniorów → bariera wejścia, Senior Shortage 2040, erozja mentoringu, ryzyko 'straconego pokolenia'."},
-      {t:"Zombie-idee (Krugman)",d:"Poglądy ekonomiczne (np. skrajny neoliberalizm), które mimo dowodów na szkodliwość wciąż funkcjonują w polityce."},
-      {t:"Neoliberalizm vs Nowy Pragmatyzm/SGR",d:"Neoliberalizm: 'małe państwo', deregulacja, nierówności OK, środowisko = efekt zewnętrzny. Nowy Pragmatyzm/SGR: państwo = strażnik ładu, regulacja dla równowagi, redukcja nierówności, środowisko = filar równorzędny."},
-      {t:"Techno-feudalizm",d:"Ryzyko gospodarki, w której globalne platformy cyfrowe (Big Tech) mają większą władzę nad życiem obywateli niż demokratyczne rządy."},
-      {t:"Wojna kognitywna",d:"Social media promują skrajne emocje (engagement bait), farmy trolli, bańki informacyjne → niszczą zaufanie do instytucji państwa."}
+      {t:"I'm afraid… / Unfortunately…",d:"wstęp do złej wiadomości"},{t:"That's a shame.",d:"Szkoda. (reakcja na złą wieść)"},
+      {t:"On the plus side…",d:"Z drugiej strony / plusem jest…"},
+      {t:"gross",d:"brutto"},{t:"net",d:"netto"},{t:"margin",d:"marża"},{t:"quarter",d:"kwartał"},
+      {t:"average",d:"średnia"},{t:"column / row",d:"kolumna / wiersz (w tabeli)"},{t:"ROI (return on investment)",d:"zwrot z inwestycji"},
+      {t:"So what you're saying is…",d:"Czyli mówisz, że… (parafraza)"},{t:"Could you go over that again?",d:"Mógłbyś to jeszcze raz wyjaśnić?"}
      ],
      quiz:[
-      {q:"Główna teza Mazzucato o 'państwie przedsiębiorczym':",a:["Państwo tylko psuje gospodarkę","Państwo kreuje rynki i bierze ryzyko, a korporacje prywatyzują zyski","Innowacje robi wyłącznie biznes","Państwo nie powinno finansować badań"],c:1,e:"Uspołecznienie ryzyka + prywatyzacja zysków. Postulat: państwo powinno mieć zwrot."},
-      {q:"Które technologie iPhone'a powstały z grantów publicznych?",a:["żadne","Internet (DARPA), GPS (marynarka), ekran dotykowy (NSF/CIA), Siri (DARPA)","tylko aparat","tylko bateria"],c:1,e:"Apple je zintegrował, ale rdzeń z badań publicznych/wojskowych."},
-      {q:"Model Potrójnej Helisy łączy:",a:["rząd, wojsko, kościół","Naukę, Biznes i Państwo","banki, giełdę, ubezpieczycieli","UE, ONZ, NATO"],c:1,e:"Nauka (B+R) + Biznes (komercjalizacja) + Państwo (finansowanie ryzyka)."},
-      {q:"Paradoks AI ('zerwana drabina') polega na tym, że:",a:["AI tworzy nieograniczone miejsca pracy","automatyzacja zadań juniorów blokuje wejście i grozi brakiem seniorów","AI zastępuje tylko seniorów","nie ma problemu"],c:1,e:"Bez etapu juniora nie wyhodujesz seniora."},
-      {q:"Polski odpowiednik instytutów Fraunhofera to:",a:["NBP","Sieć Badawcza Łukasiewicz","ZUS","GUS"],c:1,e:"Sieć Łukasiewicz — 37 instytutów B+R współpracujących z przemysłem (od 2019)."}
+      {q:"„gross” vs „net”:",a:["gross = netto, net = brutto","gross = brutto, net = netto","to to samo","gross = marża"],c:1,e:"gross = brutto (przed odliczeniami), net = netto."},
+      {q:"„quarter” (w finansach) to:",a:["ćwiartka pizzy","kwartał","moneta 25 centów","czwarte piętro"],c:1,e:"quarter = kwartał (3 miesiące)."},
+      {q:"Uprzejmy wstęp do złej wiadomości:",a:["Great news!","I'm afraid…","No problem!","Of course!"],c:1,e:"I'm afraid / Unfortunately."},
+      {q:"Parafraza przez telefon:",a:["Goodbye.","So what you're saying is…","Hold on.","I'll call back."],c:1,e:"Parafraza = powtórzenie własnymi słowami."},
+      {q:"„margin” to:",a:["margines strony","marża","kwartał","wiersz"],c:1,e:"Tu: marża (profit margin)."}
      ]},
-    /* ---------------- L9 BOSS: pytania grup ---------------- */
-    {id:"grupy",title:"🎤 BOSS: Pytania grup",emoji:"🏆",
+    /* ===================== UNIT 4 — DIGITAL BUSINESS 💻 (słówka z książki) ===================== */
+    {id:"a9",title:"💻 U4.1: Digital business + word building",emoji:"💻",
      feed:[
-      {title:"To jest ~40% Twojego testu",body:"4 pytania testowe z ostatniego slajdu KAŻDEJ prezentacji zespołowej (12 grup) → prowadzący bierze z nich <b>~40% pytań</b> na kolos. Tu masz <b>43 pytania z 11 grup</b> z poprawnymi odpowiedziami.",real:"Najwyższy priorytet przed kolosem. Jak to ogarniesz, prawie połowa testu z głowy."}
+      {title:"Vocabulary box (4.1, ćw. 5)",body:"Dokładne słówka z ramki: <b>cloud</b> – chmura (przechowywanie w sieci) · <b>conversion</b> – konwersja (sprzedaż vs odwiedziny strony) · <b>(data) dump</b> – zrzut danych · <b>(data) mining</b> – eksploracja danych · <b>platform</b> – platforma · <b>tool</b> – narzędzie.<br>+ <b>DMP</b> = Digital Marketing Platform.",mnemo:"To słowa z ramki Vocabulary 4.1 — kluczowe na test."},
+      {title:"Disruptors (4.1 lead-in)",body:"<b>disrupt</b> – zrewolucjonizować/wywrócić rynek · <b>disruption</b> – przełom/zaburzenie · <b>disruptive</b> – przełomowy.<br>Disruptive technology = technologia wywracająca rynek (Uber, Netflix).",real:"'disrupt' = wywrócić rynek do góry nogami."},
+      {title:"Word building — verbs/nouns/adjectives (4.1)",body:"<b>anticipate → anticipation</b> · <b>convert → conversion / converted</b> · <b>disrupt → disruption / disruptive</b> · <b>personalize → personalization / personal</b> · <b>visualize → visualization / visual</b> · <b>analyse → analysis / analyst / analytical</b>",mnemo:"Akcent przesuwa się: INnovate → innoVAtion. Częste w ćwiczeniu word building."}
      ],
-     flashcards:[],
+     flashcards:[
+      {t:"cloud",d:"chmura (przechowywanie danych w internecie)"},{t:"conversion",d:"konwersja (% sprzedaży względem odwiedzin)"},
+      {t:"(data) dump",d:"zrzut danych"},{t:"(data) mining",d:"eksploracja/analiza dużych zbiorów danych"},
+      {t:"platform",d:"platforma (np. oprogramowanie do zadań)"},{t:"tool",d:"narzędzie"},
+      {t:"disrupt",d:"zrewolucjonizować / wywrócić rynek"},{t:"disruption",d:"przełom, zaburzenie rynku"},{t:"disruptive",d:"przełomowy (disruptive technology)"},
+      {t:"anticipate → anticipation",d:"przewidywać → przewidywanie (word building)"},{t:"convert → conversion",d:"konwertować → konwersja"},
+      {t:"visualize → visualization",d:"wizualizować → wizualizacja"},{t:"DMP",d:"Digital Marketing Platform"}
+     ],
      quiz:[
-      {q:"[Renko] Czym charakteryzuje się „problem wspólnego zasobu” w budżecie?",a:["Grupy interesu dążą do wydania środków na własne cele, a koszty płacą wszyscy podatnicy","Państwo gromadzi nadwyżki na wspólnym koncie inwestycyjnym","Wszystkie podatki od firm trafiają do jednego ministerstwa"],c:0,e:"Common-pool: każdy chce wydać wspólną kasę na swoje, koszt rozkłada się na wszystkich."},
-      {q:"[Renko] Jak według badań zmienia się budżet w roku wyborczym?",a:["Politycy maksymalnie tną wydatki","Rząd przesuwa środki na widoczne inwestycje i transfery socjalne","Budżet jest całkowicie zamrażany"],c:1,e:"Polityczny cykl koniunkturalny — przed wyborami wydatki tam, gdzie widać."},
-      {q:"[Renko] Główny punkt reformy reguł fiskalnych UE z 2024?",a:["Powrót do sztywnej zasady 1/20","Bezwzględny zakaz deficytu","Analiza indywidualnej ścieżki „wydatków netto” i trwałości długu"],c:2,e:"Koniec 1/20 — indywidualne 4-letnie plany i kontrola wydatków netto."},
-      {q:"[Renko] Kiedy w pełni rusza Polska Rada Fiskalna?",a:["1 stycznia 2024","1 stycznia 2025","1 stycznia 2026"],c:2,e:"Od 1 stycznia 2026 — jeden z ostatnich krajów UE bez tego organu."},
-      {q:"[Stanley] „Niewidzialna ręka” Adama Smitha oznacza:",a:["Regulację państwową","Samoregulację rynku przez popyt i podaż","Centralne planowanie","Podatki progresywne"],c:1,e:"Rynek sam się reguluje grą popytu i podaży."},
-      {q:"[Stanley] Czym ordoliberalizm różni się od neoliberalizmu?",a:["Rynek potrzebuje ram prawnych i ochrony konkurencji","Promuje minimalną rolę państwa","Interwencja tylko w kryzysie","Całkowicie ufa cenom"],c:0,e:"Ordo = rynek MUSI mieć ramy i ochronę konkurencji."},
-      {q:"[Stanley] Który przykład ilustruje politykę neoliberalną?",a:["Reforma walutowa i antymonopol w powojennych Niemczech","Program „Right to Buy” Thatcher w UK","SGR w Niemczech","Fundusz odbudowy UE"],c:1,e:"Thatcheryzm (Right to Buy) = klasyka neoliberalnej prywatyzacji."},
-      {q:"[Stanley] Skutki kryzysu 2008 w kontekście neoliberalizmu?",a:["Zwiększenie kontroli nad konkurencją","Podważenie deregulacji i krytyka braku nadzoru finansowego","Wysoka inflacja w Europie","Odejście od rynku"],c:1,e:"2008 obnażył skutki zbyt daleko posuniętej deregulacji."},
-      {q:"[OJ] Dlaczego problem mieszkaniowy to problem społeczny?",a:["Dotyczy tylko firm budowlanych","Wpływa na warunki życia, stabilność i decyzje życiowe ludzi","Odnosi się tylko do estetyki osiedli"],c:1,e:"Mieszkanie wpływa na rodzinę, pracę, usamodzielnienie."},
-      {q:"[OJ] Co pokazuje, że sam rynek nie zaspokaja potrzeb mieszkaniowych?",a:["Powstają mieszkania głównie dla osób o wyższych dochodach/zdolności kredytowej","Każdy może mieć problemy","Ceny stale spadają"],c:0,e:"Oferta prywatna celuje w lepiej zarabiających."},
-      {q:"[OJ] Jaki jest cel społecznych form najmu (TBS, SIM)?",a:["Budowa premium w centrach","Dostępne mieszkania dla średnich i niższych dochodów","Zwiększenie zysków inwestorów"],c:1,e:"TBS/SIM = najem o umiarkowanym czynszu."},
-      {q:"[OJ] Dlaczego państwo/samorząd ma rolę w mieszkaniówce?",a:["Mogą kierować działania na potrzeby społeczne, nie tylko zysk","Budują szybciej niż prywatni","Zastępują rynek prywatny"],c:0,e:"Państwo patrzy szerzej: stabilność i długoterminowe bezpieczeństwo."},
-      {q:"[Goat] Termin na wydanie przez Radę Fiskalną opinii o budżecie?",a:["30 dni","14 dni","7 dni"],c:1,e:"14 dni — Rada ma działać szybko."},
-      {q:"[Goat] Minimalne doświadczenie kandydata na członka RF?",a:["5 lat","10 lat","15 lat"],c:1,e:"10–15 lat doświadczenia, minimum = 10."},
-      {q:"[Goat] Na czym polega zasada „zastosuj lub wyjaśnij”?",a:["Rząd musi przyjąć każdą poprawkę Rady","Minister Finansów musi publicznie uzasadnić niezastosowanie się do opinii","Rada ma prawo weta"],c:1,e:"Rada nie ma weta — rząd musi w 2 miesiące uzasadnić odrzucenie."},
-      {q:"[Goat] Maks. okres spłaty pożyczki FIZB/SAFE (projekt 2026)?",a:["45 lat","25 lat","10 lat"],c:0,e:"Unijny SAFE oferuje bardzo długie maturity — do 45 lat."},
-      {q:"[JKP] Cel sprawiedliwej transformacji w odchodzeniu od węgla?",a:["Natychmiastowe zamknięcie elektrowni bez względu na koszty","Modernizacja gospodarki ze wsparciem dla pracowników i regionów","Rezygnacja z jądrowej na rzecz tylko OZE","Utrzymanie wydobycia węgla"],c:1,e:"„Sprawiedliwa” = nikt nie zostaje z tyłu (Just Transition Fund)."},
-      {q:"[JKP] Sytuacja energetyczna Polski wobec Zielonego Ładu?",a:["Lider transformacji w UE","Zwolniona z celów ze względu na węgiel","Transformacja zakończona sukcesem","Polska nadal opiera energię elektryczną głównie na węglu"],c:3,e:"Polska wciąż stoi węglem — stąd skala wyzwania."},
-      {q:"[JKP] Które źródła zwiększą bezpieczeństwo energetyczne Polski?",a:["Ropa i gaz łupkowy","OZE i energetyka jądrowa","Tylko węgiel","Drewno i torf"],c:1,e:"OZE + atom = dywersyfikacja, uniezależnienie od paliw kopalnych."},
-      {q:"[JKP] Główne wyzwanie Zielonego Ładu w Polsce?",a:["Zwiększenie wydobycia węgla","Budowa kopalń","Przejście z węgla na OZE","Ograniczenie internetu na wsi"],c:2,e:"Odejście od węgla na rzecz odnawialnych."},
-      {q:"[Mind] Co oznacza skrót ESG?",a:["Environmental, Social, Governance","Economic, Sustainability, Growth","Energy, Society, Globalization","Ekologia, Społeczeństwo, Giełda"],c:0,e:"Environmental, Social, Governance."},
-      {q:"[Mind] Który element należy do obszaru „E”?",a:["Warunki pracy","Zarządzanie firmą","Emisja CO₂","Relacje ze społecznością"],c:2,e:"E = środowisko (emisje). Warunki pracy = S, zarządzanie = G."},
-      {q:"[Mind] Czym jest greenwashing?",a:["Realne działania na rzecz środowiska","Wprowadzanie w błąd co do działań ekologicznych","Raportowanie finansowe","Inwestowanie w OZE"],c:1,e:"Udawanie eko bez realnej treści."},
-      {q:"[Mind] Cel raportowania niefinansowego?",a:["Zwiększenie sprzedaży","Pozytywny marketing","Informacje dla inwestorów o wpływie firmy i ryzykach","Zastąpienie raportów finansowych"],c:2,e:"CSRD informuje inwestorów o wpływie i ryzykach ESG."},
-      {q:"[Zadymiarze] CMU Rate dla Polski w 2023?",a:["18,4%","9,2%","30,6%"],c:1,e:"9,2% (Eurostat) — poniżej średniej UE (~11,8%)."},
-      {q:"[Zadymiarze] Co oznacza zasada R3 w hierarchii 9R GOZ?",a:["Recykling","Reuse — ponowne użycie","Refuse — odmowa zakupu"],c:1,e:"R3 = Reuse, wyżej niż recykling (R8)."},
-      {q:"[Zadymiarze] Od kiedy w Polsce system kaucyjny?",a:["1.01.2024","1.10.2025","1.07.2026"],c:1,e:"Przesunięty z lipca 2025 na 1 października 2025."},
-      {q:"[Zadymiarze] Dokument UE: 25% surowców z recyklingu do 2030?",a:["Critical Raw Materials Act","European Green Deal","Pakiet GOZ 2020"],c:0,e:"CRMA (Rozporządzenie UE 2024/1252)."},
-      {q:"[EM] Najbardziej znany przykład modelu flexicurity?",a:["Polska","Dania","Niemcy","Hiszpania"],c:1,e:"Dania = wzorcowy model flexicurity."},
-      {q:"[EM] Co zyskuje pracownik dzięki flexicurity?",a:["Wakacje za granicą","Premię na święta","Większe bezpieczeństwo socjalne","Samochód służbowy"],c:2,e:"Security = zasiłki, przekwalifikowanie, bezpieczeństwo."},
-      {q:"[EM] Co NIE należy do filarów flexicurity UE?",a:["Aktywna polityka rynku pracy","Uczenie się przez całe życie","Sztywna ochrona jednego miejsca pracy niezależnie od sytuacji","Nowoczesny system zabezpieczenia"],c:2,e:"Sztywna ochrona to przeciwieństwo flexicurity."},
-      {q:"[EM] Które działanie wpisuje się we flexicurity?",a:["Rozwój aktywnej polityki rynku pracy i szkoleń","Usunięcie regulacji czasu pracy","Ograniczenie kursów","Ułatwienie zwalniania bez wsparcia"],c:0,e:"Aktywna polityka rynku pracy + szkolenia = serce flexicurity."},
-      {q:"[Szefy] Status prawny kierowców Ubera/Glovo w PL?",a:["Wolontariusze","Formalnie przedsiębiorcy (samozatrudnienie)","Urzędnicy państwowi","Pracownicy na umowę o pracę"],c:1,e:"Formalnie samozatrudnieni — stąd brak ochrony jak na etacie."},
-      {q:"[Szefy] Konsekwencja braku umowy o pracę dla gig workerów?",a:["Gwarancja stałego wynagrodzenia","Finansowanie paliwa przez platformę","Brak płatnych urlopów, odpraw i zwolnień chorobowych","Zwolnienie z ryzyka ekonomicznego"],c:2,e:"Bez umowy o pracę = bez urlopu płatnego, odpraw, L4."},
-      {q:"[Szefy] Algorytmy jako „czarna skrzynka” oznaczają:",a:["Brak transparentności — nie wiadomo jak zapadają decyzje o zleceniach","Urządzenie rejestrujące wypadki","System szyfrowania danych klientów","Schowek na paczki"],c:0,e:"Nieprzejrzysty algorytm decydujący o pracy bez wyjaśnień."},
-      {q:"[Alfa] Czym jest państwo przedsiębiorcze?",a:["Państwo prowadzące sklepy","Państwo wspierające innowacje i badania","Państwo bez podatków","Państwo bez firm prywatnych"],c:1,e:"Mazzucato: państwo finansuje innowacje i ryzykowne badania."},
-      {q:"[Alfa] Kto finansuje wiele badań naukowych?",a:["Państwo","Tylko uczniowie","Tylko sportowcy","Tylko artyści"],c:0,e:"Badania podstawowe najczęściej finansuje państwo."},
-      {q:"[Alfa] Która technologia rozwijana dzięki wsparciu państwa?",a:["Internet","Rower","Zeszyt","Ołówek"],c:0,e:"Internet (ARPANET) z badań DARPA."},
-      {q:"[Alfa] Czy prywatne firmy zawsze inwestują w ryzykowne badania?",a:["Tak, zawsze","Nie, często unikają ryzyka","Nigdy nie inwestują","Tylko w weekendy"],c:1,e:"Firmy często unikają ryzyka — stąd wkracza państwo."},
-      {q:"[Golden Oldies] Co oznacza skrót CETA?",a:["Central European Trade Agreement","Comprehensive Economic and Trade Agreement","Canadian External Tariff Act","Common European Trade Alliance"],c:1,e:"CETA = umowa handlowa UE–Kanada (od 2017)."},
-      {q:"[Golden Oldies] Dlaczego zawieszono negocjacje TTIP?",a:["Kanada odmówiła","WTO zablokowała","Zmiana administracji USA 2016 i sprzeciw społeczny","UE wycofała się po Brexicie"],c:2,e:"TTIP (UE–USA) padło na zmianie administracji USA + oporze społecznym."},
-      {q:"[Golden Oldies] Czym jest mechanizm ISDS?",a:["Fundusz wsparcia rolników","Stały sąd z publicznymi sędziami","Arbitraż — inwestor może pozwać państwo z pominięciem sądów krajowych","Procedura ratyfikacji umów"],c:2,e:"ISDS = arbitraż inwestor–państwo. ICS to jego reforma."},
-      {q:"[Golden Oldies] Główne zagrożenie umowy UE–Mercosur dla rolników?",a:["Zakaz eksportu do Ameryki Płd.","Konkurencja tańszych produktów rolnych wg niższych standardów","Obowiązek norm południowoamerykańskich w UE","Wzrost cen nawozów"],c:1,e:"Tańsza żywność z Mercosuru (niższe standardy) = presja na rolników."}
+      {q:"„(data) mining” to:",a:["kopanie kryptowalut","eksploracja/analiza dużych zbiorów danych","usuwanie danych","kopia zapasowa"],c:1,e:"data mining = analiza dużych ilości danych w poszukiwaniu wzorców."},
+      {q:"„cloud” (w IT) to:",a:["chmura — przechowywanie danych w internecie","prognoza pogody","awaria serwera","wirus"],c:0,e:"cloud = przechowywanie/oprogramowanie w sieci, nie na własnym komputerze."},
+      {q:"„disruptive technology” to technologia:",a:["przestarzała","wywracająca rynek do góry nogami","tania","zepsuta"],c:1,e:"disruptive = przełomowa, zmienia reguły rynku."},
+      {q:"Rzeczownik od „convert”:",a:["converting","conversion","converted","conversation"],c:1,e:"convert → conversion."},
+      {q:"„conversion” (marketing) to:",a:["zamiana waluty","stosunek sprzedaży do odwiedzin strony","awaria","rejestracja"],c:1,e:"conversion (rate) = ile odwiedzin zamienia się w sprzedaż."}
+     ]},
+    {id:"a10",title:"💻 U4.3–4.4: Trudni rozmówcy i negocjacje",emoji:"🤝",
+     feed:[
+      {title:"Style komunikacji (4.3 lead-in)",body:"Typy trudnych rozmówców: <b>Dominator</b> (zagaduje wszystkich) · <b>Non-responder</b> (milczy) · <b>Contradictor</b> (ze wszystkim się nie zgadza) · <b>Joker</b> (ciągle żartuje) · <b>Analyser</b> (wchodzi w detale) · <b>Technology-reliant</b> (wpatrzony w telefon).",mnemo:"Dwa podejścia: <b>Accept & adapt</b> (dostosuj się) vs <b>Intervene & control</b> (przejmij stery)."},
+      {title:"Keeping a meeting on track (4.3)",body:"Kategorie zwrotów: przypomnienie agendy, opanowanie gadułów (managing dominant speakers), zarządzanie wejściami w słowo, odłożenie dyskusji, spowolnienie, dopchnięcie do konkretu.<br><i>Can I stop you for a second? / Let's come back to that later. / Can we get back to the main topic?</i>",real:"keep a meeting on track = pilnować, by spotkanie nie zeszło z tematu."},
+      {title:"Negotiating: positional vs principled (4.4)",body:"<b>Positional negotiation</b> – bronisz konkretnej pozycji, próbujesz wymóc swoje.<br><b>Principled negotiation</b> – skupiasz się na <b>interesach i potrzebach obu stron</b>, szukasz wyniku win-win i dobrej relacji.<br>Reaching agreement: <i>First, let's look at the facts. / How could you imagine this working? / I think the best thing would be to… / That sounds reasonable.</i>",real:"Principled negotiation = rozwiązuj problem, nie walcz z osobą."}
+     ],
+     flashcards:[
+      {t:"Dominator",d:"rozmówca, który zagaduje i dominuje spotkanie"},{t:"Non-responder",d:"rozmówca milczący, nie reaguje"},
+      {t:"Contradictor",d:"rozmówca, który ze wszystkim się nie zgadza"},{t:"Analyser",d:"rozmówca wchodzący w nadmierne detale"},
+      {t:"Accept & adapt / Intervene & control",d:"dwa podejścia do trudnych rozmówców: dostosuj się / przejmij stery"},
+      {t:"keep a meeting on track",d:"pilnować, by spotkanie nie zeszło z tematu"},{t:"Can I stop you for a second?",d:"Mogę ci na chwilę przerwać?"},
+      {t:"positional negotiation",d:"negocjacje z obroną własnej pozycji (wymuszasz swoje)"},
+      {t:"principled negotiation",d:"negocjacje oparte na interesach obu stron, cel: win-win i dobra relacja"},
+      {t:"That sounds reasonable.",d:"To brzmi rozsądnie. (zgoda w negocjacji)"}
+     ],
+     quiz:[
+      {q:"„Principled negotiation” skupia się na:",a:["obronie własnej pozycji za wszelką cenę","interesach i potrzebach obu stron (win-win)","jak najszybszym zakończeniu","unikaniu rozmowy"],c:1,e:"principled = interesy obu stron, win-win i relacja."},
+      {q:"„Dominator” na spotkaniu to ktoś, kto:",a:["milczy","zagaduje i dominuje rozmowę","ciągle żartuje","wchodzi w detale"],c:1,e:"Dominator = przejmuje całą rozmowę."},
+      {q:"„keep a meeting on track” znaczy:",a:["odwołać spotkanie","pilnować, by nie zeszło z tematu","skrócić spotkanie","nagrać spotkanie"],c:1,e:"on track = w temacie / na właściwym torze."},
+      {q:"Zwrot 'Can I stop you for a second?' służy do:",a:["zakończenia spotkania","uprzejmego wejścia w słowo / opanowania gaduły","zgody","prośby o kawę"],c:1,e:"Managing dominant speakers / interruptions."},
+      {q:"„positional negotiation” to:",a:["szukanie win-win","obrona konkretnej pozycji i wymuszanie swego","brak negocjacji","negocjacje mailowe"],c:1,e:"positional = trzymasz się swojej pozycji."}
+     ]},
+    {id:"a11",title:"💻 U4.2/4.5: Linkers + business proposal",emoji:"🔗",
+     feed:[
+      {title:"Linkers (4.2)",body:"<b>Dodawanie:</b> moreover, in addition, furthermore.<br><b>Kontrast:</b> however, although, whereas, despite/in spite of.<br><b>Przyczyna:</b> because, since, as, due to.<br><b>Skutek:</b> therefore, so, as a result, consequently.<br><b>Cel:</b> to, in order to, so that.",mnemo:"however/although = kontrast; therefore/so = skutek; in order to = cel."},
+      {title:"Short business proposal — struktura (4.5)",body:"Sekcje z książki: <b>Introduction / Purpose statement</b> (<i>I am writing to propose that…</i>) → <b>Brief summary of problem</b> (<i>Recently, there have been… an increase in…</i>) → <b>Solution</b> (<i>The best… is…</i>) → <b>Plan, costs and schedule</b> (<i>Despite the high cost, we would be able to…</i>) → <b>Conclusion</b> (<i>I therefore recommend that we purchase…</i>).",mnemo:"Cel → problem → rozwiązanie → koszty/plan → rekomendacja."},
+      {title:"Noun phrases zamiast verb phrases (4.5)",body:"Styl formalny lubi rzeczowniki: „we <b>implemented</b> the system” → „<b>the implementation of</b> the system”. „costs <b>increased</b>” → „<b>the increase in</b> costs”. „we <b>reduced</b> waiting times” → „<b>the reduction of</b> waiting times”.",real:"Grammar 4.5 = noun phrases to replace verb phrases."}
+     ],
+     flashcards:[
+      {t:"however / although / whereas",d:"jednak / chociaż / podczas gdy (kontrast)"},{t:"therefore / as a result",d:"dlatego / w rezultacie (skutek)"},
+      {t:"due to / because of",d:"z powodu (przyczyna)"},{t:"in order to / so that",d:"aby / żeby (cel)"},{t:"moreover / in addition",d:"ponadto (dodawanie)"},
+      {t:"I am writing to propose that…",d:"Piszę, aby zaproponować… (otwarcie proposal)"},{t:"I therefore recommend that…",d:"Dlatego rekomenduję, aby… (zakończenie)"},
+      {t:"Despite the high cost, …",d:"Mimo wysokiego kosztu… (sekcja koszty)"},
+      {t:"noun phrase zamiast verb",d:"'we increased sales' → 'the increase in sales' (styl formalny)"}
+     ],
+     quiz:[
+      {q:"Linker KONTRASTU:",a:["therefore","however","because","in addition"],c:1,e:"however/although/whereas = kontrast."},
+      {q:"„___ the high cost, we bought it.” (mimo)",a:["Because of","Despite","Therefore","Moreover"],c:1,e:"Despite/In spite of + rzeczownik = mimo."},
+      {q:"Linker SKUTKU:",a:["although","whereas","as a result","in order to"],c:2,e:"as a result / therefore / so."},
+      {q:"Formalniej (noun phrase): „We reduced costs” →",a:["We are reducing costs","The reduction of costs","Costs reduce","Reduce the costs"],c:1,e:"Verb → noun phrase: the reduction of costs."},
+      {q:"Otwarcie business proposal:",a:["Once upon a time…","I am writing to propose that…","See you soon,","By the way…"],c:1,e:"Purpose statement: 'I am writing to propose that…'."}
      ]}
   ]
 });

@@ -198,11 +198,562 @@ body{
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .swipehint{position:absolute;bottom:80px;left:0;right:0;text-align:center;color:var(--muted);font-size:13px;font-weight:600;animation:bob 1.6s infinite;pointer-events:none;z-index:20}
 
+/* ---------- ĆWICZENIA (wpisywanie, klocki, pary, speed) ---------- */
+.exhub{display:flex;flex-direction:column;gap:12px;padding:6px 0}
+.excard{display:flex;align-items:center;gap:14px;background:linear-gradient(150deg,var(--card2),var(--card));border:1px solid #ffffff12;border-radius:20px;padding:16px 18px;cursor:pointer;position:relative;overflow:hidden;transition:transform .12s}
+.excard:active{transform:scale(.98)}
+.excard::before{content:"";position:absolute;inset:0;background:var(--accent);opacity:.08}
+.excard>*{position:relative;z-index:1}
+.excard .eemoji{font-size:32px;width:54px;height:54px;display:flex;align-items:center;justify-content:center;background:#00000033;border-radius:15px;flex:none}
+.excard .emeta h3{font-size:16.5px;font-weight:900;letter-spacing:-.2px}
+.excard .emeta p{color:var(--muted);font-size:13px;margin-top:2px;line-height:1.35}
+.exprompt{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);margin-bottom:6px}
+.exq{font-size:23px;font-weight:900;letter-spacing:-.4px;line-height:1.2;margin-bottom:18px}
+.winput{width:100%;padding:15px 16px;border-radius:15px;background:#0e0e1a;border:2px solid #ffffff1e;color:var(--txt);font-size:18px;font-weight:700;outline:none}
+.winput:focus{border-color:var(--accent2)}
+.winput.ok{border-color:var(--green);background:#13351f}
+.winput.bad{border-color:var(--red);background:#35161f}
+.exfb{margin-top:14px;padding:13px 15px;border-radius:13px;font-size:15px;line-height:1.45;display:none}
+.exfb.show{display:block;animation:pop .25s}
+.exfb.ok{background:#13351f;color:#c9ffd9}
+.exfb.bad{background:#35161f;color:#ffd0da}
+.exfb b{color:#fff}
+/* klocki */
+.tiles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.build{min-height:54px;border-bottom:2px dashed #ffffff22;padding:8px 4px;display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start}
+.tile{padding:11px 14px;border-radius:12px;background:#23233a;border:1px solid #ffffff1e;color:var(--txt);font-size:18px;font-weight:800;cursor:pointer;min-width:40px;text-align:center}
+.tile:active{transform:scale(.95)}
+.tile.used{opacity:.25;pointer-events:none}
+/* pary */
+.matchwrap{display:flex;gap:10px}
+.mcol{flex:1;display:flex;flex-direction:column;gap:9px}
+.mitem{padding:13px 12px;border-radius:13px;background:#ffffff0c;border:1.5px solid #ffffff1e;color:var(--txt);font-size:14.5px;font-weight:700;line-height:1.3;cursor:pointer;min-height:48px;display:flex;align-items:center}
+.mitem.sel{border-color:var(--accent2);background:#2a2350}
+.mitem.done{opacity:.35;border-color:var(--green);pointer-events:none}
+.mitem.bad{border-color:var(--red);animation:pop .2s}
+
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
+/* ============================================================
+   PRZEDMIOT: Angielski biznesowy B2+ — Business Partner B2 (Pearson)
+   ZAKRES: UNIT 3 (Finance) + UNIT 4 (Digital business)
+   Słownictwo i gramatyka SPRAWDZONE 1:1 ze zdjęciami stron podręcznika (ramki Vocabulary/Grammar/Functional language).
+   Gramatyka z kanału: tryby warunkowe (Unit 4.2) + alternatywy do "if". Prowadzący: Przemysław Cygan.
+   ============================================================ */
+window.SUBJECTS = window.SUBJECTS || [];
+window.SUBJECTS.push({
+  id:"angielski",
+  name:"Angielski B2+ (Unit 3 & 4)",
+  short:"English",
+  emoji:"🇬🇧",
+  tagline:"Business Partner B2 — Unit 3 Finance + Unit 4 Digital Business + tryby warunkowe. Słówka 1:1 z książki.",
+  accent:"linear-gradient(135deg,#1e3a8a,#3b82f6,#06b6d4)",
+  accent2:"#3b82f6",
+  lang:true,
+  grading:{pass:50,examMin:20,scale:[[90,"5 / bdb"],[80,"4,5"],[70,"4 / db"],[60,"3,5"],[50,"3 / dst"]],failLabel:"2 — niezaliczone"},
+  info:`
+    <div class="zbox"><h3>📕 Zakres</h3>
+      <p>Tylko <b>Unit 3 — Finance</b> i <b>Unit 4 — Digital business</b> z <b>Business Partner B2</b> (Pearson). Słownictwo i gramatyka wzięte <b>dokładnie z Twoich zdjęć stron</b> (ramki Vocabulary / Grammar / Functional language). Prowadzący: Przemysław Cygan.</p></div>
+    <div class="zbox"><h3>🔑 Gramatyka (priorytet)</h3>
+      <p>Tryby warunkowe: zero / first / second + first vs second + alternatywy do „if” (Unit 4.2). Z Unitu 3: certainty & probability + position of adverbs (3.2) i articles a/an/the/ø (3.5).</p></div>
+    <div class="zbox"><h3>💰 Unit 3 — Finance</h3>
+      <p>3.1 finanse i kryzysy · 3.2 catching up with rivals (certainty/probability) · 3.3 managing bad news · 3.4 telephoning to clarify · 3.5 annual report summary (articles).</p></div>
+    <div class="zbox"><h3>💻 Unit 4 — Digital business</h3>
+      <p>4.1 digital disruptors (tech + word building) · 4.2 conditionals + linkers · 4.3 handling difficult communicators · 4.4 negotiating strategies · 4.5 short business proposal.</p></div>
+    <div class="zbox"><h3>📝 Homework (deadline 20.06)</h3>
+      <p>Przeczytać teksty + odpowiedzieć na pytania oraz napisać jedną odpowiedź „Over to you” na <b>150–180 słów</b>. Wysłać przez Teams.</p></div>`,
+  levels:[
+    /* ===================== CONDITIONALS (Unit 4.2) ===================== */
+    {id:"a1",title:"Zero conditional",emoji:"0️⃣",
+     feed:[
+      {title:"Zero conditional = fakty i prawdy ogólne",body:"Schemat: <b>If + present, … present.</b> Coś <b>zawsze prawdziwego</b>.<br><i>If the food <b>is</b> out of date, I <b>don't eat</b> it.</i>",mnemo:"Zero = zero wątpliwości. <b>if ≈ when</b>."},
+      {title:"Przecinek",body:"If na początku → przecinek: <i>If you are talking, I can't concentrate.</i> · Main clause pierwsze → bez przecinka.",real:"Ta sama zasada w zero/first/second."}
+     ],
+     flashcards:[
+      {t:"Zero conditional — schemat",d:"If + present, … present. Prawdy ogólne / fakty."},
+      {t:"If you heat ice, it melts.",d:"Jeśli podgrzejesz lód, topnieje. (zero)"},
+      {t:"if = when (zero cond.)",d:"Można zamienić 'if' na 'when'."},
+      {t:"Przecinek",d:"If na początku → przecinek; main clause na początku → bez."}
+     ],
+     quiz:[
+      {q:"„If you heat water to 100°C, it ___.”",a:["will boil","boils","would boil","boiled"],c:1,e:"Zero: if + present, present → boils."},
+      {q:"Zero conditional dotyczy:",a:["hipotezy","prawdy ogólnej / faktu","planu na jutro","przeszłości"],c:1,e:"Coś zawsze prawdziwego."},
+      {q:"'if' w zero conditional ≈",a:["when","unless","would","will"],c:0,e:"If ≈ when."},
+      {q:"Poprawny przecinek:",a:["I don't drive, if I drink.","If I drink I don't drive.","If I drink, I don't drive.","none"],c:2,e:"If pierwszy → przecinek."}
+     ]},
+    {id:"a2",title:"First conditional",emoji:"1️⃣",
+     feed:[
+      {title:"First conditional = realna przyszłość",body:"Schemat: <b>If + present, … will/imperative/modal.</b> Coś <b>prawdopodobnego</b>.<br><i>If you <b>study</b>, you <b>will pass</b>.</i>",mnemo:"Warunek present, skutek <b>will</b> + bezokolicznik."},
+      {title:"NIE 'will' po if",body:"<s>If you will study…</s> ❌ → <i>If you study…</i> ✅",real:"Will tylko w części głównej."}
+     ],
+     flashcards:[
+      {t:"First conditional — schemat",d:"If + present, … will/imperative/modal. Realna przyszłość."},
+      {t:"If you study, you will pass.",d:"Jeśli będziesz się uczyć, zdasz."},
+      {t:"Po 'if' NIE ma 'will'",d:"If you study (✓), nie 'If you will study' (✗)."},
+      {t:"'ll / won't",d:"will → 'll; will not → won't."}
+     ],
+     quiz:[
+      {q:"„If it ___ tomorrow, we'll stay home.”",a:["will rain","rains","would rain","rained"],c:1,e:"If + present (rains)."},
+      {q:"Które POPRAWNE?",a:["If you will help me, I finish faster.","If you help me, I'll finish faster.","If you help me, I finish faster.","If you helped me, I'll finish faster."],c:1,e:"If + present, will + bezokolicznik."},
+      {q:"First conditional opisuje:",a:["nierealne marzenia","realną przyszłość","prawdy ogólne","przeszłość"],c:1,e:"Coś realnie możliwego."},
+      {q:"„Jeśli skończysz raport, wyślij mi go.”",a:["If you will finish it, send it.","If you finish the report, send it to me.","If you finished it, send it.","none"],c:1,e:"First + tryb rozkazujący."}
+     ]},
+    {id:"a3",title:"Second conditional",emoji:"2️⃣",
+     feed:[
+      {title:"Second conditional = nierealne / hipotetyczne",body:"Schemat: <b>If + past, … would/could/might + bezokolicznik.</b><br><i>If I <b>won</b> the lottery, I <b>would buy</b> a yacht.</i>",mnemo:"Past w 'if', <b>would/could/might</b> w głównej."},
+      {title:"'If I were you…'",body:"<b>were</b> dla wszystkich osób: <i>If I <b>were</b> you, I would talk to the boss.</i>",real:"Gotowy zwrot na radę."}
+     ],
+     flashcards:[
+      {t:"Second conditional — schemat",d:"If + past, … would/could/might + bezokolicznik. Nierealne/hipotetyczne."},
+      {t:"If I won the lottery, I would buy a yacht.",d:"Gdybym wygrał, kupiłbym jacht."},
+      {t:"If I were you, I would…",d:"Na Twoim miejscu bym… ('were' dla każdej osoby)"},
+      {t:"would / could / might",d:"would = bym; could = mógłbym; might = może."}
+     ],
+     quiz:[
+      {q:"„If I ___ rich, I would travel the world.”",a:["am","will be","were","be"],c:2,e:"if + past (were), would."},
+      {q:"„Gdybym miał czas, pomógłbym ci.”",a:["If I have time, I will help.","If I had time, I would help.","If I had time, I will help.","none"],c:1,e:"if + past, would."},
+      {q:"Second conditional = sytuacje:",a:["realne","nierealne / hipotetyczne","zawsze prawdziwe","przeszłe"],c:1,e:"Hipotetyczne/nierealne."},
+      {q:"„Na Twoim miejscu bym odszedł”",a:["If I am you, I will leave.","If I was you, I leave.","If I were you, I would leave.","none"],c:2,e:"If I were you, I would + bezokolicznik."}
+     ]},
+    {id:"a4",title:"First vs Second",emoji:"⚔️",
+     feed:[
+      {title:"Możliwe vs nierealne",body:"<b>First</b> = możliwe: <i>If I study, I will pass.</i><br><b>Second</b> = nierealne: <i>If I studied medicine, I would become a doctor.</i>",mnemo:"First → present+will. Second → past+would."},
+      {title:"Inny dystans",body:"<i>If I have time, I'll call.</i> (realnie) vs <i>If I had time, I'd call.</i> (raczej nie mam).",real:"Wybór pokazuje prawdopodobieństwo."}
+     ],
+     flashcards:[
+      {t:"First = ?",d:"Możliwe/prawdopodobne. If + present, will."},
+      {t:"Second = ?",d:"Nierealne/hipotetyczne. If + past, would."},
+      {t:"If I have time, I'll call.",d:"Realnie (first)."},
+      {t:"If I had time, I'd call.",d:"Raczej nie mam czasu (second)."}
+     ],
+     quiz:[
+      {q:"„Jeśli dostanę podwyżkę (realne), kupię auto.”",a:["If I get a raise, I'll buy a car.","If I got a raise, I'd buy a car.","If I get a raise, I bought a car.","none"],c:0,e:"Realne → first."},
+      {q:"„Gdybym był prezesem (nierealne)…”",a:["If I am CEO, I'll…","If I were CEO, I would…","If I was CEO, I change…","none"],c:1,e:"Nierealne → second."},
+      {q:"First vs second:",a:["bez różnicy","first=możliwe; second=nierealne","first=przeszłość","first=pytania"],c:1,e:"First realne, second nierealne."},
+      {q:"Które = małe prawdopodobieństwo?",a:["If I finish early, I'll join you.","If I finished early, I'd join you.","If I finish early, I join you.","none"],c:1,e:"Second = niskie prawdopodobieństwo."}
+     ]},
+    {id:"a5",title:"Alternatywy do „if”",emoji:"🔀",
+     feed:[
+      {title:"unless / in case",body:"<b>unless</b> = if not (chyba że): <i>I won't go <b>unless</b> you go too.</i><br><b>in case</b> = na wypadek gdyby: <i>Take an umbrella <b>in case</b> it rains.</i>",mnemo:"unless = chyba że; in case = na wszelki wypadek (NIE 'jeśli')."},
+      {title:"as long as / provided / even if",body:"<b>as long as / provided (that) / providing (that) / on condition that</b> = pod warunkiem że (= only if).<br><b>even if</b> = nawet jeśli. <b>whether or not</b> = niezależnie czy.",real:"provided/providing that = mocniejsze 'only if'."},
+      {title:"suppose / supposing",body:"<b>suppose / supposing (that)</b> = załóżmy, że / a gdyby tak.",real:"Często z second conditional."}
+     ],
+     flashcards:[
+      {t:"unless",d:"jeśli nie / chyba że (= if not)."},{t:"in case",d:"na wypadek gdyby (zapobiegawczo)."},
+      {t:"as long as / provided (that)",d:"pod warunkiem że (= only if)."},{t:"even if",d:"nawet jeśli."},
+      {t:"whether or not",d:"niezależnie czy."},{t:"suppose / supposing",d:"załóżmy, że / a gdyby."}
+     ],
+     quiz:[
+      {q:"„___ you hurry, you'll miss the bus.” (jeśli się nie pospieszysz)",a:["Unless","As long as","Even if","In case"],c:0,e:"unless = if not."},
+      {q:"„Weź gotówkę ___ karta nie zadziała.”",a:["unless","in case","provided that","even if"],c:1,e:"in case = na wypadek gdyby."},
+      {q:"„Pożyczę ci to, ___ oddasz jutro.”",a:["unless","even if","as long as","whether or not"],c:2,e:"as long as / provided that."},
+      {q:"„unless” znaczy:",a:["jeśli","jeśli nie / chyba że","na wypadek gdyby","nawet jeśli"],c:1,e:"unless = if not."}
+     ]},
+    /* ===================== UNIT 3 — FINANCE 💰 (słówka z książki) ===================== */
+    {id:"a6",title:"💰 U3.1: Finanse i kryzysy",emoji:"📉",
+     feed:[
+      {title:"Vocabulary box (3.1, ćw. 5)",body:"Dokładne słówka z ramki: <b>bankruptcy</b> – bankructwo · <b>credit crunch</b> – kryzys kredytowy · <b>depression</b> – wielki kryzys/depresja · <b>investment</b> – inwestycja · <b>loan</b> – pożyczka · <b>losses</b> – straty · <b>mortgage</b> – kredyt hipoteczny · <b>recession</b> – recesja · <b>savings</b> – oszczędności · <b>stock market</b> – giełda",mnemo:"To są dokładnie słowa z ramki Vocabulary 3.1 — kluczowe na test."},
+      {title:"Czasowniki finansowe (3.1)",body:"<b>to go bankrupt</b> – zbankrutować · <b>to bail (sb) out</b> – ratować dofinansowaniem · <b>to recover</b> – wyjść z kryzysu · <b>to invest</b> – inwestować · <b>shares / bonds</b> – akcje / obligacje · <b>interest rates</b> – stopy procentowe · <b>debt</b> – dług · <b>profit</b> – zysk",real:"Wall Street Crash 1929, Black Monday 1987, kryzys 2008 — pojawiają się w tekście/wideo 3.1."}
+     ],
+     flashcards:[
+      {t:"bankruptcy",d:"bankructwo (to go bankrupt = zbankrutować)"},{t:"credit crunch",d:"kryzys kredytowy (banki przestają pożyczać)"},
+      {t:"depression",d:"depresja / wielki kryzys gospodarczy"},{t:"investment",d:"inwestycja"},{t:"loan",d:"pożyczka, kredyt"},
+      {t:"losses",d:"straty"},{t:"mortgage",d:"kredyt hipoteczny"},{t:"recession",d:"recesja"},{t:"savings",d:"oszczędności"},
+      {t:"stock market",d:"giełda papierów wartościowych"},{t:"to bail (sb) out",d:"ratować dofinansowaniem (np. bank)"},
+      {t:"to recover",d:"wyjść z kryzysu / odbić się"},{t:"interest rates",d:"stopy procentowe"},{t:"shares / bonds",d:"akcje / obligacje"}
+     ],
+     quiz:[
+      {q:"„credit crunch” to:",a:["wzrost oszczędności","kryzys kredytowy (banki przestają pożyczać)","spłata kredytu","wysoki zysk"],c:1,e:"credit crunch = nagłe ograniczenie dostępu do kredytu."},
+      {q:"„mortgage” to:",a:["pożyczka studencka","kredyt hipoteczny","giełda","strata"],c:1,e:"mortgage = kredyt na mieszkanie/dom."},
+      {q:"„to go bankrupt” znaczy:",a:["zbankrutować","zainwestować","oszczędzać","odbić się"],c:0,e:"go bankrupt = zbankrutować."},
+      {q:"„stock market” to:",a:["sklep","giełda","magazyn","bank centralny"],c:1,e:"stock market = giełda."},
+      {q:"„savings” to:",a:["straty","długi","oszczędności","podatki"],c:2,e:"savings = oszczędności."}
+     ]},
+    {id:"a7",title:"💰 U3.2: Certainty & probability + articles",emoji:"🎯",
+     feed:[
+      {title:"Catching up with rivals (3.2 słówka)",body:"<b>to boost</b> – zwiększyć/podbić · <b>bottom line</b> – wynik finansowy (zysk/strata) · <b>to make up ground</b> – nadrobić zaległości · <b>to make your mark</b> – zaznaczyć swoją obecność · <b>profitability</b> – rentowność · <b>revenue</b> – przychód · <b>targets</b> – cele",mnemo:"bottom line = ostateczny wynik finansowy firmy."},
+      {title:"Expressing certainty & probability (Grammar 3.2)",body:"Pewne: <b>will / won't</b>, <b>is bound to / is certain to</b>.<br>Prawdopodobne: <b>is likely to</b>, <b>will probably</b>.<br>Możliwe: <b>may / might / could</b>.<br>Mało prawdopodobne: <b>is unlikely to</b>, <b>probably won't</b>.",mnemo:"Skala: will / bound to → likely to → may/might/could → unlikely to → won't."},
+      {title:"Position of adverbs + Articles (3.5)",body:"Przysłówki <b>definitely/probably/certainly</b>: PO 'will/be', PRZED zwykłym czasownikiem (<i>They will <b>definitely</b> win</i>).<br><b>Articles:</b> a/an (pierwszy raz, zawód) · the (konkretny/jedyny) · ø (ogólnie, l.mn./niepoliczalne).",real:"Grammar 3.5 = articles a/an, the, no article."}
+     ],
+     flashcards:[
+      {t:"to boost",d:"zwiększyć, podbić (np. sprzedaż)"},{t:"bottom line",d:"wynik finansowy (zysk lub strata)"},
+      {t:"to make up ground",d:"nadrobić zaległości / dogonić"},{t:"to make your mark",d:"zaznaczyć swoją obecność, zostawić ślad"},
+      {t:"profitability",d:"rentowność"},{t:"revenue",d:"przychód"},
+      {t:"is bound to / is certain to",d:"na pewno coś zrobi (wysoka pewność)"},{t:"is likely to",d:"prawdopodobnie (= will probably)"},
+      {t:"may / might / could",d:"może (możliwość)"},{t:"is unlikely to",d:"mało prawdopodobne, że"},
+      {t:"a / an / the / ø",d:"a/an = pierwszy raz/zawód; the = konkretny/jedyny; ø = ogólnie (l.mn./niepoliczalne)"}
+     ],
+     quiz:[
+      {q:"„bottom line” w biznesie to:",a:["ostatnie zdanie maila","wynik finansowy (zysk/strata)","podpis","termin"],c:1,e:"bottom line = ostateczny wynik finansowy."},
+      {q:"„Sprzedaż prawdopodobnie wzrośnie.”",a:["Sales are bound to rise.","Sales are likely to rise.","Sales won't rise.","Sales are unlikely to rise."],c:1,e:"is likely to = prawdopodobnie."},
+      {q:"Najwyższa pewność:",a:["might","could","is bound to","is unlikely to"],c:2,e:"is bound to / is certain to."},
+      {q:"Poprawna pozycja przysłówka:",a:["They definitely will win.","They will definitely win.","Definitely they will win.","They will win definitely."],c:1,e:"Po 'will': will definitely win."},
+      {q:"„She's ___ accountant.”",a:["a","an","the","ø"],c:1,e:"Zawód + samogłoska → 'an accountant'."}
+     ]},
+    {id:"a8",title:"💰 U3.3–3.4: Złe wieści i telefon",emoji:"📞",
+     feed:[
+      {title:"Managing & responding to bad news (3.3)",body:"Przekazywanie: <i>I'm afraid… / Unfortunately… / I'm sorry to say…</i><br>Balans (+ i −): <i>The good news is… , however… / On the plus side…</i><br>Reakcja: <i>I see. / That's a shame. / Let's see what we can do.</i>",mnemo:"Złe wieści 'kanapką': pozytyw → zła wiadomość → plan."},
+      {title:"Telephoning to clarify — słówka (3.4)",body:"Z ramki ćw. 3: <b>average</b> – średnia · <b>column</b> – kolumna · <b>gross</b> – brutto · <b>margin</b> – marża · <b>net</b> – netto · <b>quarter</b> – kwartał · <b>row</b> – wiersz. Plus: <b>bottom line</b>, <b>ROI</b> (return on investment), <b>product categories</b>.",real:"gross = brutto, net = netto; quarter = kwartał; margin = marża."},
+      {title:"Asking for clarification & paraphrasing (3.4)",body:"<i>Sorry, could you repeat that? / Could you go over that again?</i><br>Parafraza: <i>So what you're saying is… / If I understand correctly… / Do you mean…? / Just to confirm…</i>",real:"Parafraza = powtórz własnymi słowami, by potwierdzić zrozumienie."}
+     ],
+     flashcards:[
+      {t:"I'm afraid… / Unfortunately…",d:"wstęp do złej wiadomości"},{t:"That's a shame.",d:"Szkoda. (reakcja na złą wieść)"},
+      {t:"On the plus side…",d:"Z drugiej strony / plusem jest…"},
+      {t:"gross",d:"brutto"},{t:"net",d:"netto"},{t:"margin",d:"marża"},{t:"quarter",d:"kwartał"},
+      {t:"average",d:"średnia"},{t:"column / row",d:"kolumna / wiersz (w tabeli)"},{t:"ROI (return on investment)",d:"zwrot z inwestycji"},
+      {t:"So what you're saying is…",d:"Czyli mówisz, że… (parafraza)"},{t:"Could you go over that again?",d:"Mógłbyś to jeszcze raz wyjaśnić?"}
+     ],
+     quiz:[
+      {q:"„gross” vs „net”:",a:["gross = netto, net = brutto","gross = brutto, net = netto","to to samo","gross = marża"],c:1,e:"gross = brutto (przed odliczeniami), net = netto."},
+      {q:"„quarter” (w finansach) to:",a:["ćwiartka pizzy","kwartał","moneta 25 centów","czwarte piętro"],c:1,e:"quarter = kwartał (3 miesiące)."},
+      {q:"Uprzejmy wstęp do złej wiadomości:",a:["Great news!","I'm afraid…","No problem!","Of course!"],c:1,e:"I'm afraid / Unfortunately."},
+      {q:"Parafraza przez telefon:",a:["Goodbye.","So what you're saying is…","Hold on.","I'll call back."],c:1,e:"Parafraza = powtórzenie własnymi słowami."},
+      {q:"„margin” to:",a:["margines strony","marża","kwartał","wiersz"],c:1,e:"Tu: marża (profit margin)."}
+     ]},
+    /* ===================== UNIT 4 — DIGITAL BUSINESS 💻 (słówka z książki) ===================== */
+    {id:"a9",title:"💻 U4.1: Digital business + word building",emoji:"💻",
+     feed:[
+      {title:"Vocabulary box (4.1, ćw. 5)",body:"Dokładne słówka z ramki: <b>cloud</b> – chmura (przechowywanie w sieci) · <b>conversion</b> – konwersja (sprzedaż vs odwiedziny strony) · <b>(data) dump</b> – zrzut danych · <b>(data) mining</b> – eksploracja danych · <b>platform</b> – platforma · <b>tool</b> – narzędzie.<br>+ <b>DMP</b> = Digital Marketing Platform.",mnemo:"To słowa z ramki Vocabulary 4.1 — kluczowe na test."},
+      {title:"Disruptors (4.1 lead-in)",body:"<b>disrupt</b> – zrewolucjonizować/wywrócić rynek · <b>disruption</b> – przełom/zaburzenie · <b>disruptive</b> – przełomowy.<br>Disruptive technology = technologia wywracająca rynek (Uber, Netflix).",real:"'disrupt' = wywrócić rynek do góry nogami."},
+      {title:"Word building — verbs/nouns/adjectives (4.1)",body:"<b>anticipate → anticipation</b> · <b>convert → conversion / converted</b> · <b>disrupt → disruption / disruptive</b> · <b>personalize → personalization / personal</b> · <b>visualize → visualization / visual</b> · <b>analyse → analysis / analyst / analytical</b>",mnemo:"Akcent przesuwa się: INnovate → innoVAtion. Częste w ćwiczeniu word building."}
+     ],
+     flashcards:[
+      {t:"cloud",d:"chmura (przechowywanie danych w internecie)"},{t:"conversion",d:"konwersja (% sprzedaży względem odwiedzin)"},
+      {t:"(data) dump",d:"zrzut danych"},{t:"(data) mining",d:"eksploracja/analiza dużych zbiorów danych"},
+      {t:"platform",d:"platforma (np. oprogramowanie do zadań)"},{t:"tool",d:"narzędzie"},
+      {t:"disrupt",d:"zrewolucjonizować / wywrócić rynek"},{t:"disruption",d:"przełom, zaburzenie rynku"},{t:"disruptive",d:"przełomowy (disruptive technology)"},
+      {t:"anticipate → anticipation",d:"przewidywać → przewidywanie (word building)"},{t:"convert → conversion",d:"konwertować → konwersja"},
+      {t:"visualize → visualization",d:"wizualizować → wizualizacja"},{t:"DMP",d:"Digital Marketing Platform"}
+     ],
+     quiz:[
+      {q:"„(data) mining” to:",a:["kopanie kryptowalut","eksploracja/analiza dużych zbiorów danych","usuwanie danych","kopia zapasowa"],c:1,e:"data mining = analiza dużych ilości danych w poszukiwaniu wzorców."},
+      {q:"„cloud” (w IT) to:",a:["chmura — przechowywanie danych w internecie","prognoza pogody","awaria serwera","wirus"],c:0,e:"cloud = przechowywanie/oprogramowanie w sieci, nie na własnym komputerze."},
+      {q:"„disruptive technology” to technologia:",a:["przestarzała","wywracająca rynek do góry nogami","tania","zepsuta"],c:1,e:"disruptive = przełomowa, zmienia reguły rynku."},
+      {q:"Rzeczownik od „convert”:",a:["converting","conversion","converted","conversation"],c:1,e:"convert → conversion."},
+      {q:"„conversion” (marketing) to:",a:["zamiana waluty","stosunek sprzedaży do odwiedzin strony","awaria","rejestracja"],c:1,e:"conversion (rate) = ile odwiedzin zamienia się w sprzedaż."}
+     ]},
+    {id:"a10",title:"💻 U4.3–4.4: Trudni rozmówcy i negocjacje",emoji:"🤝",
+     feed:[
+      {title:"Style komunikacji (4.3 lead-in)",body:"Typy trudnych rozmówców: <b>Dominator</b> (zagaduje wszystkich) · <b>Non-responder</b> (milczy) · <b>Contradictor</b> (ze wszystkim się nie zgadza) · <b>Joker</b> (ciągle żartuje) · <b>Analyser</b> (wchodzi w detale) · <b>Technology-reliant</b> (wpatrzony w telefon).",mnemo:"Dwa podejścia: <b>Accept & adapt</b> (dostosuj się) vs <b>Intervene & control</b> (przejmij stery)."},
+      {title:"Keeping a meeting on track (4.3)",body:"Kategorie zwrotów: przypomnienie agendy, opanowanie gadułów (managing dominant speakers), zarządzanie wejściami w słowo, odłożenie dyskusji, spowolnienie, dopchnięcie do konkretu.<br><i>Can I stop you for a second? / Let's come back to that later. / Can we get back to the main topic?</i>",real:"keep a meeting on track = pilnować, by spotkanie nie zeszło z tematu."},
+      {title:"Negotiating: positional vs principled (4.4)",body:"<b>Positional negotiation</b> – bronisz konkretnej pozycji, próbujesz wymóc swoje.<br><b>Principled negotiation</b> – skupiasz się na <b>interesach i potrzebach obu stron</b>, szukasz wyniku win-win i dobrej relacji.<br>Reaching agreement: <i>First, let's look at the facts. / How could you imagine this working? / I think the best thing would be to… / That sounds reasonable.</i>",real:"Principled negotiation = rozwiązuj problem, nie walcz z osobą."}
+     ],
+     flashcards:[
+      {t:"Dominator",d:"rozmówca, który zagaduje i dominuje spotkanie"},{t:"Non-responder",d:"rozmówca milczący, nie reaguje"},
+      {t:"Contradictor",d:"rozmówca, który ze wszystkim się nie zgadza"},{t:"Analyser",d:"rozmówca wchodzący w nadmierne detale"},
+      {t:"Accept & adapt / Intervene & control",d:"dwa podejścia do trudnych rozmówców: dostosuj się / przejmij stery"},
+      {t:"keep a meeting on track",d:"pilnować, by spotkanie nie zeszło z tematu"},{t:"Can I stop you for a second?",d:"Mogę ci na chwilę przerwać?"},
+      {t:"positional negotiation",d:"negocjacje z obroną własnej pozycji (wymuszasz swoje)"},
+      {t:"principled negotiation",d:"negocjacje oparte na interesach obu stron, cel: win-win i dobra relacja"},
+      {t:"That sounds reasonable.",d:"To brzmi rozsądnie. (zgoda w negocjacji)"}
+     ],
+     quiz:[
+      {q:"„Principled negotiation” skupia się na:",a:["obronie własnej pozycji za wszelką cenę","interesach i potrzebach obu stron (win-win)","jak najszybszym zakończeniu","unikaniu rozmowy"],c:1,e:"principled = interesy obu stron, win-win i relacja."},
+      {q:"„Dominator” na spotkaniu to ktoś, kto:",a:["milczy","zagaduje i dominuje rozmowę","ciągle żartuje","wchodzi w detale"],c:1,e:"Dominator = przejmuje całą rozmowę."},
+      {q:"„keep a meeting on track” znaczy:",a:["odwołać spotkanie","pilnować, by nie zeszło z tematu","skrócić spotkanie","nagrać spotkanie"],c:1,e:"on track = w temacie / na właściwym torze."},
+      {q:"Zwrot 'Can I stop you for a second?' służy do:",a:["zakończenia spotkania","uprzejmego wejścia w słowo / opanowania gaduły","zgody","prośby o kawę"],c:1,e:"Managing dominant speakers / interruptions."},
+      {q:"„positional negotiation” to:",a:["szukanie win-win","obrona konkretnej pozycji i wymuszanie swego","brak negocjacji","negocjacje mailowe"],c:1,e:"positional = trzymasz się swojej pozycji."}
+     ]},
+    {id:"a11",title:"💻 U4.2/4.5: Linkers + business proposal",emoji:"🔗",
+     feed:[
+      {title:"Linkers (4.2)",body:"<b>Dodawanie:</b> moreover, in addition, furthermore.<br><b>Kontrast:</b> however, although, whereas, despite/in spite of.<br><b>Przyczyna:</b> because, since, as, due to.<br><b>Skutek:</b> therefore, so, as a result, consequently.<br><b>Cel:</b> to, in order to, so that.",mnemo:"however/although = kontrast; therefore/so = skutek; in order to = cel."},
+      {title:"Short business proposal — struktura (4.5)",body:"Sekcje z książki: <b>Introduction / Purpose statement</b> (<i>I am writing to propose that…</i>) → <b>Brief summary of problem</b> (<i>Recently, there have been… an increase in…</i>) → <b>Solution</b> (<i>The best… is…</i>) → <b>Plan, costs and schedule</b> (<i>Despite the high cost, we would be able to…</i>) → <b>Conclusion</b> (<i>I therefore recommend that we purchase…</i>).",mnemo:"Cel → problem → rozwiązanie → koszty/plan → rekomendacja."},
+      {title:"Noun phrases zamiast verb phrases (4.5)",body:"Styl formalny lubi rzeczowniki: „we <b>implemented</b> the system” → „<b>the implementation of</b> the system”. „costs <b>increased</b>” → „<b>the increase in</b> costs”. „we <b>reduced</b> waiting times” → „<b>the reduction of</b> waiting times”.",real:"Grammar 4.5 = noun phrases to replace verb phrases."}
+     ],
+     flashcards:[
+      {t:"however / although / whereas",d:"jednak / chociaż / podczas gdy (kontrast)"},{t:"therefore / as a result",d:"dlatego / w rezultacie (skutek)"},
+      {t:"due to / because of",d:"z powodu (przyczyna)"},{t:"in order to / so that",d:"aby / żeby (cel)"},{t:"moreover / in addition",d:"ponadto (dodawanie)"},
+      {t:"I am writing to propose that…",d:"Piszę, aby zaproponować… (otwarcie proposal)"},{t:"I therefore recommend that…",d:"Dlatego rekomenduję, aby… (zakończenie)"},
+      {t:"Despite the high cost, …",d:"Mimo wysokiego kosztu… (sekcja koszty)"},
+      {t:"noun phrase zamiast verb",d:"'we increased sales' → 'the increase in sales' (styl formalny)"}
+     ],
+     quiz:[
+      {q:"Linker KONTRASTU:",a:["therefore","however","because","in addition"],c:1,e:"however/although/whereas = kontrast."},
+      {q:"„___ the high cost, we bought it.” (mimo)",a:["Because of","Despite","Therefore","Moreover"],c:1,e:"Despite/In spite of + rzeczownik = mimo."},
+      {q:"Linker SKUTKU:",a:["although","whereas","as a result","in order to"],c:2,e:"as a result / therefore / so."},
+      {q:"Formalniej (noun phrase): „We reduced costs” →",a:["We are reducing costs","The reduction of costs","Costs reduce","Reduce the costs"],c:1,e:"Verb → noun phrase: the reduction of costs."},
+      {q:"Otwarcie business proposal:",a:["Once upon a time…","I am writing to propose that…","See you soon,","By the way…"],c:1,e:"Purpose statement: 'I am writing to propose that…'."}
+     ]}
+  ]
+});
+
+/* ============================================================
+   PRZEDMIOT: Język hiszpański (A1) — pod egzamin końcowy 21.06
+   Zakres wprost od prowadzącej. Nacisk na NOWY materiał (🆕), reszta = powtórka.
+   ============================================================ */
+window.SUBJECTS = window.SUBJECTS || [];
+window.SUBJECTS.push({
+  id:"hiszpanski",
+  name:"Hiszpański (egzamin 21.06)",
+  short:"Español",
+  emoji:"🇪🇸",
+  tagline:"A1 pod egzamin: powtórka z kolokwiów + nowy materiał (sklepy, pogoda, gerundio, droga, podróże).",
+  accent:"linear-gradient(135deg,#c60b1e,#ffc400,#c60b1e)",
+  accent2:"#ffc400",
+  lang:true,
+  grading:{pass:50,examMin:20,scale:[[90,"5 / bdb"],[80,"4,5"],[70,"4 / db"],[60,"3,5"],[50,"3 / dst"]],failLabel:"2 — niezaliczone"},
+  info:`
+    <div class="zbox"><h3>🗓️ Egzamin 21.06</h3>
+      <p>Skupiamy się głównie na <b>nowym materiale</b> (poziomy z 🆕), ale pojawią się też najważniejsze rzeczy z wcześniejszych zajęć i kolokwiów.</p></div>
+    <div class="zbox"><h3>🆕 Nowy materiał (priorytet)</h3>
+      <p>Sklepy (rodzaje + dialog ze sprzedawcą) · Pogoda, miesiące i pory roku · <b>Muy/mucho</b> · <b>Estar + gerundio</b> i kontrast presente vs gerundio · Pytanie/podawanie drogi · <b>Ir a + bezokolicznik</b> · Podróże (hotel/lotnisko).</p></div>
+    <div class="zbox"><h3>🔁 Powtórka z kolokwiów</h3>
+      <p>Przedstawianie się · Liczby · Odmiana czasowników (regularne + nieregularne) · Czasowniki typu <i>gustar</i> · Dialogi (restauracja) · Słownictwo: aktywności/rutyna + hobby, jedzenie, ubrania · Określenia miejsca i częstotliwości · Dzień i godzina · Tworzenie pytań · ser/estar/haber.</p></div>`,
+  levels:[
+    /* ===================== POWTÓRKA ===================== */
+    {id:"e1",title:"Przedstawianie się",emoji:"👋",
+     feed:[
+      {title:"Powitania i pożegnania",body:"<b>Hola</b> – cześć · <b>Buenos días</b> – dzień dobry (rano) · <b>Buenas tardes</b> – dzień dobry (popołudnie) · <b>Buenas noches</b> – dobry wieczór/dobranoc · <b>Adiós</b> – do widzenia · <b>Hasta luego</b> – do zobaczenia · <b>Hasta mañana</b> – do jutra",mnemo:"<b>Días</b> = rano (do ~14), <b>tardes</b> = popołudnie, <b>noches</b> = wieczór."},
+      {title:"Jak się przedstawić",body:"<b>Me llamo…</b> – nazywam się…<br><b>¿Cómo te llamas?</b> – jak się nazywasz?<br><b>Soy de Polonia</b> – jestem z Polski<br><b>¿De dónde eres?</b> – skąd jesteś?<br><b>Tengo 20 años</b> – mam 20 lat<br><b>Mucho gusto / Encantado/a</b> – miło mi",real:"Wiek przez TENER, nie ser: 'tengo 20 años' (dosł. mam 20 lat)."}
+     ],
+     flashcards:[
+      {t:"Hola",d:"cześć"},{t:"Buenos días",d:"dzień dobry (rano)"},{t:"Buenas tardes",d:"dzień dobry (po południu)"},
+      {t:"Buenas noches",d:"dobry wieczór / dobranoc"},{t:"Adiós",d:"do widzenia"},{t:"Hasta luego",d:"do zobaczenia"},
+      {t:"Me llamo…",d:"nazywam się…"},{t:"¿Cómo te llamas?",d:"jak się nazywasz?"},{t:"¿De dónde eres?",d:"skąd jesteś?"},
+      {t:"Soy de…",d:"jestem z… (pochodzenie)"},{t:"Encantado / Encantada",d:"miło mi (m./ż.)"},{t:"¿Cómo estás?",d:"jak się masz?"}
+     ],
+     quiz:[
+      {q:"Jak powiesz „nazywam się Ana”?",a:["Me llamo Ana","Soy de Ana","Tengo Ana","Me gusta Ana"],c:0,e:"Me llamo + imię. 'Soy Ana' też jest OK."},
+      {q:"„Buenas noches” oznacza:",a:["dzień dobry rano","dobry wieczór / dobranoc","do jutra","smacznego"],c:1,e:"Noches = wieczór/noc."},
+      {q:"Jak zapytasz „skąd jesteś?”",a:["¿Cómo te llamas?","¿Cuántos años tienes?","¿De dónde eres?","¿Qué hora es?"],c:2,e:"De dónde eres = skąd jesteś."},
+      {q:"„Mam 20 lat” to po hiszpańsku:",a:["Soy 20 años","Tengo 20 años","Estoy 20 años","Hay 20 años"],c:1,e:"Wiek przez TENER: tengo … años."}
+     ]},
+    {id:"e2",title:"Liczby",emoji:"🔢",
+     feed:[
+      {title:"Liczby 0–20",body:"0 cero, 1 uno, 2 dos, 3 tres, 4 cuatro, 5 cinco, 6 seis, 7 siete, 8 ocho, 9 nueve, 10 diez, 11 once, 12 doce, 13 trece, 14 catorce, 15 quince, 16 dieciséis, 17 diecisiete, 18 dieciocho, 19 diecinueve, 20 veinte.",mnemo:"16–19 = 'diez y…' sklejone: dieci+séis, dieci+siete…"},
+      {title:"Dziesiątki i setka",body:"30 treinta, 40 cuarenta, 50 cincuenta, 60 sesenta, 70 setenta, 80 ochenta, 90 noventa, 100 cien.<br>21–29: <b>veinti…</b> (veintiuno, veintidós). 31+: <b>treinta y uno</b>, cuarenta y dos…",real:"Od 31 w górę dajesz 'y': cuarenta y tres = 43. Tylko 20-tki sklejasz: veintitrés."}
+     ],
+     flashcards:[
+      {t:"cinco",d:"5"},{t:"ocho",d:"8"},{t:"once",d:"11"},{t:"quince",d:"15"},{t:"diecisiete",d:"17"},{t:"veinte",d:"20"},
+      {t:"treinta",d:"30"},{t:"cuarenta",d:"40"},{t:"cincuenta",d:"50"},{t:"setenta",d:"70"},{t:"noventa",d:"90"},{t:"cien",d:"100"}
+     ],
+     quiz:[
+      {q:"Ile to „cuarenta y siete”?",a:["47","57","74","27"],c:0,e:"cuarenta (40) y siete (7) = 47."},
+      {q:"Jak zapiszesz 15?",a:["cincuenta","quince","cinco","quinientos"],c:1,e:"quince = 15. cincuenta = 50."},
+      {q:"„70” to:",a:["sesenta","setenta","siete","setecientos"],c:1,e:"setenta = 70, sesenta = 60."},
+      {q:"23 po hiszpańsku:",a:["veintitrés","treinta y dos","dos y tres","veinte tres"],c:0,e:"20-tki sklejone: veintitrés."}
+     ]},
+    {id:"e3",title:"Czasowniki: odmiana",emoji:"🔧",
+     feed:[
+      {title:"Regularne: -ar / -er / -ir",body:"<b>hablar</b> (mówić): hablo, hablas, habla, hablamos, habláis, hablan<br><b>comer</b> (jeść): como, comes, come, comemos, coméis, comen<br><b>vivir</b> (mieszkać): vivo, vives, vive, vivimos, vivís, viven",mnemo:"Końcówki yo/tú/él: <b>-o, -as/-es, -a/-e</b>. -er i -ir różnią się tylko w 'nosotros/vosotros'."},
+      {title:"Nieregularne must-know",body:"<b>ser</b>: soy, eres, es, somos, sois, son<br><b>estar</b>: estoy, estás, está, estamos, estáis, están<br><b>tener</b>: tengo, tienes, tiene, tenemos, tenéis, tienen<br><b>ir</b>: voy, vas, va, vamos, vais, van<br><b>hacer</b>: hago, haces, hace…",real:"Te cztery (ser, estar, tener, ir) wracają wszędzie. Naucz się ich na blachę."}
+     ],
+     flashcards:[
+      {t:"hablar → yo",d:"hablo (mówię)"},{t:"comer → yo",d:"como (jem)"},{t:"vivir → nosotros",d:"vivimos (mieszkamy)"},
+      {t:"ser → yo",d:"soy (jestem - cecha)"},{t:"estar → yo",d:"estoy (jestem - stan/miejsce)"},{t:"tener → yo",d:"tengo (mam)"},
+      {t:"ir → yo",d:"voy (idę/jadę)"},{t:"hacer → yo",d:"hago (robię)"},{t:"tener → tú",d:"tienes (masz)"},
+      {t:"ir → nosotros",d:"vamos (idziemy)"}
+     ],
+     quiz:[
+      {q:"Forma „yo” od czasownika comer:",a:["como","comо","comes","como"],c:0,e:"comer → yo como."},
+      {q:"„tú” od tener:",a:["tengo","tienes","tiene","tienen"],c:1,e:"tener → tú tienes."},
+      {q:"Końcówki regularne dla 'nosotros':",a:["-amos / -emos / -imos","-o / -es / -e","-an / -en","-áis / -éis"],c:0,e:"hablamos, comemos, vivimos."},
+      {q:"„voy” to forma czasownika:",a:["ver","ir","venir","dar"],c:1,e:"ir → yo voy (idę/jadę)."}
+     ]},
+    {id:"e4",title:"Gustar i podobne",emoji:"❤️",
+     feed:[
+      {title:"Jak działa GUSTAR",body:"Gustar = 'podobać się' (dosł. coś mi się podoba). Zaimki: <b>me, te, le, nos, os, les</b>.<br><b>Me gusta el café</b> – lubię kawę (l.poj. / bezokolicznik)<br><b>Me gustan los gatos</b> – lubię koty (l.mnoga)<br><b>Me gusta bailar</b> – lubię tańczyć",mnemo:"<b>gusta</b> + jedna rzecz/czasownik, <b>gustan</b> + wiele rzeczy. Czasownik zgadza się z RZECZĄ, nie z osobą."},
+      {title:"Wzmacnianie i inne",body:"<b>Me encanta</b> – uwielbiam (mocniej niż gusta)<br><b>No me gusta nada</b> – w ogóle nie lubię<br><b>A mí también</b> – mnie też (zgoda) / <b>A mí tampoco</b> – mnie też nie<br>Podobnie odmieniają się: <b>encantar, interesar, doler</b> (boleć).",real:"'¿Te gusta?' – lubisz to? Odp.: 'Sí, me gusta mucho' albo 'No, no me gusta'."}
+     ],
+     flashcards:[
+      {t:"Me gusta…",d:"lubię… (l.poj./czasownik)"},{t:"Me gustan…",d:"lubię… (l.mnoga)"},{t:"Me encanta",d:"uwielbiam"},
+      {t:"¿Te gusta?",d:"lubisz to?"},{t:"No me gusta nada",d:"w ogóle nie lubię"},{t:"A mí también",d:"mnie też"},
+      {t:"A mí tampoco",d:"mnie też nie"},{t:"le gusta",d:"jemu/jej się podoba"},{t:"nos gusta",d:"nam się podoba"}
+     ],
+     quiz:[
+      {q:"„Lubię koty” (los gatos) to:",a:["Me gusta los gatos","Me gustan los gatos","Me gustas los gatos","Gusto los gatos"],c:1,e:"L.mnoga → gustan."},
+      {q:"„Lubię tańczyć” (bailar):",a:["Me gustan bailar","Me gusta bailar","Bailo gusta","Me gusto bailar"],c:1,e:"Bezokolicznik → gusta (l.poj.)."},
+      {q:"Czasownik w gustar zgadza się z:",a:["osobą mówiącą","rzeczą, która się podoba","czasem","rodzajem gramatycznym osoby"],c:1,e:"gusta/gustan zależy od rzeczy, nie od 'ja/ty'."},
+      {q:"„Mnie też nie” (zgoda do przeczenia):",a:["A mí también","A mí tampoco","Yo también","Me gusta"],c:1,e:"tampoco = przy przeczeniu; también = przy twierdzeniu."}
+     ]},
+    {id:"e5",title:"Słownictwo: jedzenie, ubrania, aktywności",emoji:"🍽️",
+     feed:[
+      {title:"Jedzenie (la comida)",body:"el pan – chleb · la fruta – owoce · la carne – mięso · el pescado – ryba · la verdura – warzywa · el agua – woda · el café – kawa · la leche – mleko · el queso – ser · el pollo – kurczak · el arroz – ryż · el huevo – jajko",mnemo:"Restauracja: <b>de primero</b> (przystawka), <b>de segundo</b> (danie gł.), <b>de postre</b> (deser), <b>la cuenta</b> (rachunek)."},
+      {title:"Ubrania (la ropa)",body:"la camiseta – koszulka · la camisa – koszula · el pantalón – spodnie · los zapatos – buty · el vestido – sukienka · la falda – spódnica · la chaqueta – kurtka/marynarka · el abrigo – płaszcz · los calcetines – skarpetki · el jersey – sweter"},
+      {title:"Aktywności: rutyna + hobby",body:"<b>Rutyna (zwrotne):</b> levantarse (wstawać) – me levanto, ducharse (brać prysznic), vestirse (ubierać się), desayunar (jeść śniadanie), acostarse (kłaść się) – me acuesto.<br><b>Hobby:</b> leer (czytać), ver la tele, escuchar música, jugar al fútbol, salir con amigos, hacer deporte.",real:"Zwrotne: zaimek PRZED czasownikiem: me levanto, te duchas, se acuesta."}
+     ],
+     flashcards:[
+      {t:"el pan",d:"chleb"},{t:"la carne",d:"mięso"},{t:"el pescado",d:"ryba"},{t:"la verdura",d:"warzywa"},{t:"el queso",d:"ser"},
+      {t:"la camiseta",d:"koszulka"},{t:"los zapatos",d:"buty"},{t:"el pantalón",d:"spodnie"},{t:"el vestido",d:"sukienka"},{t:"la chaqueta",d:"kurtka/marynarka"},
+      {t:"levantarse",d:"wstawać (me levanto)"},{t:"ducharse",d:"brać prysznic"},{t:"desayunar",d:"jeść śniadanie"},{t:"la cuenta",d:"rachunek (w restauracji)"}
+     ],
+     quiz:[
+      {q:"„el pescado” to:",a:["mięso","ryba","ser","chleb"],c:1,e:"pescado = ryba; carne = mięso."},
+      {q:"Które słowo to ubranie?",a:["el arroz","la falda","la leche","el huevo"],c:1,e:"la falda = spódnica."},
+      {q:"„me levanto” znaczy:",a:["myję się","wstaję","kładę się","ubieram się"],c:1,e:"levantarse = wstawać."},
+      {q:"W restauracji „la cuenta” to:",a:["karta dań","kelner","rachunek","deser"],c:2,e:"la cuenta = rachunek. la carta = menu."}
+     ]},
+    {id:"e6",title:"Miejsce, częstotliwość, czas",emoji:"📍",
+     feed:[
+      {title:"Określenia miejsca",body:"en – w/na · <b>encima de / sobre</b> – na · <b>debajo de</b> – pod · <b>enfrente de</b> – naprzeciwko · <b>al lado de</b> – obok · <b>a la derecha</b> – po prawej · <b>a la izquierda</b> – po lewej · <b>entre</b> – między · <b>detrás de</b> – za · <b>delante de</b> – przed",mnemo:"derecha = prawo (jak 'direct'), izquierda = lewo."},
+      {title:"Częstotliwość",body:"<b>siempre</b> – zawsze · <b>a menudo</b> – często · <b>a veces</b> – czasami · <b>raramente / casi nunca</b> – rzadko · <b>nunca</b> – nigdy · <b>todos los días</b> – codziennie",real:"'Nunca' przed czasownikiem = bez 'no': Nunca como carne. Po czasowniku trzeba 'no': No como carne nunca."},
+      {title:"Dzień i godzina",body:"Dni: lunes, martes, miércoles, jueves, viernes, sábado, domingo.<br><b>¿Qué hora es?</b> – Es la una / Son las dos. <b>y media</b> (:30), <b>y cuarto</b> (:15), <b>menos cuarto</b> (za 15).",mnemo:"Tylko 1:00 = 'ES la una'. Reszta = 'SON las…'."}
+     ],
+     flashcards:[
+      {t:"a la derecha",d:"po prawej"},{t:"a la izquierda",d:"po lewej"},{t:"al lado de",d:"obok"},{t:"enfrente de",d:"naprzeciwko"},
+      {t:"debajo de",d:"pod"},{t:"encima de",d:"na (czymś)"},{t:"siempre",d:"zawsze"},{t:"a veces",d:"czasami"},{t:"nunca",d:"nigdy"},
+      {t:"todos los días",d:"codziennie"},{t:"¿Qué hora es?",d:"która godzina?"},{t:"y media",d:"wpół (np. 2:30)"}
+     ],
+     quiz:[
+      {q:"„po lewej” to:",a:["a la derecha","a la izquierda","enfrente","al lado"],c:1,e:"izquierda = lewo."},
+      {q:"„nunca” znaczy:",a:["zawsze","czasami","nigdy","często"],c:2,e:"nunca = nigdy."},
+      {q:"Jak powiesz „jest 1:00”?",a:["Son la una","Es la una","Son las una","Es las dos"],c:1,e:"Tylko godzina 1 = ES la una."},
+      {q:"„debajo de la mesa” to:",a:["na stole","pod stołem","obok stołu","za stołem"],c:1,e:"debajo de = pod."}
+     ]},
+    {id:"e7",title:"Pytania + ser/estar/haber",emoji:"❓",
+     feed:[
+      {title:"Pytajniki (interrogativos)",body:"<b>¿Qué?</b> – co? · <b>¿Quién?</b> – kto? · <b>¿Dónde?</b> – gdzie? · <b>¿Cuándo?</b> – kiedy? · <b>¿Cómo?</b> – jak? · <b>¿Por qué?</b> – dlaczego? · <b>¿Cuánto/a/os/as?</b> – ile? · <b>¿Cuál?</b> – który?",mnemo:"Wszystkie pytajniki mają akcent (¿qué? vs que). I podwójny znak: ¿…?"},
+      {title:"SER vs ESTAR vs HAY",body:"<b>SER</b> – cecha stała: <i>Soy polaco. Es grande.</i><br><b>ESTAR</b> – stan/miejsce: <i>Estoy cansado. El banco está aquí.</i><br><b>HAY</b> (haber) – jest/są (istnienie, nieokreślone): <i>Hay un banco. ¿Hay una parada?</i>",real:"Pytania: ¿Dónde ESTÁ el supermercado? (gdzie jest – konkretny) vs ¿HAY un supermercado por aquí? (czy jest jakiś)."}
+     ],
+     flashcards:[
+      {t:"¿Qué?",d:"co?"},{t:"¿Dónde?",d:"gdzie?"},{t:"¿Cuándo?",d:"kiedy?"},{t:"¿Cómo?",d:"jak?"},{t:"¿Por qué?",d:"dlaczego?"},
+      {t:"¿Cuánto cuesta?",d:"ile kosztuje?"},{t:"ser",d:"być (cecha stała)"},{t:"estar",d:"być (stan / miejsce)"},
+      {t:"hay",d:"jest / są (istnienie, nieokreślone)"},{t:"¿Dónde está…?",d:"gdzie jest…? (konkretny)"},{t:"¿Hay…?",d:"czy jest jakiś…?"}
+     ],
+     quiz:[
+      {q:"„Gdzie jest dworzec?” (konkretny):",a:["¿Dónde hay la estación?","¿Dónde está la estación?","¿Dónde es la estación?","¿Qué la estación?"],c:1,e:"Konkretne miejsce → ESTAR: ¿Dónde está…?"},
+      {q:"„Czy jest tu jakiś przystanek?”",a:["¿Hay una parada por aquí?","¿Está una parada?","¿Es una parada?","¿Dónde la parada?"],c:0,e:"Istnienie nieokreślone → HAY."},
+      {q:"„Jestem zmęczony” (stan):",a:["Soy cansado","Estoy cansado","Hay cansado","Tengo cansado"],c:1,e:"Stan chwilowy → ESTAR."},
+      {q:"Który to pytajnik „ile”?",a:["¿Cuándo?","¿Cuánto?","¿Cómo?","¿Cuál?"],c:1,e:"cuánto = ile; cuándo = kiedy."}
+     ]},
+    /* ===================== NOWY MATERIAŁ 🆕 ===================== */
+    {id:"n1",title:"🆕 Sklepy + dialog",emoji:"🛒",
+     feed:[
+      {title:"Rodzaje sklepów (słówka prowadzącej)",body:"<b>la panadería</b> – piekarnia (pan) · <b>la carnicería</b> – mięsny (ternera, carne) · <b>la pescadería</b> – rybny (salmón) · <b>la frutería</b> – owoce/warzywa (naranjas) · <b>la pastelería</b> – cukiernia (tarta, pastel) · <b>la farmacia</b> – apteka (aspirinas) · <b>la papelería</b> – sklep papierniczy (bolígrafo) · <b>la óptica</b> – optyk (gafas) · <b>la joyería</b> – jubiler (anillo) · <b>la zapatería</b> – obuwniczy (botas) · <b>el estanco</b> – kiosk z tytoniem i znaczkami (sellos) · <b>el supermercado</b> – supermarket · <b>la tienda de ropa</b> – sklep odzieżowy (blusa)",mnemo:"Końcówka <b>-ería</b> = sklep z czymś: pan→panadería, carne→carnicería, zapato→zapatería. Wyjątki: la óptica, el estanco, el supermercado."},
+      {title:"Co gdzie kupisz (dopasowania z zajęć)",body:"sellos (znaczki) → <b>estanco</b> · gafas (okulary) → <b>óptica</b> · anillo (pierścionek) → <b>joyería</b> · tarta (tort) → <b>pastelería</b> · bolígrafo (długopis) → <b>papelería</b> · aspirinas → <b>farmacia</b> · salmón → <b>pescadería</b> · ternera (wołowina) → <b>carnicería</b> · naranjas → <b>frutería</b> · botas → <b>zapatería</b>",real:"Pułapki egzaminacyjne: <b>estanco</b> = tu kupisz znaczki (sellos), <b>óptica</b> = okulary, <b>joyería</b> = biżuteria. Te trzy lubią się pojawiać."},
+      {title:"Dialog ze sprzedawcą",body:"<b>¿Qué desea?</b> – czego pan/pani sobie życzy?<br><b>Quería…</b> – chciał(a)bym…<br><b>¿Cuánto cuesta? / ¿Cuánto es?</b> – ile kosztuje?<br><b>¿Algo más?</b> – coś jeszcze?<br><b>Nada más, gracias</b> – nic więcej, dziękuję<br><b>En total son 10 euros</b> – razem 10 euro · <b>Aquí tiene</b> – proszę bardzo"}
+     ],
+     flashcards:[
+      {t:"la panadería",d:"piekarnia (pan)"},{t:"la carnicería",d:"sklep mięsny (carne, ternera)"},{t:"la pescadería",d:"sklep rybny (salmón)"},
+      {t:"la frutería",d:"warzywniak / owoce (naranjas)"},{t:"la pastelería",d:"cukiernia (tarta, pastel)"},{t:"la farmacia",d:"apteka (aspirinas)"},
+      {t:"la papelería",d:"sklep papierniczy (bolígrafo)"},{t:"la óptica",d:"optyk (gafas / okulary)"},{t:"la joyería",d:"jubiler (anillo / pierścionek)"},
+      {t:"la zapatería",d:"sklep obuwniczy (botas)"},{t:"el estanco",d:"kiosk z tytoniem i znaczkami (sellos)"},{t:"el supermercado",d:"supermarket"},
+      {t:"la tienda de ropa",d:"sklep odzieżowy (blusa)"},{t:"¿Cuánto cuesta?",d:"ile kosztuje?"},{t:"¿Qué desea?",d:"czego pan/pani sobie życzy?"},
+      {t:"¿Algo más?",d:"coś jeszcze?"},{t:"Aquí tiene",d:"proszę bardzo (podając)"}
+     ],
+     quiz:[
+      {q:"Gdzie kupisz znaczki (sellos)?",a:["la papelería","el estanco","la farmacia","la óptica"],c:1,e:"Sellos → el estanco (kiosk z tytoniem i znaczkami)."},
+      {q:"Gafas (okulary) kupisz w:",a:["la óptica","la joyería","la papelería","la pescadería"],c:0,e:"Gafas → la óptica."},
+      {q:"Gdzie kupisz tort (tarta)?",a:["la panadería","la pastelería","la frutería","la carnicería"],c:1,e:"Tarta/pastel → la pastelería. Pan → panadería."},
+      {q:"Anillo (pierścionek) kupisz w:",a:["la zapatería","la joyería","el estanco","la tienda de ropa"],c:1,e:"Anillo → la joyería (jubiler)."},
+      {q:"„Salmón” (łosoś) kupisz w:",a:["la carnicería","la pescadería","la frutería","la pastelería"],c:1,e:"Ryby → la pescadería; mięso → carnicería."},
+      {q:"Sprzedawca pyta „¿Algo más?” — znaczy:",a:["ile płacę?","coś jeszcze?","gdzie kasa?","masz kartę?"],c:1,e:"Algo más = coś jeszcze?"},
+      {q:"Jak zapytasz o cenę?",a:["¿Qué desea?","¿Cuánto cuesta?","¿Algo más?","¿Dónde está?"],c:1,e:"¿Cuánto cuesta? / ¿Cuánto es?"}
+     ]},
+    {id:"n2",title:"🆕 Pogoda, miesiące, pory roku",emoji:"🌤️",
+     feed:[
+      {title:"Pogoda (el tiempo)",body:"<b>Hace sol</b> – jest słonecznie · <b>Hace calor</b> – jest gorąco · <b>Hace frío</b> – jest zimno · <b>Hace viento</b> – jest wietrznie · <b>Hace buen/mal tiempo</b> – ładna/brzydka pogoda · <b>Llueve</b> – pada deszcz (llover) · <b>Nieva</b> – pada śnieg (nevar) · <b>Está nublado</b> – jest pochmurno",mnemo:"Pogoda głównie przez <b>HACE</b> (hace sol/frío/calor). Ale: llueve, nieva, está nublado — bez 'hace'."},
+      {title:"Pory roku i miesiące",body:"<b>Pory roku:</b> la primavera (wiosna), el verano (lato), el otoño (jesień), el invierno (zima).<br><b>Miesiące:</b> enero, febrero, marzo, abril, mayo, junio, julio, agosto, septiembre, octubre, noviembre, diciembre.",real:"Miesiące i dni piszemy <b>małą literą</b>: 'en junio', 'el lunes'."},
+      {title:"Kultura: kwiecień w Hiszpanii 🇪🇸",body:"Z materiału „El abril en España”:<br>🐎 <b>La Feria de Abril</b> – święto w <b>Sewilli</b>: casetas (namioty), muzyka i taniec <b>sevillanas</b>, jedzenie/picie, corrida de toros.<br>📚🌹 <b>Sant Jordi</b> (23 kwietnia, Barcelona) – „najpiękniejszy dzień”: ludzie <b>dają sobie książki i róże</b> (libros y rosas).",real:"Skojarz: Feria de Abril = Sevilla + sevillanas; Sant Jordi = Barcelona + książki i róże (23.04)."}
+     ],
+     flashcards:[
+      {t:"Hace sol",d:"jest słonecznie"},{t:"Hace calor",d:"jest gorąco"},{t:"Hace frío",d:"jest zimno"},{t:"Hace viento",d:"jest wietrznie"},
+      {t:"Llueve",d:"pada deszcz"},{t:"Nieva",d:"pada śnieg"},{t:"Está nublado",d:"jest pochmurno"},
+      {t:"la primavera",d:"wiosna"},{t:"el verano",d:"lato"},{t:"el otoño",d:"jesień"},{t:"el invierno",d:"zima"},
+      {t:"julio",d:"lipiec"},{t:"diciembre",d:"grudzień"}
+     ],
+     quiz:[
+      {q:"Jak powiesz „jest zimno”?",a:["Hace calor","Hace frío","Hace sol","Llueve"],c:1,e:"Hace frío = zimno; calor = gorąco."},
+      {q:"„pada deszcz” to:",a:["Nieva","Llueve","Está nublado","Hace viento"],c:1,e:"Llueve (llover). Nieva = pada śnieg."},
+      {q:"Lato po hiszpańsku:",a:["el invierno","el otoño","el verano","la primavera"],c:2,e:"verano = lato; invierno = zima."},
+      {q:"Pogodę najczęściej tworzymy czasownikiem:",a:["ser","hacer (hace…)","tener","ir"],c:1,e:"Hace sol/calor/frío/viento."}
+     ]},
+    {id:"n3",title:"🆕 Muy vs Mucho",emoji:"⚖️",
+     feed:[
+      {title:"MUY — bardzo (przy cechach)",body:"<b>muy</b> + przymiotnik / przysłówek. Nie odmienia się.<br><i>muy grande</i> – bardzo duży · <i>muy bien</i> – bardzo dobrze · <i>muy cansado</i> – bardzo zmęczony · <i>muy rápido</i> – bardzo szybko",mnemo:"<b>muy</b> stoi przy 'jaki/jak' (przymiotnik/przysłówek). Krótkie słowo = krótkie towarzystwo."},
+      {title:"MUCHO — dużo (przy rzeczach/czynnościach)",body:"<b>mucho</b> + rzeczownik (odmienia się przez rodzaj/liczbę): mucho dinero, mucha gente, muchos libros, muchas casas.<br><b>mucho</b> po czasowniku (nie odmienia się): <i>como mucho</i> – dużo jem · <i>trabaja mucho</i> – dużo pracuje.",real:"Test: 'bardzo' → MUY. 'dużo' → MUCHO. Nigdy 'muy mucho'."}
+     ],
+     flashcards:[
+      {t:"muy",d:"bardzo (+ przymiotnik/przysłówek)"},{t:"mucho",d:"dużo (+ rzeczownik / po czasowniku)"},
+      {t:"muy grande",d:"bardzo duży"},{t:"muy bien",d:"bardzo dobrze"},{t:"mucho dinero",d:"dużo pieniędzy"},
+      {t:"mucha gente",d:"dużo ludzi"},{t:"muchos libros",d:"dużo książek"},{t:"Trabaja mucho",d:"dużo pracuje"}
+     ],
+     quiz:[
+      {q:"„bardzo zmęczony” to:",a:["mucho cansado","muy cansado","mucha cansado","muy mucho cansado"],c:1,e:"bardzo + przymiotnik → MUY."},
+      {q:"„dużo ludzi” (la gente):",a:["muy gente","mucho gente","mucha gente","muchas gente"],c:2,e:"gente jest ż.l.poj. → mucha gente."},
+      {q:"Wstaw: „Como ___” (dużo jem):",a:["muy","mucho","mucha","muchos"],c:1,e:"Po czasowniku → mucho (bez odmiany)."},
+      {q:"Która forma jest BŁĘDNA?",a:["muy rápido","muchos libros","muy mucho","mucha agua"],c:2,e:"'muy mucho' nie istnieje."}
+     ]},
+    {id:"n4",title:"🆕 Estar + gerundio",emoji:"🔄",
+     feed:[
+      {title:"Gerundio — jak go tworzyć",body:"Czasowniki <b>-ar</b> → <b>-ando</b>: hablar → hablando.<br><b>-er / -ir</b> → <b>-iendo</b>: comer → comiendo, vivir → viviendo.<br>Nieregularne: leer → le<b>y</b>endo, dormir → d<b>u</b>rmiendo, pedir → p<b>i</b>diendo, oír → oyendo.",mnemo:"-AR → -ANDO, -ER/-IR → -IENDO. (A do A, reszta do I.)"},
+      {title:"Estar + gerundio = dzieje się TERAZ",body:"<b>estar</b> (odmienione) + gerundio = czynność w trakcie, w tym momencie.<br><i>Estoy comiendo</i> – właśnie jem · <i>¿Qué estás haciendo?</i> – co (teraz) robisz? · <i>Está lloviendo</i> – właśnie pada",real:"To hiszpański 'present continuous' (jak ang. I am eating)."},
+      {title:"Presente vs gerundio — kontrast",body:"<b>Presente</b> = ogólnie / rutyna / zawsze: <i>Como a las dos</i> (jadam o 14), <i>Estudio español</i> (uczę się hiszpańskiego – ogólnie).<br><b>Estar + gerundio</b> = właśnie teraz: <i>Estoy comiendo</i> (jem w tej chwili), <i>Estoy estudiando</i> (uczę się w tym momencie).",real:"Słowa-klucze dla gerundio: ahora, en este momento. Dla presente: normalmente, todos los días, siempre."}
+     ],
+     flashcards:[
+      {t:"hablando",d:"mówiąc (hablar → -ando)"},{t:"comiendo",d:"jedząc (comer → -iendo)"},{t:"viviendo",d:"mieszkając (vivir → -iendo)"},
+      {t:"leyendo",d:"czytając (leer — nieregularne)"},{t:"durmiendo",d:"śpiąc (dormir — nieregularne)"},
+      {t:"Estoy comiendo",d:"właśnie jem"},{t:"¿Qué estás haciendo?",d:"co (teraz) robisz?"},{t:"Está lloviendo",d:"właśnie pada"},
+      {t:"estar + gerundio",d:"czynność w trakcie (teraz)"}
+     ],
+     quiz:[
+      {q:"Gerundio od „comer” to:",a:["comando","comiendo","comando","comido"],c:1,e:"-er → -iendo: comiendo."},
+      {q:"„Właśnie pada” to:",a:["Llueve ahora","Está lloviendo","Estoy lloviendo","Hace lluvia"],c:1,e:"estar + gerundio: está lloviendo."},
+      {q:"Gerundio od „hablar”:",a:["hablando","hablendo","hablado","habliendo"],c:0,e:"-ar → -ando: hablando."},
+      {q:"„Normalmente como a las dos” używa presente, bo:",a:["czynność trwa teraz","to rutyna/ogólnie","to przyszłość","to rozkaz"],c:1,e:"Rutyna/ogólnie → presente. Teraz → estar+gerundio."},
+      {q:"Gerundio od „leer” (nieregularne):",a:["leiendo","leyendo","leendo","leyando"],c:1,e:"leer → leyendo (i→y między samogłoskami)."},
+      {q:"[z quizu] „Ahora mismo ___ Matemáticas porque mañana tengo examen.”",a:["estudio","estoy estudiando","voy a estudiar","estudiando"],c:1,e:"'Ahora mismo' = teraz → estar+gerundio: estoy estudiando."},
+      {q:"[z quizu] „El próximo sábado ___ al cine.”",a:["estamos yendo","vamos","estamos ir","yendo"],c:1,e:"Plan na przyszłość, nie czynność w trakcie → presente: vamos. (NIE 'estamos yendo'.)"},
+      {q:"[z quizu] „Su primo es músico. ___ el violín.”",a:["Está tocando","Toca","Tocando","Va a tocar"],c:1,e:"Cecha/ogólnie (jest muzykiem) → presente: Toca."},
+      {q:"[z quizu] „Marco ___ la televisión en este momento.”",a:["ve","está viendo","va a ver","viendo"],c:1,e:"'En este momento' → estar+gerundio: está viendo."},
+      {q:"[z quizu] „No puedes gritar, el niño ___.”",a:["duerme","está durmiendo","va a dormir","durmiendo"],c:1,e:"Dzieje się teraz → está durmiendo (dormir → durmiendo)."},
+      {q:"[z quizu] „¿Puede repetir? Es que no ___ bien.” (słyszeć)",a:["estoy oyendo","oigo","voy a oír","oyendo"],c:1,e:"Czasowniki percepcji (oír, ver) zwykle w presente: no oigo bien — mimo że 'teraz'."},
+      {q:"Reguła z zajęć: presente używamy do…, a estar+gerundio do…",a:["…czynności teraz / …rutyny","…rutyny i prawd ogólnych / …czynności w trakcie mówienia","obu tak samo","tylko w pytaniach"],c:1,e:"Presente = czynności habitualne i prawdy ogólne; estar+gerundio = czynność w momencie mówienia."}
+     ]},
+    {id:"n5",title:"🆕 Pytanie i podawanie drogi",emoji:"🧭",
+     feed:[
+      {title:"Jak zapytać o drogę",body:"<b>¿Cómo llego a…?</b> – jak dojdę do…?<br><b>¿Dónde está…?</b> – gdzie jest…?<br><b>¿Hay un/una … por aquí?</b> – czy jest tu jakiś…?<br><b>¿Está lejos / cerca?</b> – czy to daleko / blisko?",real:"Perdone/Disculpe (przepraszam) na start, gdy zaczepiasz kogoś o drogę."},
+      {title:"Wskazówki (las direcciones)",body:"<b>Sigue todo recto</b> – idź prosto · <b>Gira a la derecha</b> – skręć w prawo · <b>Gira a la izquierda</b> – skręć w lewo · <b>Cruza la calle</b> – przejdź przez ulicę · <b>la primera/segunda calle</b> – pierwsza/druga ulica · <b>Está al final de la calle</b> – na końcu ulicy",mnemo:"recto = prosto, gira = skręć, cruza = przejdź. derecha=prawo / izquierda=lewo."}
+     ],
+     flashcards:[
+      {t:"¿Cómo llego a…?",d:"jak dojdę do…?"},{t:"todo recto",d:"prosto"},{t:"Sigue recto",d:"idź prosto"},
+      {t:"Gira a la derecha",d:"skręć w prawo"},{t:"Gira a la izquierda",d:"skręć w lewo"},{t:"Cruza la calle",d:"przejdź przez ulicę"},
+      {t:"¿Está lejos?",d:"czy to daleko?"},{t:"cerca",d:"blisko"},{t:"la primera calle",d:"pierwsza ulica"},{t:"Perdone / Disculpe",d:"przepraszam (zaczepiając)"}
+     ],
+     quiz:[
+      {q:"„skręć w lewo” to:",a:["gira a la derecha","sigue recto","gira a la izquierda","cruza la calle"],c:2,e:"izquierda = lewo."},
+      {q:"„Jak dojdę do dworca?”",a:["¿Cómo llego a la estación?","¿Cuánto cuesta la estación?","¿Qué hora es?","¿De dónde eres?"],c:0,e:"¿Cómo llego a…? = jak dojdę do…?"},
+      {q:"„todo recto” znaczy:",a:["w prawo","prosto","w lewo","zawróć"],c:1,e:"recto = prosto."},
+      {q:"„¿Está cerca?” pyta o to, czy coś jest:",a:["daleko","drogie","blisko","otwarte"],c:2,e:"cerca = blisko; lejos = daleko."}
+     ]},
+    {id:"n6",title:"🆕 Ir a + bezokolicznik",emoji:"⏩",
+     feed:[
+      {title:"Bliska przyszłość: IR A + infinitivo",body:"<b>ir</b> (odmienione) + <b>a</b> + bezokolicznik = zamiar / najbliższa przyszłość ('zamierzam / będę').<br>voy a, vas a, va a, vamos a, vais a, van a + czasownik.<br><i>Voy a comer</i> – zamierzam zjeść · <i>Vamos a viajar</i> – będziemy podróżować · <i>¿Qué vas a hacer?</i> – co będziesz robić?",mnemo:"Schemat na blachę: <b>[forma ir] + a + bezokolicznik</b>. Zawsze jest 'a'!"},
+      {title:"Z określeniami czasu",body:"<b>mañana</b> – jutro · <b>esta tarde</b> – dziś po południu · <b>este fin de semana</b> – w ten weekend · <b>el año que viene</b> – w przyszłym roku.<br><i>Mañana voy a estudiar.</i> · <i>Este verano vamos a viajar a España.</i>",real:"To najprostszy sposób mówienia o przyszłości na A1 — nie musisz znać czasu przyszłego (futuro)."}
+     ],
+     flashcards:[
+      {t:"ir a + bezokolicznik",d:"zamierzać / bliska przyszłość"},{t:"Voy a comer",d:"zamierzam zjeść"},{t:"¿Qué vas a hacer?",d:"co będziesz robić?"},
+      {t:"Vamos a viajar",d:"będziemy podróżować"},{t:"mañana",d:"jutro"},{t:"esta tarde",d:"dziś po południu"},
+      {t:"este fin de semana",d:"w ten weekend"},{t:"el año que viene",d:"w przyszłym roku"}
+     ],
+     quiz:[
+      {q:"„Zamierzam zjeść” to:",a:["Voy comer","Voy a comer","Voy a como","Como a ir"],c:1,e:"ir + A + bezokolicznik: voy a comer."},
+      {q:"Czego ZAWSZE potrzeba w tej konstrukcji?",a:["przyimka 'a'","rodzajnika","zaimka zwrotnego","przeczenia"],c:0,e:"[ir] + a + bezokolicznik — 'a' jest obowiązkowe."},
+      {q:"„Co będziesz robić jutro?”",a:["¿Qué haces mañana a?","¿Qué vas a hacer mañana?","¿Qué vas hacer?","¿Qué ir a hacer?"],c:1,e:"¿Qué vas a hacer? + mañana."},
+      {q:"„Będziemy podróżować” (nosotros):",a:["Van a viajar","Vamos a viajar","Vais a viajar","Voy a viajar"],c:1,e:"nosotros → vamos a viajar."}
+     ]},
+    {id:"n7",title:"🆕 Podróże (hotel / lotnisko)",emoji:"✈️",
+     feed:[
+      {title:"Słownictwo podróżne",body:"el aeropuerto – lotnisko · el vuelo – lot · la maleta – walizka · el billete – bilet · el pasaporte – paszport · la estación – dworzec · el tren – pociąg · el hotel – hotel · la habitación – pokój · la llave – klucz · la reserva – rezerwacja",mnemo:"billete = bilet (podobne!), maleta = walizka, llave = klucz."},
+      {title:"Dialogi: hotel i lotnisko",body:"<b>Hotel:</b> Tengo una reserva – mam rezerwację · Quería una habitación doble/individual – pokój 2-os./1-os. · ¿A qué hora es el desayuno? – o której śniadanie?<br><b>Lotnisko:</b> ¿Dónde está la puerta de embarque? – gdzie jest bramka? · facturar el equipaje – nadać bagaż · El vuelo sale a las… – lot odlatuje o…",real:"habitación doble = dwuosobowy, individual = jednoosobowy. 'una reserva a nombre de…' = rezerwacja na nazwisko…"}
+     ],
+     flashcards:[
+      {t:"el aeropuerto",d:"lotnisko"},{t:"el vuelo",d:"lot"},{t:"la maleta",d:"walizka"},{t:"el billete",d:"bilet"},
+      {t:"el pasaporte",d:"paszport"},{t:"la habitación",d:"pokój"},{t:"la reserva",d:"rezerwacja"},{t:"la llave",d:"klucz"},
+      {t:"habitación doble",d:"pokój dwuosobowy"},{t:"habitación individual",d:"pokój jednoosobowy"},{t:"¿A qué hora es el desayuno?",d:"o której śniadanie?"}
+     ],
+     quiz:[
+      {q:"„walizka” to:",a:["el billete","la maleta","la llave","el vuelo"],c:1,e:"maleta = walizka; billete = bilet."},
+      {q:"W hotelu poprosisz o pokój 1-osobowy:",a:["habitación doble","habitación individual","habitación grande","habitación libre"],c:1,e:"individual = jednoosobowy; doble = dwuosobowy."},
+      {q:"„Mam rezerwację” to:",a:["Quería una habitación","Tengo una reserva","¿A qué hora?","Voy a viajar"],c:1,e:"Tengo una reserva (a nombre de…)."},
+      {q:"„el vuelo” znaczy:",a:["dworzec","lot","paszport","klucz"],c:1,e:"vuelo = lot (samolotem)."}
+     ]}
+  ]
+});
+
 /* ============================================================
    PRZEDMIOT: Wprowadzenie do kryptowalut i NFT (blockchain dla banku)
    Źródło: 8 prezentacji dr. hab. Krzysztofa Piecha (Uczelnia Łazarskiego / szkolenie Deutsche Bank)
@@ -665,6 +1216,132 @@ window.SUBJECTS.push({
   ]
 });
 
+/* ============================================================
+   PRZEDMIOT: Makroekonomia — kolos (5 pytań)
+   Na bazie realnego kolosa (grupy a1–a5). Te same TYPY pytań, inne liczby.
+   Każdy poziom = jeden typ: metoda + przeliczony przykład + warianty liczbowe do drylu.
+   ============================================================ */
+window.SUBJECTS = window.SUBJECTS || [];
+window.SUBJECTS.push({
+  id:"makrokolos",
+  name:"Makroekonomia — kolos (5 pytań)",
+  short:"Makro-kolos",
+  emoji:"🧮",
+  tagline:"5 typów pytań z kolosa: realne PKB, inflacja, aktywność zawodowa, model Solowa, krzyż keynesowski.",
+  accent:"linear-gradient(135deg,#0ea5e9,#1ed760,#0ea5e9)",
+  accent2:"#1ed760",
+  grading:{pass:50,examMin:15,scale:[[90,"5"],[80,"4,5"],[70,"4"],[60,"3,5"],[50,"3"]],failLabel:"2 — niezaliczone"},
+  info:`
+    <div class="zbox"><h3>🎯 Po co to</h3>
+      <p>Na kolosie pojawią się <b>dokładnie te 5 pytań</b> — tylko z innymi liczbami. Tu masz <b>metodę na każde</b> + przeliczony oryginał + warianty z innymi danymi. Ogarnij metodę, a podstawisz dowolne liczby.</p></div>
+    <div class="zbox"><h3>⚡ Najczęstsze pułapki</h3>
+      <p>• <b>Realne PKB</b> liczysz cenami <b>roku bazowego</b> (nie bieżącego!).<br>• <b>Inflację</b> za kilka lat <b>mnożysz</b> (1+i), a nie dodajesz.<br>• <b>Aktywność zawodowa</b> = pracujący <b>+</b> bezrobotni, podzielone przez dorosłych.<br>• W <b>Solowie</b> przy k poniżej k* nachylenie produkcji jest <b>większe</b> (malejąca produktywność kapitału).</p></div>`,
+  levels:[
+    /* ---------------- Q1: Realne PKB ---------------- */
+    {id:"q1",title:"Q1: Realne PKB + stopa wzrostu",emoji:"📊",
+     feed:[
+      {title:"Wzór (zapamiętaj)",body:"<b>Realne PKB (rok t)</b> = Σ (ilość z roku t × cena z roku <b>bazowego</b>).<br><b>Stopa wzrostu realnego PKB</b> = (realne PKB_t − realne PKB_t−1) / realne PKB_t−1 × 100%.",mnemo:"Realne = ILOŚCI bieżące × CENY bazowe. Nominalne = ilości × ceny bieżące."},
+      {title:"Twój przykład (jabłka + ziemniaki)",body:"Rok bazowy 2020: cena jabłka 5, cena ziemniaka 2.<br><b>Realne PKB 2022</b> = 200·5 + 150·2 = 1000 + 300 = <b>1300 €</b><br><b>Realne PKB 2021</b> = 150·5 + 75·2 = 750 + 150 = 900 €<br><b>Wzrost 2022</b> = (1300 − 900)/900 = <b>44%</b>",real:"Odpowiedź: 1300 € i 44%. (Uwaga: nominalne PKB 2022 = 200·7+150·4 = 2000 — to pułapka, nie używaj cen 2022!)"},
+      {title:"Schemat krok po kroku",body:"1) Weź <b>ceny z roku bazowego</b>.<br>2) Pomnóż przez <b>ilości z roku, którego szukasz</b>.<br>3) Zsumuj wszystkie dobra → realne PKB.<br>4) Wzrost = (nowe − stare)/stare × 100%.",real:"Liczysz dwa lata (bieżący i poprzedni), żeby policzyć wzrost."}
+     ],
+     flashcards:[
+      {t:"Realne PKB — wzór",d:"Σ (ilości z danego roku × ceny roku BAZOWEGO)."},
+      {t:"Nominalne PKB — wzór",d:"Σ (ilości × ceny z TEGO SAMEGO, bieżącego roku)."},
+      {t:"Stopa wzrostu realnego PKB",d:"(realne PKB_t − realne PKB_t−1) / realne PKB_t−1 × 100%."},
+      {t:"Rok bazowy",d:"Rok, którego ceny przyjmujemy do liczenia PKB realnego (tu: 2020)."},
+      {t:"Realne PKB 2022 (przykład)",d:"200·5 + 150·2 = 1300 € (ceny 2020)."}
+     ],
+     quiz:[
+      {q:"[oryginał] Realne PKB w 2022 (ceny bazowe 2020: jabłko 5, ziemniak 2; ilości 2022: 200 i 150):",a:["800 €","1300 €","2000 €","1700 €"],c:1,e:"200·5 + 150·2 = 1000+300 = 1300 €. (2000 = nominalne, pułapka.)"},
+      {q:"[oryginał] Stopa wzrostu realnego PKB w 2022 (realne: 2021=900, 2022=1300):",a:["44%","52%","20%","14%"],c:0,e:"(1300−900)/900 = 0,444 ≈ 44%."},
+      {q:"Realne PKB liczymy:",a:["cenami roku bieżącego","cenami roku bazowego × ilości bieżące","tylko ilościami","średnią cen"],c:1,e:"Realne = ilości bieżące × ceny bazowe (eliminujemy wpływ inflacji)."},
+      {q:"Wariant: ceny bazowe X=10, Y=5; ilości 2022: X=30, Y=20. Realne PKB 2022 =",a:["350","400","700","600"],c:1,e:"30·10 + 20·5 = 300+100 = 400."},
+      {q:"Wariant wzrostu: realne PKB 2021=250, 2022=400. Stopa wzrostu =",a:["37,5%","60%","150%","40%"],c:1,e:"(400−250)/250 = 0,6 = 60%."}
+     ]},
+    /* ---------------- Q2: Inflacja skumulowana ---------------- */
+    {id:"q2",title:"Q2: Inflacja — cena po latach",emoji:"💸",
+     feed:[
+      {title:"Wzór (zapamiętaj)",body:"<b>Cena końcowa</b> = cena początkowa × (1+i₁) × (1+i₂) × (1+i₃) × …<br>gdzie i to inflacja w danym roku (jako ułamek: 7% = 0,07).",mnemo:"Inflację z kolejnych lat MNOŻYSZ, nie dodajesz. Dodanie (7+13+9=29%) = błąd!"},
+      {title:"Twój przykład",body:"Inflacja: 7% (2020), 13% (2021), 9% (2022). Towar 1 zł na początku 2020.<br>1 × 1,07 × 1,13 × 1,09 =<br>1,07 × 1,13 = 1,2091 → × 1,09 = <b>1,32 zł</b>",real:"Odpowiedź: 1,32 zł. (Dodanie procentów dałoby 1,29 zł — to zła odpowiedź-pułapka.)"},
+      {title:"Czemu mnożymy?",body:"Każdego roku ceny rosną od <b>nowego, wyższego</b> poziomu (procent składany). Dlatego (1+i) mnożymy przez siebie, tak jak odsetki składane w banku.",real:"To ten sam mechanizm co 'procent składany'."}
+     ],
+     flashcards:[
+      {t:"Cena po inflacji — wzór",d:"P_końcowa = P_początkowa × (1+i₁)(1+i₂)(1+i₃)…"},
+      {t:"7% jako ułamek",d:"0,07 → mnożnik (1+0,07) = 1,07."},
+      {t:"Częsty błąd",d:"Dodawanie procentów (7+13+9). Trzeba MNOŻYĆ mnożniki, bo to procent składany."},
+      {t:"Przykład",d:"1 zł × 1,07 × 1,13 × 1,09 = 1,32 zł."}
+     ],
+     quiz:[
+      {q:"[oryginał] Towar 1 zł; inflacja 7%, 13%, 9%. Cena po 3 latach:",a:["1,29 zł","1,32 zł","1,45 zł","1,21 zł"],c:1,e:"1·1,07·1,13·1,09 = 1,32 zł. (1,29 = błędne dodanie procentów.)"},
+      {q:"Inflację za kilka lat liczymy:",a:["dodając procenty","mnożąc (1+i) kolejnych lat","biorąc średnią","odejmując"],c:1,e:"Procent składany → mnożymy mnożniki (1+i)."},
+      {q:"Wariant: 1 zł, inflacja 10% i 20%. Cena końcowa:",a:["1,30 zł","1,32 zł","1,28 zł","1,02 zł"],c:1,e:"1·1,1·1,2 = 1,32 zł (a nie 1,30 z dodawania)."},
+      {q:"Wariant: 100 zł, inflacja 5% przez 2 lata z rzędu:",a:["110 zł","110,25 zł","105 zł","125 zł"],c:1,e:"100·1,05·1,05 = 110,25 zł."}
+     ]},
+    /* ---------------- Q3: Aktywność zawodowa ---------------- */
+    {id:"q3",title:"Q3: Wskaźnik aktywności zawodowej",emoji:"👷",
+     feed:[
+      {title:"Wzór (zapamiętaj)",body:"<b>Wskaźnik aktywności zawodowej</b> = (pracujący + bezrobotni) / liczba dorosłych (w wieku produkcyjnym).<br>Aktywni zawodowo = <b>pracujący + bezrobotni</b> (czyli siła robocza).",mnemo:"Aktywni = ci, co pracują LUB szukają pracy. Dzielisz przez wszystkich dorosłych."},
+      {title:"Twój przykład",body:"Pracujący = 10, bezrobotni = 2, dorośli = 20.<br>Wskaźnik = (10 + 2) / 20 = 12/20 = <b>0,6</b>",real:"Odpowiedź: 0,6 (czyli 60% dorosłych jest aktywnych zawodowo)."},
+      {title:"Nie pomyl z innymi (mogą być w dystraktorach)",body:"<b>Stopa bezrobocia</b> = bezrobotni / (pracujący+bezrobotni) = 2/12 = 16,7%.<br><b>Wskaźnik zatrudnienia</b> = pracujący / dorośli = 10/20 = 0,5.",real:"Aktywności zawodowej = siła robocza / dorośli. Zatrudnienia = pracujący / dorośli."}
+     ],
+     flashcards:[
+      {t:"Wskaźnik aktywności zawodowej",d:"(pracujący + bezrobotni) / liczba dorosłych."},
+      {t:"Aktywni zawodowo (siła robocza)",d:"pracujący + bezrobotni (szukający pracy)."},
+      {t:"Stopa bezrobocia",d:"bezrobotni / (pracujący + bezrobotni)."},
+      {t:"Wskaźnik zatrudnienia",d:"pracujący / liczba dorosłych."},
+      {t:"Przykład",d:"(10+2)/20 = 0,6."}
+     ],
+     quiz:[
+      {q:"[oryginał] Pracujący 10, bezrobotni 2, dorośli 20. Wskaźnik aktywności zawodowej:",a:["1,1","0,8","0,6","0,5"],c:2,e:"(10+2)/20 = 0,6."},
+      {q:"Aktywni zawodowo to:",a:["tylko pracujący","pracujący + bezrobotni","wszyscy dorośli","tylko bezrobotni"],c:1,e:"Siła robocza = pracujący + bezrobotni."},
+      {q:"Wariant: pracujący 30, bezrobotni 10, dorośli 50. Wskaźnik aktywności:",a:["0,6","0,8","0,4","1,0"],c:1,e:"(30+10)/50 = 0,8."},
+      {q:"Z tych danych (10, 2, 20) stopa bezrobocia =",a:["10%","16,7%","20%","60%"],c:1,e:"bezrobotni/siła robocza = 2/12 = 16,7%."},
+      {q:"Z tych danych wskaźnik zatrudnienia =",a:["0,5","0,6","0,2","1,0"],c:0,e:"pracujący/dorośli = 10/20 = 0,5."}
+     ]},
+    /* ---------------- Q4: Model Solowa ---------------- */
+    {id:"q4",title:"Q4: Model Solowa (k₁ < k*)",emoji:"📈",
+     feed:[
+      {title:"Co pokazuje wykres",body:"Krzywe: produkcja <b>y = f(k)</b> (wygięta, malejące przyrosty), inwestycje <b>i = s·f(k)</b>, deprecjacja <b>δ·k</b> (linia prosta). Równowaga (stan ustalony) <b>k*</b> tam, gdzie <b>i = δ·k</b>.",mnemo:"k* = punkt, gdzie inwestycje = ubytek kapitału (starzenie)."},
+      {title:"Gdy gospodarka jest w k₁ (na lewo od k*)",body:"Wtedy <b>i₁ > δ·k₁</b> → inwestycje generują więcej kapitału niż ubywa ze starzenia → <b>kapitał rośnie</b>, a z nim <b>produkcja</b>. Gospodarka <b>zbiega do k*</b>.<br>Nachylenie krzywej produkcji (krańcowa produktywność kapitału) jest <b>większe w k₁ niż w k*</b> (bo przyrosty maleją wraz ze wzrostem k).",real:"Poniżej k* → kapitał i produkcja rosną, dążą do równowagi; nachylenie f(k) większe niż w k*."},
+      {title:"Poprawna odpowiedź (oryginał)",body:"„Nakłady na inwestycje generują kapitał w takiej wielkości, która <b>pozwala na przyrost produkcji</b>. Kapitału <b>przybywa szybciej niż ubywa</b> z powodu starzenia; nachylenie krzywej produkcji Y jest <b>większe w punkcie k₁ niż w punkcie równowagi</b>, do którego zbiega gospodarka.”",real:"Lustrzanie: gdyby k₂ > k*, to δ·k > i → kapitał MALEJE, też wraca do k*."}
+     ],
+     flashcards:[
+      {t:"Stan ustalony k* (Solow)",d:"Punkt, w którym inwestycje = deprecjacja: s·f(k*) = δ·k*. Kapitał się nie zmienia."},
+      {t:"k poniżej k* (np. k₁)",d:"i > δ·k → kapitał i produkcja rosną, gospodarka zbiega do k*."},
+      {t:"k powyżej k* (np. k₂)",d:"δ·k > i → kapitału ubywa, gospodarka spada z powrotem do k*."},
+      {t:"Nachylenie f(k) w k₁ vs k*",d:"Większe w k₁ (malejąca krańcowa produktywność kapitału — krzywa się wypłaszcza)."},
+      {t:"δ·k",d:"Deprecjacja — ubytek kapitału z powodu zużycia/starzenia (linia prosta)."}
+     ],
+     quiz:[
+      {q:"[oryginał] Gospodarka w k₁ (na lewo od k*). Co się dzieje?",a:["produkcja jest w całości konsumowana, kapitał nie przyrasta","inwestycje > deprecjacja → kapitał i produkcja rosną, zbiega do k*; nachylenie f(k) większe w k₁ niż w równowadze","kapitału ubywa, produkcja spada","gospodarka nie może zbiegać do równowagi"],c:1,e:"k₁<k* → i>δk → kapitał rośnie; nachylenie f(k) większe niż w k*."},
+      {q:"Stan ustalony k* to punkt, gdzie:",a:["produkcja = 0","inwestycje = deprecjacja (s·f(k)=δ·k)","kapitał jest największy","konsumpcja = 0"],c:1,e:"i = δ·k → kapitał się nie zmienia."},
+      {q:"W punkcie k poniżej k* nachylenie krzywej produkcji jest:",a:["mniejsze niż w k*","większe niż w k*","takie samo","zerowe"],c:1,e:"Malejąca produktywność kapitału: im mniejsze k, tym stromiej."},
+      {q:"Gdyby gospodarka była w k₂ > k*, to:",a:["kapitał rośnie dalej","kapitału ubywa (δ·k > i) i wraca do k*","nic się nie dzieje","produkcja spada do zera"],c:1,e:"Powyżej k* deprecjacja przewyższa inwestycje → powrót do k*."}
+     ]},
+    /* ---------------- Q5: Krzyż keynesowski → rynek pieniądza ---------------- */
+    {id:"q5",title:"Q5: Krzyż keynesowski → pieniądz",emoji:"💱",
+     feed:[
+      {title:"Łańcuch przyczynowy",body:"Na krzyżu keynesowskim (wydatki E w funkcji produkcji Y) krzywa produkcji <b>się obniża</b> → nowy, <b>niższy punkt równowagi Y</b>.<br>Niższe Y → mniej transakcji → <b>maleje popyt na pieniądz</b> (zapotrzebowanie transakcyjne).",mnemo:"Mniej produkcji → mniej transakcji → mniej potrzeba pieniądza."},
+      {title:"Co na rynku pieniądza",body:"Popyt na pieniądz maleje → krzywa <b>Dm przesuwa się w LEWO</b>.<br>Podaż pieniądza <b>Ms stała</b> (pionowa).<br>Efekt: <b>spada cena pieniądza</b> (stopa procentowa).",real:"Odpowiedź: maleje zapotrzebowanie; Dm w lewo; przy stałym Ms → spadek ceny pieniądza."},
+      {title:"Lustrzanie (gdyby Y rosło)",body:"Gdyby produkcja <b>rosła</b>: popyt na pieniądz rośnie → Dm w <b>prawo</b> → przy stałym Ms <b>cena pieniądza rośnie</b>. (Odwrotny scenariusz — uważaj na dystraktory.)",real:"Klucz: spadek Y ⇒ Dm w lewo ⇒ niższa cena pieniądza (stopa %)."}
+     ],
+     flashcards:[
+      {t:"Cena pieniądza",d:"Stopa procentowa — 'koszt' pieniądza na rynku pieniężnym."},
+      {t:"Spadek produkcji Y → popyt na pieniądz",d:"Maleje (mniej transakcji) → krzywa Dm przesuwa się w LEWO."},
+      {t:"Podaż pieniądza Ms",d:"Zwykle stała (pionowa) — kontrolowana przez bank centralny."},
+      {t:"Dm w lewo przy stałym Ms",d:"→ spadek ceny pieniądza (stopy procentowej)."},
+      {t:"Wzrost Y (odwrotnie)",d:"Popyt rośnie → Dm w prawo → wzrost ceny pieniądza."}
+     ],
+     quiz:[
+      {q:"[oryginał] Krzywa produkcji się obniża (nowy, niższy punkt równowagi). Co na rynku pieniądza?",a:["maleje popyt; Dm w prawo; spadek ceny pieniądza","maleje popyt; przy stałym Ms Dm w lewo → spadek ceny pieniądza","rośnie popyt; Dm w prawo → wzrost ceny","maleje popyt; Dm w prawo → brak zmiany ceny"],c:1,e:"Niższe Y → mniejszy popyt na pieniądz → Dm w lewo → spadek ceny pieniądza (stopy %)."},
+      {q:"Spadek produkcji Y wpływa na popyt na pieniądz:",a:["rośnie","maleje","bez zmian","najpierw rośnie, potem maleje"],c:1,e:"Mniej transakcji → mniejszy popyt transakcyjny na pieniądz."},
+      {q:"Maleje popyt na pieniądz — krzywa Dm przesuwa się:",a:["w prawo","w lewo","w górę","nie rusza się"],c:1,e:"Spadek popytu → przesunięcie krzywej popytu w lewo."},
+      {q:"Dm w lewo, Ms stałe → cena pieniądza (stopa %):",a:["rośnie","spada","bez zmian","podwaja się"],c:1,e:"Mniejszy popyt przy stałej podaży → niższa cena (stopa %)."},
+      {q:"Odwrotnie: gdyby Y rosło, to:",a:["Dm w lewo, cena spada","Dm w prawo, cena rośnie","Ms w prawo","brak wpływu"],c:1,e:"Wzrost Y → wzrost popytu → Dm w prawo → wzrost ceny pieniądza."}
+     ]}
+  ]
+});
+
 </script>
 <script>
 /* ============================================================
@@ -775,6 +1452,7 @@ function openSubject(id){
 }
 function renderSubject(){
   const s=current;
+  try{clearInterval(cwInt);clearInterval(exInt);}catch(e){}
   app.innerHTML='';
   const top=el('div','topbar');
   const back=el('button','backbtn','‹');back.onclick=renderHome;
@@ -787,7 +1465,7 @@ function renderSubject(){
   app.appendChild(top);
 
   const tabs=el('div','subtabs');
-  [['path','🗺️ Ścieżka'],['fiszki','🎴 Fiszki'],['quiz','🧠 Quiz'],['egzamin','🎯 Egzamin'],['info','📋 Info']].forEach(([k,lab])=>{
+  [['path','🗺️ Ścieżka'],['fiszki','🎴 Fiszki'],['quiz','🧠 Quiz'],['cwicz','✍️ Ćwiczenia'],['egzamin','🎯 Egzamin'],['info','📋 Info']].forEach(([k,lab])=>{
     const b=el('div','subtab'+(curTab===k?' active':''),lab);
     b.onclick=()=>{curTab=k;renderSubject();};
     tabs.appendChild(b);
@@ -799,6 +1477,7 @@ function renderSubject(){
   if(curTab==='path')renderPath(sc);
   else if(curTab==='fiszki')renderFiszki(sc);
   else if(curTab==='quiz')renderQuiz(sc);
+  else if(curTab==='cwicz')renderCwicz(sc);
   else if(curTab==='egzamin')renderEgzamin(sc);
   else if(curTab==='info')renderInfo(sc);
 
@@ -1005,14 +1684,19 @@ function exGrade(s,pct){
 function renderEgzamin(sc){
   const s=current;clearInterval(exInt);exState=null;
   const wrap=el('div','scroll');
-  const N=Math.min(20,allQuiz(s).length);
+  const ALL=allQuiz(s).length;
+  const N=Math.min(20,ALL);
   const lim=(s.grading&&s.grading.examMin)||20;
-  wrap.innerHTML=`<div class="result"><div class="big">🎯</div><h2>Symulacja egzaminu</h2>
-    <div class="specs"><div class="spec">${N}<small>pytań losowo</small></div><div class="spec">${lim}:00<small>na czas</small></div><div class="spec">${(s.grading&&s.grading.pass)||50}%<small>żeby zaliczyć</small></div></div>
-    <p>Losuję ${N} pytań z całego przedmiotu, bez podpowiedzi w trakcie. Na końcu % i ocena wg siatki + przegląd błędów.</p>
-    <button class="pill" id="exstart">start egzaminu 🚀</button></div>`;
+  const fullLim=Math.max(lim,Math.ceil(ALL*0.75)); // ~45s na pytanie
+  wrap.innerHTML=`<div class="result"><div class="big">🎯</div><h2>Egzamin</h2>
+    <div class="specs"><div class="spec">${N}<small>losowych</small></div><div class="spec">${lim}:00<small>na czas</small></div><div class="spec">${(s.grading&&s.grading.pass)||50}%<small>zalicza</small></div></div>
+    <p>Bez podpowiedzi w trakcie. Na końcu % i ocena wg siatki + przegląd błędów.</p>
+    <button class="pill" id="exstart">symulacja — ${N} losowych 🎲</button>
+    <button class="pill" id="exfull" style="margin-top:10px">📋 Test końcowy — WSZYSTKIE ${ALL} pytań</button>
+    <p style="font-size:13px;margin-top:6px">Test końcowy = każde pytanie z przedmiotu, w losowej kolejności (${fullLim}:00).</p></div>`;
   sc.innerHTML='';sc.appendChild(wrap);
   document.getElementById('exstart').onclick=()=>beginExam(sc,N,lim*60);
+  document.getElementById('exfull').onclick=()=>beginExam(sc,ALL,fullLim*60);
 }
 function beginExam(sc,N,limit){
   const s=current;
@@ -1067,6 +1751,147 @@ function renderInfo(sc){
   const s=current;const wrap=el('div','scroll');
   wrap.innerHTML=`<div class="hero" style="padding-bottom:8px"><h1>${s.emoji} ${s.name}</h1><p>${s.tagline||''}</p></div>${s.info||'<div class="zbox"><p>Brak dodatkowych informacji.</p></div>'}`;
   sc.innerHTML='';sc.appendChild(wrap);
+}
+
+/* ================= ĆWICZENIA (wpisywanie, klocki, pary, speed) ================= */
+let cw=null, cwInt=null;
+function exNorm(str){return (str||'').toLowerCase().replace(/ł/g,'l').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9\s]/g,' ').replace(/\b(the|a|an|to|el|la|los|las|un|una|unos|unas)\b/g,' ').replace(/\s+/g,' ').trim();}
+function exClean(str){return (str||'').replace(/\([^)]*\)/g,'').replace(/…|\.\.\./g,'').replace(/\s+/g,' ').trim();}
+function typePool(s){return allCards(s).map(c=>({prompt:exClean(c.d),ans:exClean(c.t),lvl:c.lvl})).filter(c=>c.prompt&&c.ans&&c.ans.length<=30&&!/\//.test(c.ans));}
+function tilePool(s){return typePool(s).filter(c=>c.ans.replace(/\s/g,'').length<=18);}
+function matchPool(s){return allCards(s).map(c=>({a:exClean(c.t),b:exClean(c.d)})).filter(c=>c.a&&c.b);}
+
+function renderCwicz(sc){
+  clearInterval(cwInt);cw=null;
+  const s=current;const wrap=el('div','scroll');
+  const hub=el('div','exhub');
+  const items = s.lang
+   ? [['typing','✍️','Wpisywanie','Po polsku → '+(s.short||'język')+'. Wpisz słowo z klawiatury.'],
+      ['tiles','🧩','Klocki — ułóż słowo','Poukładaj literki/wyrazy w poprawne słowo.'],
+      ['match','🔗','Połącz w pary','Dopasuj słowo do tłumaczenia.']]
+   : [['match','🔗','Połącz w pary','Dopasuj pojęcie do definicji.'],
+      ['speed','⚡','Szybki quiz na czas','60 sekund — ile zdążysz trafić?'],
+      ['typing','✍️','Wpisz pojęcie','Z definicji wpisz właściwy termin.']];
+  hub.appendChild(el('div','exprompt','Wybierz ćwiczenie 👇'));
+  items.forEach(([k,em,t,p])=>{
+    const c=el('div','excard',`<div class="eemoji">${em}</div><div class="emeta"><h3>${t}</h3><p>${p}</p></div>`);
+    c.onclick=()=>{ if(k==='typing')cwStartTyping(sc); else if(k==='tiles')cwStartTiles(sc); else if(k==='match')cwStartMatch(sc); else cwStartSpeed(sc); };
+    hub.appendChild(c);
+  });
+  wrap.appendChild(hub);sc.innerHTML='';sc.appendChild(wrap);
+}
+function cwBackBtn(sc){const b=el('button','pill ghost','← ćwiczenia');b.style.marginTop='12px';b.onclick=()=>renderCwicz(sc);return b;}
+function cwResult(sc,emoji,score,total,retry){
+  clearInterval(cwInt);
+  const wrap=el('div','scroll');const pct=total?Math.round(score/total*100):0;
+  wrap.innerHTML=`<div class="result"><div class="big">${emoji}</div><h2>Wynik</h2>
+    <div class="score">Dobrze: <b>${score}/${total}</b> (${pct}%)</div>
+    <p>${pct>=80?'Świetnie! Masz to w małym palcu.':pct>=50?'Niezłe, jeszcze runda i będzie czysto.':'Spoko, powtórz — od tego jest ćwiczenie.'}</p></div>`;
+  const f=el('div');f.style.cssText='display:flex;gap:10px;padding:0 0 8px';
+  const r=el('button','pill','jeszcze raz 🔁');r.onclick=retry;
+  f.appendChild(r);f.appendChild(cwBackBtn(sc));wrap.appendChild(f);
+  sc.innerHTML='';sc.appendChild(wrap);
+}
+/* --- TYPING --- */
+function cwStartTyping(sc){const pool=shuffle(typePool(current)).slice(0,12);
+  if(!pool.length){toast('Brak danych do wpisywania');return renderCwicz(sc);}
+  cw={type:'typing',list:pool,idx:0,score:0};cwRenderTyping(sc);}
+function cwRenderTyping(sc){
+  const it=cw.list[cw.idx];
+  if(!it)return cwResult(sc,(cw.score/cw.list.length>=0.8)?'👑':'✍️',cw.score,cw.list.length,()=>cwStartTyping(sc));
+  const wrap=el('div','scroll');
+  wrap.appendChild(el('div','progressrow',`<div class="bar"><i style="width:${cw.idx/cw.list.length*100}%"></i></div><div class="counter">${cw.idx+1}/${cw.list.length}</div>`));
+  const card=el('div','qcard');
+  card.innerHTML=`<span class="tag">${it.lvl||''}</span><div class="exprompt">przetłumacz / wpisz</div><div class="exq">${it.prompt}</div>
+    <input class="winput" id="win" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="wpisz odpowiedź…">
+    <div class="exfb" id="wfb"></div>
+    <button class="pill qnext" id="wnext" style="margin-top:14px">sprawdź ✅</button>`;
+  wrap.appendChild(card);sc.innerHTML='';sc.appendChild(wrap);
+  const inp=document.getElementById('win'),btn=document.getElementById('wnext'),fb=document.getElementById('wfb');
+  setTimeout(()=>{try{inp.focus();}catch(e){}},50);
+  let checked=false;
+  const check=()=>{
+    if(checked){cw.idx++;cwRenderTyping(sc);return;}
+    checked=true;
+    const ok=inp.value.trim()!=='' && exNorm(inp.value)===exNorm(it.ans);
+    inp.classList.add(ok?'ok':'bad');inp.disabled=true;
+    if(ok){cw.score++;addXP(current.id,4);toast('GIT +4xp 🟢');fb.className='exfb ok show';fb.innerHTML='✅ Dobrze: <b>'+it.ans+'</b>';}
+    else{toast('prawie!');fb.className='exfb bad show';fb.innerHTML='Poprawnie: <b>'+it.ans+'</b>';}
+    btn.textContent=(cw.idx+1>=cw.list.length)?'wynik 🏁':'dalej →';
+  };
+  btn.onclick=check;
+  inp.addEventListener('keydown',e=>{if(e.key==='Enter')check();});
+}
+/* --- TILES --- */
+function cwStartTiles(sc){const pool=shuffle(tilePool(current)).slice(0,10);
+  if(!pool.length){toast('Brak danych');return renderCwicz(sc);}
+  cw={type:'tiles',list:pool,idx:0,score:0,_n:-1};cwRenderTiles(sc);}
+function cwRenderTiles(sc){
+  const it=cw.list[cw.idx];
+  if(!it)return cwResult(sc,(cw.score/cw.list.length>=0.8)?'👑':'🧩',cw.score,cw.list.length,()=>cwStartTiles(sc));
+  const phrase=/\s/.test(it.ans.trim());
+  const sep=phrase?' ':'';
+  if(cw._n!==cw.idx){cw._n=cw.idx;const units=phrase?it.ans.trim().split(/\s+/):it.ans.replace(/\s/g,'').split('');cw.tiles=shuffle(units.map(ch=>({ch,used:false})));cw.build=[];cw.checked=false;}
+  const wrap=el('div','scroll');
+  wrap.appendChild(el('div','progressrow',`<div class="bar"><i style="width:${cw.idx/cw.list.length*100}%"></i></div><div class="counter">${cw.idx+1}/${cw.list.length}</div>`));
+  const card=el('div','qcard');
+  card.innerHTML=`<span class="tag">${it.lvl||''}</span><div class="exprompt">ułóż: ${it.prompt}</div>
+    <div class="build" id="build"></div><div class="tiles" id="bank"></div>
+    <div class="exfb" id="tfb"></div>
+    <button class="pill qnext" id="tnext" style="margin-top:8px">sprawdź ✅</button>`;
+  wrap.appendChild(card);sc.innerHTML='';sc.appendChild(wrap);
+  const bankEl=document.getElementById('bank'),buildEl=document.getElementById('build'),fb=document.getElementById('tfb'),btn=document.getElementById('tnext');
+  cw.build.forEach((ti,pos)=>{const b=el('button','tile',cw.tiles[ti].ch);b.onclick=()=>{if(cw.checked)return;cw.tiles[ti].used=false;cw.build.splice(pos,1);cwRenderTiles(sc);};buildEl.appendChild(b);});
+  cw.tiles.forEach((tl,ti)=>{const b=el('button','tile'+(tl.used?' used':''),tl.ch);b.onclick=()=>{if(cw.checked||tl.used)return;tl.used=true;cw.build.push(ti);cwRenderTiles(sc);};bankEl.appendChild(b);});
+  btn.onclick=()=>{
+    if(cw.checked){cw.idx++;cwRenderTiles(sc);return;}
+    const got=cw.build.map(i=>cw.tiles[i].ch).join(sep);
+    const ok=exNorm(got)===exNorm(it.ans);cw.checked=true;
+    if(ok){cw.score++;addXP(current.id,4);toast('GIT +4xp 🟢');fb.className='exfb ok show';fb.innerHTML='✅ <b>'+it.ans+'</b>';}
+    else{toast('nie tak');fb.className='exfb bad show';fb.innerHTML='Poprawnie: <b>'+it.ans+'</b>';}
+    btn.textContent=(cw.idx+1>=cw.list.length)?'wynik 🏁':'dalej →';
+  };
+}
+/* --- MATCH --- */
+function cwStartMatch(sc){const pool=shuffle(matchPool(current)).slice(0,5);
+  if(pool.length<2){toast('Za mało danych');return renderCwicz(sc);}
+  cw={type:'match',pairs:pool,left:shuffle(pool.map((p,i)=>({i,t:p.a}))),right:shuffle(pool.map((p,i)=>({i,t:p.b}))),selL:null,selR:null,done:0,matched:new Set()};
+  cwRenderMatch(sc);}
+function cwRenderMatch(sc){
+  if(cw.done>=cw.pairs.length)return cwResult(sc,'🔗',cw.pairs.length,cw.pairs.length,()=>cwStartMatch(sc));
+  const wrap=el('div','scroll');
+  wrap.appendChild(el('div','exprompt','Połącz w pary (tapnij z lewej, potem z prawej)'));
+  const mw=el('div','matchwrap');const lc=el('div','mcol'),rc=el('div','mcol');
+  const trunc=t=>t.length>64?t.slice(0,62)+'…':t;
+  cw.left.forEach(o=>{const it=el('div','mitem'+(cw.matched.has('L'+o.i)?' done':'')+(cw.selL===o.i?' sel':''),o.t);it.onclick=()=>{if(cw.matched.has('L'+o.i))return;cw.selL=o.i;tryMatch(sc);};lc.appendChild(it);});
+  cw.right.forEach(o=>{const it=el('div','mitem'+(cw.matched.has('R'+o.i)?' done':'')+(cw.selR===o.i?' sel':''),trunc(o.t));it.onclick=()=>{if(cw.matched.has('R'+o.i))return;cw.selR=o.i;tryMatch(sc);};rc.appendChild(it);});
+  mw.appendChild(lc);mw.appendChild(rc);wrap.appendChild(mw);
+  const f=el('div');f.style.cssText='margin-top:14px';f.appendChild(cwBackBtn(sc));wrap.appendChild(f);
+  sc.innerHTML='';sc.appendChild(wrap);
+}
+function tryMatch(sc){
+  if(cw.selL==null||cw.selR==null){cwRenderMatch(sc);return;}
+  if(cw.selL===cw.selR){cw.matched.add('L'+cw.selL);cw.matched.add('R'+cw.selR);cw.done++;cw.selL=null;cw.selR=null;addXP(current.id,3);toast('para! +3xp 🟢');cwRenderMatch(sc);}
+  else{toast('nie pasuje 🔴');cw.selL=null;cw.selR=null;cwRenderMatch(sc);}
+}
+/* --- SPEED --- */
+function cwStartSpeed(sc){cw={type:'speed',list:shuffle(allQuiz(current)),idx:0,score:0,left:60};
+  clearInterval(cwInt);cwInt=setInterval(()=>{cw.left--;const t=document.getElementById('spdt');if(t){t.textContent='⏱ '+cw.left+'s';t.classList.toggle('warn',cw.left<=10);}if(cw.left<=0){clearInterval(cwInt);cwResult(sc,(cw.score>=10)?'🔥':'⚡',cw.score,cw.idx,()=>cwStartSpeed(sc));}},1000);
+  cwRenderSpeed(sc);}
+function cwRenderSpeed(sc){
+  if(cw.idx>=cw.list.length){clearInterval(cwInt);return cwResult(sc,'🔥',cw.score,cw.idx,()=>cwStartSpeed(sc));}
+  const q=cw.list[cw.idx];const wrap=el('div','scroll');
+  wrap.innerHTML=`<div class="examhead"><div class="counter">Trafione: ${cw.score}</div><div class="timer" id="spdt">⏱ ${cw.left}s</div></div>
+    <div class="qcard"><span class="tag">${q.lvl||''}</span><div class="qq">${q.q}</div>
+    <div class="opts">${q.a.map((o,i)=>`<button class="opt" data-i="${i}"><span class="k">${keys[i]}</span><span>${o}</span></button>`).join('')}</div></div>`;
+  sc.innerHTML='';sc.appendChild(wrap);
+  let locked=false;
+  wrap.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{
+    if(locked)return;locked=true;const i=+o.dataset.i;
+    wrap.querySelectorAll('.opt').forEach(x=>{const xi=+x.dataset.i;if(xi===q.c)x.classList.add('correct');else if(xi===i)x.classList.add('wrong');});
+    if(i===q.c){cw.score++;addXP(current.id,2);}
+    setTimeout(()=>{cw.idx++;cwRenderSpeed(sc);},450);
+  });
 }
 
 /* ---------- INIT ---------- */
