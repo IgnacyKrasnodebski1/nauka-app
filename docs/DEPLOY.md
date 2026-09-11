@@ -11,10 +11,10 @@
 | Stripe Customer Portal | skonfigurowany | `bpc_1UESvGRsoBaIQwwL6jxvaNG3` |
 | Stripe webhook | `https://nauka-jet.vercel.app/api/stripe/webhook`, secret w env Vercela | `we_1UETG1RsoBaIQwwLW8dYAsaZ` |
 | Vercel projekt `nauka` | utworzony, podpięty do repo (root `apps/web`), wszystkie env ustawione | `prj_Fxj3EGxACbjEJdjzAbPWSXex2KHS`, domena `nauka-jet.vercel.app` |
-| Vercel produkcja | buduje z brancha `main` → **zmerguj `claude/peaceful-hamilton-jy11e3` do `main`** (pushe na inne branche = preview) | |
-| Anthropic key | **brak** → apka w trybie demo | |
+| Vercel produkcja | **wdrożona** z brancha `claude/peaceful-hamilton-jy11e3` → https://nauka-jet.vercel.app. Auto-deploy prod działa z `main` → zmerguj branch do `main` | |
+| Anthropic key | ustawiony na Vercelu (generacja na produkcji przetestowana: 112 s, 2 poziomy) | |
 
-Zostało: merge do `main` (deploy), Google OAuth (1.4), klucz Anthropic (2), test płatności (4).
+Zostało: merge do `main`, Google OAuth (1.4), przełączenie Stripe z test na live (klucze `sk_live`, nowy webhook), własna domena.
 
 ## 0. Wymagania
 - Node 22+, npm 10+, konto GitHub (repo już jest), Supabase, Vercel, Stripe, Anthropic Console, Expo (EAS).
@@ -39,10 +39,10 @@ Zostało: merge do `main` (deploy), Google OAuth (1.4), klucz Anthropic (2), tes
 2. Model domyślny: `claude-opus-5` (zmiana: `NAUKA_AI_MODEL`). Koszt orientacyjny jednej generacji (5 zdjęć, 4 poziomy): ok. 0,15–0,40 USD. Plan Pro za 29 zł/mies. z limitem 150 generacji jest bezpieczny przy typowym użyciu (kilka–kilkanaście generacji/mies.); limity zmienisz w `packages/shared/src/plans.ts`.
 3. Bez klucza apka działa w **trybie demo** (generuje przykładowy przedmiot) — dobre do testów UI.
 
-## 3. Stripe (płatności, BLIK + karty)
+## 3. Stripe (płatności, karty + Apple/Google Pay)
 1. https://dashboard.stripe.com → aktywuj konto (dane firmy/JDG, IBAN). Do testów działa tryb testowy.
 2. Products → Add product „NAUKA Pro”: dwie ceny recurring — **29 zł / miesiąc** i **199 zł / rok**. Skopiuj `price_...` → `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`.
-3. Settings → Payment methods: włącz **BLIK**, **Przelewy24** (opcjonalnie), karty. Checkout sam je pokaże dla PLN.
+3. Settings → Payment methods: karty + Apple Pay / Google Pay. **BLIK i Przelewy24 nie działają w trybie subskrypcji** (tylko płatności jednorazowe) — jeśli chcesz BLIK, trzeba dodać plan „Pro na rok” jako zakup jednorazowy.
 4. Settings → Customer portal: włącz (anulowanie, zmiana planu, faktury).
 5. Developers → Webhooks → Add endpoint: `https://twoja-domena.pl/api/stripe/webhook`, eventy: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`. Skopiuj `whsec_...` → `STRIPE_WEBHOOK_SECRET`.
 6. Developers → API keys → `sk_live_...` → `STRIPE_SECRET_KEY` (na start `sk_test_...`).
@@ -75,7 +75,7 @@ NEXT_PUBLIC_APP_URL=https://twoja-domena.pl
 ## 7. Checklist „sprzedaję od jutra”
 - [ ] Supabase: upgrade SQL v2 + Google OAuth
 - [ ] Anthropic key wpisany na Vercel
-- [ ] Stripe: produkt, 2 ceny, BLIK, webhook, portal
+- [x] Stripe: produkt, 2 ceny, webhook, portal
 - [ ] Vercel: env + domena + test płatności testową kartą `4242 4242 4242 4242`
 - [ ] Regulamin/prywatność uzupełnione
 - [ ] Mobile: `eas build` preview APK dla beta-testerów; App Store po dodaniu IAP

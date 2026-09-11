@@ -142,7 +142,7 @@ export default function Profile() {
                 <View style={{ gap: 8, marginTop: 12 }}>
                   <PillButton label={`Przejdź na Pro — ${PLANS.pro.priceMonthlyPln} zł/mies.`} onPress={() => upgrade("month")} disabled={busy || !hasApi} />
                   <PillButton label={`Rocznie ${PLANS.pro.priceYearlyPln} zł (taniej o ${Math.round((1 - PLANS.pro.priceYearlyPln / (PLANS.pro.priceMonthlyPln * 12)) * 100)}%)`} ghost onPress={() => upgrade("year")} disabled={busy || !hasApi} />
-                  <Muted style={{ fontSize: 12.5 }}>Pro: {PLANS.pro.generationsPerMonth} generacji/mies., {PLANS.pro.filesPerGeneration} plików na raz do {PLANS.pro.maxFileMb} MB, tutor bez limitu. Płatność BLIK/karta w przeglądarce.</Muted>
+                  <Muted style={{ fontSize: 12.5 }}>Pro: {PLANS.pro.generationsPerMonth} generacji/mies., {PLANS.pro.filesPerGeneration} plików na raz do {PLANS.pro.maxFileMb} MB, tutor bez limitu. Płatność kartą w przeglądarce.</Muted>
                 </View>
               ) : (
                 <PillButton label="zarządzaj subskrypcją" ghost small onPress={portal} disabled={busy} style={{ marginTop: 12 }} />

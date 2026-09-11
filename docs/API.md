@@ -23,7 +23,7 @@ Odpowiedź: `text/plain` streamowany (chunked). Limit: 30 wiadomości/dzień fre
 
 ## POST /api/stripe/checkout
 Body: `{ "interval": "month" | "year", "platform": "web" | "mobile" }` → `{ "url": "https://checkout.stripe.com/..." }`
-Tworzy/odczytuje `stripe_customer_id`, Checkout Session (mode=subscription, BLIK + karta, locale pl). success_url: web → `/app?upgraded=1`, mobile → `/billing/success` (strona mówi „wróć do apki”).
+Tworzy/odczytuje `stripe_customer_id`, Checkout Session (mode=subscription, metody z ustawień Stripe — karta, Link, Apple/Google Pay; BLIK nie obsługuje subskrypcji, locale pl). success_url: web → `/app?upgraded=1`, mobile → `/billing/success` (strona mówi „wróć do apki”).
 
 ## POST /api/stripe/portal
 → `{ "url" }` (Stripe Customer Portal).

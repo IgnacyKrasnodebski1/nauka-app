@@ -102,7 +102,7 @@ export default function Landing() {
                 <li>⚡ {PLANS.pro.generationsPerMonth} tematów AI / miesiąc</li>
                 <li>⚡ do {PLANS.pro.filesPerGeneration} plików, max {PLANS.pro.maxFileMb} MB każdy</li>
                 <li>⚡ tutor AI bez limitu</li>
-                <li>⚡ BLIK i karta, anulujesz kiedy chcesz</li>
+                <li>⚡ Karta, Apple Pay, Google Pay — anulujesz kiedy chcesz</li>
               </ul>
               <Link href="/login?next=/app/account" className="pill mt-5">Przejdź na Pro</Link>
             </div>

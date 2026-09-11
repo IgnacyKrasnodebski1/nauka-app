@@ -124,7 +124,7 @@ export function Account() {
               <button type="button" className="pill ghost" onClick={() => checkout("year")} disabled={busy !== null}>Pro · {PLANS.pro.priceYearlyPln} zł/rok</button>
             </div>
           )}
-          <p className="text-[12px] mt-2">Pro: {PLANS.pro.generationsPerMonth} generacji/mies., {PLANS.pro.filesPerGeneration} plików po {PLANS.pro.maxFileMb} MB, tutor bez limitu. BLIK i karta.</p>
+          <p className="text-[12px] mt-2">Pro: {PLANS.pro.generationsPerMonth} generacji/mies., {PLANS.pro.filesPerGeneration} plików po {PLANS.pro.maxFileMb} MB, tutor bez limitu. Karta, Apple Pay, Google Pay.</p>
         </div>
 
         {err && <div className="exfb bad" role="alert">{err}</div>}

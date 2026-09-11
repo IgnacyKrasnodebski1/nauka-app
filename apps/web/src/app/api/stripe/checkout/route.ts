@@ -33,7 +33,6 @@ export async function POST(req: Request) {
     mode: "subscription",
     customer: customerId,
     line_items: [{ price, quantity: 1 }],
-    payment_method_types: ["card", "blik"],
     locale: "pl",
     allow_promotion_codes: true,
     success_url: body.platform === "mobile" ? `${base}/billing/success` : `${base}/app?upgraded=1`,

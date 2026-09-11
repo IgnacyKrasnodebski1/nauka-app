@@ -18,7 +18,7 @@ export default function Regulamin() {
         <h2>4. Treści AI</h2>
         <p>Treści generowane przez AI mogą zawierać błędy. NAUKA to narzędzie pomocnicze — zawsze weryfikuj kluczowe informacje z materiałem źródłowym. Nie ponosimy odpowiedzialności za wynik egzaminu.</p>
         <h2>5. Plan Pro i płatności</h2>
-        <p>Subskrypcja Pro jest rozliczana miesięcznie lub rocznie przez Stripe (karta, BLIK). Możesz ją anulować w każdej chwili w panelu konta — pozostaje aktywna do końca opłaconego okresu. Limity planów opisane są w cenniku.</p>
+        <p>Subskrypcja Pro jest rozliczana miesięcznie lub rocznie przez Stripe (karta, Apple Pay, Google Pay). Możesz ją anulować w każdej chwili w panelu konta — pozostaje aktywna do końca opłaconego okresu. Limity planów opisane są w cenniku.</p>
         <h2>6. Zakończenie</h2>
         <p>Możesz usunąć konto i swoje przedmioty w ustawieniach. Możemy zablokować konto naruszające regulamin.</p>
         <h2>7. Kontakt</h2>
