@@ -1,23 +1,16 @@
 import { TopicContentSchema, type GeneratedTopic } from "./schema.js";
 import type { MiniGame, TopicContent, Stage } from "./types.js";
 
-const PALETTES: [string, string][] = [
-  ["linear-gradient(135deg,#ff2d95,#a855f7,#22d3ee)", "#22d3ee"],
-  ["linear-gradient(135deg,#f59e0b,#ef4444,#ec4899)", "#f59e0b"],
-  ["linear-gradient(135deg,#10b981,#06b6d4,#3b82f6)", "#10b981"],
-  ["linear-gradient(135deg,#1e3a8a,#3b82f6,#06b6d4)", "#3b82f6"],
-  ["linear-gradient(135deg,#7c3aed,#c026d3,#f43f5e)", "#c026d3"],
-  ["linear-gradient(135deg,#0ea5e9,#22c55e,#eab308)", "#22c55e"],
-];
+import { subjectHue } from "./theme.js";
 
-function hash(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
+/**
+ * Subject/topic palette: [accent, accent2].
+ * accent  = soft duotone gradient of the hue for headers/tiles (premium dark: low saturation, no neon)
+ * accent2 = the hue itself for rings, progress, active states.
+ */
 export function paletteFor(seed: string): [string, string] {
-  return PALETTES[hash(seed) % PALETTES.length]!;
+  const h = subjectHue(seed);
+  return [`linear-gradient(135deg, ${h.color} 0%, ${h.color}99 55%, ${h.color}33 100%)`, h.color];
 }
 
 export const DEFAULT_GRADING: TopicContent["grading"] = {
