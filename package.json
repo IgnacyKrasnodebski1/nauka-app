@@ -9,11 +9,12 @@
   ],
   "scripts": {
     "build:shared": "npm run build -w @nauka/shared",
+    "build:packages": "npm run build -w @nauka/shared && npm run build -w @nauka/ai",
     "web": "npm run dev -w @nauka/web",
-    "web:build": "npm run build:shared && npm run build -w @nauka/web",
+    "web:build": "npm run build:packages && npm run build -w @nauka/web",
     "mobile": "npm run start -w @nauka/mobile",
-    "typecheck": "npm run build:shared && npm run typecheck -w @nauka/web && npm run typecheck -w @nauka/mobile",
-    "test": "npm run build:shared && npm test -w @nauka/shared",
+    "typecheck": "npm run build:packages && npm run typecheck -w @nauka/web && npm run typecheck -w @nauka/mobile",
+    "test": "npm run build:packages && npm test -w @nauka/shared && npm test -w @nauka/ai",
     "legacy:build": "node legacy/build.js"
   },
   "engines": {
