@@ -7,7 +7,7 @@ export function LandingHeader() {
       <nav className="flex items-center gap-2 sm:gap-4 text-sm font-bold" aria-label="Główna nawigacja">
         <a href="#jak" className="hidden sm:inline text-muted hover:text-txt">Jak to działa</a>
         <a href="#cennik" className="hidden sm:inline text-muted hover:text-txt">Cennik</a>
-        <Link href="/app" className="text-muted hover:text-txt">Apka</Link>
+        <a href="#faq" className="hidden sm:inline text-muted hover:text-txt">FAQ</a>
         <Link href="/login" className="pill sm">Zaloguj</Link>
       </nav>
     </header>

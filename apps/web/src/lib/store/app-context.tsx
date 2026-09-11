@@ -89,7 +89,7 @@ export function AppProvider({ user, children }: { user: AppUser; children: React
       ready: !!store,
       user,
       session,
-      authHeaders: () => (session?.access_token ? { authorization: `Bearer ${session.access_token}` } : {}),
+      authHeaders: (): Record<string, string> => (session?.access_token ? { authorization: `Bearer ${session.access_token}` } : {}),
       supabase,
       store,
       progressOf: (id) => store?.getProgress(id) ?? EMPTY,

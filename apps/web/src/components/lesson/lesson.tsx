@@ -1,14 +1,13 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { applyQuizResult, shuffle, XP, type MiniGame, type QuizQuestion } from "@nauka/shared";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { applyQuizResult, markWeak, shuffle, XP, type MiniGame, type QuizQuestion, type Subject, type Topic } from "@nauka/shared";
 import { useApp } from "@/lib/store/app-context";
 import { useMounted } from "@/lib/use-mounted";
-import type { AppSubject } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { SubjectTheme } from "@/components/subject/theme";
-import { QuestionCard } from "@/components/subject/question";
+import { SubjectTheme } from "@/components/topic/theme";
+import { QuestionCard } from "@/components/topic/question";
 import { GameView, GAME_LABEL } from "@/components/lesson/games";
 import { Confetti } from "@/components/lesson/confetti";
 import { TutorFab } from "@/components/tutor/tutor-drawer";
@@ -17,18 +16,23 @@ type Phase = "feed" | "cards" | "games" | "quiz" | "result";
 const ORDER: Phase[] = ["feed", "cards", "games", "quiz", "result"];
 const PHASE_LABEL: Record<Phase, string> = { feed: "📖 feed", cards: "🎴 fiszki", games: "🎮 mini-gry", quiz: "🧠 quiz", result: "🏁" };
 
-export function Lesson({ subject, levelId }: { subject: AppSubject; levelId: string }) {
-  const level = subject.levels.find((l) => l.id === levelId)!;
-  const { addXp, progressOf, setProgress, toast } = useApp();
+export function Lesson({ topic, subject, levelId }: { topic: Topic; subject: Subject; levelId: string }) {
+  const level = topic.levels.find((l) => l.id === levelId)!;
+  const { addXp, progressOf, setProgress, toast, weak, setWeak, logActivity } = useApp();
   const router = useRouter();
   const mounted = useMounted();
-  const backHref = `/app/s/${subject.slug ?? subject.id}`;
+  const backHref = `/app/t/${topic.id}`;
+  const startedAt = useRef(0);
+  useEffect(() => {
+    startedAt.current = Date.now();
+  }, []);
 
   const feed = level.feed;
   const cards = useMemo(() => level.flashcards.slice(0, 10), [level]);
   const games = useMemo<MiniGame[]>(() => (level.games ?? []).slice(0, 4), [level]);
   const [round, setRound] = useState(0);
-  const quiz = useMemo<QuizQuestion[]>(() => shuffle(level.quiz).slice(0, Math.min(8, level.quiz.length)), [level, round]); // eslint-disable-line react-hooks/exhaustive-deps
+  // keep original indices so wrong answers can be stored in progress.weak
+  const quiz = useMemo<(QuizQuestion & { qi: number })[]>(() => shuffle(level.quiz.map((q, qi) => ({ ...q, qi }))).slice(0, Math.min(8, level.quiz.length)), [level, round]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const firstPhase = (): Phase => (feed.length ? "feed" : cards.length ? "cards" : games.length ? "games" : quiz.length ? "quiz" : "result");
   const [phase, setPhase] = useState<Phase>(firstPhase);
@@ -36,6 +40,7 @@ export function Lesson({ subject, levelId }: { subject: AppSubject; levelId: str
   const [flipped, setFlipped] = useState(false);
   const [picked, setPicked] = useState<number | null>(null);
   const [score, setScore] = useState(0);
+  const [answers, setAnswers] = useState<{ qi: number; ok: boolean }[]>([]);
   const [gained, setGained] = useState(0);
   const [result, setResult] = useState<ReturnType<typeof applyQuizResult> | null>(null);
 
@@ -46,7 +51,7 @@ export function Lesson({ subject, levelId }: { subject: AppSubject; levelId: str
 
   const earn = (n: number) => {
     if (!n) return;
-    addXp(subject, n);
+    addXp(topic.id, n);
     setGained((g) => g + n);
   };
 
@@ -68,16 +73,21 @@ export function Lesson({ subject, levelId }: { subject: AppSubject; levelId: str
   };
 
   const finish = () => {
-    const r = applyQuizResult(progressOf(subject), level.id, score, quiz.length);
+    const r = applyQuizResult(progressOf(topic.id), level.id, score, quiz.length);
+    const minutes = Math.max(1, Math.round((Date.now() - startedAt.current) / 60000));
     if (quiz.length) {
-      setProgress(subject, r.progress);
-      addXp(subject, 0); // touches the streak for today
+      setProgress(topic.id, r.progress);
+      addXp(topic.id, 0); // touches the streak for today
       setGained((g) => g + r.gained);
+      // remember what didn't stick → tomorrow's session
+      setWeak(markWeak(weak, topic.id, level.id, answers.filter((a) => !a.ok).map((a) => a.qi), answers.filter((a) => a.ok).map((a) => a.qi)), topic.id);
+      logActivity(gained + r.gained, minutes);
     } else {
       // no quiz in this level → passing is automatic
-      const p = progressOf(subject);
+      const p = progressOf(topic.id);
       const prev = p.levels[level.id];
-      setProgress(subject, { ...p, levels: { ...p.levels, [level.id]: { done: true, best: 100, stars: 3, attempts: (prev?.attempts ?? 0) + 1 } } });
+      setProgress(topic.id, { ...p, levels: { ...p.levels, [level.id]: { done: true, best: 100, stars: 3, attempts: (prev?.attempts ?? 0) + 1 } } });
+      logActivity(gained, minutes);
     }
     setResult(r);
     setPhase("result");
@@ -86,7 +96,9 @@ export function Lesson({ subject, levelId }: { subject: AppSubject; levelId: str
   const retry = () => {
     setRound((r) => r + 1);
     setScore(0);
+    setAnswers([]);
     setGained(0);
+    startedAt.current = Date.now();
     setResult(null);
     setI(0);
     setPicked(null);
@@ -168,6 +180,7 @@ export function Lesson({ subject, levelId }: { subject: AppSubject; levelId: str
                 onPick={(k) => {
                   if (picked !== null) return;
                   setPicked(k);
+                  setAnswers((a) => [...a, { qi: quiz[i]!.qi, ok: k === quiz[i]!.c }]);
                   if (k === quiz[i]!.c) {
                     setScore((s) => s + 1);
                     toast(`GIT +${XP.quizCorrect}xp 🟢`);
@@ -215,7 +228,7 @@ export function Lesson({ subject, levelId }: { subject: AppSubject; levelId: str
         )}
       </div>
 
-      {phase !== "result" && <TutorFab subject={subject} levelId={level.id} />}
+      {phase !== "result" && <TutorFab topic={topic} levelId={level.id} />}
     </SubjectTheme>
   );
 }

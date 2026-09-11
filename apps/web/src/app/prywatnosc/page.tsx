@@ -18,8 +18,8 @@ export default function Prywatnosc() {
         </ul>
         <h2>Po co</h2>
         <p>Żeby wygenerować Twoje przedmioty, zapamiętać postępy i rozliczyć subskrypcję. Materiały są przesyłane do dostawcy modelu AI (Anthropic) wyłącznie w celu wygenerowania treści i nie służą do trenowania modeli.</p>
-        <h2>Gość bez konta</h2>
-        <p>Jeśli uczysz się bez logowania, postępy zapisujemy tylko w Twojej przeglądarce (localStorage). Nic nie trafia na nasze serwery.</p>
+        <h2>Postępy i aktywność</h2>
+        <p>Zapisujemy, które poziomy zaliczyłeś, wyniki quizów, powtórki fiszek i dzienną aktywność (XP, minuty) — wyłącznie po to, żeby układać sesję „Dziś” i plan na sprawdzian. Widzisz je tylko Ty.</p>
         <h2>Twoje prawa</h2>
         <p>Możesz w każdej chwili usunąć przedmioty i materiały w aplikacji oraz poprosić o usunięcie konta pisząc na hej@nauka.app. Masz prawo dostępu, sprostowania, przeniesienia i usunięcia danych (RODO).</p>
         <h2>Cookies</h2>

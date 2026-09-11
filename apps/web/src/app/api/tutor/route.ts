@@ -3,13 +3,13 @@ import { tutorStream } from "@/lib/ai";
 import { getUserFromRequest, jsonError, NO_SUPABASE } from "@/lib/auth";
 import { hasServiceRole, hasSupabaseEnv } from "@/lib/env";
 import { getPlan, reserveTutorMessage } from "@/lib/plan";
-import { getSubject } from "@/lib/subjects";
+import { getTopic } from "@/lib/data";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const BodySchema = z.object({
-  subjectId: z.string().min(1),
+  topicId: z.string().uuid(),
   levelId: z.string().min(1),
   question: z.string().min(1).max(2000),
   history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(4000) })).max(20).default([]),
@@ -25,8 +25,8 @@ export async function POST(req: Request) {
   } catch {
     return jsonError("Nieprawidłowe body", 400, { code: "bad_request" });
   }
-  const subject = await getSubject(body.subjectId, ctx.supabase);
-  if (!subject) return jsonError("Nie znaleziono przedmiotu", 404);
+  const topic = await getTopic(ctx.supabase, body.topicId);
+  if (!topic) return jsonError("Nie znaleziono tematu", 404);
 
   const plan = await getPlan(ctx.supabase, ctx.user.id);
   try {
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       try {
-        for await (const chunk of tutorStream({ subject, levelId: body.levelId, question: body.question, history: body.history })) {
+        for await (const chunk of tutorStream({ subject: topic, levelId: body.levelId, question: body.question, history: body.history })) {
           controller.enqueue(encoder.encode(chunk));
         }
       } catch (e) {

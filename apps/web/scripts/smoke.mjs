@@ -38,21 +38,31 @@ const wait = async () => {
   throw new Error("server did not start:\n" + log);
 };
 
+// Works in both modes: no env (pages show "Brak konfiguracji Supabase", API → 503) and configured env (guests are
+// redirected to /login, API → 401). Note: NEXT_PUBLIC_* are inlined at build time — for a true no-env run build
+// without apps/web/.env.local present.
+const gated = (r, body) => r.status === 200 && (body.includes("Brak konfiguracji Supabase") || body.includes("Zaloguj"));
+const apiErr = (r, body) => (r.status === 401 || r.status === 503) && r.headers.get("content-type")?.includes("application/json") && JSON.parse(body).error;
 const checks = [
-  { path: "/", expect: (r, body) => r.status === 200 && body.includes("NAUKA") },
+  { path: "/", expect: (r, body) => r.status === 200 && body.includes("NAUKA") && body.includes("AI robi z tego lekcje") && !body.includes("bez konta") },
   { path: "/login", expect: (r, body) => r.status === 200 && body.includes("Zaloguj") },
-  { path: "/app", expect: (r, body) => r.status === 200 && body.includes("Biblioteka") },
-  { path: "/app/s/makro", expect: (r, body) => r.status === 200 && body.includes("Makro") },
-  { path: "/app/s/makro/l/l1", expect: (r, body) => r.status === 200 && body.includes("lessonhead") },
-  { path: "/app/new", expect: (r) => r.status === 200 },
-  { path: "/app/account", expect: (r) => r.status === 200 },
+  { path: "/app", expect: gated },
+  { path: "/app/today", expect: gated },
+  { path: "/app/account", expect: gated },
+  { path: "/app/s/00000000-0000-4000-8000-000000000000", expect: (r, body) => gated(r, body) || r.status === 404 },
+  { path: "/app/s/00000000-0000-4000-8000-000000000000/new?mode=prompt", expect: (r, body) => gated(r, body) || r.status === 404 },
+  { path: "/app/t/00000000-0000-4000-8000-000000000000", expect: (r, body) => gated(r, body) || r.status === 404 },
+  { path: "/app/t/00000000-0000-4000-8000-000000000000/l/l1", expect: (r, body) => gated(r, body) || r.status === 404 },
   { path: "/regulamin", expect: (r) => r.status === 200 },
   { path: "/prywatnosc", expect: (r) => r.status === 200 },
+  { path: "/billing/success", expect: (r) => r.status === 200 },
   { path: "/manifest.webmanifest", expect: (r, body) => r.status === 200 && body.includes("NAUKA") },
-  { path: "/api/me", expect: (r, body) => (r.status === 401 || r.status === 503) && r.headers.get("content-type")?.includes("application/json") && JSON.parse(body).error },
-  { path: "/api/generate", method: "POST", body: "{}", expect: (r, body) => (r.status === 401 || r.status === 503) && JSON.parse(body).error },
-  { path: "/api/tutor", method: "POST", body: "{}", expect: (r, body) => (r.status === 401 || r.status === 503) && JSON.parse(body).error },
-  { path: "/api/stripe/checkout", method: "POST", body: "{}", expect: (r, body) => (r.status === 401 || r.status === 503) && JSON.parse(body).error },
+  { path: "/api/me", expect: apiErr },
+  { path: "/api/generate", method: "POST", body: "{}", expect: apiErr },
+  { path: "/api/generate?id=x", expect: apiErr },
+  { path: "/api/tutor", method: "POST", body: "{}", expect: apiErr },
+  { path: "/api/stripe/checkout", method: "POST", body: "{}", expect: apiErr },
+  { path: "/api/stripe/portal", method: "POST", expect: apiErr },
   { path: "/api/stripe/webhook", method: "POST", body: "{}", expect: (r) => r.status === 503 || r.status === 400 },
   { path: "/nie-ma-takiej", expect: (r) => r.status === 404 },
 ];

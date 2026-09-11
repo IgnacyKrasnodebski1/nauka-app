@@ -1,22 +1,27 @@
 import { z } from "zod";
-import { GenerationOptionsSchema, PLANS, SubjectContentSchema } from "@nauka/shared";
-import { generateSubject } from "@/lib/ai";
+import { GenerationOptionsSchema, PLANS, TopicContentSchema } from "@nauka/shared";
+import { generateTopic, GenerationError } from "@/lib/ai";
 import { getUserFromRequest, jsonError, NO_SUPABASE } from "@/lib/auth";
 import { hasServiceRole, hasSupabaseEnv } from "@/lib/env";
-import { countOwnSubjects, getPlan, reserveGeneration } from "@/lib/plan";
+import { getPlan, reserveGeneration } from "@/lib/plan";
 import { getAdminSupabase } from "@/lib/supabase/admin";
-import { rowToSubject, type SubjectRow } from "@/lib/types";
+import { rowToTopic, TOPIC_SELECT, type TopicRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const BodySchema = z
   .object({
+    subjectId: z.string().uuid(),
     materialIds: z.array(z.string().uuid()).max(50).default([]),
     text: z.string().max(200_000).optional(),
     options: GenerationOptionsSchema,
   })
-  .refine((b) => b.materialIds.length > 0 || (b.text && b.text.trim().length > 0), { message: "Podaj materiały (materialIds) albo tekst." });
+  .superRefine((b, ctx) => {
+    const mode = b.options.mode ?? "materials";
+    if (mode === "materials" && !b.materialIds.length && !b.text?.trim()) ctx.addIssue({ code: "custom", message: "Tryb „materials” wymaga plików (materialIds) albo tekstu." });
+    if (mode === "prompt" && !b.options.hint?.trim()) ctx.addIssue({ code: "custom", message: "Tryb „prompt” wymaga options.hint (temat)." });
+  });
 
 interface MaterialRow {
   id: string;
@@ -39,16 +44,20 @@ export async function POST(req: Request) {
   } catch (e) {
     return jsonError(e instanceof z.ZodError ? e.issues.map((i) => i.message).join("; ") : "Nieprawidłowe body", 400, { code: "bad_request" });
   }
+  const mode = body.options.mode ?? "materials";
+
+  // subject must belong to the caller
+  const { data: subj } = await ctx.supabase.from("subjects").select("id,name,stage,owner_id").eq("id", body.subjectId).maybeSingle();
+  const subject = subj as { id: string; name: string; stage: string; owner_id: string } | null;
+  if (!subject || subject.owner_id !== ctx.user.id) return jsonError("Nie znaleziono przedmiotu", 404, { code: "not_found" });
 
   const plan = await getPlan(ctx.supabase, ctx.user.id);
   const limits = PLANS[plan];
   if (body.materialIds.length > limits.filesPerGeneration) return jsonError(`Max ${limits.filesPerGeneration} plików w planie ${limits.label}`, 400, { code: "too_many_files" });
-  const ownCount = await countOwnSubjects(ctx.supabase, ctx.user.id);
-  if (ownCount >= limits.maxSubjects) return jsonError(`Limit ${limits.maxSubjects} przedmiotów w planie ${limits.label}. Usuń któryś albo przejdź na Pro.`, 402, { code: "limit_reached", used: ownCount, limit: limits.maxSubjects });
 
   // materials must belong to the caller (RLS on the user-scoped client enforces that)
   let materials: MaterialRow[] = [];
-  if (body.materialIds.length) {
+  if (mode === "materials" && body.materialIds.length) {
     const { data, error } = await ctx.supabase.from("materials").select("id,storage_path,mime,size_bytes,name").in("id", body.materialIds);
     if (error) return jsonError(error.message, 500);
     materials = (data ?? []) as MaterialRow[];
@@ -66,9 +75,10 @@ export async function POST(req: Request) {
   }
   if (!reserved.ok) return jsonError(`Wykorzystano ${reserved.used - 1}/${reserved.limit} generacji w tym miesiącu`, 402, { code: "limit_reached", used: reserved.used - 1, limit: reserved.limit });
 
+  const options = { ...body.options, mode, subjectName: body.options.subjectName ?? subject.name };
   const { data: gen, error: genErr } = await admin
     .from("generations")
-    .insert({ owner_id: ctx.user.id, status: "running", stage: body.options.stage, hint: body.options.hint ?? null, options: body.options, material_ids: body.materialIds })
+    .insert({ owner_id: ctx.user.id, status: "running", stage: options.stage, hint: options.hint ?? null, options, material_ids: body.materialIds, subject_id: subject.id })
     .select("id")
     .single();
   if (genErr || !gen) return jsonError(`Nie udało się utworzyć zadania: ${genErr?.message}`, 500);
@@ -82,30 +92,32 @@ export async function POST(req: Request) {
         return { mime: m.mime, data: Buffer.from(await data.arrayBuffer()), name: m.name ?? undefined };
       }),
     );
-    const out = await generateSubject({ materials: files, text: body.text, options: body.options });
-    const content = SubjectContentSchema.parse(out.content);
+    const out = await generateTopic({ materials: files, text: mode === "materials" ? body.text : undefined, options });
+    const content = TopicContentSchema.parse(out.content);
     if (out.demo && !content.tagline.includes("DEMO")) content.tagline = `DEMO · ${content.tagline}`.slice(0, 300);
 
-    const { data: subj, error: subErr } = await admin
-      .from("subjects")
-      .insert({ owner_id: ctx.user.id, name: content.name, stage: body.options.stage, category: out.category, is_public: false, content, generation_id: generationId })
-      .select("id,slug,owner_id,name,stage,category,is_public,content,created_at,updated_at")
+    const { count } = await admin.from("topics").select("id", { count: "exact", head: true }).eq("subject_id", subject.id);
+    const { data: row, error: topErr } = await admin
+      .from("topics")
+      .insert({ subject_id: subject.id, owner_id: ctx.user.id, name: content.name, emoji: content.emoji, source: mode, content, generation_id: generationId, position: count ?? 0 })
+      .select(TOPIC_SELECT)
       .single();
-    if (subErr || !subj) throw new Error(`Zapis przedmiotu: ${subErr?.message}`);
-    const row = subj as SubjectRow;
+    if (topErr || !row) throw new Error(`Zapis tematu: ${topErr?.message}`);
+    const topic = rowToTopic(row as TopicRow);
 
     await admin
       .from("generations")
-      .update({ status: "done", subject_id: row.id, model: out.model, input_tokens: out.usage.input, output_tokens: out.usage.output, finished_at: new Date().toISOString() })
+      .update({ status: "done", topic_id: topic.id, model: out.model, input_tokens: out.usage.input, output_tokens: out.usage.output, finished_at: new Date().toISOString() })
       .eq("id", generationId);
 
-    return Response.json({ generationId, subjectId: row.id, subject: rowToSubject(row), demo: out.demo });
+    return Response.json({ generationId, topicId: topic.id, topic, demo: out.demo });
   } catch (e) {
     const msg = (e as Error).message || "Generowanie nie powiodło się";
+    const code = e instanceof GenerationError ? e.code : "generation_failed";
     console.error("[generate] failed", generationId, msg);
     await admin.from("generations").update({ status: "failed", error: msg.slice(0, 2000), finished_at: new Date().toISOString() }).eq("id", generationId);
     // usage was already incremented — intentionally not decremented (see docs/API.md)
-    return jsonError(msg, 500, { code: "generation_failed", generationId });
+    return jsonError(msg, code === "no_input" ? 400 : 500, { code, generationId });
   }
 }
 
@@ -115,8 +127,8 @@ export async function GET(req: Request) {
   if (!ctx) return jsonError("Wymagane logowanie", 401, { code: "unauthorized" });
   const id = new URL(req.url).searchParams.get("id");
   if (!id) return jsonError("Brak ?id", 400);
-  const { data } = await ctx.supabase.from("generations").select("status,subject_id,error").eq("id", id).maybeSingle();
+  const { data } = await ctx.supabase.from("generations").select("status,topic_id,error").eq("id", id).maybeSingle();
   if (!data) return jsonError("Nie znaleziono", 404);
-  const g = data as { status: string; subject_id: string | null; error: string | null };
-  return Response.json({ status: g.status, subjectId: g.subject_id ?? undefined, error: g.error ?? undefined });
+  const g = data as { status: string; topic_id: string | null; error: string | null };
+  return Response.json({ status: g.status, topicId: g.topic_id ?? undefined, error: g.error ?? undefined });
 }

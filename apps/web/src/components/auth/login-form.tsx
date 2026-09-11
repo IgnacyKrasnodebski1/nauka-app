@@ -31,7 +31,7 @@ export function LoginForm() {
 
   async function submit(e: FormEvent) {
     e.preventDefault();
-    if (!supabase) return setMsg({ kind: "err", text: "Brak konfiguracji Supabase. Możesz uczyć się bez konta." });
+    if (!supabase) return setMsg({ kind: "err", text: "Brak konfiguracji Supabase." });
     setBusy(true);
     setMsg(null);
     try {
@@ -72,7 +72,7 @@ export function LoginForm() {
       <p className="text-muted text-sm mt-1 mb-5">Konto = własne przedmioty z AI, postępy w chmurze i {" "}<b className="text-txt">3 generacje/mies. za darmo</b>.</p>
 
       {!supabase && (
-        <div className="exfb bad mb-4">Tryb demo: brak NEXT_PUBLIC_SUPABASE_URL. Logowanie nie działa, ale biblioteka i nauka bez konta — tak.</div>
+        <div className="exfb bad mb-4">Brak konfiguracji Supabase (NEXT_PUBLIC_SUPABASE_URL) — logowanie jest wyłączone na tej instancji.</div>
       )}
 
       <button type="button" onClick={google} disabled={busy || !supabase} className="pill ghost flex items-center justify-center gap-2">
