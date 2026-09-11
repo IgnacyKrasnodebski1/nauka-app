@@ -1,6 +1,19 @@
 # NAUKA — wdrożenie (od zera do sprzedaży)
 
-Czas: ~60–90 min przy pierwszym podejściu. Wszystko ma darmowy tier na start.
+## Stan na 2026-09-11 (zrobione z tej sesji)
+| Co | Status | Identyfikator |
+|---|---|---|
+| Supabase projekt `nauka` (eu-central-1) | utworzony, schemat v1 wgrany | ref `zhgxhdsnizujzygpcyfl` |
+| Supabase schemat v2 (przedmioty → tematy) | **do wklejenia**: `supabase/dev_upgrade_v1_to_v2.sql` w SQL Editor | |
+| Supabase auth | email (auto-confirm), redirecty localhost / `*.vercel.app` / `nauka://` | Google: do włączenia ręcznie |
+| Stripe (test) produkt „NAUKA Pro” | utworzony | `prod_VEwoeIrg8evsMf` |
+| Stripe ceny | 29 zł/mies `price_1UESvFRsoBaIQwwLY3S0hjrd`, 199 zł/rok `price_1UESvGRsoBaIQwwL8c0rRt0s` | |
+| Stripe Customer Portal | skonfigurowany | `bpc_1UESvGRsoBaIQwwL6jxvaNG3` |
+| Stripe webhook | **do zrobienia** po deployu (potrzebny URL) | |
+| Vercel projekt | **do zrobienia** (import repo, root `apps/web`) | team `ignacykrasnodebski1s-projects` |
+| Anthropic key | **brak** → apka w trybie demo | |
+
+Czas na resztę: ~30 min.
 
 ## 0. Wymagania
 - Node 22+, npm 10+, konto GitHub (repo już jest), Supabase, Vercel, Stripe, Anthropic Console, Expo (EAS).
@@ -8,8 +21,9 @@ Czas: ~60–90 min przy pierwszym podejściu. Wszystko ma darmowy tier na start.
 ## 1. Supabase (baza, auth, pliki)
 1. https://supabase.com → New project (region: `eu-central-1` Frankfurt). Zapisz **hasło DB**.
 2. Settings → API: skopiuj `Project URL`, `anon public`, `service_role` (ten drugi TYLKO do API weba).
-3. SQL: otwórz SQL Editor → wklej `supabase/migrations/0001_init.sql` → Run. Potem `supabase/seed.sql` → Run (7 przedmiotów seed).
-   Alternatywnie CLI: `npx supabase login && npx supabase link --project-ref <ref> && npx supabase db push && npx supabase db seed` (lub `psql "<connection string>" -f supabase/seed.sql`).
+3. SQL: otwórz SQL Editor → wklej `supabase/migrations/0001_init.sql` → Run.
+   Alternatywnie CLI: `npx supabase login && npx supabase link --project-ref <ref> && npx supabase db push`.
+   (Istniejący projekt `zhgxhdsnizujzygpcyfl` ma schemat v1 → wklej `supabase/dev_upgrade_v1_to_v2.sql`.)
 4. Authentication → Providers:
    - Email: włącz. „Confirm email” zostaw wg uznania (dla szybkiego startu: wyłącz).
    - Google: utwórz OAuth Client w Google Cloud (typ Web), Authorized redirect URI = `https://<ref>.supabase.co/auth/v1/callback`; wklej Client ID/Secret.
@@ -17,6 +31,7 @@ Czas: ~60–90 min przy pierwszym podejściu. Wszystko ma darmowy tier na start.
    - Site URL: `https://twoja-domena.pl`
    - Redirect URLs: `https://twoja-domena.pl/auth/callback`, `http://localhost:3000/auth/callback`, `nauka://auth/callback`, `exp://**`
 6. Storage: bucket `materials` tworzy migracja (prywatny, 25 MB, tylko obrazy/PDF/txt).
+7. Settings → API → skopiuj `anon` i `service_role` (do env Vercela, pkt 4).
 
 ## 2. Anthropic (AI)
 1. https://console.anthropic.com → API Keys → Create key → `ANTHROPIC_API_KEY`.
@@ -57,7 +72,7 @@ NEXT_PUBLIC_APP_URL=https://twoja-domena.pl
 - Materiały użytkowników trafiają do Anthropic API (przetwarzanie danych — wpisz w polityce; Anthropic API nie trenuje na danych klientów).
 
 ## 7. Checklist „sprzedaję od jutra”
-- [ ] Supabase: migracja + seed + Google OAuth
+- [ ] Supabase: upgrade SQL v2 + Google OAuth
 - [ ] Anthropic key wpisany na Vercel
 - [ ] Stripe: produkt, 2 ceny, BLIK, webhook, portal
 - [ ] Vercel: env + domena + test płatności testową kartą `4242 4242 4242 4242`
