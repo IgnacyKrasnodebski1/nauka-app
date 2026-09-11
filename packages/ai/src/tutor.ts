@@ -1,9 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { TUTOR_SYSTEM_PROMPT, type SubjectContent } from "@nauka/shared";
+import { TUTOR_SYSTEM_PROMPT, type TopicContent } from "@nauka/shared";
 import { aiConfigured, getClient, modelId } from "./client.js";
 
 export interface TutorInput {
-  subject: Pick<SubjectContent, "name" | "levels">;
+  subject: Pick<TopicContent, "name" | "levels">;
   levelId?: string;
   question: string;
   history?: { role: "user" | "assistant"; content: string }[];

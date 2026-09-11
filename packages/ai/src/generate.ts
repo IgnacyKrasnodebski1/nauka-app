@@ -2,12 +2,13 @@ import Anthropic from "@anthropic-ai/sdk";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import {
   GENERATION_SYSTEM_PROMPT,
-  GeneratedSubjectSchema,
+  TOPIC_SYSTEM_PROMPT,
+  GeneratedTopicSchema,
   GenerationOptionsSchema,
   buildGenerationUserPrompt,
   finalizeGenerated,
   type GenerationOptions,
-  type SubjectContent,
+  type TopicContent,
 } from "@nauka/shared";
 import { aiConfigured, getClient, modelId } from "./client.js";
 import { demoGenerated } from "./demo.js";
@@ -20,7 +21,7 @@ export interface GenerateInput {
 }
 
 export interface GenerateResult {
-  content: SubjectContent;
+  content: TopicContent;
   category: string;
   model: string;
   usage: { input: number; output: number };
@@ -37,19 +38,21 @@ export class GenerationError extends Error {
 }
 
 /**
- * Turn uploaded materials into a full subject. Uses Claude vision + PDF + structured outputs.
- * Falls back to a demo subject when no API key is configured so the product flow can be tested.
+ * Turn uploaded materials (mode "materials") or a typed topic (mode "prompt") into a full topic.
+ * Uses Claude vision + PDF + structured outputs. Falls back to a demo topic when no API key is configured.
  */
-export async function generateSubject(input: GenerateInput): Promise<GenerateResult> {
+export async function generateTopic(input: GenerateInput): Promise<GenerateResult> {
   const options = GenerationOptionsSchema.parse(input.options);
-  if (!input.materials.length && !input.text?.trim()) throw new GenerationError("Dodaj przynajmniej jeden plik albo tekst.", "no_input");
+  const mode = options.mode ?? (input.materials.length || input.text?.trim() ? "materials" : "prompt");
+  if (mode === "materials" && !input.materials.length && !input.text?.trim()) throw new GenerationError("Dodaj przynajmniej jeden plik albo tekst.", "no_input");
+  if (mode === "prompt" && !options.hint?.trim()) throw new GenerationError("Wpisz temat, np. „fotosynteza, klasa 7”.", "no_input");
 
   if (!aiConfigured()) {
     const gen = demoGenerated(options.hint || input.text?.split("\n")[0] || "Demo", options.levels ?? 3);
     return { content: finalizeGenerated(gen, options.stage, { lang: options.lang }), category: gen.category, model: "demo", usage: { input: 0, output: 0 }, demo: true };
   }
 
-  const { blocks, summary } = materialsToBlocks(input.materials, input.text);
+  const { blocks, summary } = mode === "materials" ? materialsToBlocks(input.materials, input.text) : { blocks: [], summary: "brak" };
   const client = getClient();
   const model = modelId();
 
@@ -59,9 +62,9 @@ export async function generateSubject(input: GenerateInput): Promise<GenerateRes
     betas: ["server-side-fallback-2026-07-01"],
     fallbacks: "default",
     thinking: { type: "adaptive" },
-    output_config: { effort: "high", format: betaZodOutputFormat(GeneratedSubjectSchema) },
-    system: [{ type: "text", text: GENERATION_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: [...blocks, { type: "text", text: buildGenerationUserPrompt(options, summary) }] }],
+    output_config: { effort: "high", format: betaZodOutputFormat(GeneratedTopicSchema) },
+    system: [{ type: "text", text: mode === "materials" ? GENERATION_SYSTEM_PROMPT : TOPIC_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
+    messages: [{ role: "user", content: [...blocks, { type: "text", text: buildGenerationUserPrompt({ ...options, mode }, summary) }] }],
   });
 
   let msg;
@@ -93,8 +96,11 @@ function parseFromText(content: Anthropic.Beta.BetaContentBlock[]) {
     .map((b) => b.text)
     .join("");
   try {
-    return GeneratedSubjectSchema.parse(JSON.parse(text));
+    return GeneratedTopicSchema.parse(JSON.parse(text));
   } catch {
     return null;
   }
 }
+
+/** @deprecated use generateTopic */
+export const generateSubject = generateTopic;

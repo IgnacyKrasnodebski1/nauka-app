@@ -4,20 +4,21 @@ Wszystkie endpointy poza webhookiem wymagają nagłówka `Authorization: Bearer 
 Błędy: JSON `{ error: string, code?: string }` z odpowiednim statusem (401, 402 limit planu, 400, 500).
 
 ## POST /api/generate
-Body:
+Tworzy **temat** w przedmiocie użytkownika. Body:
 ```json
-{ "materialIds": ["uuid"], "text": "opcjonalny wklejony tekst", "options": { "stage": "liceum", "hint": "biologia, fotosynteza", "levels": 4, "lang": false } }
+{ "subjectId": "uuid", "materialIds": ["uuid"], "text": "opcjonalny wklejony tekst",
+  "options": { "stage": "liceum", "subjectName": "Biologia", "mode": "materials" | "prompt", "hint": "fotosynteza, klasa 7", "levels": 4, "lang": false } }
 ```
-Wymaga `materialIds.length > 0 || text`. Limity z `PLANS[plan]`. Synchroniczne (do ~4 min, `maxDuration = 300`).
-Odpowiedź 200: `{ "generationId": "uuid", "subjectId": "uuid", "subject": Subject }`.
+`mode=materials` wymaga `materialIds.length > 0 || text`; `mode=prompt` wymaga `options.hint`. API sprawdza, że `subjects.owner_id = user`. Limity z `PLANS[plan]`. Synchroniczne (`maxDuration = 300`). Wywołuje `generateTopic()` z `@nauka/ai`, wstawia `topics` (position = liczba tematów w przedmiocie, `source` = mode, `generation_id`).
+Odpowiedź 200: `{ "generationId": "uuid", "topicId": "uuid", "topic": Topic }`.
 402: `{ error, code: "limit_reached", used, limit }`.
-Gdy brak `ANTHROPIC_API_KEY` → tryb demo: generuje przykładowy przedmiot z `text`/`hint` (oznaczony w `tagline` „DEMO”).
+Gdy brak `ANTHROPIC_API_KEY` → tryb demo (przykładowy temat, `tagline` „DEMO”).
 
 ## GET /api/generate?id=<generationId>
-Status joba: `{ status, subjectId?, error? }` (do pollowania po zerwaniu połączenia).
+Status joba: `{ status, topicId?, error? }`.
 
 ## POST /api/tutor
-Body: `{ "subjectId": "uuid", "levelId": "l1", "question": "…", "history": [{ "role": "user"|"assistant", "content": "…" }] }`
+Body: `{ "topicId": "uuid", "levelId": "l1", "question": "…", "history": [{ "role": "user"|"assistant", "content": "…" }] }`
 Odpowiedź: `text/plain` streamowany (chunked). Limit: 30 wiadomości/dzień free (liczone w `usage.tutor_messages`), Pro bez limitu.
 
 ## POST /api/stripe/checkout
@@ -34,8 +35,8 @@ Stripe → weryfikacja podpisu `STRIPE_WEBHOOK_SECRET`. Obsługa: `checkout.sess
 → `{ profile, plan, usage: { month, generations, tutorMessages }, limits: PLANS[plan], subscription }`.
 
 ## Dane bezpośrednio przez Supabase (RLS)
-- `subjects`: select `is_public or owner`; insert/update/delete owner. Public seed: `owner_id is null`.
-- `progress`, `srs_cards`, `user_meta`, `library`, `materials`: tylko własne.
+- `subjects` (kontenery), `topics` (treść), `progress`, `srs_cards`, `user_meta`, `activity`, `materials`: tylko własne (`owner_id`/`user_id = auth.uid()`).
+- RPC: `log_activity(p_xp int, p_minutes int)`, `my_total_xp()`.
 - Storage `materials/{uid}/...`: tylko własne.
 
 ## Env (apps/web/.env.local)

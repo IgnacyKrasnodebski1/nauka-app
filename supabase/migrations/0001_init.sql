@@ -38,23 +38,40 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created after insert on auth.users
   for each row execute procedure public.handle_new_user();
 
--- ---------- subjects ----------
+-- ---------- subjects (user's containers: Matematyka, Biologia…) ----------
 create table if not exists public.subjects (
   id uuid primary key default gen_random_uuid(),
-  slug text,
-  owner_id uuid references auth.users(id) on delete cascade,
+  owner_id uuid not null references auth.users(id) on delete cascade,
   name text not null,
-  stage public.stage not null default 'inne',
-  category text,
-  is_public boolean not null default false,
-  content jsonb not null,
-  generation_id uuid,
+  emoji text not null default '📘',
+  category text not null default 'inne',
+  stage public.stage not null default 'liceum',
+  accent text not null default 'linear-gradient(135deg,#ff2d95,#a855f7,#22d3ee)',
+  accent2 text not null default '#22d3ee',
+  exam_date date,
+  exam_label text,
+  position int not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
-create unique index if not exists subjects_public_slug on public.subjects (slug) where owner_id is null;
-create index if not exists subjects_owner on public.subjects (owner_id);
-create index if not exists subjects_public on public.subjects (is_public) where is_public;
+create index if not exists subjects_owner on public.subjects (owner_id, position);
+
+-- ---------- topics (AI-generated learning units inside a subject) ----------
+create table if not exists public.topics (
+  id uuid primary key default gen_random_uuid(),
+  subject_id uuid not null references public.subjects(id) on delete cascade,
+  owner_id uuid not null references auth.users(id) on delete cascade,
+  name text not null,
+  emoji text not null default '📘',
+  source text not null default 'materials', -- materials | prompt
+  content jsonb not null,
+  generation_id uuid,
+  position int not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists topics_subject on public.topics (subject_id, position);
+create index if not exists topics_owner on public.topics (owner_id);
 
 -- ---------- materials (uploaded files) ----------
 create table if not exists public.materials (
@@ -78,6 +95,7 @@ create table if not exists public.generations (
   options jsonb not null default '{}'::jsonb,
   material_ids uuid[] not null default '{}',
   subject_id uuid references public.subjects(id) on delete set null,
+  topic_id uuid references public.topics(id) on delete set null,
   error text,
   model text,
   input_tokens int,
@@ -90,21 +108,31 @@ create index if not exists generations_owner on public.generations (owner_id, cr
 -- ---------- progress ----------
 create table if not exists public.progress (
   user_id uuid not null references auth.users(id) on delete cascade,
-  subject_id uuid not null references public.subjects(id) on delete cascade,
+  topic_id uuid not null references public.topics(id) on delete cascade,
   xp int not null default 0,
   levels jsonb not null default '{}'::jsonb,
+  weak jsonb not null default '{}'::jsonb, -- levelId → wrong question indices
   best_exam int,
   updated_at timestamptz not null default now(),
-  primary key (user_id, subject_id)
+  primary key (user_id, topic_id)
 );
 
 create table if not exists public.srs_cards (
   user_id uuid not null references auth.users(id) on delete cascade,
-  subject_id uuid not null references public.subjects(id) on delete cascade,
+  topic_id uuid not null references public.topics(id) on delete cascade,
   card_key text not null,
   state jsonb not null,
   due timestamptz not null default now(),
-  primary key (user_id, subject_id, card_key)
+  primary key (user_id, topic_id, card_key)
+);
+
+-- daily activity log (for calendar / streak repair / stats)
+create table if not exists public.activity (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  day date not null,
+  xp int not null default 0,
+  minutes int not null default 0,
+  primary key (user_id, day)
 );
 create index if not exists srs_due on public.srs_cards (user_id, due);
 
@@ -115,14 +143,6 @@ create table if not exists public.user_meta (
   last_day date,
   total_xp int not null default 0,
   updated_at timestamptz not null default now()
-);
-
--- user adds a public subject to their home screen
-create table if not exists public.library (
-  user_id uuid not null references auth.users(id) on delete cascade,
-  subject_id uuid not null references public.subjects(id) on delete cascade,
-  added_at timestamptz not null default now(),
-  primary key (user_id, subject_id)
 );
 
 -- ---------- billing ----------
@@ -149,7 +169,7 @@ create table if not exists public.usage (
 create or replace function public.touch_updated_at() returns trigger language plpgsql as $$
 begin new.updated_at = now(); return new; end $$;
 do $$ declare t text; begin
-  foreach t in array array['profiles','subjects','progress','user_meta','subscriptions'] loop
+  foreach t in array array['profiles','subjects','topics','progress','user_meta','subscriptions'] loop
     execute format('drop trigger if exists touch_%I on public.%I', t, t);
     execute format('create trigger touch_%I before update on public.%I for each row execute procedure public.touch_updated_at()', t, t);
   end loop;
@@ -158,12 +178,13 @@ end $$;
 -- ---------- RLS ----------
 alter table public.profiles enable row level security;
 alter table public.subjects enable row level security;
+alter table public.topics enable row level security;
+alter table public.activity enable row level security;
 alter table public.materials enable row level security;
 alter table public.generations enable row level security;
 alter table public.progress enable row level security;
 alter table public.srs_cards enable row level security;
 alter table public.user_meta enable row level security;
-alter table public.library enable row level security;
 alter table public.subscriptions enable row level security;
 alter table public.usage enable row level security;
 
@@ -173,14 +194,12 @@ drop policy if exists "profiles self update" on public.profiles;
 create policy "profiles self update" on public.profiles for update using (auth.uid() = id)
   with check (auth.uid() = id and plan = (select p.plan from public.profiles p where p.id = auth.uid()) and stripe_customer_id is not distinct from (select p.stripe_customer_id from public.profiles p where p.id = auth.uid()));
 
-drop policy if exists "subjects read" on public.subjects;
-create policy "subjects read" on public.subjects for select using (is_public or owner_id = auth.uid());
-drop policy if exists "subjects insert" on public.subjects;
-create policy "subjects insert" on public.subjects for insert with check (owner_id = auth.uid());
-drop policy if exists "subjects update" on public.subjects;
-create policy "subjects update" on public.subjects for update using (owner_id = auth.uid()) with check (owner_id = auth.uid());
-drop policy if exists "subjects delete" on public.subjects;
-create policy "subjects delete" on public.subjects for delete using (owner_id = auth.uid());
+drop policy if exists "subjects own" on public.subjects;
+create policy "subjects own" on public.subjects for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+drop policy if exists "topics own" on public.topics;
+create policy "topics own" on public.topics for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+drop policy if exists "activity own" on public.activity;
+create policy "activity own" on public.activity for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 drop policy if exists "materials own" on public.materials;
 create policy "materials own" on public.materials for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
@@ -194,8 +213,6 @@ drop policy if exists "srs own" on public.srs_cards;
 create policy "srs own" on public.srs_cards for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 drop policy if exists "meta own" on public.user_meta;
 create policy "meta own" on public.user_meta for all using (user_id = auth.uid()) with check (user_id = auth.uid());
-drop policy if exists "library own" on public.library;
-create policy "library own" on public.library for all using (user_id = auth.uid()) with check (user_id = auth.uid());
 drop policy if exists "subs read own" on public.subscriptions;
 create policy "subs read own" on public.subscriptions for select using (user_id = auth.uid());
 drop policy if exists "usage read own" on public.usage;
@@ -230,7 +247,13 @@ begin
 end $$;
 revoke all on function public.increment_usage(uuid, text, text) from public, anon, authenticated;
 
--- leaderboard-ish: total xp per user (safe, aggregated)
+-- total xp per user
 create or replace function public.my_total_xp() returns int language sql security invoker as $$
   select coalesce(sum(xp),0)::int from public.progress where user_id = auth.uid();
+$$;
+
+-- log today's activity (xp + minutes) atomically
+create or replace function public.log_activity(p_xp int, p_minutes int) returns void language sql security invoker as $$
+  insert into public.activity (user_id, day, xp, minutes) values (auth.uid(), current_date, p_xp, p_minutes)
+  on conflict (user_id, day) do update set xp = activity.xp + excluded.xp, minutes = activity.minutes + excluded.minutes;
 $$;

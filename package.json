@@ -9,8 +9,6 @@
   ],
   "scripts": {
     "build:shared": "npm run build -w @nauka/shared",
-    "content:convert": "node packages/content/scripts/convert-legacy.mjs",
-    "content:seed": "node packages/content/scripts/make-seed.mjs",
     "web": "npm run dev -w @nauka/web",
     "web:build": "npm run build:shared && npm run build -w @nauka/web",
     "mobile": "npm run start -w @nauka/mobile",

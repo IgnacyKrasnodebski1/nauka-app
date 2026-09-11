@@ -1,12 +1,12 @@
-import type { GeneratedSubject } from "@nauka/shared";
+import type { GeneratedTopic } from "@nauka/shared";
 
 /**
  * Demo generator used when no ANTHROPIC_API_KEY is configured — lets the whole flow
  * (upload → generate → learn) run end-to-end locally. Output is obviously generic.
  */
-export function demoGenerated(topic: string, levels: number): GeneratedSubject {
+export function demoGenerated(topic: string, levels: number): GeneratedTopic {
   const t = topic.trim().slice(0, 60) || "Twój materiał";
-  const mk = (n: number): GeneratedSubject["levels"][number] => ({
+  const mk = (n: number): GeneratedTopic["levels"][number] => ({
     title: `${t} — część ${n}`,
     emoji: ["🧩", "🔎", "⚙️", "🚀", "🧠", "🎯", "🏁", "✨"][(n - 1) % 8]!,
     summary: `Poziom ${n} przedmiotu „${t}” (tryb demo — bez klucza API).`,
