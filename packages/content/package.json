@@ -1,0 +1,12 @@
+{
+  "name": "@nauka/content",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Seed subjects (JSON) shipped with NAUKA — converted from the legacy vanilla app.",
+  "type": "module",
+  "main": "./index.js",
+  "scripts": {
+    "convert": "node scripts/convert-legacy.mjs",
+    "seed": "node scripts/make-seed.mjs"
+  }
+}

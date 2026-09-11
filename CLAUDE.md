@@ -1,59 +1,37 @@
 # CLAUDE.md — kontekst projektu dla Claude Code
 
 ## Czym jest ten projekt
-**nauka-app** — wieloprzedmiotowa apka do nauki w stylu Duolingo (poziomy odblokowywane po kolei) + tryby: roladka (feed), fiszki, quiz, symulacja egzaminu. **Vanilla JS, bez frameworków, bez bundlera.** Działa offline, otwierana wprost z pliku.
+**NAUKA** — apka do nauki (web + mobile) w stylu Duolingo: użytkownik wrzuca materiały (zdjęcia notatek, slajdy, PDF, tekst), AI (Claude) zamienia je w przedmiot z poziomami: roladka (feed) → fiszki (SRS) → mini-gry → quiz → egzamin. Zakres: podstawówka, liceum, studia. Freemium przez Stripe.
 
-Powstała z prezentacji z zajęć. Przedmioty: Makro (polityka makroekonomiczna) i Krypto (blockchain/kryptowaluty).
-
-## Struktura
+## Struktura (monorepo, npm workspaces)
 ```
-index.html      # wersja edytowalna — ładuje styles.css, engine.js, data/*.js przez <script>
-engine.js       # CAŁA logika: router, ekran wyboru, ścieżka poziomów, fiszki, quiz, egzamin
-styles.css      # style; motyw każdego przedmiotu przez zmienną CSS --accent / --accent2
-data/
-  makro.js      # przedmiot — robi window.SUBJECTS.push({...})
-  krypto.js     # przedmiot
-build.js        # `node build.js` → skleja jednoplikowe wersje do build/
-build/          # gotowe pliki jednoplikowe (na telefon / do odpalenia bez serwera)
-README.md       # pełny schemat danych + instrukcja dodawania przedmiotu
+packages/shared   @nauka/shared  KONTRAKT: typy + zod (schema.ts), gamification.ts (XP/gwiazdki/streak), srs.ts, prompts.ts, plans.ts, finalize.ts. Build: tsc → dist/
+packages/content  @nauka/content 7 przedmiotów seed (JSON). `npm run content:convert` (z legacy/data) i `content:seed` (→ supabase/seed.sql)
+packages/ai       @nauka/ai      server-only. generateSubject() (Claude vision+PDF+structured outputs, tryb demo bez klucza), tutorStream()
+apps/web          @nauka/web     Next.js 16 App Router + Tailwind 4: landing, auth (Supabase), /app, API routes (docs/API.md)
+apps/mobile       @nauka/mobile  Expo + expo-router, RN StyleSheet, to samo API i kontrakt
+supabase/         migrations/0001_init.sql (tabele, RLS, storage bucket, RPC), seed.sql (generowany), config.toml
+legacy/           stara wersja vanilla JS (nadal działa: node legacy/build.js) — nie rozwijać, tylko nie psuć
+docs/             ARCHITECTURE.md, API.md, DEPLOY.md
 ```
 
-## Jak to działa (ważne reguły)
-- Dane ładują się przez `<script src>` (NIE przez `fetch`), więc apka działa też z `file://` (bez serwera, bez CORS). **Nie zamieniaj na fetch/JSON.**
-- Każdy plik w `data/` zaczyna się od `window.SUBJECTS = window.SUBJECTS || [];` i `window.SUBJECTS.push({...})`.
-- Silnik (`engine.js`) jest jednym IIFE; czyta `window.SUBJECTS` na `DOMContentLoaded`.
-- Postępy (XP, gwiazdki, zaliczone poziomy) trzymane w `localStorage` przez bezpieczny wrapper `STORE` (łapie wyjątki na iOS file://). Klucz: `nauka_progress_v1`.
+## Komendy
+- `npm install` (root), `npm run build:shared`, `npm run build -w @nauka/ai`
+- `npm test` (shared + ai, node:test), `npm run typecheck` (shared, web, mobile)
+- `npm run web` / `npm run web:build`, `npm run mobile`
+- Po zmianie treści legacy: `npm run content:convert && npm run content:seed`
 
-## Kontrakt danych (NIE psuć)
-```js
-{
-  id, name, short, emoji, tagline,
-  accent, accent2,                       // kolory motywu
-  grading: { pass, examMin, scale:[[próg,"ocena"],...], failLabel },
-  info: `<div class="zbox">...HTML...</div>`,
-  levels: [
-    { id, title, emoji,
-      feed:[{title, body, real?, mnemo?}],   // mikro-dawki (HTML w body)
-      flashcards:[{t, d}],                    // termin / definicja
-      quiz:[{q, a:[...], c, e}]               // c = INDEKS poprawnej odpowiedzi (0=A)
-    }
-  ]
-}
-```
-Poziomy odblokowują się po kolei (quiz w lekcji ≥ 50% zalicza poziom). Zakładki Fiszki/Quiz/Egzamin działają na całym przedmiocie.
+## Reguły (NIE psuć)
+- **Jeden kontrakt danych**: `SubjectContent` w `packages/shared/src/schema.ts`. AI, baza (`subjects.content` JSONB) i oba UI używają tego samego. Zmiana = zod + migracja + oba UI.
+- Quiz: `c` = indeks poprawnej odpowiedzi od 0, `e` zawsze obecne. Mini-gry: `match | cloze | truefalse | order`.
+- Klucze (Anthropic, Stripe secret, Supabase service role) **tylko** w API weba (`apps/web` server). Przeglądarka i mobile: anon key + RLS.
+- Klucze localStorage/AsyncStorage gościa: `nauka_progress_v1`, `nauka_meta_v1` (kompatybilne z legacy) — nie zmieniać bez migracji.
+- Plan usera (`profiles.plan`) zmienia tylko webhook Stripe (RLS blokuje update przez usera). Limity w `PLANS` (shared).
+- Model AI: `claude-opus-5` domyślnie (`NAUKA_AI_MODEL`), adaptive thinking, structured outputs przez `betaZodOutputFormat(GeneratedSubjectSchema)`, fallbacks `"default"`. Bez klucza = tryb demo (nie crashować).
+- Build weba i typecheck mobile muszą przechodzić **bez** żadnych env (klienci tworzone leniwie).
+- UI po polsku, luźny gen-z; treść merytoryczna poprawna. Bez dodatkowych UI-kitów.
 
 ## Workflow przy zmianach
-1. Edytuj `data/*.js` (treść), `engine.js` (logika) lub `styles.css` (wygląd).
-2. Po zmianie danych/silnika odpal `node build.js` (regeneruje `build/`).
-3. Sprawdź w przeglądarce `index.html` (dev) albo `build/nauka-all.html` (build).
-4. Test sanity (opcjonalnie): `npm i jsdom` i prosty skrypt klikający `.subjcard` → węzeł ścieżki → lekcja → egzamin; sprawdź brak błędów JS w `window.onerror`.
-
-## Konwencje
-- Język UI: polski, luźny gen-z, ale treść merytoryczna ma być poprawna.
-- Dodając przedmiot: skopiuj `data/makro.js`, zmień `id` (unikalny, bez spacji) i treść, dopisz `<script src="data/twoj.js">` w `index.html`, odpal `node build.js`.
-- Indeks `c` w quizie liczony od 0. Zawsze dawaj pole `e` (wyjaśnienie).
-
-## Czego NIE robić
-- Nie dodawać frameworków/bundlerów (ma zostać jednoplikowo-odpalalne).
-- Nie używać `fetch` do danych.
-- Nie zmieniać klucza `localStorage` bez migracji (utrata postępów użytkownika).
+1. Zmiana kontraktu → `packages/shared` → `npm run build:shared` → dostosuj web i mobile.
+2. Logika lekcji/gier: web `apps/web/src/components`, mobile `apps/mobile/src`. Trzymaj mechanikę identyczną (używaj funkcji z shared: `applyQuizResult`, `touchStreak`, `review`, `pickExam`, `unlockedIndex`).
+3. Przed commitem: `npm test && npm run typecheck && npm run build -w @nauka/web`.

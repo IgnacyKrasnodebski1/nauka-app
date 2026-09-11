@@ -1,0 +1,24 @@
+{
+  "name": "nauka",
+  "private": true,
+  "version": "0.1.0",
+  "description": "NAUKA — AI-powered learning app (web + mobile): upload your materials, get quizzes, flashcards and mini-games.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w @nauka/shared",
+    "content:convert": "node packages/content/scripts/convert-legacy.mjs",
+    "content:seed": "node packages/content/scripts/make-seed.mjs",
+    "web": "npm run dev -w @nauka/web",
+    "web:build": "npm run build:shared && npm run build -w @nauka/web",
+    "mobile": "npm run start -w @nauka/mobile",
+    "typecheck": "npm run build:shared && npm run typecheck -w @nauka/web && npm run typecheck -w @nauka/mobile",
+    "test": "npm run build:shared && npm test -w @nauka/shared",
+    "legacy:build": "node legacy/build.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
