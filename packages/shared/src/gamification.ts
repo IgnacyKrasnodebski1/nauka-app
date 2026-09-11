@@ -1,4 +1,4 @@
-import type { LevelProgress, SubjectContent, SubjectProgress, UserMeta } from "./types.js";
+import type { LevelProgress, TopicContent, SubjectProgress, UserMeta } from "./types.js";
 
 /** XP rewards — single source of truth for both apps. */
 export const XP = {
@@ -30,13 +30,13 @@ export function levelProgress(p: SubjectProgress, levelId: string): LevelProgres
 }
 
 /** Index of first level not yet passed; levels before it are done, after it locked. */
-export function unlockedIndex(subject: Pick<SubjectContent, "levels">, p: SubjectProgress): number {
+export function unlockedIndex(subject: Pick<TopicContent, "levels">, p: SubjectProgress): number {
   let i = 0;
   while (i < subject.levels.length && levelProgress(p, subject.levels[i]!.id).done) i++;
   return Math.min(i, subject.levels.length - 1);
 }
 
-export function isLevelUnlocked(subject: Pick<SubjectContent, "levels">, p: SubjectProgress, levelId: string): boolean {
+export function isLevelUnlocked(subject: Pick<TopicContent, "levels">, p: SubjectProgress, levelId: string): boolean {
   const idx = subject.levels.findIndex((l) => l.id === levelId);
   if (idx <= 0) return true;
   return levelProgress(p, subject.levels[idx - 1]!.id).done;
@@ -65,13 +65,13 @@ export function applyQuizResult(
   return { progress: { ...p, xp: p.xp + gained, levels: { ...p.levels, [levelId]: next } }, gained, passed, pct, stars };
 }
 
-export function subjectCompletion(subject: Pick<SubjectContent, "levels">, p: SubjectProgress): { done: number; total: number; pct: number } {
+export function subjectCompletion(subject: Pick<TopicContent, "levels">, p: SubjectProgress): { done: number; total: number; pct: number } {
   const total = subject.levels.length;
   const done = subject.levels.filter((l) => levelProgress(p, l.id).done).length;
   return { done, total, pct: total ? Math.round((done / total) * 100) : 0 };
 }
 
-export function gradeFor(pct: number, grading: SubjectContent["grading"]): string {
+export function gradeFor(pct: number, grading: TopicContent["grading"]): string {
   for (const [thr, label] of grading.scale) if (pct >= thr) return label;
   return grading.failLabel;
 }

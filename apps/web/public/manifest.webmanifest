@@ -1,0 +1,19 @@
+{
+  "name": "NAUKA — z notatek do quizów",
+  "short_name": "NAUKA",
+  "description": "Wrzucasz screeny, notatki, PDF — AI robi z tego quizy, fiszki i mini-gry.",
+  "lang": "pl",
+  "start_url": "/app",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a12",
+  "theme_color": "#0a0a12",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ],
+  "categories": ["education"]
+}

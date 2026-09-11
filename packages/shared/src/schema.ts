@@ -80,7 +80,7 @@ export const GradingSchema = z.object({
   failLabel: z.string().min(1),
 });
 
-export const SubjectContentSchema = z.object({
+export const TopicContentSchema = z.object({
   name: z.string().min(1).max(120),
   short: z.string().min(1).max(30),
   emoji: z.string().min(1).max(8),
@@ -93,13 +93,15 @@ export const SubjectContentSchema = z.object({
   levels: z.array(LevelSchema).min(1).max(30),
 });
 
-export type SubjectContentInput = z.input<typeof SubjectContentSchema>;
+/** @deprecated use TopicContentSchema */
+export const SubjectContentSchema = TopicContentSchema;
+export type TopicContentInput = z.input<typeof TopicContentSchema>;
 
 /**
  * Schema for what the AI returns. Kept slightly simpler than SubjectContentSchema so the
  * structured-output grammar stays small; `finalizeGenerated()` fills the rest.
  */
-export const GeneratedSubjectSchema = z.object({
+export const GeneratedTopicSchema = z.object({
   name: z.string(),
   short: z.string(),
   emoji: z.string(),
@@ -132,10 +134,26 @@ export const GeneratedSubjectSchema = z.object({
     }),
   ),
 });
-export type GeneratedSubject = z.infer<typeof GeneratedSubjectSchema>;
+export type GeneratedTopic = z.infer<typeof GeneratedTopicSchema>;
+/** @deprecated */
+export const GeneratedSubjectSchema = GeneratedTopicSchema;
+/** @deprecated */
+export type GeneratedSubject = GeneratedTopic;
+
+/** Subject shell (container) — validated on create/update. */
+export const SubjectInputSchema = z.object({
+  name: z.string().min(1).max(60),
+  emoji: z.string().min(1).max(8),
+  category: z.string().min(1).max(40),
+  stage: StageSchema,
+  examDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  examLabel: z.string().max(80).nullable().optional(),
+});
 
 export const GenerationOptionsSchema = z.object({
   stage: StageSchema,
+  subjectName: z.string().max(80).optional(),
+  mode: z.enum(["materials", "prompt"]).optional(),
   hint: z.string().max(2000).optional(),
   levels: z.number().int().min(1).max(8).optional(),
   lang: z.boolean().optional(),

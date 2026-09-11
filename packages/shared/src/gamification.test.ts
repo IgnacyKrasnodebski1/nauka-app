@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { applyQuizResult, emptyProgress, starsFor, touchStreak, streakDisplay, emptyMeta, unlockedIndex } from "./gamification.js";
 import { review, newCard, isDue } from "./srs.js";
 import { finalizeGenerated } from "./finalize.js";
-import { SubjectContentSchema } from "./schema.js";
+import { TopicContentSchema } from "./schema.js";
 
 test("stars thresholds", () => {
   assert.equal(starsFor(49), 0);
@@ -76,5 +76,5 @@ test("finalizeGenerated produces valid content and drops broken items", () => {
   assert.equal(out.levels[0]!.quiz.length, 1);
   assert.equal(out.levels[0]!.games!.length, 1);
   assert.equal(out.levels[0]!.emoji, "📘");
-  assert.ok(SubjectContentSchema.safeParse(out).success);
+  assert.ok(TopicContentSchema.safeParse(out).success);
 });

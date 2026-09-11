@@ -1,5 +1,5 @@
-import { SubjectContentSchema, type GeneratedSubject } from "./schema.js";
-import type { MiniGame, SubjectContent, Stage } from "./types.js";
+import { TopicContentSchema, type GeneratedTopic } from "./schema.js";
+import type { MiniGame, TopicContent, Stage } from "./types.js";
 
 const PALETTES: [string, string][] = [
   ["linear-gradient(135deg,#ff2d95,#a855f7,#22d3ee)", "#22d3ee"],
@@ -20,7 +20,7 @@ export function paletteFor(seed: string): [string, string] {
   return PALETTES[hash(seed) % PALETTES.length]!;
 }
 
-export const DEFAULT_GRADING: SubjectContent["grading"] = {
+export const DEFAULT_GRADING: TopicContent["grading"] = {
   pass: 50,
   examMin: 20,
   scale: [
@@ -33,14 +33,14 @@ export const DEFAULT_GRADING: SubjectContent["grading"] = {
   failLabel: "2 — niezaliczone",
 };
 
-const GRADING_BY_STAGE: Record<Stage, SubjectContent["grading"]> = {
+const GRADING_BY_STAGE: Record<Stage, TopicContent["grading"]> = {
   podstawowa: { pass: 50, examMin: 15, scale: [[95, "6"], [85, "5"], [70, "4"], [50, "3"], [30, "2"]], failLabel: "1 — spróbuj jeszcze raz" },
   liceum: { pass: 50, examMin: 20, scale: [[95, "6"], [85, "5"], [70, "4"], [50, "3"], [30, "2"]], failLabel: "1 — spróbuj jeszcze raz" },
   studia: DEFAULT_GRADING,
   inne: { pass: 60, examMin: 20, scale: [[90, "🏆 mistrz"], [75, "💪 solidnie"], [60, "✅ zaliczone"]], failLabel: "❌ jeszcze nie" },
 };
 
-function convertGame(g: GeneratedSubject["levels"][number]["games"][number]): MiniGame | null {
+function convertGame(g: GeneratedTopic["levels"][number]["games"][number]): MiniGame | null {
   const title = g.title || undefined;
   switch (g.type) {
     case "match":
@@ -61,10 +61,10 @@ function dedupe(a: string[]): string[] {
 }
 
 /**
- * Turn raw AI output into a valid SubjectContent: assign level ids, palette, grading; drop invalid items
+ * Turn raw AI output into a valid TopicContent: assign level ids, palette, grading; drop invalid items
  * instead of failing the whole generation.
  */
-export function finalizeGenerated(gen: GeneratedSubject, stage: Stage, opts: { lang?: boolean } = {}): SubjectContent {
+export function finalizeGenerated(gen: GeneratedTopic, stage: Stage, opts: { lang?: boolean } = {}): TopicContent {
   const [accent, accent2] = paletteFor(gen.name);
   const levels = gen.levels
     .map((l, i) => ({
@@ -81,7 +81,7 @@ export function finalizeGenerated(gen: GeneratedSubject, stage: Stage, opts: { l
     }))
     .filter((l) => l.quiz.length > 0 || l.flashcards.length > 0 || l.feed.length > 0);
 
-  const content: SubjectContent = {
+  const content: TopicContent = {
     name: gen.name.trim() || "Nowy przedmiot",
     short: (gen.short || gen.name).trim().slice(0, 30) || "Przedmiot",
     emoji: gen.emoji || "📘",
@@ -93,17 +93,17 @@ export function finalizeGenerated(gen: GeneratedSubject, stage: Stage, opts: { l
     info: gen.info_html || "",
     levels: levels.length ? levels : [{ id: "l1", title: "Poziom 1", emoji: "📘", feed: [], flashcards: [], quiz: [], games: [] }],
   };
-  return SubjectContentSchema.parse(content);
+  return TopicContentSchema.parse(content);
 }
 
 /** Flatten helpers shared by both UIs. */
-export function allFlashcards(s: Pick<SubjectContent, "levels">) {
+export function allFlashcards(s: Pick<TopicContent, "levels">) {
   return s.levels.flatMap((l) => l.flashcards.map((c, i) => ({ ...c, lvl: l.title, levelId: l.id, index: i })));
 }
-export function allQuiz(s: Pick<SubjectContent, "levels">) {
+export function allQuiz(s: Pick<TopicContent, "levels">) {
   return s.levels.flatMap((l) => l.quiz.map((q) => ({ ...q, lvl: l.title, levelId: l.id })));
 }
-export function allGames(s: Pick<SubjectContent, "levels">) {
+export function allGames(s: Pick<TopicContent, "levels">) {
   return s.levels.flatMap((l) => (l.games ?? []).map((g) => ({ ...g, lvl: l.title, levelId: l.id })));
 }
 
@@ -118,6 +118,6 @@ export function shuffle<T>(arr: readonly T[], rand: () => number = Math.random):
 }
 
 /** Pick exam questions: up to `n` random across levels. */
-export function pickExam(s: Pick<SubjectContent, "levels">, n = 20) {
+export function pickExam(s: Pick<TopicContent, "levels">, n = 20) {
   return shuffle(allQuiz(s)).slice(0, n);
 }

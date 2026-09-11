@@ -94,8 +94,11 @@ export interface Grading {
   failLabel: string;
 }
 
-/** Full subject content — what AI produces and what a subject row stores in `content` JSONB. */
-export interface SubjectContent {
+/**
+ * Topic content — one AI-generated learning unit (e.g. "Fotosynteza" inside subject "Biologia").
+ * This is what AI produces and what a `topics` row stores in `content` JSONB.
+ */
+export interface TopicContent {
   name: string;
   short: string;
   emoji: string;
@@ -103,27 +106,49 @@ export interface SubjectContent {
   /** CSS gradient or colour */
   accent: string;
   accent2: string;
-  /** language-learning subject: flashcards are vocab, quizzes are translations */
+  /** language-learning topic: flashcards are vocab, quizzes are translations */
   lang?: boolean;
   grading: Grading;
   /** HTML info block(s) */
   info: string;
   levels: Level[];
 }
+/** @deprecated use TopicContent */
+export type SubjectContent = TopicContent;
 
-/** Subject as stored / listed (DB row shape used by both apps). */
-export interface Subject extends SubjectContent {
+/** Subject = the user's container (Matematyka, Biologia, Makroekonomia…). Starts empty; topics are generated into it. */
+export interface Subject {
   id: string;
-  ownerId: string | null;
+  ownerId: string;
+  name: string;
+  emoji: string;
+  /** curriculum category key, see CURRICULUM */
+  category: string;
   stage: Stage;
-  isPublic: boolean;
-  /** free-form: "matematyka", "historia", "makroekonomia" … */
-  category?: string | null;
+  accent: string;
+  accent2: string;
+  /** optional upcoming test: drives the study plan */
+  examDate?: string | null;
+  examLabel?: string | null;
   createdAt?: string;
   updatedAt?: string;
 }
 
-/** Per-user progress for one subject. */
+/** Topic row (DB shape used by both apps). */
+export interface Topic extends TopicContent {
+  id: string;
+  subjectId: string;
+  ownerId: string;
+  /** display order inside the subject */
+  position: number;
+  /** "materials" (from uploads) or "prompt" (from a typed topic) */
+  source: "materials" | "prompt";
+  generationId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+/** Per-user progress for one topic. */
 export interface SubjectProgress {
   xp: number;
   levels: Record<string, LevelProgress>;
@@ -150,7 +175,11 @@ export type GenerationStatus = "queued" | "running" | "done" | "failed";
 
 export interface GenerationOptions {
   stage: Stage;
-  /** the user's own description of what the material is */
+  /** subject the topic belongs to (name, e.g. "Biologia") — gives AI the curriculum context */
+  subjectName?: string;
+  /** "materials": teach only what's in the uploads. "prompt": no uploads — build the topic from `hint` per the Polish curriculum. */
+  mode?: "materials" | "prompt";
+  /** the user's description of the material, or (mode=prompt) the topic itself, e.g. "fotosynteza, klasa 7" */
   hint?: string;
   /** target number of levels (1–8) */
   levels?: number;
@@ -161,3 +190,54 @@ export interface GenerationOptions {
 }
 
 export type Plan = "free" | "pro";
+
+/** Standard subject presets per stage (Polish curriculum). Users can also type their own. */
+export const CURRICULUM: Record<Stage, { key: string; name: string; emoji: string }[]> = {
+  podstawowa: [
+    { key: "matematyka", name: "Matematyka", emoji: "➗" },
+    { key: "polski", name: "Język polski", emoji: "📖" },
+    { key: "angielski", name: "Angielski", emoji: "🇬🇧" },
+    { key: "historia", name: "Historia", emoji: "🏰" },
+    { key: "przyroda", name: "Przyroda", emoji: "🌿" },
+    { key: "biologia", name: "Biologia", emoji: "🧬" },
+    { key: "geografia", name: "Geografia", emoji: "🗺️" },
+    { key: "chemia", name: "Chemia", emoji: "⚗️" },
+    { key: "fizyka", name: "Fizyka", emoji: "🧲" },
+    { key: "wos", name: "WOS", emoji: "🏛️" },
+    { key: "informatyka", name: "Informatyka", emoji: "💻" },
+    { key: "inny-jezyk", name: "Drugi język", emoji: "🌍" },
+  ],
+  liceum: [
+    { key: "matematyka", name: "Matematyka", emoji: "➗" },
+    { key: "polski", name: "Język polski", emoji: "📖" },
+    { key: "angielski", name: "Angielski", emoji: "🇬🇧" },
+    { key: "historia", name: "Historia", emoji: "🏰" },
+    { key: "biologia", name: "Biologia", emoji: "🧬" },
+    { key: "chemia", name: "Chemia", emoji: "⚗️" },
+    { key: "fizyka", name: "Fizyka", emoji: "🧲" },
+    { key: "geografia", name: "Geografia", emoji: "🗺️" },
+    { key: "wos", name: "WOS", emoji: "🏛️" },
+    { key: "informatyka", name: "Informatyka", emoji: "💻" },
+    { key: "hit", name: "HiT", emoji: "📰" },
+    { key: "pp", name: "Podstawy przedsiębiorczości", emoji: "💼" },
+    { key: "inny-jezyk", name: "Drugi język", emoji: "🌍" },
+  ],
+  studia: [
+    { key: "matematyka", name: "Matematyka / analiza", emoji: "∫" },
+    { key: "statystyka", name: "Statystyka", emoji: "📊" },
+    { key: "ekonomia", name: "Ekonomia", emoji: "💹" },
+    { key: "prawo", name: "Prawo", emoji: "⚖️" },
+    { key: "psychologia", name: "Psychologia", emoji: "🧠" },
+    { key: "medycyna", name: "Medycyna / anatomia", emoji: "🩺" },
+    { key: "informatyka", name: "Informatyka", emoji: "💻" },
+    { key: "zarzadzanie", name: "Zarządzanie", emoji: "🏢" },
+    { key: "jezyk", name: "Język obcy", emoji: "🌍" },
+    { key: "inne", name: "Inny przedmiot", emoji: "📘" },
+  ],
+  inne: [
+    { key: "jezyk", name: "Język obcy", emoji: "🌍" },
+    { key: "certyfikat", name: "Certyfikat / egzamin zawodowy", emoji: "📜" },
+    { key: "prawo-jazdy", name: "Prawo jazdy", emoji: "🚗" },
+    { key: "hobby", name: "Hobby / własny temat", emoji: "✨" },
+  ],
+};
