@@ -15,7 +15,7 @@ export interface AuthState {
   user: User | null;
   /** true dopóki nie wiemy, czy jest sesja */
   loading: boolean;
-  /** Supabase w ogóle skonfigurowany? Bez env = tylko gość. */
+  /** Supabase skonfigurowany? Bez env logowanie (a więc i apka) nie zadziała. */
   enabled: boolean;
   signInPassword(email: string, password: string): Promise<void>;
   signUpPassword(email: string, password: string): Promise<{ needsConfirm: boolean }>;

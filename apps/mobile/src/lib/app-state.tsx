@@ -15,7 +15,7 @@ import {
 import * as Haptics from "expo-haptics";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
-import { fetchTopic, fetchUserData, insertSubjects, readCache, writeCache, type SrsMap, type SubjectInput, type UserData } from "./data";
+import { fetchTopic, fetchUserData, insertSubjects, readCache, writeCache, type SrsMap, type SubjectInput } from "./data";
 import { KEYS, setJson } from "./storage";
 import { ProgressStore } from "./store/progress-store";
 import { supabase } from "./supabase";
@@ -80,7 +80,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef<{ subjects: Subject[]; topics: Topic[] }>({ subjects: [], topics: [] });
-  latest.current = { subjects, topics };
+  useEffect(() => {
+    latest.current = { subjects, topics };
+  }, [subjects, topics]);
 
   const showToast = useCallback((t: string) => {
     setToast(t);

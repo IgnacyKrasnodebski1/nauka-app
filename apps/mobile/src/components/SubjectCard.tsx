@@ -1,4 +1,4 @@
-import { dayDiff, subjectCompletion, todayStr, type Subject, type Topic } from "@nauka/shared";
+import { dayDiff, subjectCompletion, todayStr, type Subject, type SubjectProgress, type Topic } from "@nauka/shared";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useApp } from "@/lib/app-state";
@@ -21,7 +21,7 @@ export function examBadge(days: number): string {
 }
 
 /** Statystyka przedmiotu: tematy, poziomy zrobione / wszystkie. */
-export function subjectStats(topics: Topic[], progress: ReturnType<ReturnType<typeof useApp>["progressFor"]> extends infer P ? (id: string) => P : never) {
+export function subjectStats(topics: Topic[], progress: (topicId: string) => SubjectProgress) {
   let done = 0, total = 0;
   for (const t of topics) {
     const c = subjectCompletion(t, progress(t.id));

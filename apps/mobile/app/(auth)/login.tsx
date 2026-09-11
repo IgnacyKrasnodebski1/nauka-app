@@ -1,24 +1,23 @@
-import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from "react-native";
-import { BackButton, Muted, PillButton, Screen, Touch } from "@/components/ui";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Muted, PillButton, Screen, Touch } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
 import { C, FONT, R } from "@/lib/theme";
 
 type Mode = "magic" | "password" | "signup";
 
+/** Logowanie wymagane — brak trybu gościa. Po sesji bramka w _layout przenosi do apki / onboardingu. */
 export default function Login() {
   const auth = useAuth();
   const app = useApp();
-  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [mode, setMode] = useState<Mode>("magic");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-
-  const done = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)"));
 
   const run = async (fn: () => Promise<string | void>) => {
     setBusy(true);
@@ -26,10 +25,7 @@ export default function Login() {
     try {
       const info = await fn();
       if (info) setMsg({ ok: true, text: info });
-      else {
-        app.showToast("Zalogowano ✅");
-        done();
-      }
+      else app.showToast("Zalogowano ✅");
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : "Nie wyszło. Spróbuj jeszcze raz." });
     } finally {
@@ -38,7 +34,6 @@ export default function Login() {
   };
 
   const validEmail = /\S+@\S+\.\S+/.test(email.trim());
-
   const submit = () =>
     run(async () => {
       if (!validEmail) throw new Error("Podaj poprawny e-mail.");
@@ -47,10 +42,7 @@ export default function Login() {
         return "Wysłane 📩 Sprawdź maila i kliknij link — apka sama się zaloguje.";
       }
       if (password.length < 6) throw new Error("Hasło: min. 6 znaków.");
-      if (mode === "password") {
-        await auth.signInPassword(email, password);
-        return;
-      }
+      if (mode === "password") return void (await auth.signInPassword(email, password));
       const { needsConfirm } = await auth.signUpPassword(email, password);
       return needsConfirm ? "Konto założone 🎉 Potwierdź maila (link w skrzynce) i wróć tu." : undefined;
     });
@@ -58,17 +50,16 @@ export default function Login() {
   return (
     <Screen padded={false}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-        <View style={s.wrap}>
-          <View style={s.head}>
-            <BackButton onPress={done} label="✕" />
-          </View>
-          <Text style={{ fontSize: 44 }}>🔐</Text>
-          <Text style={s.h1}>Wbijaj na konto</Text>
-          <Muted>Konto = postępy w chmurze, własne przedmioty z AI i tutor. Za darmo.</Muted>
+        <ScrollView contentContainerStyle={[s.wrap, { paddingTop: insets.top + 40, paddingBottom: insets.bottom + 24 }]} keyboardShouldPersistTaps="handled">
+          <Text style={{ fontSize: 48 }}>📚</Text>
+          <Text style={s.h1}>
+            <Text style={{ color: C.pink }}>NAUKA</Text> — wbijaj
+          </Text>
+          <Muted>Wrzucasz notatki albo wpisujesz temat — AI robi z tego lekcje jak w Duolingo. Konto jest potrzebne, żeby trzymać Twoje przedmioty i postępy.</Muted>
 
           {!auth.enabled ? (
             <View style={s.warn}>
-              <Text style={s.warnTxt}>Brak konfiguracji Supabase (EXPO_PUBLIC_SUPABASE_URL / ANON_KEY). Możesz uczyć się jako gość — postępy zostaną na tym telefonie.</Text>
+              <Text style={s.warnTxt}>Brak konfiguracji Supabase (EXPO_PUBLIC_SUPABASE_URL / ANON_KEY) — logowanie nie zadziała. Uzupełnij .env i zrestartuj.</Text>
             </View>
           ) : null}
 
@@ -95,20 +86,15 @@ export default function Login() {
 
           <PillButton label={busy ? "chwila…" : mode === "magic" ? "wyślij link ✨" : mode === "password" ? "zaloguj 🔑" : "załóż konto 🆕"} onPress={submit} disabled={busy || !auth.enabled} />
           <PillButton label="Kontynuuj z Google" ghost onPress={() => run(() => auth.signInGoogle())} disabled={busy || !auth.enabled} />
-
-          <View style={{ flex: 1 }} />
-          <Touch onPress={done} style={{ alignSelf: "center", padding: 10 }}>
-            <Text style={s.skip}>pomiń — ucz się jako gość 👻</Text>
-          </Touch>
-        </View>
+          <Muted style={{ fontSize: 12, textAlign: "center", marginTop: 8 }}>Free: 3 tematy z AI miesięcznie. Bez karty.</Muted>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  wrap: { flex: 1, paddingHorizontal: 20, paddingTop: 16, paddingBottom: 24, gap: 12 },
-  head: { flexDirection: "row", justifyContent: "flex-end" },
+  wrap: { flexGrow: 1, paddingHorizontal: 20, gap: 12 },
   h1: { color: C.txt, fontSize: 28, fontWeight: FONT.black, letterSpacing: -0.6 },
   warn: { backgroundColor: "#2a230066", borderLeftWidth: 3, borderLeftColor: C.lime, borderRadius: 12, padding: 12 },
   warnTxt: { color: "#e7e7f4", fontSize: 13.5, lineHeight: 19 },
@@ -118,5 +104,4 @@ const s = StyleSheet.create({
   modeTxt: { color: C.muted, fontWeight: FONT.bold, fontSize: 12.5 },
   input: { backgroundColor: "#0e0e1a", borderWidth: 2, borderColor: C.border2, borderRadius: 15, color: C.txt, paddingHorizontal: 16, paddingVertical: 14, fontSize: 17, fontWeight: FONT.semi },
   msg: { fontSize: 14, fontWeight: FONT.semi, lineHeight: 20 },
-  skip: { color: C.muted, fontWeight: FONT.bold, fontSize: 14 },
 });

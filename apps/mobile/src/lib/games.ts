@@ -2,6 +2,11 @@ import { shuffle, type Flashcard, type Level, type MatchGame, type MiniGame } fr
 
 export { shuffle };
 
+/** Minuty od `startMs` (min. 1) — do `log_activity`. */
+export function minutesSince(startMs: number): number {
+  return Math.max(1, Math.round((Date.now() - startMs) / 60000));
+}
+
 export const KEYS_ABC = ["A", "B", "C", "D", "E"] as const;
 
 /** Skraca definicję do „prawej strony” pary (żeby kafelki match nie były elaboratem). */

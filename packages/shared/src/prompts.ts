@@ -12,7 +12,7 @@ const STAGE_STYLE: Record<Stage, string> = {
 
 const COMMON_RULES = `STRUKTURA
 - Podziel temat na poziomy (levels) w logicznej kolejności nauki: od podstaw do rzeczy trudniejszych. Każdy poziom = spójny podtemat.
-- Każdy poziom ma: feed (4–8 mikro-dawek wiedzy), flashcards (6–15), quiz (6–12 pytań, 4 odpowiedzi), games (2–3 mini-gry różnych typów).
+- Każdy poziom ma: feed (4–6 mikro-dawek wiedzy), flashcards (6–10), quiz (6–10 pytań, 4 odpowiedzi), games (2 mini-gry różnych typów).
 - feed.body może zawierać prosty HTML: <b>, <i>, <br>, <ul><li>. feed.real = to samo 'po ludzku' w 1 zdaniu. feed.mnemo = mnemotechnika albo pusty string.
 - Mini-gry: "match" (pary termin↔znaczenie, 4–8 par), "cloze" (zdanie z luką ___ + 3–4 opcje), "truefalse" (5–10 zdań prawda/fałsz z wyjaśnieniem), "order" (ułóż kroki/etapy w kolejności, 3–6 kroków). W obiekcie gry wypełnij TYLKO pola swojego typu; pozostałe tablice zostaw puste, a nieużywane stringi puste.
 - Dla tematu językowego: flashcards = słówko → tłumaczenie + przykład, quiz = tłumaczenia/gramatyka, match = słówko↔znaczenie.
@@ -65,6 +65,22 @@ export function buildGenerationUserPrompt(opts: GenerationOptions, materialsSumm
     "Zwróć kompletny temat zgodnie ze schematem.",
   ].filter(Boolean);
   return parts.join("\n");
+}
+
+/** Phase 1 (outline): appended to the user prompt. Output = OutlineSchema. */
+export const OUTLINE_INSTRUCTIONS = `FAZA 1 — KONSPEKT. Zwróć TYLKO metadane tematu (name, short, emoji, tagline, category, info_html) i listę poziomów. Dla każdego poziomu: title, emoji, summary (1 zdanie) oraz scope = 3–6 punktów (tekst z myślnikami) mówiących DOKŁADNIE, jakie pojęcia/fakty/umiejętności wchodzą w ten poziom, tak by poziomy się nie powtarzały. Nie generuj feed, fiszek, quizu ani gier.`;
+
+/** Phase 2 (one level): appended to the user prompt. Output = LevelGenSchema. */
+export function levelInstructions(outline: { name: string; levels: { title: string; scope: string }[] }, index: number): string {
+  const l = outline.levels[index]!;
+  const others = outline.levels
+    .map((x, i) => `${i + 1}. ${x.title}`)
+    .join("; ");
+  return `FAZA 2 — JEDEN POZIOM. Temat: „${outline.name}”. Wszystkie poziomy: ${others}.
+Generujesz WYŁĄCZNIE poziom ${index + 1}: „${l.title}”.
+Zakres tego poziomu:
+${l.scope}
+Nie wchodź w zakres pozostałych poziomów. Zwróć feed, flashcards, quiz i games dla tego poziomu.`;
 }
 
 /** System prompt for the in-lesson tutor chat ("wytłumacz mi to"). */

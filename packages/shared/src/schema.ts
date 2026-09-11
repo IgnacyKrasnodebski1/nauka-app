@@ -150,6 +150,45 @@ export const SubjectInputSchema = z.object({
   examLabel: z.string().max(80).nullable().optional(),
 });
 
+/** Phase 1 of generation: topic metadata + level outline (small, fast). */
+export const OutlineSchema = z.object({
+  name: z.string(),
+  short: z.string(),
+  emoji: z.string(),
+  tagline: z.string(),
+  category: z.string(),
+  info_html: z.string(),
+  levels: z.array(
+    z.object({
+      title: z.string(),
+      emoji: z.string(),
+      summary: z.string(),
+      /** what exactly this level covers (bullet list as text) — used to generate the level in phase 2 */
+      scope: z.string(),
+    }),
+  ),
+});
+export type Outline = z.infer<typeof OutlineSchema>;
+
+/** Phase 2 of generation: content of ONE level (generated in parallel per level). */
+export const LevelGenSchema = z.object({
+  feed: z.array(z.object({ title: z.string(), body: z.string(), real: z.string(), mnemo: z.string() })),
+  flashcards: z.array(z.object({ t: z.string(), d: z.string() })),
+  quiz: z.array(z.object({ q: z.string(), a: z.array(z.string()), c: z.number(), e: z.string() })),
+  games: z.array(
+    z.object({
+      type: z.enum(["match", "cloze", "truefalse", "order"]),
+      title: z.string(),
+      pairs: z.array(z.object({ l: z.string(), r: z.string() })),
+      cloze: z.array(z.object({ s: z.string(), answer: z.string(), options: z.array(z.string()), e: z.string() })),
+      tf: z.array(z.object({ s: z.string(), v: z.boolean(), e: z.string() })),
+      prompt: z.string(),
+      steps: z.array(z.string()),
+    }),
+  ),
+});
+export type LevelGen = z.infer<typeof LevelGenSchema>;
+
 export const GenerationOptionsSchema = z.object({
   stage: StageSchema,
   subjectName: z.string().max(80).optional(),

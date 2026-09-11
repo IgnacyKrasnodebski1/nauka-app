@@ -19,8 +19,8 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: C.bg },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: "Nauka", tabBarIcon: ({ focused }) => <Icon e="🏠" focused={focused} /> }} />
-      <Tabs.Screen name="library" options={{ title: "Biblioteka", tabBarIcon: ({ focused }) => <Icon e="📚" focused={focused} /> }} />
+      <Tabs.Screen name="today" options={{ title: "Dziś", tabBarIcon: ({ focused }) => <Icon e="⚡" focused={focused} /> }} />
+      <Tabs.Screen name="index" options={{ title: "Przedmioty", tabBarIcon: ({ focused }) => <Icon e="📚" focused={focused} /> }} />
       <Tabs.Screen name="profile" options={{ title: "Profil", tabBarIcon: ({ focused }) => <Icon e="👤" focused={focused} /> }} />
     </Tabs>
   );

@@ -1,6 +1,6 @@
 # @nauka/mobile — NAUKA na iOS / Android
 
-Expo SDK 57 + expo-router, TypeScript strict, czysty `StyleSheet` (bez UI-kitów). Ten sam kontrakt danych (`@nauka/shared`), te same seedy (`@nauka/content`) i to samo API (`apps/web`) co wersja webowa.
+Expo SDK 57 + expo-router, TypeScript strict, czysty `StyleSheet` (bez UI-kitów). Ten sam kontrakt danych (`@nauka/shared`) i to samo API (`apps/web`) co wersja webowa. Model produktu: **przedmiot** (kontener użytkownika) → **tematy** generowane przez AI (ze zdjęć/PDF/tekstu albo z samego hasła) → poziomy: feed, fiszki, mini-gry, quiz, egzamin. Logowanie wymagane — brak trybu gościa i cudzej biblioteki (patrz `docs/PRODUCT.md`).
 
 ## Szybki start (Expo Go)
 
@@ -10,7 +10,7 @@ npm install
 npm run build:shared            # packages/shared/dist (raz, albo po zmianach w shared)
 
 cd apps/mobile
-cp .env.example .env            # uzupełnij (patrz niżej) — bez env apka działa jako gość na seedach
+cp .env.example .env            # uzupełnij Supabase + URL API (bez tego nie da się zalogować)
 npm run start                   # QR → Expo Go (iOS/Android) albo `i` / `a` na symulator
 ```
 
@@ -27,54 +27,49 @@ Skrypty: `start`, `ios`, `android`, `web`, `typecheck` (`tsc --noEmit`), `lint` 
 | `EXPO_PUBLIC_API_URL` | adres weba (`apps/web`), np. `https://nauka.pl` — tam żyje `/api/generate`, `/api/tutor`, `/api/me`, `/api/stripe/*` |
 | `EAS_PROJECT_ID` | opcjonalnie, po `eas init` |
 
-Bez Supabase: tylko tryb gościa (7 seedów, postępy w AsyncStorage). Bez API: brak generowania, tutora i planów — reszta działa.
+W Supabase Auth → URL Configuration dodaj redirecty: `nauka://auth/callback` (build), `exp://…/--/auth/callback` (Expo Go; adres wypisze `REDIRECT_URI` w `src/lib/auth.tsx`). Google OAuth: włącz providera w Supabase, client id/secret z Google Cloud. Baza: `supabase/migrations/0001_init.sql` (tabele `subjects`, `topics`, `progress`, `srs_cards`, `user_meta`, `activity`, RPC `log_activity`).
 
-W Supabase Auth → URL Configuration dodaj redirecty: `nauka://auth/callback` (build), `exp://…/--/auth/callback` (Expo Go; adres wypisze `REDIRECT_URI` w `src/lib/auth.tsx`). Google OAuth: włącz providera w Supabase, client id/secret z Google Cloud.
+## Ekrany (`app/`)
 
-## Co gdzie
+| trasa | co robi |
+| --- | --- |
+| `(auth)/login` | magic link / hasło / rejestracja / Google. Bez „pomiń”. |
+| `onboarding` | po pierwszym logowaniu: etap (`STAGES`) → chipsy przedmiotów z `CURRICULUM[stage]` + własne → insert `subjects` (kolor z `paletteFor(name)`), `profiles.stage`. |
+| `onboarding-add` | „+ przedmiot” z Home (te same chipsy, już dodane wyszarzone). |
+| `(tabs)/today` **Dziś** | dzienna sesja z `buildDailySession` po wszystkich tematach: fiszki do powtórki (ocena 0–3 → `review()` → `srs_cards`), słabe pytania (→ `progress.weak`), na końcu link do nowego poziomu; ekran końcowy z XP + `log_activity`. |
+| `(tabs)/index` **Przedmioty** | 🔥 streak / ⚡ XP, karta „Dziś” (ile fiszek/słabych/nowy poziom, ~min, Start), siatka przedmiotów (emoji, nazwa, tematy, % poziomów, badge „sprawdzian za N dni”), „+ przedmiot”. |
+| `(tabs)/profile` **Profil** | etap, plan + zużycie z `GET /api/me`, Pro → Stripe Checkout (`platform: "mobile"`) w przeglądarce, portal, wyloguj. |
+| `s/[subjectId]` | nagłówek w kolorze przedmiotu; **Sprawdzian**: „Mam sprawdzian” → data `RRRR-MM-DD` + nazwa → `exam_date/exam_label` → plan z `buildExamPlan` (dni z zadaniami, odliczanie); lista **tematów** (emoji, nazwa, poziomy, gwiazdki, źródło); CTA „📸 Z materiałów” / „✍️ Z hasła”; **Fiszki** i **Egzamin** z całego przedmiotu; usuń przedmiot. |
+| `s/[subjectId]/new?mode=materials\|prompt` | `materials`: aparat / galeria (multi) / PDF+txt / wklejony tekst + opis; `prompt`: pole „np. fotosynteza, klasa 7”. Poziomy 2–6, „język obcy”. Upload do Storage `materials/{uid}/{uuid}.{ext}` + wiersze `materials`, potem `POST /api/generate` `{ subjectId, materialIds?, text?, options: { stage, subjectName, mode, hint, levels, lang } }` → `{ topicId }` → `t/[topicId]`. |
+| `s/[subjectId]/cards`, `s/[subjectId]/exam` | fiszki (SRS) i egzamin (losowanie po wszystkich tematach) z całego przedmiotu. |
+| `t/[topicId]` | temat: Ścieżka (odblokowywanie z shared) · Fiszki (flip + SRS) · Quiz · Egzamin (timer z `grading.examMin`, `gradeFor`, przegląd błędów) · Info (HTML → tekst, bez WebView). |
+| `t/[topicId]/l/[levelId]` | lekcja: feed → fiszki → mini-gry (match/cloze/truefalse/order) → quiz → wynik. Po quizie: `applyQuizResult`, `markWeak` → `progress.weak`, `log_activity(xp, minuty)`, `touchStreak`. Przycisk 🤖 wytłumacz → tutor (`POST /api/tutor` z `topicId`, streaming jeśli RN fetch to umie). |
+
+## Kod
 
 ```
-app/                       trasy expo-router (typed routes)
-  _layout.tsx              providery (Auth → App), Stack, toast, splash
-  (auth)/login.tsx         magic link / hasło / rejestracja / Google, „pomiń = gość”
-  (tabs)/index.tsx         Home: 🔥 streak, ⚡ XP, CTA „📸 Dodaj materiały”, własne + biblioteka, onboarding (STAGES)
-  (tabs)/library.tsx       publiczne seedy (Supabase `subjects.is_public` → fallback SEED), „+ dodaj”
-  (tabs)/profile.tsx       etap, plan + usage (GET /api/me), Pro → Stripe Checkout w przeglądarce, wyloguj
-  new.tsx                  capture: aparat / galeria (multi) / PDF+txt / wklejony tekst, etap, hint, poziomy 2–8, język → upload → POST /api/generate
-  s/[id]/index.tsx         przedmiot: Ścieżka · Fiszki · Quiz · Egzamin · Info
-  s/[id]/l/[levelId].tsx   lekcja: feed → fiszki → mini-gry → quiz → wynik (+ 🤖 tutor)
-  auth/callback.tsx        landing deep linku
 src/lib/
   supabase.ts              klient (AsyncStorage, PKCE) — `null` bez env
-  auth.tsx                 AuthProvider: sesja, magic link, hasło, Google (expo-web-browser), obsługa `code`/tokenów z URL
-  app-state.tsx            AppProvider: ProgressStore per user, przedmioty (+cache offline), biblioteka, XP/streak, toast
-  store/progress-store.ts  ProgressStore: LocalProgressStore (AsyncStorage) / SupabaseProgressStore (progress, user_meta, srs_cards, profiles.stage)
-  store/merge.ts           jednorazowe scalenie gościa → konto (slug → uuid dla seedów)
-  subjects.ts              rowToSubject / seedy / cache / progressKey
-  api.ts                   /api/me, /api/generate, /api/tutor (stream albo pełny tekst), /api/stripe/*
-  upload.ts                Storage `materials/{uid}/{uuid}.{ext}` (File.base64 → ArrayBuffer) + wiersz `materials`
-  html.ts                  mini HTML → bloki tekstu (b/i/br/p/h3/ul/li/table, div.zbox) — bez WebView
-  games.ts                 shuffle, fallback „dopasuj pary” z fiszek, etykiety gier
+  auth.tsx                 AuthProvider: sesja, magic link, hasło, Google (expo-web-browser), obsługa `code`/tokenów z deep linku
+  app-state.tsx            AppProvider: ProgressStore, subjects + topics, daily session (buildDailySession), CRUD przedmiotów, XP/streak, toast
+  data.ts                  mapowanie wierszy (`rowToSubject`, `rowToTopic`), `fetchUserData`, `insertSubjects` (paletteFor), cache offline
+  store/progress-store.ts  Supabase-only: `progress` (xp, levels, weak, best_exam) po topic_id, `srs_cards`, `user_meta`, `profiles.stage`, RPC `log_activity`;
+                           po każdym zapisie snapshot do AsyncStorage (`nauka_cache_v2:<uid>`)
+  api.ts                   /api/me, /api/generate (→ topicId), /api/tutor (topicId; stream albo pełny tekst), /api/stripe/*
+  upload.ts                Storage upload (File.base64 → ArrayBuffer) + `materials`
+  html.ts                  mini HTML → bloki tekstu (b/i/br/p/h3/ul/li/table, div.zbox)
+  games.ts                 fallback „dopasuj pary” z fiszek gdy poziom nie ma `games`, etykiety gier, `minutesSince`
   theme.ts                 kolory z legacy/styles.css, `parseAccent()` (CSS gradient → expo-linear-gradient)
-src/components/            ui (TopBar, StatPill, PillButton, Chips…), SubjectCard, LevelPath, FeedCard, Flashcard (flip), QuizCard,
-                           games/{Match,Cloze,TrueFalse,Order}, TutorModal, Onboarding, ResultView, HtmlText, Accent
-src/screens/subject/       PathTab, FlashcardsTab (SRS), QuizTab, ExamTab (timer, gradeFor), InfoTab
-scripts/make-icons.mjs     generator PNG (własny enkoder, zero natywnych zależności)
+src/components/            ui, SubjectCard (+ examCountdown), TopicCard, ExamPlanView, LevelPath, FeedCard, Flashcard, QuizCard,
+                           games/*, TutorModal, Onboarding (StagePicker, SubjectChips), ResultView, HtmlText, Accent
+src/screens/topic/         PathTab, FlashcardsTab (1 temat albo cały przedmiot), QuizTab, ExamTab (1 temat albo cały przedmiot), InfoTab
 ```
 
-## Postępy
+## Postępy i offline
 
-Ten sam kształt JSON co legacy/web: `{[subjectKey]: {xp, levels: {[levelId]: {done, best, stars, attempts}}, bestExam?}}`.
-
-- Gość: AsyncStorage, klucze `nauka_progress_v1`, `nauka_meta_v1`, `nauka_srs_v1`, `nauka_stage_v1`. Seedy kluczowane **slugiem** (`makro`, `krypto`…), jak w legacy.
-- Zalogowany: Supabase `progress` / `user_meta` / `srs_cards` (klucz = uuid przedmiotu); po pierwszym logowaniu lokalny stan scalany jest do konta raz (`nauka_merged_v1:<uid>`), slug → uuid przez `subjects.slug`.
-- Offline: ostatnio załadowane przedmioty w `nauka_subjects_cache_v1`, snapshot postępów zalogowanego w `nauka_progress_v1:<uid>`.
-
-Logika XP / gwiazdek / odblokowań / streaka / SRS pochodzi w 100% z `@nauka/shared` (`applyQuizResult`, `unlockedIndex`, `isLevelUnlocked`, `gradeFor`, `touchStreak`, `review`).
-
-## Mini-gry
-
-Wszystkie 4 typy kontraktu: `match` (tap-tap pary), `cloze` (wybór do luki), `truefalse`, `order` (tap-to-reorder). Gdy poziom nie ma `games` (np. seedy z legacy), lekcja dostaje jedną grę „dopasuj pary” zbudowaną z fiszek poziomu (`gamesForLevel`).
+- Źródło prawdy: Supabase (`progress` kluczowane `topic_id`, `srs_cards`, `user_meta`, `activity` przez RPC). Cała logika XP / gwiazdek / odblokowań / streaka / SRS / sesji / planu pochodzi z `@nauka/shared`.
+- AsyncStorage to **tylko cache do odczytu**: po każdym `fetchUserData` i każdym zapisie store zrzuca snapshot (`subjects`, `topics`, `progress`, `srs`, `weak`, `meta`, `stage`) pod `nauka_cache_v2:<uid>`. Bez sieci apka startuje z cache (toast „📴”), tematy i lekcje działają; zapisy kolejkują się w pamięci i lecą przy następnej okazji w tej sesji (po restarcie bez sieci przepadną — świadome uproszczenie).
+- Bramka w `app/_layout.tsx`: brak sesji → login; sesja bez etapu/przedmiotów (i online) → onboarding.
 
 ## Build / EAS
 
@@ -87,25 +82,16 @@ eas build --profile production --platform all
 eas submit --platform ios                          # uzupełnij ascAppId w eas.json
 ```
 
-Profile w `eas.json`: `development` (dev client, internal), `preview` (internal, APK), `production` (autoIncrement). Zmienne `EXPO_PUBLIC_*` ustaw w EAS (`eas env:create`) albo w profilu `env`.
-
-Bundle id: `pl.nauka.app` (iOS i Android), scheme `nauka`. Ikony: `npm run icons` (gradient + „książka”, 1024², adaptive, splash) — podmień na finalne przed publikacją.
+Profile w `eas.json`: `development`, `preview` (APK), `production` (autoIncrement). Zmienne `EXPO_PUBLIC_*` ustaw w EAS (`eas env:create`). Bundle id `pl.nauka.app`, scheme `nauka`. Ikony: `npm run icons` — podmień na finalne przed publikacją.
 
 ## Sklepy — WAŻNE (TODO IAP)
 
-`profile.tsx` → „Przejdź na Pro” otwiera **Stripe Checkout** (`POST /api/stripe/checkout`, `platform: "mobile"`) w `expo-web-browser`. To jest OK dla **TestFlight / bety wewnętrznej** i dla dystrybucji poza sklepami (EU/DMA, web-purchase link), ale **App Store odrzuci build sprzedający subskrypcję cyfrową bez StoreKit (In-App Purchase)**, Google Play analogicznie wymaga Play Billing. Przed publikacją w sklepach:
-
-1. dodać IAP (najprościej RevenueCat: `react-native-purchases`, produkty `nauka_pro_month` / `nauka_pro_year`),
-2. webhook RevenueCat → ustawianie `profiles.plan` (tak jak robi to dziś webhook Stripe),
-3. w apce pokazywać Stripe tylko tam, gdzie wolno (np. web-purchase link w UE), inaczej IAP.
-
-Miejsce w kodzie: `app/(tabs)/profile.tsx` (komentarz `TODO(store)`).
+`profile.tsx` → „Przejdź na Pro” otwiera **Stripe Checkout** (`POST /api/stripe/checkout`, `platform: "mobile"`) w `expo-web-browser`. OK dla **TestFlight / bety wewnętrznej** i dystrybucji poza sklepami (EU/DMA), ale **App Store odrzuci build sprzedający subskrypcję cyfrową bez StoreKit (IAP)**, Google Play analogicznie wymaga Play Billing. Przed publikacją: RevenueCat (`react-native-purchases`, produkty `nauka_pro_month` / `nauka_pro_year`) + webhook ustawiający `profiles.plan` (jak dziś webhook Stripe). Miejsce w kodzie: komentarz `TODO(store)` w `app/(tabs)/profile.tsx`.
 
 ## Uwagi techniczne
 
-- **Seedy**: Metro nie wspiera `import x from "./a.json" with { type: "json" }` z `packages/content/index.js`, więc `src/lib/subjects.ts` ładuje pliki `@nauka/content/subjects/*.json` przez `require` (lista identyczna z `index.js`). Dodając seed, dopisz go w obu miejscach.
-- **Monorepo / Metro**: `apps/web` pinuje `react@19.3.0`, a RN 0.86 wymaga `react@19.2.3`, więc npm zagnieżdża `react`, `react-dom`, `reanimated`, `worklets` w `apps/mobile/node_modules`. `metro.config.js` ma resolver, który dla pakietów obecnych lokalnie zawsze bierze lokalną kopię — w bundlu jest jeden React (sprawdzone w `expo export`). `expo-doctor` zgłasza ten duplikat react/react-dom — to skutek pinów weba, nie błąd mobile.
-- **Upload w RN**: `supabase.storage.upload()` nie przyjmuje `Blob` z `file://`, dlatego plik jest czytany przez `expo-file-system` `File.base64()`, dekodowany `base64-arraybuffer` i wysyłany jako `ArrayBuffer` z `contentType`.
-- **Tutor streaming**: RN fetch nie zawsze daje `body.getReader()` — `tutorAsk()` streamuje jeśli się da, inaczej czeka na cały tekst. Działa w obu przypadkach.
+- **Monorepo / Metro**: `apps/web` pinuje `react@19.3.0`, a RN 0.86 wymaga `react@19.2.3`, więc npm zagnieżdża `react`/`react-dom` w `apps/mobile/node_modules`. `metro.config.js` ma resolver, który dla pakietów obecnych lokalnie zawsze bierze lokalną kopię — w bundlu jest jeden React (sprawdzone w `expo export`). `expo-doctor` zgłasza ten duplikat — skutek pinów weba.
+- **Upload w RN**: `supabase.storage.upload()` nie przyjmuje `Blob` z `file://`, dlatego plik jest czytany przez `expo-file-system` `File.base64()`, dekodowany `base64-arraybuffer` i wysyłany jako `ArrayBuffer`.
 - **Typed routes**: `experiments.typedRoutes` — typy generują się do `.expo/types` przy `expo start`; `tsc` przechodzi też bez nich.
-- **TypeScript 6**: Expo 57 oczekuje `typescript ~6.0` — `tsconfig.json` nie używa `baseUrl` (deprecated w TS 6), `paths` są względne do tsconfig.
+- **TypeScript 6** (wymagany przez Expo 57): `tsconfig.json` bez `baseUrl`, `paths` względne do tsconfig.
+- **Data sprawdzianu**: prosty input `RRRR-MM-DD` (bez natywnego date pickera — zero dodatkowych natywnych zależności).

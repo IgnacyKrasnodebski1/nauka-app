@@ -3,20 +3,18 @@ import React from "react";
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AccentGradient } from "@/components/Accent";
-import { OnboardingModal } from "@/components/Onboarding";
 import { SubjectCard } from "@/components/SubjectCard";
 import { H1, Muted, StatPill, TopBar, Touch } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
-import { useAuth } from "@/lib/auth";
 import { C, FONT, R } from "@/lib/theme";
 
+/** Home „Przedmioty”: streak/XP, karta „Dziś”, siatka przedmiotów, „+ przedmiot”. */
 export default function Home() {
   const app = useApp();
-  const auth = useAuth();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const own = app.ownSubjects;
-  const lib = app.homeSubjects.filter((s) => !own.includes(s));
+  const d = app.daily;
+  const hasSession = d.items.length > 0;
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -35,63 +33,38 @@ export default function Home() {
       />
       <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: 40 + insets.bottom }]} refreshControl={<RefreshControl refreshing={app.refreshing} onRefresh={app.refresh} tintColor={C.cyan} />} showsVerticalScrollIndicator={false}>
         <View style={s.hero}>
-          <H1>{auth.user ? "Siema, lecimy z nauką 👇" : "Wybierz przedmiot 👇"}</H1>
-          <Muted>Poziomy jak w Duolingo, fiszki, mini-gry, quizy i symulacja egzaminu. Z Twoich notatek, slajdów i zdjęć.</Muted>
+          <H1>Twoje przedmioty</H1>
+          <Muted>Do każdego dodajesz tematy — ze zdjęć notatek, PDF-a albo z samego hasła. Potem 10 minut dziennie.</Muted>
         </View>
 
-        <Touch onPress={() => router.push("/new")} style={s.ctaWrap}>
-          <AccentGradient style={s.cta}>
-            <Text style={s.ctaEmoji}>📸</Text>
+        <Touch onPress={() => router.push("/(tabs)/today")} style={s.todayWrap}>
+          <AccentGradient style={s.today}>
             <View style={{ flex: 1 }}>
-              <Text style={s.ctaTitle}>Dodaj materiały</Text>
-              <Text style={s.ctaSub}>zdjęcia notatek, slajdy, PDF albo tekst → AI robi z tego lekcje</Text>
+              <Text style={s.todayTitle}>⚡ Dziś · ~{d.minutes} min</Text>
+              <Text style={s.todaySub}>
+                {hasSession
+                  ? [d.reviewCount ? `${d.reviewCount} fiszek do powtórki` : null, d.weakCount ? `${d.weakCount} słabych pytań` : null, d.newLevel ? `nowy poziom: ${d.newLevel.title}` : null].filter(Boolean).join(" · ")
+                  : "brak zadań — dodaj temat, a ułożę Ci sesję"}
+              </Text>
             </View>
-            <Text style={s.ctaChev}>›</Text>
+            <View style={s.startBtn}>
+              <Text style={s.startTxt}>{hasSession ? "Start ›" : "Zobacz ›"}</Text>
+            </View>
           </AccentGradient>
         </Touch>
 
-        {app.offline ? <Text style={s.offline}>📴 offline — pokazuję zapisane przedmioty</Text> : null}
+        {app.offline ? <Text style={s.offline}>📴 offline — pokazuję zapisane dane</Text> : null}
 
-        {own.length ? (
-          <>
-            <Text style={s.section}>Twoje przedmioty</Text>
-            {own.map((sub) => (
-              <SubjectCard key={sub.id} subject={sub} onPress={() => router.push({ pathname: "/s/[id]", params: { id: sub.id } })} />
-            ))}
-          </>
-        ) : null}
-
-        <Text style={s.section}>{own.length ? "Z biblioteki" : "Przedmioty"}</Text>
-        {lib.length ? (
-          lib.map((sub) => <SubjectCard key={sub.id} subject={sub} onPress={() => router.push({ pathname: "/s/[id]", params: { id: sub.slug ?? sub.id } })} />)
-        ) : (
-          <Touch onPress={() => router.push("/(tabs)/library")} style={s.addcard}>
-            <View style={s.addEmoji}>
-              <Text style={{ fontSize: 28, color: C.muted }}>＋</Text>
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.addTitle}>Pusto tu. Dodaj coś z biblioteki</Text>
-              <Text style={s.addSub}>Gotowe przedmioty (makro, krypto, języki, psychologia…) — jeden tap i są na Twojej liście.</Text>
-            </View>
+        <View style={s.grid}>
+          {app.subjects.map((sub) => (
+            <SubjectCard key={sub.id} subject={sub} onPress={() => router.push({ pathname: "/s/[subjectId]", params: { subjectId: sub.id } })} />
+          ))}
+          <Touch onPress={() => router.push("/onboarding-add")} style={s.addcard}>
+            <Text style={{ fontSize: 30, color: C.muted }}>＋</Text>
+            <Text style={s.addTitle}>przedmiot</Text>
           </Touch>
-        )}
-
-        {!auth.user && auth.enabled ? (
-          <Touch onPress={() => router.push("/(auth)/login")} style={s.loginHint}>
-            <Text style={s.loginTxt}>👻 Uczysz się jako gość. Zaloguj się, żeby mieć postępy w chmurze i generować własne przedmioty →</Text>
-          </Touch>
-        ) : null}
+        </View>
       </ScrollView>
-
-      <OnboardingModal
-        open={app.ready && !app.onboarded}
-        initial={app.stage}
-        onDone={(st) => {
-          app.setStage(st);
-          app.setOnboarded();
-          app.showToast("Git, dopasowane 🎯");
-        }}
-      />
     </View>
   );
 }
@@ -99,19 +72,15 @@ export default function Home() {
 const s = StyleSheet.create({
   logo: { color: C.txt, fontWeight: FONT.black, fontSize: 18, letterSpacing: -0.5 },
   scroll: { paddingHorizontal: 16, paddingTop: 6 },
-  hero: { paddingVertical: 14, paddingHorizontal: 4, gap: 6 },
-  ctaWrap: { marginBottom: 18, borderRadius: R.lg, overflow: "hidden" },
-  cta: { flexDirection: "row", alignItems: "center", gap: 14, padding: 18, borderRadius: R.lg },
-  ctaEmoji: { fontSize: 36 },
-  ctaTitle: { color: "#fff", fontSize: 19, fontWeight: FONT.black, letterSpacing: -0.3 },
-  ctaSub: { color: "rgba(255,255,255,0.85)", fontSize: 13, marginTop: 2, lineHeight: 17, fontWeight: FONT.semi },
-  ctaChev: { color: "#fff", fontSize: 26, fontWeight: FONT.bold },
+  hero: { paddingVertical: 12, paddingHorizontal: 4, gap: 6 },
+  todayWrap: { marginBottom: 16, borderRadius: R.lg, overflow: "hidden" },
+  today: { flexDirection: "row", alignItems: "center", gap: 12, padding: 18, borderRadius: R.lg },
+  todayTitle: { color: "#fff", fontSize: 18, fontWeight: FONT.black, letterSpacing: -0.3 },
+  todaySub: { color: "rgba(255,255,255,0.88)", fontSize: 13, marginTop: 3, lineHeight: 17, fontWeight: FONT.semi },
+  startBtn: { backgroundColor: "rgba(0,0,0,0.28)", borderRadius: R.pill, paddingVertical: 10, paddingHorizontal: 14 },
+  startTxt: { color: "#fff", fontWeight: FONT.black, fontSize: 14 },
   offline: { color: C.muted, fontSize: 13, fontWeight: FONT.semi, marginBottom: 12, textAlign: "center" },
-  section: { color: C.muted, fontSize: 12, fontWeight: FONT.bold, textTransform: "uppercase", letterSpacing: 0.8, marginBottom: 10, marginTop: 6, paddingHorizontal: 4 },
-  addcard: { flexDirection: "row", alignItems: "center", gap: 14, borderWidth: 1.5, borderStyle: "dashed", borderColor: "rgba(255,255,255,0.15)", borderRadius: R.lg, padding: 16 },
-  addEmoji: { width: 54, height: 54, borderRadius: 16, backgroundColor: C.faint, alignItems: "center", justifyContent: "center" },
-  addTitle: { color: C.txt, fontWeight: FONT.bold, fontSize: 15 },
-  addSub: { color: C.muted, fontSize: 12.5, marginTop: 2, lineHeight: 17 },
-  loginHint: { marginTop: 18, backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: R.md, padding: 14 },
-  loginTxt: { color: C.muted, fontSize: 13.5, lineHeight: 19, fontWeight: FONT.semi },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  addcard: { flexBasis: "47%", flexGrow: 1, minHeight: 150, borderWidth: 1.5, borderStyle: "dashed", borderColor: "rgba(255,255,255,0.15)", borderRadius: R.lg, alignItems: "center", justifyContent: "center", gap: 4 },
+  addTitle: { color: C.muted, fontWeight: FONT.bold, fontSize: 14 },
 });

@@ -1,5 +1,5 @@
 import { PLANS, STAGES, type Stage } from "@nauka/shared";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import React, { useCallback, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
@@ -15,7 +15,6 @@ import { C, FONT } from "@/lib/theme";
 export default function Profile() {
   const app = useApp();
   const auth = useAuth();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [me, setMe] = useState<MeResponse | null>(null);
   const [meErr, setMeErr] = useState<string | null>(null);
@@ -52,7 +51,7 @@ export default function Profile() {
    */
   const upgrade = async (interval: "month" | "year") => {
     const token = await auth.accessToken();
-    if (!token) return router.push("/(auth)/login");
+    if (!token) return app.showToast("Sesja wygasła — zaloguj się ponownie.");
     setBusy(true);
     try {
       const { url } = await stripeCheckout(token, interval);
@@ -81,7 +80,7 @@ export default function Profile() {
   };
 
   const logout = async () => {
-    await app.store.flush();
+    await app.store?.flush();
     await auth.signOut();
     setMe(null);
     app.showToast("Wylogowano 👋");
@@ -92,8 +91,8 @@ export default function Profile() {
       <TopBar title="👤 Profil" />
       <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: 40 + insets.bottom }]} showsVerticalScrollIndicator={false}>
         <View style={s.hero}>
-          <H1>{auth.user ? (me?.profile?.display_name ?? auth.user.email?.split("@")[0] ?? "Ty") : "Gość 👻"}</H1>
-          <Muted>{auth.user ? auth.user.email : "Postępy zostają na tym telefonie. Zaloguj się, żeby je zsynchronizować."}</Muted>
+          <H1>{me?.profile?.display_name ?? auth.user?.email?.split("@")[0] ?? "Ty"}</H1>
+          <Muted>{auth.user?.email}</Muted>
         </View>
 
         <View style={s.specs}>
@@ -131,8 +130,7 @@ export default function Profile() {
             <Text style={s.big}>{plan === "pro" ? "💜 Pro" : "🆓 Free"}</Text>
             {me?.subscription?.current_period_end ? <Muted style={{ fontSize: 12.5 }}>do {new Date(me.subscription.current_period_end).toLocaleDateString("pl-PL")}</Muted> : null}
           </View>
-          {auth.user ? (
-            <>
+          <>
               <Text style={s.usage}>
                 Generacje w tym miesiącu: <Text style={{ color: C.txt, fontWeight: FONT.black }}>{me?.usage.generations ?? "–"}</Text> / {limits.generationsPerMonth}
                 {"\n"}Wiadomości do tutora: <Text style={{ color: C.txt, fontWeight: FONT.black }}>{me?.usage.tutorMessages ?? "–"}</Text>
@@ -149,18 +147,12 @@ export default function Profile() {
               ) : (
                 <PillButton label="zarządzaj subskrypcją" ghost small onPress={portal} disabled={busy} style={{ marginTop: 12 }} />
               )}
-            </>
-          ) : (
-            <>
-              <Text style={s.usage}>Free: {PLANS.free.generationsPerMonth} generacje z AI miesięcznie, {PLANS.free.filesPerGeneration} plików na raz. Pro: {PLANS.pro.generationsPerMonth}/mies. i tutor bez limitu.</Text>
-              <PillButton label="zaloguj się / załóż konto" onPress={() => router.push("/(auth)/login")} style={{ marginTop: 12 }} />
-            </>
-          )}
+          </>
         </Card>
 
-        {auth.user ? <PillButton label="wyloguj 👋" ghost danger onPress={logout} style={{ marginTop: 16 }} /> : null}
+        <PillButton label="wyloguj 👋" ghost danger onPress={logout} style={{ marginTop: 16 }} />
 
-        <Muted style={{ fontSize: 12, textAlign: "center", marginTop: 24 }}>NAUKA v0.1 · {app.store.kind === "supabase" ? "postępy w chmurze ☁️" : "postępy lokalnie 📱"}</Muted>
+        <Muted style={{ fontSize: 12, textAlign: "center", marginTop: 24 }}>NAUKA v0.1 · {app.subjects.length} przedmiotów · {app.topics.length} tematów · postępy w chmurze ☁️{app.offline ? " (offline: cache)" : ""}</Muted>
       </ScrollView>
     </View>
   );

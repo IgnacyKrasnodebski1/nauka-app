@@ -3,11 +3,17 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import {
   GENERATION_SYSTEM_PROMPT,
   TOPIC_SYSTEM_PROMPT,
-  GeneratedTopicSchema,
+  OUTLINE_INSTRUCTIONS,
+  levelInstructions,
   GenerationOptionsSchema,
+  OutlineSchema,
+  LevelGenSchema,
   buildGenerationUserPrompt,
   finalizeGenerated,
+  type GeneratedTopic,
   type GenerationOptions,
+  type Outline,
+  type LevelGen,
   type TopicContent,
 } from "@nauka/shared";
 import { aiConfigured, getClient, modelId } from "./client.js";
@@ -18,6 +24,8 @@ export interface GenerateInput {
   materials: MaterialInput[];
   text?: string;
   options: GenerationOptions;
+  /** optional progress callback: phase "outline" | "levels" | "done" */
+  onProgress?: (phase: "outline" | "levels" | "done", detail?: string) => void;
 }
 
 export interface GenerateResult {
@@ -37,9 +45,22 @@ export class GenerationError extends Error {
   }
 }
 
+type Usage = { input: number; output: number };
+
+function addUsage(u: Usage, m: Anthropic.Beta.BetaMessage): Usage {
+  return {
+    input: u.input + m.usage.input_tokens + (m.usage.cache_read_input_tokens ?? 0) + (m.usage.cache_creation_input_tokens ?? 0),
+    output: u.output + m.usage.output_tokens,
+  };
+}
+
 /**
  * Turn uploaded materials (mode "materials") or a typed topic (mode "prompt") into a full topic.
- * Uses Claude vision + PDF + structured outputs. Falls back to a demo topic when no API key is configured.
+ *
+ * Two phases so wall-clock stays ~2 min regardless of level count:
+ *  1. outline (metadata + per-level scope) — small, fast;
+ *  2. every level generated in parallel from the same materials + its scope.
+ * Falls back to a demo topic when no API key is configured.
  */
 export async function generateTopic(input: GenerateInput): Promise<GenerateResult> {
   const options = GenerationOptionsSchema.parse(input.options);
@@ -52,51 +73,82 @@ export async function generateTopic(input: GenerateInput): Promise<GenerateResul
     return { content: finalizeGenerated(gen, options.stage, { lang: options.lang }), category: gen.category, model: "demo", usage: { input: 0, output: 0 }, demo: true };
   }
 
-  const { blocks, summary } = mode === "materials" ? materialsToBlocks(input.materials, input.text) : { blocks: [], summary: "brak" };
+  const { blocks, summary } = mode === "materials" ? materialsToBlocks(input.materials, input.text) : { blocks: [] as Anthropic.Beta.BetaContentBlockParam[], summary: "brak" };
+  // cache the (possibly large) materials prefix so the parallel level calls reuse it
+  if (blocks.length) {
+    const last = blocks[blocks.length - 1]!;
+    (last as { cache_control?: { type: "ephemeral" } }).cache_control = { type: "ephemeral" };
+  }
   const client = getClient();
   const model = modelId();
+  const system: Anthropic.Beta.BetaTextBlockParam[] = [
+    { type: "text", text: mode === "materials" ? GENERATION_SYSTEM_PROMPT : TOPIC_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
+  ];
+  const basePrompt = buildGenerationUserPrompt({ ...options, mode }, summary);
+  let usage: Usage = { input: 0, output: 0 };
+  let servedModel = model;
 
-  const stream = client.beta.messages.stream({
-    model,
-    max_tokens: 64000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-    thinking: { type: "adaptive" },
-    output_config: { effort: "high", format: betaZodOutputFormat(GeneratedTopicSchema) },
-    system: [{ type: "text", text: mode === "materials" ? GENERATION_SYSTEM_PROMPT : TOPIC_SYSTEM_PROMPT, cache_control: { type: "ephemeral" } }],
-    messages: [{ role: "user", content: [...blocks, { type: "text", text: buildGenerationUserPrompt({ ...options, mode }, summary) }] }],
-  });
-
-  let msg;
-  try {
-    msg = await stream.finalMessage();
-  } catch (e) {
-    if (e instanceof Anthropic.APIError) throw new GenerationError(`AI: ${e.status} ${e.message}`, "api");
-    throw e;
+  async function call<T>(userText: string, format: ReturnType<typeof betaZodOutputFormat<any>>, maxTokens: number, parse: (text: string) => T | null): Promise<T> {
+    const stream = client.beta.messages.stream({
+      model,
+      max_tokens: maxTokens,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      thinking: { type: "adaptive" },
+      output_config: { effort: "medium", format },
+      system,
+      messages: [{ role: "user", content: [...blocks, { type: "text", text: userText }] }],
+    });
+    let msg: Anthropic.Beta.BetaMessage & { parsed_output?: unknown };
+    try {
+      msg = await stream.finalMessage();
+    } catch (e) {
+      if (e instanceof Anthropic.APIError) throw new GenerationError(`AI: ${e.status} ${e.message}`, "api");
+      throw e;
+    }
+    usage = addUsage(usage, msg);
+    servedModel = msg.model;
+    if (msg.stop_reason === "refusal") throw new GenerationError("AI odmówiło przetworzenia tych materiałów.", "refusal");
+    if (msg.stop_reason === "max_tokens") throw new GenerationError("Materiał za duży na jeden temat — podziel go na mniejsze części.", "invalid_output");
+    const text = msg.content
+      .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
+      .map((b) => b.text)
+      .join("");
+    const parsed = (msg.parsed_output as T | null | undefined) ?? parse(text);
+    if (!parsed) throw new GenerationError("AI zwróciło nieprawidłową strukturę. Spróbuj ponownie.", "invalid_output");
+    return parsed;
   }
-  if (msg.stop_reason === "refusal") throw new GenerationError("AI odmówiło przetworzenia tych materiałów.", "refusal");
-  if (msg.stop_reason === "max_tokens") throw new GenerationError("Materiał za duży na jeden przedmiot — podziel go na mniejsze części.", "invalid_output");
 
-  const parsed = msg.parsed_output ?? parseFromText(msg.content);
-  if (!parsed) throw new GenerationError("AI zwróciło nieprawidłową strukturę. Spróbuj ponownie.", "invalid_output");
+  // ---- phase 1: outline
+  input.onProgress?.("outline");
+  const outline = await call<Outline>(`${basePrompt}\n\n${OUTLINE_INSTRUCTIONS}`, betaZodOutputFormat(OutlineSchema), 8000, (t) => safeParse(OutlineSchema, t));
+  const want = options.levels ?? 4;
+  outline.levels = outline.levels.slice(0, Math.max(1, want));
+  if (!outline.levels.length) throw new GenerationError("AI nie znalazło w materiałach treści do nauki.", "invalid_output");
 
-  const content = finalizeGenerated(parsed, options.stage, { lang: options.lang });
-  return {
-    content,
-    category: parsed.category || "inne",
-    model: msg.model,
-    usage: { input: msg.usage.input_tokens + (msg.usage.cache_read_input_tokens ?? 0) + (msg.usage.cache_creation_input_tokens ?? 0), output: msg.usage.output_tokens },
-    demo: false,
+  // ---- phase 2: levels in parallel
+  input.onProgress?.("levels", `${outline.levels.length} poziomów`);
+  const levels = await Promise.all(
+    outline.levels.map((_, i) => call<LevelGen>(`${basePrompt}\n\n${levelInstructions(outline, i)}`, betaZodOutputFormat(LevelGenSchema), 16000, (t) => safeParse(LevelGenSchema, t))),
+  );
+
+  const gen: GeneratedTopic = {
+    name: outline.name,
+    short: outline.short,
+    emoji: outline.emoji,
+    tagline: outline.tagline,
+    category: outline.category,
+    info_html: outline.info_html,
+    levels: outline.levels.map((l, i) => ({ title: l.title, emoji: l.emoji, summary: l.summary, ...levels[i]! })),
   };
+  input.onProgress?.("done");
+  const content = finalizeGenerated(gen, options.stage, { lang: options.lang });
+  return { content, category: outline.category || "inne", model: servedModel, usage, demo: false };
 }
 
-function parseFromText(content: Anthropic.Beta.BetaContentBlock[]) {
-  const text = content
-    .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("");
+function safeParse<T>(schema: { parse: (v: unknown) => T }, text: string): T | null {
   try {
-    return GeneratedTopicSchema.parse(JSON.parse(text));
+    return schema.parse(JSON.parse(text));
   } catch {
     return null;
   }
