@@ -1,7 +1,9 @@
 "use client";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { subjectCompletion, type Subject, type Topic } from "@nauka/shared";
 import { useApp } from "@/lib/store/app-context";
+import { hueOf } from "@/lib/hue";
 import { examBadge } from "@/lib/types";
 
 export function SubjectCard({ s, topics }: { s: Subject; topics: Pick<Topic, "id" | "levels">[] }) {
@@ -16,15 +18,15 @@ export function SubjectCard({ s, topics }: { s: Subject; topics: Pick<Topic, "id
   const pct = total ? Math.round((done / total) * 100) : 0;
   const badge = examBadge(s.examDate, s.examLabel);
   return (
-    <Link href={`/app/s/${s.id}`} className="subjcard" style={{ ["--sa" as string]: s.accent }}>
-      <div className="subjemoji" aria-hidden="true">{s.emoji}</div>
+    <Link href={`/app/s/${s.id}`} className="subjcard" style={{ "--hue": hueOf(s) } as CSSProperties}>
+      <div className="tile" aria-hidden="true">{s.emoji}</div>
       <div className="subjmeta">
         <h3>{s.name}</h3>
-        <div className="sub">{topics.length ? `${topics.length} ${plural(topics.length, "temat", "tematy", "tematów")}` : "jeszcze pusto — dodaj pierwszy temat"}</div>
-        {badge && <span className="tag !mb-0 mt-2" style={{ background: "#ff3b5c33", color: "#ffb3c1" }}>📅 {badge}</span>}
+        <div className="sub">{topics.length ? `${topics.length} ${plural(topics.length, "temat", "tematy", "tematów")}` : "pusto — dodaj pierwszy temat"}</div>
+        {badge && <span className="tag badge danger !mb-0 mt-2">📅 {badge}</span>}
         <div className="subjprog">
           <div className="bar"><i style={{ width: `${pct}%` }} /></div>
-          <small>{pct}% poziomów</small>
+          <small>{pct}%</small>
         </div>
       </div>
       <div className="chev" aria-hidden="true">›</div>

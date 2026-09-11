@@ -38,7 +38,7 @@ export function Account() {
   async function saveName() {
     const { error } = await supabase.from("profiles").update({ display_name: name.trim() || null }).eq("id", user.id);
     if (error) setErr(error.message);
-    else toast("Zapisane ✅");
+    else toast("Zapisane");
   }
   async function post(path: string, body?: unknown) {
     const r = await fetch(path, { method: "POST", headers: { "content-type": "application/json", ...authHeaders() }, body: body ? JSON.stringify(body) : undefined });
@@ -70,49 +70,50 @@ export function Account() {
 
   return (
     <>
-      <TopBar back="/app" title={<>👤 <span className="g">Konto</span></>} />
+      <TopBar back="/app" title="Konto" />
       <div className="px-4 pb-8 space-y-4">
         <div className="card">
-          <div className="flex items-center gap-3">
-            <div className="subjemoji !w-14 !h-14 !text-3xl" aria-hidden="true">{stageLabel?.emoji ?? "🙂"}</div>
+          <div className="flex items-center gap-4">
+            <div className="tile gold" aria-hidden="true">{stageLabel?.emoji ?? "🙂"}</div>
             <div className="min-w-0">
-              <div className="font-black text-lg truncate">{me?.profile?.display_name || user.name || user.email}</div>
+              <h2 className="truncate" style={{ fontSize: 20 }}>{me?.profile?.display_name || user.name || user.email}</h2>
               <div className="text-muted text-sm truncate">{user.email}</div>
             </div>
           </div>
-          <div className="specs mt-4 !justify-start">
-            <div className="spec">🔥 {ready ? meta.streak : "·"}<small>seria</small></div>
-            <div className="spec">🏆 {ready ? meta.best : "·"}<small>rekord</small></div>
-            <div className="spec">⚡ {ready ? totalXp : "·"}<small>xp łącznie</small></div>
+          <div className="specs !justify-start mt-5">
+            <div className="spec"><b style={{ color: "var(--streak)" }}>{ready ? meta.streak : "·"}</b><small>seria</small></div>
+            <div className="spec"><b>{ready ? meta.best : "·"}</b><small>rekord</small></div>
+            <div className="spec"><b style={{ color: "var(--accent)" }}>{ready ? totalXp : "·"}</b><small>XP</small></div>
           </div>
         </div>
 
         <div className="card">
+          <span className="tag">Profil</span>
           <h3>Etap edukacji</h3>
           <div className="chips mt-2" role="radiogroup" aria-label="Etap">
             {STAGES.map((s) => (
-              <button key={s.id} type="button" role="radio" aria-checked={stage === s.id} className={cn("chip", stage === s.id && "active")} onClick={() => { setStage(s.id); toast("Zapisane ✅"); }}>{s.emoji} {s.label}</button>
+              <button key={s.id} type="button" role="radio" aria-checked={stage === s.id} className={cn("chip", stage === s.id && "active")} onClick={() => { setStage(s.id); toast("Zapisane"); }}>{s.emoji} {s.label}</button>
             ))}
           </div>
           <div className="mt-3">
             <label className="label" htmlFor="name">Nazwa</label>
             <div className="flex gap-2">
               <input id="name" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="jak mamy do Ciebie mówić?" maxLength={60} />
-              <button type="button" className="pill sm" onClick={saveName}>zapisz</button>
+              <button type="button" className="pill ghost sm" onClick={saveName}>Zapisz</button>
             </div>
           </div>
         </div>
 
         <div className="card">
           <div className="flex items-center justify-between">
-            <h3>Plan: {me ? PLANS[me.plan].label : "…"}</h3>
-            {me?.subscription?.status && <span className="tag !mb-0">{me.subscription.status}{me.subscription.cancel_at_period_end ? " · wygasa" : ""}</span>}
+            <div><span className="tag">Plan</span><h3>{me ? PLANS[me.plan].label : "…"}</h3></div>
+            {me?.subscription?.status && <span className="tag badge !mb-0">{me.subscription.status}{me.subscription.cancel_at_period_end ? " · wygasa" : ""}</span>}
           </div>
           {me && (
             <>
-              <div className="text-sm text-muted mt-2 mb-1">Generacje w {me.usage.month}: <b className="text-txt">{me.usage.generations}/{me.limits.generationsPerMonth}</b></div>
+              <div className="text-sm text-muted mt-2 mb-1">Tematy w {me.usage.month}: <b>{me.usage.generations}/{me.limits.generationsPerMonth}</b></div>
               <div className="usagebar"><i style={{ width: `${Math.min(100, (me.usage.generations / me.limits.generationsPerMonth) * 100)}%` }} /></div>
-              <div className="text-sm text-muted mt-2">Wiadomości do tutora w tym miesiącu: <b className="text-txt">{me.usage.tutorMessages}</b>{me.plan === "free" ? " (30/dzień)" : " (bez limitu)"}</div>
+              <div className="text-sm text-muted mt-2">Wiadomości do tutora w tym miesiącu: <b>{me.usage.tutorMessages}</b>{me.plan === "free" ? " (30/dzień)" : " (bez limitu)"}</div>
               {me.subscription?.current_period_end && <div className="text-sm text-muted mt-1">Okres do: {new Date(me.subscription.current_period_end).toLocaleDateString("pl-PL")}</div>}
             </>
           )}
@@ -124,7 +125,7 @@ export function Account() {
               <button type="button" className="pill ghost" onClick={() => checkout("year")} disabled={busy !== null}>Pro · {PLANS.pro.priceYearlyPln} zł/rok</button>
             </div>
           )}
-          <p className="text-[12px] mt-2">Pro: {PLANS.pro.generationsPerMonth} generacji/mies., {PLANS.pro.filesPerGeneration} plików po {PLANS.pro.maxFileMb} MB, tutor bez limitu. Karta, Apple Pay, Google Pay.</p>
+          <p className="!text-[12.5px] mt-3">Pro: {PLANS.pro.generationsPerMonth} tematów/mies., {PLANS.pro.filesPerGeneration} plików po {PLANS.pro.maxFileMb} MB, tutor bez limitu. Karta, Apple Pay, Google Pay.</p>
         </div>
 
         {err && <div className="exfb bad" role="alert">{err}</div>}

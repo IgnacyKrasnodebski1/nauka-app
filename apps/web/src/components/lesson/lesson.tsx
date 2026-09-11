@@ -10,11 +10,12 @@ import { SubjectTheme } from "@/components/topic/theme";
 import { QuestionCard } from "@/components/topic/question";
 import { GameView, GAME_LABEL } from "@/components/lesson/games";
 import { Confetti } from "@/components/lesson/confetti";
+import { XpCounter } from "@/components/lesson/xp-counter";
 import { TutorFab } from "@/components/tutor/tutor-drawer";
 
 type Phase = "feed" | "cards" | "games" | "quiz" | "result";
 const ORDER: Phase[] = ["feed", "cards", "games", "quiz", "result"];
-const PHASE_LABEL: Record<Phase, string> = { feed: "📖 feed", cards: "🎴 fiszki", games: "🎮 mini-gry", quiz: "🧠 quiz", result: "🏁" };
+const PHASE_LABEL: Record<Phase, string> = { feed: "Feed", cards: "Fiszki", games: "Mini-gry", quiz: "Quiz", result: "Wynik" };
 
 export function Lesson({ topic, subject, levelId }: { topic: Topic; subject: Subject; levelId: string }) {
   const level = topic.levels.find((l) => l.id === levelId)!;
@@ -114,7 +115,7 @@ export function Lesson({ topic, subject, levelId }: { topic: Topic; subject: Sub
       <div className="lessonhead">
         <Link href={backHref} className="x" aria-label="Zamknij lekcję">✕</Link>
         <div className="bar" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${pct}%` }} /></div>
-        <span className="counter">{PHASE_LABEL[phase]}</span>
+        <span className="eyebrow">{PHASE_LABEL[phase]}</span>
       </div>
 
       <div className="flex-1 px-4 pb-4 flex flex-col">
@@ -126,13 +127,13 @@ export function Lesson({ topic, subject, levelId }: { topic: Topic; subject: Sub
                 <span className="tag">{level.title} · {i + 1}/{feed.length}</span>
                 <div className="ftitle">{feed[i]!.title}</div>
                 <div className="fbody" dangerouslySetInnerHTML={{ __html: feed[i]!.body }} />
-                {feed[i]!.real && <div className="real"><span className="lbl">po ludzku 🗣️</span><span dangerouslySetInnerHTML={{ __html: feed[i]!.real! }} /></div>}
-                {feed[i]!.mnemo && <div className="mnemo"><span className="lbl">zapamiętaj 🧠</span><span dangerouslySetInnerHTML={{ __html: feed[i]!.mnemo! }} /></div>}
+                {feed[i]!.real && <div className="real"><span className="lbl">Po ludzku</span><span dangerouslySetInnerHTML={{ __html: feed[i]!.real! }} /></div>}
+                {feed[i]!.mnemo && <div className="mnemo"><span className="lbl">Zapamiętaj</span><span dangerouslySetInnerHTML={{ __html: feed[i]!.mnemo! }} /></div>}
               </div>
             </div>
-            <div className="lessonfoot !px-0">
+            <div className="lessonfoot">
               <button type="button" className="pill" onClick={() => { earn(XP.feedRead); step("feed"); }}>
-                {i + 1 < feed.length ? "dalej →" : cards.length ? "lecimy z fiszkami 🎴" : games.length ? "czas na gry 🎮" : quiz.length ? "lecimy z quizem 🧠" : "zakończ ✅"}
+                {i + 1 < feed.length ? "Dalej" : cards.length ? "Do fiszek" : games.length ? "Do mini-gier" : quiz.length ? "Do quizu" : "Zakończ"}
               </button>
             </div>
           </>
@@ -140,16 +141,16 @@ export function Lesson({ topic, subject, levelId }: { topic: Topic; subject: Sub
 
         {mounted && phase === "cards" && cards[i] && (
           <>
-            <div className="progressrow"><div className="counter">fiszka {i + 1}/{cards.length}</div></div>
+            <div className="progressrow"><div className="counter">Fiszka {i + 1}/{cards.length}</div></div>
             <div className={cn("flip mb-3", flipped && "flipped")}>
               <div className="flipinner" onClick={() => setFlipped((f) => !f)} role="button" tabIndex={0} onKeyDown={(e) => (e.key === " " || e.key === "Enter") && (e.preventDefault(), setFlipped((f) => !f))} aria-label="Odwróć fiszkę">
-                <div className="face front"><span className="tag">{level.title}</span><div className="term">{cards[i]!.t}</div><div className="tapomat">tapnij = odpowiedź 👀</div></div>
-                <div className="face back"><span className="tag">odpowiedź ✅</span><div className="deftxt" dangerouslySetInnerHTML={{ __html: cards[i]!.d }} /><div className="tapomat">tapnij = wróć ↩</div></div>
+                <div className="face front"><span className="tag">{level.title}</span><div className="term">{cards[i]!.t}</div><div className="tapomat">tapnij, żeby odwrócić</div></div>
+                <div className="face back"><span className="tag hue">Odpowiedź</span><div className="deftxt" dangerouslySetInnerHTML={{ __html: cards[i]!.d }} /><div className="tapomat">tapnij, żeby wrócić</div></div>
               </div>
             </div>
             <div className="fbtns">
-              <button type="button" className="fbtn no" onClick={() => step("cards")}>jeszcze nie 😵</button>
-              <button type="button" className="fbtn yes" onClick={() => { earn(XP.flashcardKnown); step("cards"); }}>umiem 💪</button>
+              <button type="button" className="fbtn no" onClick={() => step("cards")}>Jeszcze nie</button>
+              <button type="button" className="fbtn yes" onClick={() => { earn(XP.flashcardKnown); step("cards"); }}>Umiem</button>
             </div>
           </>
         )}
@@ -162,7 +163,7 @@ export function Lesson({ topic, subject, levelId }: { topic: Topic; subject: Sub
               onDone={(correct, total) => {
                 const xp = correct * XP.gameCorrect;
                 earn(xp);
-                toast(correct === total ? `perfekcyjnie! +${xp}xp 🟢` : `+${xp}xp · ${correct}/${total}`);
+                toast(correct === total ? `Bezbłędnie · +${xp} XP` : `+${xp} XP · ${correct}/${total}`);
                 step("games");
               }}
             />
@@ -174,7 +175,7 @@ export function Lesson({ topic, subject, levelId }: { topic: Topic; subject: Sub
             <div className="flex-1">
               <QuestionCard
                 q={quiz[i]!}
-                tag={`pytanie ${i + 1}/${quiz.length}`}
+                tag={`Pytanie ${i + 1} z ${quiz.length}`}
                 picked={picked}
                 reveal={picked !== null}
                 onPick={(k) => {
@@ -183,14 +184,14 @@ export function Lesson({ topic, subject, levelId }: { topic: Topic; subject: Sub
                   setAnswers((a) => [...a, { qi: quiz[i]!.qi, ok: k === quiz[i]!.c }]);
                   if (k === quiz[i]!.c) {
                     setScore((s) => s + 1);
-                    toast(`GIT +${XP.quizCorrect}xp 🟢`);
-                  } else toast("mid, czytaj wyjaśnienie 👇");
+                    toast(`+${XP.quizCorrect} XP`);
+                  } else toast("Nie tym razem — zerknij na wyjaśnienie");
                 }}
               />
             </div>
             {picked !== null && (
-              <div className="lessonfoot !px-0">
-                <button type="button" className="pill pop" onClick={() => step("quiz")}>{i + 1 >= quiz.length ? "zobacz wynik 🏁" : "dalej →"}</button>
+              <div className="lessonfoot">
+                <button type="button" className="pill pop" onClick={() => step("quiz")}>{i + 1 >= quiz.length ? "Zobacz wynik" : "Dalej"}</button>
               </div>
             )}
           </>
@@ -200,29 +201,32 @@ export function Lesson({ topic, subject, levelId }: { topic: Topic; subject: Sub
           <>
             {passed && <Confetti />}
             <div className="flex-1 result">
-              <div className="big pop">{!passed ? "😵" : rpct >= 90 ? "👑" : rpct >= 70 ? "🔥" : "✅"}</div>
-              <h2>{level.title}</h2>
+              <span className="tag">{level.title}</span>
+              <XpCounter value={gained} />
               {quiz.length > 0 && (
-                <div className="score">Trafione <b>{score}/{quiz.length}</b> ({rpct}%){passed ? ` · ${"⭐".repeat(stars)}${"☆".repeat(3 - stars)}` : ""}</div>
+                <div className="starrow" aria-label={`${stars} z 3 gwiazdek`}>
+                  {[0, 1, 2].map((k) => <span key={k} className={k < stars ? "" : "off"}>★</span>)}
+                </div>
               )}
-              <div className="streak">⚡ +{gained} <small>xp</small></div>
+              <h2>{!passed ? "Poziom niezaliczony" : rpct >= 90 ? "Mistrzowsko" : rpct >= 70 ? "Solidnie" : "Zaliczone"}</h2>
+              {quiz.length > 0 && <div className="score">Trafione <b>{score}/{quiz.length}</b> · {rpct}%</div>}
               <p>
                 {!passed
-                  ? "Poniżej 50% — poziom niezaliczony. Przejedź feed jeszcze raz i spróbuj ponownie, dasz radę."
+                  ? "Poniżej 50%. Przejedź feed jeszcze raz i spróbuj ponownie — to wchodzi za drugim razem."
                   : rpct >= 90
-                    ? "Mistrzostwo. Trzy gwiazdki, profesor by płakał ze szczęścia."
+                    ? "Trzy gwiazdki. Ten poziom masz w małym palcu."
                     : rpct >= 70
-                      ? "Solidnie! Poziom zaliczony, lecimy dalej."
+                      ? "Poziom zaliczony, lecimy dalej."
                       : "Zaliczone na styk — wróć kiedyś po więcej gwiazdek."}
               </p>
             </div>
-            <div className="lessonfoot !px-0 flex flex-col gap-2.5">
+            <div className="lessonfoot flex flex-col gap-2.5">
               {passed ? (
-                <button type="button" className="pill" onClick={() => router.push(backHref)}>dalej na ścieżkę 🗺️</button>
+                <button type="button" className="pill" onClick={() => router.push(backHref)}>Dalej na ścieżkę</button>
               ) : (
-                <button type="button" className="pill" onClick={retry}>spróbuj jeszcze raz 🔁</button>
+                <button type="button" className="pill" onClick={retry}>Spróbuj jeszcze raz</button>
               )}
-              {passed && <button type="button" className="pill ghost" onClick={retry}>jeszcze raz po gwiazdki ⭐</button>}
+              {passed && <button type="button" className="pill ghost" onClick={retry}>Jeszcze raz po gwiazdki</button>}
             </div>
           </>
         )}

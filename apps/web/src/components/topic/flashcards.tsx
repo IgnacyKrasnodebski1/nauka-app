@@ -39,7 +39,7 @@ export function FlashcardsTab({ topics }: { topics: Topic[] }) {
   const card = list[safeIdx];
 
   const startSrs = () => {
-    if (!dueCards.length) return toast("Nic nie czeka na powtórkę 🎉");
+    if (!dueCards.length) return toast("Nic nie czeka na powtórkę");
     setSrsQueue(dueCards.map((c) => c.topicId + "|" + c.key));
     setSrsDone(0);
     setIdx(0);
@@ -59,7 +59,7 @@ export function FlashcardsTab({ topics }: { topics: Topic[] }) {
     if (!rest.length) {
       setSrsQueue(null);
       setMode("browse");
-      toast("Powtórka zrobiona 🧠✨");
+      toast("Powtórka zrobiona");
       return;
     }
     setSrsQueue(rest);
@@ -69,7 +69,7 @@ export function FlashcardsTab({ topics }: { topics: Topic[] }) {
     if (!card) return;
     if (known) {
       addXp(card.topicId, XP.flashcardKnown);
-      toast(`+${XP.flashcardKnown}xp 💪`);
+      toast(`+${XP.flashcardKnown} XP`);
     }
     const srs = srsOf(card.topicId);
     setSrs(card.topicId, { ...srs, [card.key]: review(srs[card.key] ?? newCard(), known ? 2 : 0) });
@@ -83,14 +83,14 @@ export function FlashcardsTab({ topics }: { topics: Topic[] }) {
     <div className="flex flex-col">
       {mode === "browse" ? (
         <div className="chips" role="tablist" aria-label="Filtr">
-          <button type="button" className={cn("chip", filter === "all" && "active")} onClick={() => { setFilter("all"); setIdx(0); setFlipped(false); }}>Wszystko 🌀</button>
+          <button type="button" className={cn("chip", filter === "all" && "active")} onClick={() => { setFilter("all"); setIdx(0); setFlipped(false); }}>Wszystko</button>
           {chips.map((c) => (
             <button key={c.id} type="button" className={cn("chip", filter === c.id && "active")} onClick={() => { setFilter(c.id); setIdx(0); setFlipped(false); }}>{c.label}</button>
           ))}
         </div>
       ) : (
         <div className="flex items-center justify-between mb-3">
-          <span className="tag !mb-0">🔁 powtórka · zostało {srsQueue?.length ?? 0}</span>
+          <span className="tag badge hue !mb-0">Powtórka · zostało {srsQueue?.length ?? 0}</span>
           <button type="button" className="chip" onClick={() => { setMode("browse"); setSrsQueue(null); }}>przerwij</button>
         </div>
       )}
@@ -101,25 +101,25 @@ export function FlashcardsTab({ topics }: { topics: Topic[] }) {
       {card && (
         <div className={cn("flip mb-3", flipped && "flipped")}>
           <div className="flipinner" onClick={() => setFlipped((f) => !f)} role="button" tabIndex={0} aria-label={flipped ? "Pokaż termin" : "Pokaż definicję"} onKeyDown={(e) => (e.key === " " || e.key === "Enter") && (e.preventDefault(), setFlipped((f) => !f))}>
-            <div className="face front"><span className="tag">{card.lvl}</span><div className="term">{card.t}</div><div className="tapomat">tapnij = odpowiedź 👀</div></div>
-            <div className="face back"><span className="tag">odpowiedź ✅</span><div className="deftxt" dangerouslySetInnerHTML={{ __html: card.d }} /><div className="tapomat">tapnij = wróć ↩</div></div>
+            <div className="face front"><span className="tag">{card.lvl}</span><div className="term">{card.t}</div><div className="tapomat">tapnij, żeby odwrócić</div></div>
+            <div className="face back"><span className="tag hue">Odpowiedź</span><div className="deftxt" dangerouslySetInnerHTML={{ __html: card.d }} /><div className="tapomat">tapnij, żeby wrócić</div></div>
           </div>
         </div>
       )}
       {mode === "browse" ? (
         <>
           <div className="fbtns">
-            <button type="button" className="fbtn no" onClick={() => browseNext(false)}>jeszcze nie 😵</button>
-            <button type="button" className="fbtn yes" onClick={() => browseNext(true)}>umiem 💪</button>
+            <button type="button" className="fbtn no" onClick={() => browseNext(false)}>Jeszcze nie</button>
+            <button type="button" className="fbtn yes" onClick={() => browseNext(true)}>Umiem</button>
           </div>
-          <button type="button" className="pill ghost mt-3" onClick={startSrs}>🔁 Powtórka SRS — {dueCards.length} do zrobienia</button>
+          <button type="button" className="pill ghost mt-3" onClick={startSrs}>Powtórka SRS · {dueCards.length} do zrobienia</button>
         </>
       ) : (
         <div className="fbtns">
-          <button type="button" className="fbtn no" onClick={() => grade(0)}>nie 😵</button>
-          <button type="button" className="fbtn mid" onClick={() => grade(1)}>trudne 🤔</button>
-          <button type="button" className="fbtn yes" onClick={() => grade(2)}>dobrze 👍</button>
-          <button type="button" className="fbtn yes" onClick={() => grade(3)}>easy 😎</button>
+          <button type="button" className="fbtn no" onClick={() => grade(0)}>Nie</button>
+          <button type="button" className="fbtn mid" onClick={() => grade(1)}>Trudne</button>
+          <button type="button" className="fbtn yes" onClick={() => grade(2)}>Dobrze</button>
+          <button type="button" className="fbtn yes" onClick={() => grade(3)}>Łatwe</button>
         </div>
       )}
     </div>

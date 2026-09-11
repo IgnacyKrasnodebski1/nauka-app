@@ -67,9 +67,10 @@ export function LoginForm() {
   }
 
   return (
-    <div className="w-full max-w-md card">
-      <h1 className="text-2xl font-black tracking-tight">{mode === "signup" ? "Załóż konto" : "Zaloguj się"}</h1>
-      <p className="text-muted text-sm mt-1 mb-5">Konto = własne przedmioty z AI, postępy w chmurze i {" "}<b className="text-txt">3 generacje/mies. za darmo</b>.</p>
+    <div className="w-full max-w-md card !p-6">
+      <span className="tag">{mode === "signup" ? "Nowe konto" : "Logowanie"}</span>
+      <h1 style={{ fontSize: 28 }}>{mode === "signup" ? "Załóż konto" : "Zaloguj się"}</h1>
+      <p className="text-muted text-[14.5px] mt-2 mb-6">Własne przedmioty, tematy z AI i postępy w chmurze. <b>3 tematy w miesiącu za darmo.</b></p>
 
       {!supabase && (
         <div className="exfb bad mb-4">Brak konfiguracji Supabase (NEXT_PUBLIC_SUPABASE_URL) — logowanie jest wyłączone na tej instancji.</div>
@@ -80,7 +81,7 @@ export function LoginForm() {
         Kontynuuj z Google
       </button>
 
-      <div className="flex items-center gap-3 my-4 text-muted text-xs font-bold uppercase tracking-wider"><span className="flex-1 h-px bg-white/10" />albo e-mail<span className="flex-1 h-px bg-white/10" /></div>
+      <div className="flex items-center gap-3 my-5 eyebrow"><span className="flex-1 divider" />albo e-mail<span className="flex-1 divider" /></div>
 
       <form onSubmit={submit} className="space-y-3">
         <div>
@@ -94,18 +95,18 @@ export function LoginForm() {
           </div>
         )}
         <button type="submit" className="pill" disabled={busy || !supabase}>
-          {busy ? "chwila…" : mode === "magic" ? "Wyślij magiczny link ✨" : mode === "password" ? "Zaloguj" : "Załóż konto"}
+          {busy ? "Chwila…" : mode === "magic" ? "Wyślij magiczny link" : mode === "password" ? "Zaloguj" : "Załóż konto"}
         </button>
       </form>
 
       {msg && <div className={`exfb ${msg.kind === "ok" ? "ok" : "bad"}`} role="status">{msg.text}</div>}
 
-      <div className="text-sm text-muted mt-5 flex flex-wrap gap-x-4 gap-y-1 justify-center">
-        {mode !== "magic" && <button type="button" className="underline" onClick={() => setMode("magic")}>magiczny link</button>}
-        {mode !== "password" && <button type="button" className="underline" onClick={() => setMode("password")}>hasło</button>}
-        {mode !== "signup" && <button type="button" className="underline" onClick={() => setMode("signup")}>nowe konto z hasłem</button>}
+      <div className="text-sm text-muted mt-5 flex flex-wrap gap-2">
+        {mode !== "magic" && <button type="button" className="chip" onClick={() => setMode("magic")}>magiczny link</button>}
+        {mode !== "password" && <button type="button" className="chip" onClick={() => setMode("password")}>hasło</button>}
+        {mode !== "signup" && <button type="button" className="chip" onClick={() => setMode("signup")}>nowe konto z hasłem</button>}
       </div>
-      <p className="text-[12px] text-muted mt-4 text-center">Logując się akceptujesz <a className="underline" href="/regulamin">regulamin</a> i <a className="underline" href="/prywatnosc">politykę prywatności</a>.</p>
+      <p className="text-[12px] text-muted mt-5">Logując się akceptujesz <a className="underline" href="/regulamin">regulamin</a> i <a className="underline" href="/prywatnosc">politykę prywatności</a>.</p>
     </div>
   );
 }

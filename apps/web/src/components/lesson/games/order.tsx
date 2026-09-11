@@ -27,7 +27,7 @@ export function OrderGameView({ game, onDone }: { game: OrderGame; onDone: (corr
     <div>
       <div className="exprompt">{game.title || "Ułóż w kolejności"}</div>
       <div className="exq !text-[18px]">{game.prompt}</div>
-      <ol className="orderlist list-none p-0 m-0">
+      <ol className="orderlist">
         {order.map((stepIdx, pos) => (
           <li
             key={stepIdx}
@@ -49,11 +49,11 @@ export function OrderGameView({ game, onDone }: { game: OrderGame; onDone: (corr
         ))}
       </ol>
       {!checked ? (
-        <button type="button" className="pill mt-4" onClick={() => setChecked(true)}>sprawdź ✅</button>
+        <button type="button" className="pill mt-4" onClick={() => setChecked(true)}>Sprawdź</button>
       ) : (
         <>
-          <div className={cn("exfb", correct === steps.length ? "ok" : "bad")} role="status">{correct === steps.length ? "✅ Idealna kolejność." : `${correct}/${steps.length} na miejscu. Dobra kolejność: ${steps.map((s, i) => `${i + 1}. ${s}`).join(" → ")}`}</div>
-          <button type="button" className="pill mt-3 pop" onClick={() => onDone(correct, steps.length)}>dalej →</button>
+          <div className={cn("exfb", correct === steps.length ? "ok" : "bad")} role="status">{correct === steps.length ? "Idealna kolejność." : `${correct}/${steps.length} na miejscu. Dobra kolejność: ${steps.map((s, i) => `${i + 1}. ${s}`).join(" → ")}`}</div>
+          <button type="button" className="pill mt-3 pop" onClick={() => onDone(correct, steps.length)}>Dalej</button>
         </>
       )}
     </div>

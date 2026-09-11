@@ -35,13 +35,13 @@ export function ClozeGameView({ game, onDone }: { game: ClozeGame; onDone: (corr
       </div>
       <div className="tiles" role="group" aria-label="Opcje">
         {options.map((o) => (
-          <button type="button" key={o} className={cn("tile", picked !== null && o === it.answer && "ok", picked === o && !ok && "bad")} disabled={picked !== null} onClick={() => { setPicked(o); if (o.trim().toLowerCase() === it.answer.trim().toLowerCase()) setScore((s) => s + 1); }}>{o}</button>
+          <button type="button" key={o} className={cn("gtile", picked !== null && o === it.answer && "ok", picked === o && !ok && "bad")} disabled={picked !== null} onClick={() => { setPicked(o); if (o.trim().toLowerCase() === it.answer.trim().toLowerCase()) setScore((s) => s + 1); }}>{o}</button>
         ))}
       </div>
       {picked !== null && (
         <>
-          <div className={cn("exfb", ok ? "ok" : "bad")} role="status">{ok ? "✅ Dokładnie tak." : <>Poprawnie: <b>{it.answer}</b></>}{it.e ? ` ${it.e}` : ""}</div>
-          <button type="button" className="pill mt-3 pop" onClick={next}>{idx + 1 >= items.length ? "dalej →" : "następne →"}</button>
+          <div className={cn("exfb", ok ? "ok" : "bad")} role="status">{ok ? "Dokładnie tak." : <>Poprawnie: <b>{it.answer}</b></>}{it.e ? ` ${it.e}` : ""}</div>
+          <button type="button" className="pill mt-3 pop" onClick={next}>{idx + 1 >= items.length ? "Dalej" : "Następne"}</button>
         </>
       )}
     </div>

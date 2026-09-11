@@ -12,11 +12,11 @@ import { InfoTab } from "@/components/topic/info";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  ["path", "🗺️ Ścieżka"],
-  ["fiszki", "🎴 Fiszki"],
-  ["quiz", "🧠 Quiz"],
-  ["egzamin", "🎯 Egzamin"],
-  ["info", "📋 Info"],
+  ["path", "Ścieżka"],
+  ["fiszki", "Fiszki"],
+  ["quiz", "Quiz"],
+  ["egzamin", "Egzamin"],
+  ["info", "Info"],
 ] as const;
 type Tab = (typeof TABS)[number][0];
 
@@ -31,8 +31,16 @@ export function TopicShell({ topic, subject }: { topic: Topic; subject: Subject 
 
   return (
     <SubjectTheme s={subject}>
-      <TopBar back={`/app/s/${subject.id}`} title={<>{topic.emoji} <span className="g">{topic.short || topic.name}</span></>} xp={xp} />
-      <div className="px-4 -mt-1 mb-1 text-muted text-xs font-bold">{subject.emoji} {subject.name}</div>
+      <TopBar back={`/app/s/${subject.id}`} title={<span className="subline">Temat</span>} xp={xp} />
+      <div className="glow-head px-4 pt-5 pb-1">
+        <div className="flex items-center gap-4">
+          <div className="tile lg" aria-hidden="true">{topic.emoji}</div>
+          <div className="min-w-0">
+            <div className="eyebrow mb-1">{subject.name}</div>
+            <h1 style={{ fontSize: 24 }}>{topic.name}</h1>
+          </div>
+        </div>
+      </div>
       <div className="subtabs" role="tablist" aria-label="Sekcje tematu">
         {TABS.map(([k, label]) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} className={cn("subtab", tab === k && "active")} onClick={() => go(k)}>{label}</button>

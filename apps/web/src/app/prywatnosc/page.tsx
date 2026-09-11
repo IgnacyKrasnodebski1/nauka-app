@@ -5,10 +5,10 @@ export const metadata: Metadata = { title: "Polityka prywatności" };
 
 export default function Prywatnosc() {
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh land">
       <LandingHeader />
-      <main className="mx-auto max-w-2xl px-4 py-8 prose">
-        <h1 className="text-3xl font-black tracking-tight mb-6">Polityka prywatności</h1>
+      <main className="land-wrap !max-w-3xl py-12 prose">
+        <h1 className="mb-8">Polityka prywatności</h1>
         <h2>Jakie dane zbieramy</h2>
         <ul>
           <li>Konto: adres e-mail, nazwa wyświetlana, etap edukacji.</li>

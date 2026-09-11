@@ -69,7 +69,7 @@ export function ExamTab({ topics, grading: gradingProp }: { topics: Topic[]; gra
       if (topics.length === 1 && (progressOf(target).bestExam ?? 0) < pct) setProgress(target, { ...progressOf(target), bestExam: pct });
     }
     logActivity(gained, Math.max(1, Math.round((Date.now() - startedAt.current) / 60000)));
-    toast(pass ? `zdane! ocena ${gradeFor(pct, grading)} 🎉 +${gained}xp` : "niezaliczone 💀");
+    toast(pass ? `Zdane · ocena ${gradeFor(pct, grading)} · +${gained} XP` : "Niezaliczone");
     setPhase("done");
   }
 
@@ -77,18 +77,17 @@ export function ExamTab({ topics, grading: gradingProp }: { topics: Topic[]; gra
 
   if (phase === "intro")
     return (
-      <div className="result">
-        <div className="big">🎯</div>
-        <h2>Egzamin{topics.length > 1 ? " z całego przedmiotu" : ""}</h2>
-        <div className="specs">
-          <div className="spec">{N}<small>losowych</small></div>
-          <div className="spec">{lim}:00<small>na czas</small></div>
-          <div className="spec">{grading.pass}%<small>zalicza</small></div>
+      <div className="card mt-2">
+        <span className="tag">Egzamin próbny</span>
+        <h2>{topics.length > 1 ? "Cały przedmiot" : "Ten temat"}</h2>
+        <p className="mt-1">Bez podpowiedzi w trakcie. Na końcu procent, ocena wg siatki i przegląd błędów.</p>
+        <div className="specs !justify-start mt-4">
+          <div className="spec"><b>{N}</b><small>pytań</small></div>
+          <div className="spec"><b>{lim}:00</b><small>czas</small></div>
+          <div className="spec"><b>{grading.pass}%</b><small>zalicza</small></div>
         </div>
-        <p>Bez podpowiedzi w trakcie. Na końcu % i ocena wg siatki + przegląd błędów.</p>
-        <button type="button" className="pill" onClick={() => begin(N, lim)}>symulacja — {N} losowych 🎲</button>
-        <button type="button" className="pill ghost" onClick={() => begin(total, fullLim)}>📋 Test końcowy — WSZYSTKIE {total} pytań</button>
-        <p className="!text-[13px]">Test końcowy = każde pytanie{topics.length > 1 ? " ze wszystkich tematów" : " z tematu"}, w losowej kolejności ({fullLim}:00).</p>
+        <button type="button" className="pill mt-5" onClick={() => begin(N, lim)}>Symulacja · {N} losowych</button>
+        <button type="button" className="pill ghost mt-2" onClick={() => begin(total, fullLim)}>Test końcowy · wszystkie {total} pytań ({fullLim}:00)</button>
       </div>
     );
 
@@ -104,8 +103,8 @@ export function ExamTab({ topics, grading: gradingProp }: { topics: Topic[]; gra
         <div className="progressrow"><div className="bar"><i style={{ width: `${(idx / pool.length) * 100}%` }} /></div></div>
         <QuestionCard q={q} tag={q.lvl} picked={picks[idx] ?? null} reveal={false} onPick={(i) => setPicks((p) => p.map((v, j) => (j === idx ? i : v)))}>
           <div className="flex gap-2.5 mt-4">
-            {idx > 0 && <button type="button" className="pill ghost flex-1" onClick={() => setIdx((i) => i - 1)}>← wstecz</button>}
-            <button type="button" className="pill flex-[2]" onClick={() => (last ? finish() : setIdx((i) => i + 1))}>{last ? "zakończ i sprawdź 🏁" : "dalej →"}</button>
+            {idx > 0 && <button type="button" className="pill ghost flex-1" onClick={() => setIdx((i) => i - 1)}>Wstecz</button>}
+            <button type="button" className="pill flex-[2]" onClick={() => (last ? finish() : setIdx((i) => i + 1))}>{last ? "Zakończ i sprawdź" : "Dalej"}</button>
           </div>
         </QuestionCard>
       </div>
@@ -117,16 +116,16 @@ export function ExamTab({ topics, grading: gradingProp }: { topics: Topic[]; gra
     <div>
       {r.pass && <Confetti />}
       <div className="result">
-        <div className="big">{r.pct >= 90 ? "👑" : r.pct >= 70 ? "🔥" : r.pass ? "😮‍💨" : "💀"}</div>
-        <h2>Ocena: {r.grade}</h2>
-        <div className="score">Trafione <b>{r.correct}/{pool.length}</b> ({r.pct}%)</div>
-        <p>{r.pass ? "Zdane! 🎉" : "Poniżej progu — wróć do ścieżki i fiszek."}</p>
-        <button type="button" className="pill" onClick={() => setPhase("intro")}>jeszcze raz 🔁</button>
+        <span className="tag">Ocena</span>
+        <div className="xpbig">{r.grade}</div>
+        <div className="score">Trafione <b>{r.correct}/{pool.length}</b> · {r.pct}%</div>
+        <p>{r.pass ? "Zdane." : "Poniżej progu — wróć do ścieżki i fiszek."}</p>
+        <button type="button" className="pill" onClick={() => setPhase("intro")}>Jeszcze raz</button>
       </div>
       <div className="review">
         <h3>Przegląd błędów ({r.wrong.length})</h3>
         {r.wrong.length === 0 ? (
-          <div className="ritem rgood">Zero błędów. Clean sweep 🧼</div>
+          <div className="ritem rgood">Zero błędów.</div>
         ) : (
           r.wrong.map((w, i) => (
             <div className="ritem" key={i}>

@@ -19,7 +19,7 @@ export function QuestionCard({ q, tag, picked, reveal, onPick, children }: { q: 
           );
         })}
       </div>
-      {reveal && <div className="explain" role="status"><b>czemu:</b> {q.e}</div>}
+      {reveal && <div className="explain" role="status"><b>Dlaczego:</b> {q.e}</div>}
       {children}
     </div>
   );

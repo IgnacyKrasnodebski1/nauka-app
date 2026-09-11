@@ -1,8 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
+import { hueOf } from "@/lib/hue";
 
-/** Applies a subject's gradient accent via CSS vars (same mechanism as legacy applyTheme). */
-export function SubjectTheme({ s, children, className }: { s: { accent: string; accent2: string }; children: ReactNode; className?: string }) {
-  const style = { "--accent": s.accent, "--accent2": s.accent2 } as CSSProperties;
+/** Sets the subject hue (`--hue`) for rings, progress, glow and active path nodes. */
+export function SubjectTheme({ s, children, className }: { s: { name: string; accent2?: string | null }; children: ReactNode; className?: string }) {
+  const style = { "--hue": hueOf(s) } as CSSProperties;
   return (
     <div style={style} className={className}>
       {children}

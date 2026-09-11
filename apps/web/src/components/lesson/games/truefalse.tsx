@@ -31,7 +31,8 @@ export function TrueFalseGameView({ game, onDone }: { game: TrueFalseGame; onDon
 
   return (
     <div>
-      <div className="exprompt">{game.title || "Prawda czy fałsz?"} · {idx + 1}/{items.length} · przesuń kartę albo tapnij</div>
+      <div className="exprompt">{game.title || "Prawda czy fałsz?"} · {idx + 1}/{items.length}</div>
+      <p className="text-muted text-sm mb-3">Przesuń kartę albo tapnij.</p>
       <div
         className={cn("tfcard", swipe && `swipe-${swipe}`)}
         style={!swipe ? { transform: `translateX(${dx}px) rotate(${dx / 20}deg)` } : undefined}
@@ -43,13 +44,13 @@ export function TrueFalseGameView({ game, onDone }: { game: TrueFalseGame; onDon
         {it.s}
       </div>
       <div className="fbtns mt-3">
-        <button type="button" className="fbtn no" onClick={() => pick(false)} disabled={answer !== null}>← fałsz ❌</button>
-        <button type="button" className="fbtn yes" onClick={() => pick(true)} disabled={answer !== null}>prawda ✅ →</button>
+        <button type="button" className="fbtn no" onClick={() => pick(false)} disabled={answer !== null}>← Fałsz</button>
+        <button type="button" className="fbtn yes" onClick={() => pick(true)} disabled={answer !== null}>Prawda →</button>
       </div>
       {answer !== null && (
         <>
-          <div className={cn("exfb", ok ? "ok" : "bad")} role="status">{ok ? "✅ Zgadza się." : `❌ To ${it.v ? "prawda" : "fałsz"}.`}{it.e ? ` ${it.e}` : ""}</div>
-          <button type="button" className="pill mt-3 pop" onClick={next}>{idx + 1 >= items.length ? "dalej →" : "następne →"}</button>
+          <div className={cn("exfb", ok ? "ok" : "bad")} role="status">{ok ? "Zgadza się." : `To ${it.v ? "prawda" : "fałsz"}.`}{it.e ? ` ${it.e}` : ""}</div>
+          <button type="button" className="pill mt-3 pop" onClick={next}>{idx + 1 >= items.length ? "Dalej" : "Następne"}</button>
         </>
       )}
     </div>

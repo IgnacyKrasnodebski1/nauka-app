@@ -5,6 +5,7 @@ import { buildDailySession, markWeak, newCard, review, XP, type DailySession, ty
 import { useApp } from "@/lib/store/app-context";
 import { QuestionCard } from "@/components/topic/question";
 import { Confetti } from "@/components/lesson/confetti";
+import { XpCounter } from "@/components/lesson/xp-counter";
 import { cn } from "@/lib/utils";
 
 /** `/app/today` — waits for the store, then runs the session (built once, not on every progress write). */
@@ -69,8 +70,8 @@ function SessionRunner({ topics }: { topics: Topic[] }) {
     if (qi >= 0) setWeak(markWeak(weak, item.topicId, q.levelId, ok ? [] : [qi], ok ? [qi] : []), item.topicId);
     if (ok) {
       earn(item.topicId, XP.quizCorrect);
-      toast(`GIT +${XP.quizCorrect}xp 🟢`);
-    } else toast("jeszcze raz jutro 👇");
+      toast(`+${XP.quizCorrect} XP`);
+    } else toast("Wróci jutro");
   };
 
   const total = items.length;
@@ -81,54 +82,54 @@ function SessionRunner({ topics }: { topics: Topic[] }) {
       <div className="lessonhead">
         <Link href="/app" className="x" aria-label="Zamknij sesję">✕</Link>
         <div className="bar" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100}><i style={{ width: `${done ? 100 : pct}%` }} /></div>
-        <span className="counter">⚡ dziś</span>
+        <span className="eyebrow">Dziś</span>
       </div>
       <div className="flex-1 px-4 pb-4 flex flex-col">
         {done || (!item && !session.newLevel) ? (
           <>
-            {gained > 0 && <Confetti n={40} />}
+            {gained > 0 && <Confetti n={30} />}
             <div className="flex-1 result">
-              <div className="big pop">{total === 0 && !session.newLevel ? "🫥" : "🎉"}</div>
+              <span className="tag">Dzisiejsza sesja</span>
+              {total > 0 ? <XpCounter value={gained} /> : <div className="tile lg neutral" aria-hidden="true">📚</div>}
               <h2>{total === 0 && !session.newLevel ? "Na dziś pusto" : "Sesja zrobiona"}</h2>
-              {total > 0 && <div className="streak">⚡ +{gained} <small>xp</small></div>}
-              <p>{total === 0 && !session.newLevel ? "Dodaj temat w przedmiocie — jutro pojawią się tu powtórki." : session.newLevel ? "Zostało jeszcze jedno: nowy poziom. Wchodzisz?" : "Powtórki zaliczone. Do zobaczenia jutro 🔥"}</p>
+              <p>{total === 0 && !session.newLevel ? "Dodaj temat w przedmiocie — jutro pojawią się tu powtórki." : session.newLevel ? "Zostało jeszcze jedno: nowy poziom. Wchodzisz?" : "Powtórki zaliczone. Do zobaczenia jutro."}</p>
             </div>
-            <div className="lessonfoot !px-0 flex flex-col gap-2.5">
-              {session.newLevel && <Link href={`/app/t/${session.newLevel.topicId}/l/${session.newLevel.levelId}`} className="pill">🆕 {session.newLevel.title} →</Link>}
-              <Link href="/app" className="pill ghost">wróć na start</Link>
+            <div className="lessonfoot flex flex-col gap-2.5">
+              {session.newLevel && <Link href={`/app/t/${session.newLevel.topicId}/l/${session.newLevel.levelId}`} className="pill">Nowy poziom: {session.newLevel.title}</Link>}
+              <Link href="/app" className="pill ghost">Wróć na start</Link>
             </div>
           </>
         ) : !item ? (
           <>
             <div className="flex-1 result">
-              <div className="big">🆕</div>
+              <div className="tile lg" aria-hidden="true">✦</div>
               <h2>Nowy poziom</h2>
               <p>Powtórek dziś brak — czas na coś nowego: <b>{session.newLevel!.title}</b>.</p>
             </div>
-            <div className="lessonfoot !px-0"><Link href={`/app/t/${session.newLevel!.topicId}/l/${session.newLevel!.levelId}`} className="pill">lecimy →</Link></div>
+            <div className="lessonfoot"><Link href={`/app/t/${session.newLevel!.topicId}/l/${session.newLevel!.levelId}`} className="pill">Lecimy</Link></div>
           </>
         ) : item.kind === "review" && item.card ? (
           <>
-            <div className="progressrow"><div className="counter">🎴 powtórka {i + 1}/{total} · {byId[item.topicId]?.name}</div></div>
+            <div className="progressrow"><div className="counter">Powtórka {i + 1}/{total} · {byId[item.topicId]?.name}</div></div>
             <div className={cn("flip mb-3", flipped && "flipped")}>
               <div className="flipinner" onClick={() => setFlipped((f) => !f)} role="button" tabIndex={0} onKeyDown={(e) => (e.key === " " || e.key === "Enter") && (e.preventDefault(), setFlipped((f) => !f))} aria-label="Odwróć fiszkę">
-                <div className="face front"><span className="tag">{byId[item.topicId]?.name}</span><div className="term">{item.card.t}</div><div className="tapomat">tapnij = odpowiedź 👀</div></div>
-                <div className="face back"><span className="tag">odpowiedź ✅</span><div className="deftxt" dangerouslySetInnerHTML={{ __html: item.card.d }} /><div className="tapomat">tapnij = wróć ↩</div></div>
+                <div className="face front"><span className="tag">{byId[item.topicId]?.name}</span><div className="term">{item.card.t}</div><div className="tapomat">tapnij, żeby odwrócić</div></div>
+                <div className="face back"><span className="tag hue">Odpowiedź</span><div className="deftxt" dangerouslySetInnerHTML={{ __html: item.card.d }} /><div className="tapomat">tapnij, żeby wrócić</div></div>
               </div>
             </div>
             <div className="fbtns">
-              <button type="button" className="fbtn no" onClick={() => grade(0)}>nie 😵</button>
-              <button type="button" className="fbtn mid" onClick={() => grade(1)}>trudne 🤔</button>
-              <button type="button" className="fbtn yes" onClick={() => grade(2)}>dobrze 👍</button>
-              <button type="button" className="fbtn yes" onClick={() => grade(3)}>easy 😎</button>
+              <button type="button" className="fbtn no" onClick={() => grade(0)}>Nie</button>
+              <button type="button" className="fbtn mid" onClick={() => grade(1)}>Trudne</button>
+              <button type="button" className="fbtn yes" onClick={() => grade(2)}>Dobrze</button>
+              <button type="button" className="fbtn yes" onClick={() => grade(3)}>Łatwe</button>
             </div>
           </>
         ) : item.question ? (
           <>
             <div className="flex-1">
-              <QuestionCard q={item.question} tag={`🎯 słabe ${i + 1}/${total} · ${byId[item.topicId]?.name ?? ""}`} picked={picked} reveal={picked !== null} onPick={answer} />
+              <QuestionCard q={item.question} tag={`Słabe ${i + 1}/${total} · ${byId[item.topicId]?.name ?? ""}`} picked={picked} reveal={picked !== null} onPick={answer} />
             </div>
-            {picked !== null && <div className="lessonfoot !px-0"><button type="button" className="pill pop" onClick={next}>{i + 1 >= total ? "koniec 🏁" : "dalej →"}</button></div>}
+            {picked !== null && <div className="lessonfoot"><button type="button" className="pill pop" onClick={next}>{i + 1 >= total ? "Koniec" : "Dalej"}</button></div>}
           </>
         ) : null}
       </div>

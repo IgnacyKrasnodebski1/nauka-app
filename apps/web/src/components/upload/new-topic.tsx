@@ -121,21 +121,22 @@ export function NewTopic({ subject, mode }: { subject: Subject; mode: "materials
 
   return (
     <SubjectTheme s={subject}>
-      <TopBar back={`/app/s/${subject.id}`} title={<>{mode === "prompt" ? "✍️" : "📸"} <span className="g">Nowy temat</span></>} />
-      <div className="px-4 pb-8">
-        <div className="text-muted text-sm mb-3">{subject.emoji} {subject.name} · {mode === "prompt" ? "z hasła" : "z materiałów"} ·{" "}
-          <Link className="underline" href={`/app/s/${subject.id}/new?mode=${mode === "prompt" ? "materials" : "prompt"}`}>{mode === "prompt" ? "mam materiały" : "wolę wpisać hasło"}</Link>
+      <TopBar back={`/app/s/${subject.id}`} title="Nowy temat" sub={subject.name} />
+      <div className="glow-head px-4 pt-5 pb-8">
+        <div className="chips mb-2" role="tablist" aria-label="Źródło">
+          <Link href={`/app/s/${subject.id}/new?mode=materials`} className={cn("chip", mode === "materials" && "active")} role="tab" aria-selected={mode === "materials"}>📸 Z materiałów</Link>
+          <Link href={`/app/s/${subject.id}/new?mode=prompt`} className={cn("chip", mode === "prompt" && "active")} role="tab" aria-selected={mode === "prompt"}>✍️ Z hasła</Link>
         </div>
         {busy ? (
           <div className="result mt-10" aria-live="polite">
-            <div className="big"><span className="spinner !w-14 !h-14 !border-4" /></div>
+            <span className="spinner !w-12 !h-12 !border-[3px]" />
             <h2>Robię z tego temat</h2>
             <p className="pop" key={funIdx}>{busy.startsWith("wysyłam") ? busy : fun[funIdx % fun.length]}</p>
             <p className="!text-[13px]">To trwa zwykle 1–3 minuty. Nie zamykaj karty.</p>
           </div>
         ) : (
           <form onSubmit={submit} className="space-y-5">
-            {me && <div className="text-sm text-muted">Plan <b className="text-txt">{limits.label}</b> · zostało <b className="text-txt">{left}</b> z {limits.generationsPerMonth} generacji w tym miesiącu</div>}
+            {me && <div className="text-sm text-muted">Plan <b>{limits.label}</b> · zostało <b>{left}</b> z {limits.generationsPerMonth} tematów w tym miesiącu</div>}
 
             {mode === "materials" ? (
               <>
@@ -150,15 +151,15 @@ export function NewTopic({ subject, mode }: { subject: Subject; mode: "materials
                   onKeyDown={(e) => e.key === "Enter" && input.current?.click()}
                   aria-label="Dodaj pliki"
                 >
-                  <div className="text-4xl mb-2">📸📄</div>
-                  <div className="font-black text-txt">Przeciągnij pliki albo kliknij</div>
+                  <div className="tile mx-auto mb-3" aria-hidden="true">📸</div>
+                  <div className="display font-bold text-txt text-[16px]">Przeciągnij pliki albo kliknij</div>
                   <div className="text-xs mt-1">zdjęcia, PDF, txt · max {limits.filesPerGeneration} plików · do {limits.maxFileMb} MB każdy</div>
                   <input ref={input} type="file" multiple accept={ACCEPTED_MIME.join(",")} className="hidden" onChange={(e) => e.target.files && addFiles(e.target.files)} />
                 </div>
                 {files.length > 0 && (
                   <ul className="space-y-2">
                     {files.map((f) => (
-                      <li key={f.name + f.size} className="flex items-center gap-3 card !p-3 text-sm">
+                      <li key={f.name + f.size} className="flex items-center gap-3 card raised !p-3 text-sm">
                         <span aria-hidden="true">{f.type.startsWith("image/") ? "🖼️" : f.type === "application/pdf" ? "📄" : "📝"}</span>
                         <span className="flex-1 truncate">{f.name}</span>
                         <span className="text-muted">{(f.size / 1024 / 1024).toFixed(1)} MB</span>
@@ -187,16 +188,16 @@ export function NewTopic({ subject, mode }: { subject: Subject; mode: "materials
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="label" htmlFor="levels">Liczba poziomów: {levels}</label>
-                <input id="levels" type="range" min={2} max={6} value={levels} onChange={(e) => setLevels(Number(e.target.value))} className="w-full accent-[var(--accent2)]" />
+                <input id="levels" type="range" min={2} max={6} value={levels} onChange={(e) => setLevels(Number(e.target.value))} className="w-full" />
               </div>
-              <label className="card !p-3 flex items-center gap-3 cursor-pointer">
-                <input type="checkbox" checked={lang} onChange={(e) => setLang(e.target.checked)} className="w-5 h-5 accent-[var(--accent2)]" />
-                <span className="text-sm font-bold">🌍 Język obcy<br /><span className="text-muted font-semibold text-xs">fiszki = słówka</span></span>
+              <label className="switchcard">
+                <input type="checkbox" checked={lang} onChange={(e) => setLang(e.target.checked)} className="w-5 h-5" />
+                <span className="text-sm font-semibold text-txt">Język obcy<br /><span className="text-muted font-medium text-xs">fiszki = słówka</span></span>
               </label>
             </div>
 
             {err && <div className="exfb bad" role="alert">{err}</div>}
-            <button type="submit" className="pill" disabled={!canSubmit}>Generuj temat 🚀</button>
+            <button type="submit" className="pill" disabled={!canSubmit}>Generuj temat</button>
             {mode === "materials" && <p className="text-[12px] text-muted text-center">Wrzucaj tylko materiały, do których masz prawo. AI uczy wyłącznie z tego, co wrzucisz.</p>}
           </form>
         )}

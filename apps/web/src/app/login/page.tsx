@@ -9,11 +9,13 @@ export const dynamic = "force-dynamic";
 export default function LoginPage() {
   return (
     <main className="min-h-dvh flex flex-col">
-      <div className="topbar mx-auto w-full max-w-md">
-        <Link href="/" className="logo">📚 <span className="g">NAUKA</span></Link>
-        <Link href="/" className="text-sm font-bold text-muted">← strona główna</Link>
+      <div className="land-header">
+        <div className="land-wrap flex items-center justify-between h-14">
+          <Link href="/" className="logo">NAUKA</Link>
+          <Link href="/" className="text-sm font-semibold text-muted hover:text-txt">Strona główna</Link>
+        </div>
       </div>
-      <div className="flex-1 flex items-start sm:items-center justify-center px-4 py-6">
+      <div className="flex-1 flex items-start sm:items-center justify-center px-4 py-8 glow-head glow-gold">
         <Suspense fallback={null}>
           <LoginForm />
         </Suspense>

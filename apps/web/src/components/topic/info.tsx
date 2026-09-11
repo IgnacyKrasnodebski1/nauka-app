@@ -3,11 +3,10 @@ import type { Topic } from "@nauka/shared";
 export function InfoTab({ topic }: { topic: Topic }) {
   return (
     <div className="pb-8">
-      <div className="hero !pb-2">
-        <h1>{topic.emoji} {topic.name}</h1>
-        <p>{topic.tagline}</p>
+      <div className="hero !pb-3">
+        <p className="!mt-0 !text-[15px] !text-[var(--text-soft)]">{topic.tagline}</p>
+        <div className="eyebrow mt-3">źródło: {topic.source === "prompt" ? "hasło (podstawa programowa)" : "Twoje materiały"}</div>
       </div>
-      <div className="text-muted text-xs mb-3">źródło: {topic.source === "prompt" ? "✍️ z hasła (podstawa programowa)" : "📸 z Twoich materiałów"}</div>
       {topic.info ? <div dangerouslySetInnerHTML={{ __html: topic.info }} /> : <div className="zbox"><p>Brak dodatkowych informacji.</p></div>}
       <div className="zbox">
         <h3>Siatka ocen</h3>

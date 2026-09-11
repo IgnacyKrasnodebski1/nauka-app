@@ -18,4 +18,4 @@ export function GameView({ game, onDone }: { game: MiniGame; onDone: (correct: n
   }
 }
 
-export const GAME_LABEL: Record<MiniGame["type"], string> = { match: "🔗 Pary", cloze: "✍️ Luka", truefalse: "⚖️ Prawda/fałsz", order: "🔢 Kolejność" };
+export const GAME_LABEL: Record<MiniGame["type"], string> = { match: "Pary", cloze: "Luka", truefalse: "Prawda / fałsz", order: "Kolejność" };

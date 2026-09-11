@@ -5,10 +5,10 @@ export const metadata: Metadata = { title: "Regulamin" };
 
 export default function Regulamin() {
   return (
-    <div className="min-h-dvh">
+    <div className="min-h-dvh land">
       <LandingHeader />
-      <main className="mx-auto max-w-2xl px-4 py-8 prose">
-        <h1 className="text-3xl font-black tracking-tight mb-6">Regulamin serwisu NAUKA</h1>
+      <main className="land-wrap !max-w-3xl py-12 prose">
+        <h1 className="mb-8">Regulamin serwisu NAUKA</h1>
         <h2>1. Czym jest NAUKA</h2>
         <p>NAUKA to aplikacja do nauki, która na podstawie materiałów przesłanych przez użytkownika generuje treści edukacyjne (poziomy, fiszki, quizy, mini-gry) z pomocą modeli AI. Usługa jest dostępna w wersji bezpłatnej (Free) i płatnej (Pro).</p>
         <h2>2. Konto</h2>

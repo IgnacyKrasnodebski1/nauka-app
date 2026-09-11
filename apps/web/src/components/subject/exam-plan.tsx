@@ -34,17 +34,20 @@ export function ExamPlan({ subject, topics }: { subject: Subject; topics: Topic[
 
   if (!subject.examDate && !editing)
     return (
-      <div className="card mb-4">
-        <h3>📅 Mam sprawdzian</h3>
-        <p className="mb-3">Podaj datę, a rozłożymy poziomy na dni i dorzucimy symulację dzień wcześniej.</p>
-        <button type="button" className="pill ghost" onClick={() => setEditing(true)}>Ustaw datę sprawdzianu</button>
+      <div className="card mb-4 flex items-center gap-4">
+        <div className="tile sm neutral" aria-hidden="true">📅</div>
+        <div className="flex-1 min-w-0">
+          <h3>Mam sprawdzian</h3>
+          <p>Podaj datę — rozłożymy poziomy na dni.</p>
+        </div>
+        <button type="button" className="pill ghost sm" onClick={() => setEditing(true)}>Ustaw</button>
       </div>
     );
 
   if (editing)
     return (
       <form className="card mb-4 space-y-3" onSubmit={(e) => { e.preventDefault(); save(); }}>
-        <h3>📅 Sprawdzian</h3>
+        <span className="tag">Sprawdzian</span>
         <div>
           <label className="label" htmlFor="exam-date">Data</label>
           <input id="exam-date" type="date" className="input" required min={todayStr()} value={date} onChange={(e) => setDate(e.target.value)} />
@@ -67,22 +70,23 @@ export function ExamPlan({ subject, topics }: { subject: Subject; topics: Topic[
     <div className="card mb-4">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h3>📅 {subject.examLabel || "Sprawdzian"}</h3>
+          <span className="tag">Sprawdzian</span>
+          <h3>{subject.examLabel || "Sprawdzian"}</h3>
           <p>{n < 0 ? `${-n} dni temu — jak poszło?` : n === 0 ? "DZIŚ. Powodzenia 🍀" : `za ${n} ${n === 1 ? "dzień" : "dni"} · ${plan?.levelsLeft ?? "…"} poziomów do zrobienia`}</p>
         </div>
         <button type="button" className="chip" onClick={() => setEditing(true)}>zmień</button>
       </div>
       {plan && n >= 0 && topics.length > 0 && (
-        <ol className="mt-3 space-y-2 list-none p-0 m-0">
+        <ol className="mt-4 list-none p-0 m-0 divide-y divide-[var(--line)]">
           {plan.days.slice(0, 7).map((d, i) => (
-            <li key={d.date} className="text-sm flex gap-3">
-              <span className="font-black w-[64px] shrink-0 text-muted">{i === 0 ? "dziś" : fmtDay(d.date)}</span>
+            <li key={d.date} className="text-sm flex gap-3 py-2.5">
+              <span className="eyebrow w-[64px] shrink-0 pt-0.5">{i === 0 ? "dziś" : fmtDay(d.date)}</span>
               <span className="flex-1 flex flex-wrap gap-x-2 gap-y-1">
                 {d.tasks.map((t, k) =>
                   t.kind === "level" ? (
-                    <Link key={k} href={`/app/t/${t.topicId}/l/${t.levelId}`} className="underline">📘 {t.label}</Link>
+                    <Link key={k} href={`/app/t/${t.topicId}/l/${t.levelId}`} className="hue font-semibold">{t.label}</Link>
                   ) : (
-                    <span key={k} className="text-muted">{t.kind === "exam" ? "🎯" : "🎴"} {t.label}</span>
+                    <span key={k} className="text-muted">{t.label}</span>
                   ),
                 )}
               </span>

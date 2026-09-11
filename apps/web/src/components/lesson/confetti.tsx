@@ -1,7 +1,5 @@
 "use client";
-import { useMemo } from "react";
-
-const COLORS = ["#ff2d95", "#a855f7", "#22d3ee", "#aaff00", "#ff7a00", "#1ed760"];
+import { useMemo, type CSSProperties } from "react";
 
 /** Deterministic pseudo-random in [0,1) — keeps render pure while still looking scattered. */
 const pr = (i: number, k: number) => {
@@ -9,16 +7,21 @@ const pr = (i: number, k: number) => {
   return x - Math.floor(x);
 };
 
-/** Lightweight CSS confetti burst (no deps). */
-export function Confetti({ n = 60 }: { n?: number }) {
+/** Restrained confetti burst: max 40 particles in the subject hue + gold, 1.2 s, radiating from the centre. */
+export function Confetti({ n = 40 }: { n?: number }) {
   const bits = useMemo(
-    () => Array.from({ length: n }, (_, i) => ({ left: pr(i, 1) * 100, delay: pr(i, 2) * 0.8, color: COLORS[i % COLORS.length]!, dur: 1.8 + pr(i, 3) * 1.2, rot: pr(i, 4) * 360 })),
+    () =>
+      Array.from({ length: Math.min(40, n) }, (_, i) => {
+        const angle = pr(i, 1) * Math.PI * 2;
+        const dist = 120 + pr(i, 2) * 220;
+        return { dx: Math.cos(angle) * dist, dy: Math.sin(angle) * dist + 160, color: i % 3 === 0 ? "var(--accent)" : "var(--hue)", delay: pr(i, 3) * 0.15, scale: 0.7 + pr(i, 4) * 0.6 };
+      }),
     [n],
   );
   return (
     <div className="confetti" aria-hidden="true">
       {bits.map((b, i) => (
-        <i key={i} style={{ left: `${b.left}%`, background: b.color, animationDelay: `${b.delay}s`, animationDuration: `${b.dur}s`, transform: `rotate(${b.rot}deg)` }} />
+        <i key={i} style={{ "--dx": `${b.dx}px`, "--dy": `${b.dy}px`, background: b.color, animationDelay: `${b.delay}s`, transform: `scale(${b.scale})` } as CSSProperties} />
       ))}
     </div>
   );

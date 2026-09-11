@@ -37,7 +37,8 @@ export function MatchGameView({ game, onDone }: { game: MatchGame; onDone: (corr
 
   return (
     <div>
-      <div className="exprompt">{game.title || "Połącz w pary"} · tapnij z lewej, potem z prawej</div>
+      <div className="exprompt">{game.title || "Połącz w pary"}</div>
+      <p className="text-muted text-sm mb-3">Tapnij z lewej, potem z prawej.</p>
       <div className="matchwrap">
         <div className="mcol">
           {left.map((o) => (
@@ -50,7 +51,7 @@ export function MatchGameView({ game, onDone }: { game: MatchGame; onDone: (corr
           ))}
         </div>
       </div>
-      <div className="counter mt-3 text-center">{done.size}/{pairs.length} par · pomyłki: {misses}</div>
+      <div className="counter mt-3">{done.size}/{pairs.length} par · pomyłki: {misses}</div>
     </div>
   );
 }

@@ -39,15 +39,15 @@ export function QuizTab({ topic }: { topic: Topic }) {
     if (i === q.c) {
       setScore((s) => s + 1);
       addXp(topic.id, XP.quizCorrect);
-      toast(`GIT +${XP.quizCorrect}xp 🟢`);
-    } else toast("mid, czytaj wyjaśnienie 👇");
+      toast(`+${XP.quizCorrect} XP`);
+    } else toast("Nie tym razem — zerknij na wyjaśnienie");
   };
   const pct = list.length ? Math.round((score / list.length) * 100) : 0;
 
   return (
     <div>
       <div className="chips" role="group" aria-label="Poziomy w quizie">
-        <button type="button" className={cn("chip", allOn && "active")} onClick={() => { setSel(new Set(topic.levels.map((l) => l.id))); restart(); }}>Wszystko 🌀</button>
+        <button type="button" className={cn("chip", allOn && "active")} onClick={() => { setSel(new Set(topic.levels.map((l) => l.id))); restart(); }}>Wszystko</button>
         {topic.levels.map((l) => (
           <button type="button" key={l.id} className={cn("chip", !allOn && sel.has(l.id) && "active")} onClick={() => toggle(l.id)} aria-pressed={sel.has(l.id)}>{l.title}</button>
         ))}
@@ -61,16 +61,16 @@ export function QuizTab({ topic }: { topic: Topic }) {
       ) : !q ? (
         <div className="qcard">
           <div className="result">
-            <div className="big">{pct >= 70 ? "🔥" : pct >= 50 ? "😎" : "💀"}</div>
+            <div className="xpbig">{pct}<small>%</small></div>
             <h2>Wynik</h2>
-            <div className="score">Trafione <b>{score}/{list.length}</b> ({pct}%)</div>
+            <div className="score">Trafione <b>{score}/{list.length}</b></div>
             <p>{pct >= 70 ? "Solidnie ogarniasz ten temat." : pct >= 50 ? "Spoko, ale przejedź jeszcze fiszki." : "Wróć do fiszek i ścieżki, potem tu wróć."}</p>
-            <button type="button" className="pill" onClick={restart}>jeszcze raz 🔁</button>
+            <button type="button" className="pill" onClick={restart}>Jeszcze raz</button>
           </div>
         </div>
       ) : (
         <QuestionCard q={q} tag={q.lvl} picked={picked} reveal={picked !== null} onPick={pick}>
-          {picked !== null && <button type="button" className="pill mt-4 pop" onClick={() => { setPicked(null); setIdx((i) => i + 1); }}>{idx + 1 >= list.length ? "wynik 🏁" : "dalej →"}</button>}
+          {picked !== null && <button type="button" className="pill mt-4 pop" onClick={() => { setPicked(null); setIdx((i) => i + 1); }}>{idx + 1 >= list.length ? "Zobacz wynik" : "Dalej"}</button>}
         </QuestionCard>
       )}
     </div>

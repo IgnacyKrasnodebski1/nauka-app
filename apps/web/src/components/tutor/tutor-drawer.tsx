@@ -12,7 +12,7 @@ export function TutorFab({ topic, levelId }: { topic: Topic; levelId: string }) 
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="fab" onClick={() => setOpen(true)} aria-haspopup="dialog">🤖 wytłumacz</button>
+      <button type="button" className="fab" onClick={() => setOpen(true)} aria-haspopup="dialog">✦ Wytłumacz</button>
       {open && <TutorDrawer topic={topic} levelId={levelId} onClose={() => setOpen(false)} />}
     </>
   );
@@ -20,7 +20,7 @@ export function TutorFab({ topic, levelId }: { topic: Topic; levelId: string }) 
 
 function TutorDrawer({ topic, levelId, onClose }: { topic: Topic; levelId: string; onClose: () => void }) {
   const { authHeaders } = useApp();
-  const [msgs, setMsgs] = useState<Msg[]>([{ role: "assistant", content: `Hej! Jestem tutorem od „${topic.short || topic.name}”. Pytaj o cokolwiek z tej lekcji — tłumaczę na przykładach, nie podaję gotowców do quizu 😉` }]);
+  const [msgs, setMsgs] = useState<Msg[]>([{ role: "assistant", content: `Pytaj o cokolwiek z tej lekcji — tłumaczę na przykładach, nie podaję gotowych odpowiedzi do quizu.` }]);
   const [q, setQ] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -66,10 +66,13 @@ function TutorDrawer({ topic, levelId, onClose }: { topic: Topic; levelId: strin
 
   return (
     <div className="fixed inset-0 z-[69] bg-black/50" onClick={onClose}>
-      <div className="drawer mx-auto max-w-[560px]" role="dialog" aria-modal="true" aria-label="Tutor AI" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <div className="font-black">🤖 Tutor · {topic.levels.find((l) => l.id === levelId)?.title}</div>
-          <button type="button" className="lessonhead x" onClick={onClose} aria-label="Zamknij">✕</button>
+      <div className="drawer" role="dialog" aria-modal="true" aria-label="Tutor AI" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[var(--line)]">
+          <div className="min-w-0">
+            <div className="eyebrow">Tutor</div>
+            <div className="display font-bold text-txt truncate">{topic.levels.find((l) => l.id === levelId)?.title}</div>
+          </div>
+          <button type="button" className="backbtn" onClick={onClose} aria-label="Zamknij">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-2 min-h-[200px]">
           {msgs.map((m, i) => (
@@ -82,7 +85,7 @@ function TutorDrawer({ topic, levelId, onClose }: { topic: Topic; levelId: strin
           <form onSubmit={send} className="flex gap-2 p-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
             <label htmlFor="tutor-q" className="sr-only">Pytanie do tutora</label>
             <input id="tutor-q" className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="np. czemu to jest fałsz?" disabled={busy} autoComplete="off" />
-            <button type="submit" className="pill sm" disabled={busy || !q.trim()}>wyślij</button>
+            <button type="submit" className="pill sm" disabled={busy || !q.trim()}>Wyślij</button>
           </form>
         )}
       </div>
