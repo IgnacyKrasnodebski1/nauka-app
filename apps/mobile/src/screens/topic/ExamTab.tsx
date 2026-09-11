@@ -1,13 +1,14 @@
 import { DEFAULT_GRADING, XP, allQuiz, gradeFor, shuffle, type Grading, type QuizQuestion, type Topic } from "@nauka/shared";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { QuizCard } from "@/components/QuizCard";
 import { ResultView, ScoreLine } from "@/components/ResultView";
-import { PillButton, ProgressBar, Spec } from "@/components/ui";
+import { Body, Display, Label, Muted } from "@/components/Text";
+import { Button, Card, MiniPill, ProgressBar } from "@/components/ui";
 import { haptic, useApp } from "@/lib/app-state";
 import { KEYS_ABC } from "@/lib/games";
-import { C, FONT, R } from "@/lib/theme";
+import { COLORS, RADIUS, SPACE, UI, tabular } from "@/lib/theme";
 
 interface Q extends QuizQuestion {
   lvl: string;
@@ -18,10 +19,7 @@ type Phase = "intro" | "run" | "result";
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
-/**
- * Egzamin z jednego tematu albo całego przedmiotu (`topics` > 1 → `pickExam`-style losowanie po wszystkich tematach).
- * N losowych (albo wszystkie) pytań na czas, bez podpowiedzi, ocena wg `grading.scale` (gradeFor).
- */
+/** Egzamin z jednego tematu albo całego przedmiotu: N losowych (albo wszystkie) pytań na czas, ocena wg siatki. */
 export function ExamTab({ topics }: { topics: Topic[] }) {
   const app = useApp();
   const insets = useSafeAreaInsets();
@@ -38,6 +36,7 @@ export function ExamTab({ topics }: { topics: Topic[] }) {
   const [idx, setIdx] = useState(0);
   const [picks, setPicks] = useState<(number | null)[]>([]);
   const [left, setLeft] = useState(0);
+  const [gained, setGained] = useState(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const finishedRef = useRef(false);
   const startedAt = useRef(0);
@@ -76,7 +75,6 @@ export function ExamTab({ topics }: { topics: Topic[] }) {
     if (finishedRef.current) return;
     finishedRef.current = true;
     if (timer.current) clearInterval(timer.current);
-    // per-topic: poprawne, błędne (→ weak), XP
     const byTopic = new Map<string, { correct: number; total: number; wrong: Map<string, number[]>; right: Map<string, number[]> }>();
     pool.forEach((q, i) => {
       const b = byTopic.get(q.topicId) ?? { correct: 0, total: 0, wrong: new Map(), right: new Map() };
@@ -93,20 +91,20 @@ export function ExamTab({ topics }: { topics: Topic[] }) {
     for (const b of byTopic.values()) correct += b.correct;
     const pct = pool.length ? Math.round((correct / pool.length) * 100) : 0;
     const passed = pct >= pass;
-    let gained = 0;
+    let total = 0;
     for (const [topicId, b] of byTopic) {
       const p = app.progressFor(topicId);
       const firstPass = passed && !(p.bestExam && p.bestExam >= pass);
       const g = b.correct * 3 + (firstPass ? XP.examPass : 0);
-      gained += g;
+      total += g;
       const next = { ...p, xp: p.xp + g };
       if (!p.bestExam || pct > p.bestExam) next.bestExam = pct;
       app.setProgressFor(topicId, next);
       for (const [levelId, wrongIdx] of b.wrong) app.setWeak(topicId, levelId, wrongIdx, b.right.get(levelId) ?? []);
       for (const [levelId, rightIdx] of b.right) if (!b.wrong.has(levelId)) app.setWeak(topicId, levelId, [], rightIdx);
     }
-    app.logActivity(gained, Math.max(1, Math.round((Date.now() - startedAt.current) / 60000)));
-    app.showToast(passed ? `zdane! ocena ${gradeFor(pct, grading)} 🎉 +${gained}xp` : "niezaliczone 💀");
+    setGained(total);
+    app.logActivity(total, Math.max(1, Math.round((Date.now() - startedAt.current) / 60000)));
     if (passed) haptic.heavy();
     else haptic.bad();
     setPhase("result");
@@ -123,44 +121,62 @@ export function ExamTab({ topics }: { topics: Topic[] }) {
     const best = multi ? undefined : app.progressFor(topics[0]?.id ?? "").bestExam;
     return (
       <ScrollView contentContainerStyle={[s.scroll, pad]} showsVerticalScrollIndicator={false}>
-        <ResultView emoji="🎯" title={multi ? "Egzamin z przedmiotu" : "Egzamin"} verdict={multi ? `Pytania ze wszystkich ${topics.length} tematów. Bez podpowiedzi, na końcu ocena wg siatki + przegląd błędów.` : "Bez podpowiedzi w trakcie. Na końcu % i ocena wg siatki + przegląd błędów."}>
+        <Card>
+          <Label>{multi ? "egzamin z przedmiotu" : "egzamin"}</Label>
+          <Display size="xl" weight={700} style={{ marginTop: SPACE[2] }}>
+            {multi ? `Pytania ze wszystkich ${topics.length} tematów` : "Symulacja sprawdzianu"}
+          </Display>
+          <Body color={COLORS.muted} style={{ marginTop: SPACE[2] }}>
+            Bez podpowiedzi w trakcie. Na końcu procent, ocena wg siatki i przegląd błędów.
+          </Body>
           <View style={s.specs}>
-            <Spec value={N} label="losowych" />
-            <Spec value={`${lim}:00`} label="na czas" />
-            <Spec value={`${pass}%`} label="zalicza" />
+            <MiniPill value={N} label="pytań" />
+            <MiniPill value={`${lim}:00`} label="czas" />
+            <MiniPill value={`${pass}%`} label="zalicza" />
           </View>
-          {best ? <Text style={s.best}>Twój rekord: {best}% · ocena {gradeFor(best, grading)}</Text> : null}
-          <PillButton label={`symulacja — ${N} losowych 🎲`} onPress={() => begin(N, lim)} disabled={!all.length} style={{ marginTop: 8 }} />
-          <PillButton label={`📋 test końcowy — WSZYSTKIE ${all.length} pytań`} ghost onPress={() => begin(all.length, fullLim)} disabled={!all.length} />
-          <Text style={s.note}>Test końcowy = każde pytanie, w losowej kolejności ({fullLim}:00).</Text>
-        </ResultView>
+          {best ? (
+            <Muted size="xs" weight={600} color={COLORS.accent} style={{ marginBottom: SPACE[3] }}>
+              Twój rekord: {best}% · ocena {gradeFor(best, grading)}
+            </Muted>
+          ) : null}
+          <View style={{ gap: SPACE[2] }}>
+            <Button label={`Symulacja — ${N} losowych`} onPress={() => begin(N, lim)} disabled={!all.length} />
+            <Button label={`Test końcowy — wszystkie ${all.length}`} variant="secondary" onPress={() => begin(all.length, fullLim)} disabled={!all.length} />
+          </View>
+          <Muted size="xs" style={{ marginTop: SPACE[3] }}>
+            Test końcowy = każde pytanie, w losowej kolejności ({fullLim}:00).
+          </Muted>
+        </Card>
       </ScrollView>
     );
   }
 
   if (phase === "result" && result) {
-    const emoji = result.pct >= 90 ? "👑" : result.pct >= 70 ? "🔥" : result.passed ? "😮‍💨" : "💀";
     return (
       <ScrollView contentContainerStyle={[s.scroll, pad]} showsVerticalScrollIndicator={false}>
-        <ResultView emoji={emoji} title={`Ocena: ${result.grade}`} score={<ScoreLine correct={result.correct} total={pool.length} />} verdict={result.passed ? "Zdane! 🎉 Błędne pytania wrócą w sesji „Dziś”." : "Poniżej progu — błędne pytania wrócą w sesji „Dziś”."}>
-          <PillButton label="jeszcze raz 🔁" onPress={() => setPhase("intro")} style={{ marginTop: 6 }} />
-        </ResultView>
-        <Text style={s.reviewH}>Przegląd błędów ({result.wrong.length})</Text>
+        <Card>
+          <ResultView eyebrow={result.passed ? "zdane" : "niezaliczone"} title={`Ocena ${result.grade}`} xp={gained} score={<ScoreLine correct={result.correct} total={pool.length} />} verdict={result.passed ? "Błędne pytania wrócą w sesji „Dziś”." : "Poniżej progu — błędne pytania wrócą w sesji „Dziś”."} celebrate={result.passed}>
+            <Button label="Jeszcze raz" variant="secondary" onPress={() => setPhase("intro")} />
+          </ResultView>
+        </Card>
+        <Label style={{ marginTop: SPACE[6], marginBottom: SPACE[3] }}>przegląd błędów · {result.wrong.length}</Label>
         {result.wrong.length === 0 ? (
-          <View style={s.ritem}>
-            <Text style={[s.rgood, { fontWeight: FONT.bold }]}>Zero błędów. Clean sweep 🧼</Text>
-          </View>
+          <Body color={COLORS.success}>Zero błędów.</Body>
         ) : (
           result.wrong.map((w, i) => (
             <View key={i} style={s.ritem}>
-              <Text style={s.rq}>{w.q.q}</Text>
-              <Text style={s.rbad}>Twoja: {w.sel == null ? "— (brak)" : `${KEYS_ABC[w.sel]}. ${w.q.a[w.sel]}`}</Text>
-              <Text style={s.rgood}>
+              <Body weight={600} color={COLORS.text}>
+                {w.q.q}
+              </Body>
+              <Body size="sm" color={COLORS.danger}>
+                Twoja: {w.sel == null ? "— (brak)" : `${KEYS_ABC[w.sel]}. ${w.q.a[w.sel]}`}
+              </Body>
+              <Body size="sm" color={COLORS.success}>
                 Dobra: {KEYS_ABC[w.q.c]}. {w.q.a[w.q.c]}
-              </Text>
-              <Text style={s.rsrc}>
+              </Body>
+              <Muted size="xs">
                 {w.q.lvl} · {w.q.e}
-              </Text>
+              </Muted>
             </View>
           ))
         )}
@@ -174,18 +190,20 @@ export function ExamTab({ topics }: { topics: Topic[] }) {
   return (
     <ScrollView contentContainerStyle={[s.scroll, pad]} showsVerticalScrollIndicator={false}>
       <View style={s.examhead}>
-        <Text style={s.counter}>
-          Pytanie {idx + 1}/{pool.length}
-        </Text>
-        <View style={[s.timer, left <= 60 && { borderColor: C.red }]}>
-          <Text style={[s.timerTxt, left <= 60 && { color: C.red }]}>⏱ {fmt(Math.max(0, left))}</Text>
+        <Muted size="xs" weight={600} style={tabular}>
+          PYTANIE {idx + 1}/{pool.length}
+        </Muted>
+        <View style={[s.timer, left <= 60 && { borderColor: COLORS.danger }]}>
+          <Display size="base" weight={700} color={left <= 60 ? COLORS.danger : COLORS.text} style={tabular}>
+            {fmt(Math.max(0, left))}
+          </Display>
         </View>
       </View>
-      <ProgressBar pct={(idx / pool.length) * 100} style={{ marginBottom: 12 }} />
+      <ProgressBar pct={(idx / pool.length) * 100} style={{ marginBottom: SPACE[3] }} />
       <QuizCard q={q} picked={picks[idx] ?? null} reveal={false} onPick={(i) => setPicks((p) => p.map((v, k) => (k === idx ? i : v)))} tag={q.lvl}>
         <View style={s.nav}>
-          {idx > 0 ? <PillButton label="← wstecz" ghost onPress={() => setIdx(idx - 1)} style={{ flex: 1 }} /> : null}
-          <PillButton label={last ? "zakończ i sprawdź 🏁" : "dalej →"} onPress={() => (last ? finish() : setIdx(idx + 1))} style={{ flex: 2 }} />
+          {idx > 0 ? <Button label="Wstecz" variant="secondary" onPress={() => setIdx(idx - 1)} style={{ flex: 1 }} /> : null}
+          <Button label={last ? "Zakończ i sprawdź" : "Dalej"} onPress={() => (last ? finish() : setIdx(idx + 1))} style={{ flex: 2 }} />
         </View>
       </QuizCard>
     </ScrollView>
@@ -193,19 +211,10 @@ export function ExamTab({ topics }: { topics: Topic[] }) {
 }
 
 const s = StyleSheet.create({
-  scroll: { paddingHorizontal: 16 },
-  specs: { flexDirection: "row", gap: 10, flexWrap: "wrap", justifyContent: "center", marginVertical: 4 },
-  best: { color: C.lime, fontWeight: FONT.bold, fontSize: 14 },
-  note: { color: C.muted, fontSize: 13, textAlign: "center", lineHeight: 18 },
-  examhead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
-  counter: { color: C.muted, fontWeight: FONT.bold, fontSize: 13 },
-  timer: { backgroundColor: C.card, borderWidth: 1, borderColor: C.border2, borderRadius: R.pill, paddingVertical: 7, paddingHorizontal: 13 },
-  timerTxt: { color: C.txt, fontWeight: FONT.black, fontSize: 16 },
-  nav: { flexDirection: "row", gap: 10, marginTop: 16 },
-  reviewH: { color: C.muted, fontSize: 14, fontWeight: FONT.bold, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 10, marginTop: 10 },
-  ritem: { backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 14, padding: 14, marginBottom: 9, gap: 4 },
-  rq: { color: C.txt, fontWeight: FONT.bold, fontSize: 14, lineHeight: 20 },
-  rbad: { color: "#ff8aa3", fontSize: 14, lineHeight: 20 },
-  rgood: { color: "#7dffa6", fontSize: 14, lineHeight: 20 },
-  rsrc: { color: C.muted, fontSize: 12, lineHeight: 17, marginTop: 2 },
+  scroll: { paddingHorizontal: UI.gutter },
+  specs: { flexDirection: "row", gap: SPACE[2], flexWrap: "wrap", marginVertical: SPACE[4] },
+  examhead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: SPACE[3] },
+  timer: { backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.pill, paddingVertical: 6, paddingHorizontal: 12 },
+  nav: { flexDirection: "row", gap: SPACE[2], marginTop: SPACE[4] },
+  ritem: { paddingVertical: SPACE[3], gap: 3, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.lineStrong },
 });

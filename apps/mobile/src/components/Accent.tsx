@@ -1,37 +1,39 @@
-import { LinearGradient, type LinearGradientProps } from "expo-linear-gradient";
 import React, { createContext, useContext, useMemo } from "react";
-import { StyleSheet, type StyleProp, type ViewStyle } from "react-native";
-import { parseAccent, type Accent } from "@/lib/theme";
+import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
+import { GOLD_HUE, hueFrom, withAlpha, type Hue } from "@/lib/theme";
 
-// expo-linear-gradient typuje `style` przez własną kopię typów RN — rzutujemy StyleProp<ViewStyle>.
-type GStyle = LinearGradientProps["style"];
+const Ctx = createContext<Hue>(GOLD_HUE);
 
-const Ctx = createContext<Accent>(parseAccent(null, null));
-
-/** Motyw przedmiotu (gradient akcentu) dla poddrzewa — odpowiednik `--accent` z legacy CSS. */
-export function AccentProvider({ accent, accent2, children }: { accent?: string | null; accent2?: string | null; children: React.ReactNode }) {
-  const value = useMemo(() => parseAccent(accent, accent2), [accent, accent2]);
+/** Kolor przedmiotu dla poddrzewa (subject.accent2 = hue z SUBJECT_HUES). */
+export function HueProvider({ color, seed, children }: { color?: string | null; seed?: string; children: React.ReactNode }) {
+  const value = useMemo(() => hueFrom(color, seed), [color, seed]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
-export function useAccent(): Accent {
+export function useHue(): Hue {
   return useContext(Ctx);
 }
 
-/** Gradient akcentu jako tło (dowolne dzieci). */
-export function AccentGradient({ style, children, opacity = 1, accent }: { style?: StyleProp<ViewStyle>; children?: React.ReactNode; opacity?: number; accent?: Accent }) {
-  const a = useAccent();
-  const g = accent ?? a;
+/**
+ * Miękka poświata (pseudo-radial): koncentryczne koła o malejącej alfie, rozmyte przez nakładanie.
+ * Alfa łączna w centrum ≈ `alpha` (0.10–0.18 wg DESIGN.md). `pointerEvents="none"`.
+ */
+export function Glow({ color, size = 320, alpha = 0.14, style }: { color?: string; size?: number; alpha?: number; style?: StyleProp<ViewStyle> }) {
+  const hue = useHue();
+  const c = color ?? hue.color;
+  // 14 koncentrycznych kół o bardzo małej alfie każdy → gładki spadek bez widocznych pierścieni
+  const N = 14;
+  const rings = Array.from({ length: N }, (_, i) => 1 - i / N);
+  const step = alpha / N;
   return (
-    <LinearGradient colors={g.colors} start={g.start} end={g.end} style={[style as GStyle, { opacity }]}>
-      {children}
-    </LinearGradient>
+    <View pointerEvents="none" style={[s.glow, { width: size, height: size }, style]}>
+      {rings.map((r, i) => (
+        <View key={i} style={{ position: "absolute", width: size * r, height: size * r, borderRadius: (size * r) / 2, backgroundColor: withAlpha(c, step * (0.6 + (i / N) * 0.8)) }} />
+      ))}
+    </View>
   );
 }
 
-/** Półprzezroczysta warstwa gradientu pod kartą (jak `.subjcard::before`). */
-export function AccentWash({ opacity = 0.1, accent, radius }: { opacity?: number; accent?: Accent; radius?: number }) {
-  const a = useAccent();
-  const g = accent ?? a;
-  return <LinearGradient pointerEvents="none" colors={g.colors} start={g.start} end={g.end} style={[StyleSheet.absoluteFill as GStyle, { opacity, borderRadius: radius }]} />;
-}
+const s = StyleSheet.create({
+  glow: { position: "absolute", alignItems: "center", justifyContent: "center" },
+});

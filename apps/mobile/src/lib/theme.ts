@@ -1,77 +1,59 @@
-/** Motyw NAUKA — port legacy/styles.css (dark, neon). Akcent per przedmiot: gradient z `accent` + kolor `accent2`. */
-export const C = {
-  bg: "#0a0a12",
-  bg2: "#12121f",
-  card: "#1a1a2e",
-  card2: "#222238",
-  txt: "#f2f2fa",
-  muted: "#9a9ab8",
-  pink: "#ff2d95",
-  purple: "#a855f7",
-  cyan: "#22d3ee",
-  lime: "#aaff00",
-  orange: "#ff7a00",
-  red: "#ff3b5c",
-  green: "#1ed760",
-  border: "rgba(255,255,255,0.08)",
-  border2: "rgba(255,255,255,0.14)",
-  faint: "rgba(255,255,255,0.05)",
-  faint2: "rgba(255,255,255,0.08)",
-  okBg: "#13351f",
-  okTxt: "#c9ffd9",
-  badBg: "#35161f",
-  badTxt: "#ffd0da",
-  selBg: "#2a2350",
+/**
+ * Motyw „Premium dark” — tokeny z @nauka/shared (docs/DESIGN.md). Nic nie hardkodujemy w komponentach.
+ */
+import { COLORS, MOTION, RADIUS, SHADOW, SPACE, SUBJECT_HUES, TYPE, subjectHue } from "@nauka/shared";
+import type { TextStyle, ViewStyle } from "react-native";
+
+export { COLORS, MOTION, RADIUS, SHADOW, SPACE, SUBJECT_HUES, TYPE, subjectHue };
+
+/** Nazwy rodzin fontów = klucze pod którymi expo-font je ładuje (identyczne na iOS/Android/web). */
+export const FONT = {
+  display600: "BricolageGrotesque_600SemiBold",
+  display700: "BricolageGrotesque_700Bold",
+  display800: "BricolageGrotesque_800ExtraBold",
+  body400: "Manrope_400Regular",
+  body500: "Manrope_500Medium",
+  body600: "Manrope_600SemiBold",
+  body700: "Manrope_700Bold",
 } as const;
 
-export const DEFAULT_ACCENT = "linear-gradient(135deg,#ff2d95,#a855f7,#22d3ee)";
-export const DEFAULT_ACCENT2 = "#22d3ee";
-
-export interface Accent {
-  colors: [string, string, ...string[]];
-  start: { x: number; y: number };
-  end: { x: number; y: number };
-  solid: string;
+export function display(weight: 600 | 700 | 800 = 700): string {
+  return weight === 800 ? FONT.display800 : weight === 600 ? FONT.display600 : FONT.display700;
+}
+export function body(weight: 400 | 500 | 600 | 700 = 400): string {
+  return weight === 700 ? FONT.body700 : weight === 600 ? FONT.body600 : weight === 500 ? FONT.body500 : FONT.body400;
 }
 
-const COLOR_RE = /#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\b|rgba?\([^)]*\)|hsla?\([^)]*\)/gi;
-
-/**
- * Zamienia CSS `linear-gradient(135deg,#a,#b,#c)` (albo pojedynczy kolor) na props dla expo-linear-gradient.
- * Obsługuje kąt w stopniach i słowa kluczowe `to right/bottom/...`. Zawsze zwraca ≥ 2 kolory.
- */
-export function parseAccent(accent?: string | null, accent2?: string | null): Accent {
-  const src = accent && accent.trim() ? accent : DEFAULT_ACCENT;
-  const colors = (src.match(COLOR_RE) ?? []).map((c) => c.trim());
-  if (colors.length === 0) colors.push(C.pink, C.purple, C.cyan);
-  if (colors.length === 1) colors.push(accent2 && accent2.trim() ? accent2 : colors[0]!);
-
-  let angle = 135;
-  const deg = /(-?\d+(?:\.\d+)?)deg/.exec(src);
-  if (deg) angle = parseFloat(deg[1]!);
-  else if (/to right/.test(src)) angle = 90;
-  else if (/to left/.test(src)) angle = 270;
-  else if (/to top/.test(src)) angle = 0;
-  else if (/to bottom/.test(src)) angle = 180;
-  const rad = ((angle - 90) * Math.PI) / 180;
-  const dx = Math.cos(rad), dy = Math.sin(rad);
-  const start = { x: 0.5 - dx / 2, y: 0.5 - dy / 2 };
-  const end = { x: 0.5 + dx / 2, y: 0.5 + dy / 2 };
-  return { colors: colors as Accent["colors"], start, end, solid: accent2 && accent2.trim() ? accent2 : colors[colors.length - 1]! };
+/** Kolor przedmiotu: `subjects.accent2` (SUBJECT_HUES) → warianty do ringów, poświat i pasków. */
+export interface Hue {
+  color: string;
+  soft: string;
+  ring: string;
+  glow: string;
 }
 
-/** Kolor z alfą (hex #rrggbb → rgba). */
-export function alpha(hex: string, a: number): string {
+export function withAlpha(hex: string, a: number): string {
   const m = /^#([0-9a-f]{6})$/i.exec(hex.trim());
   if (!m) return hex;
   const n = parseInt(m[1]!, 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
-export const R = { xl: 26, lg: 22, md: 16, sm: 12, pill: 999 } as const;
-export const SP = { xs: 6, sm: 10, md: 14, lg: 18, xl: 24 } as const;
-export const FONT = {
-  black: "900" as const,
-  bold: "800" as const,
-  semi: "600" as const,
-};
+export function hueFrom(color?: string | null, seed?: string): Hue {
+  let c = color && /^#[0-9a-f]{6}$/i.test(color.trim()) ? color.trim() : null;
+  if (!c) c = subjectHue(seed ?? "nauka").color;
+  const known = SUBJECT_HUES.find((h) => h.color.toLowerCase() === c!.toLowerCase());
+  return { color: c, soft: known?.soft ?? withAlpha(c, 0.16), ring: withAlpha(c, 0.4), glow: withAlpha(c, 0.14) };
+}
+
+export const GOLD_HUE: Hue = { color: COLORS.accent, soft: withAlpha(COLORS.accent, 0.16), ring: withAlpha(COLORS.accent, 0.4), glow: COLORS.accentGlow };
+
+/** Cienie (RN nie ma inset — górny highlight robimy osobnym 1px View, patrz <Card>). */
+export const shadowCard: ViewStyle = { shadowColor: "#000", shadowOpacity: 0.45, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 8 };
+export const shadowGlow: ViewStyle = { shadowColor: COLORS.accent, shadowOpacity: 0.3, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 8 };
+export const shadowOverlay: ViewStyle = { shadowColor: "#000", shadowOpacity: 0.6, shadowRadius: 40, shadowOffset: { width: 0, height: 24 }, elevation: 16 };
+
+export const tabular: TextStyle = { fontVariant: ["tabular-nums"] };
+
+/** Wysokości/kształty z DESIGN.md */
+export const UI = { buttonH: 48, buttonHsm: 40, inputH: 48, tile: 52, node: 64, gutter: SPACE[4] } as const;

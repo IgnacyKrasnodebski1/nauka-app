@@ -1,31 +1,37 @@
 import type { FeedItem } from "@nauka/shared";
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { C, FONT, R } from "@/lib/theme";
-import { AccentWash, useAccent } from "./Accent";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { COLORS, RADIUS, SPACE, body, shadowCard } from "@/lib/theme";
+import { useHue } from "./Accent";
 import { HtmlText } from "./HtmlText";
-import { Tag } from "./ui";
+import { Display, Label } from "./Text";
 
-/** Mikro-dawka z feedu („roladka”) — port `.fcard`. */
+/** Mikro-dawka z feedu: karta bg2, duży tytuł display, „po ludzku” i mnemo jako bloki info. */
 export function FeedCard({ item, tag }: { item: FeedItem; tag?: string }) {
-  const a = useAccent();
+  const hue = useHue();
   return (
     <View style={s.card}>
-      <AccentWash opacity={0.1} radius={R.xl} />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 22 }}>
-        {tag ? <Tag>{tag}</Tag> : null}
-        <Text style={s.title}>{item.title}</Text>
+      <View style={s.hl} />
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: SPACE[6], gap: SPACE[4] }}>
+        {tag ? <Label>{tag}</Label> : null}
+        <Display size="xl" weight={700}>
+          {item.title}
+        </Display>
         <HtmlText html={item.body} inline textStyle={s.body} />
         {item.real ? (
-          <View style={[s.real, { borderLeftColor: a.solid }]}>
-            <Text style={[s.lbl, { color: a.solid }]}>po ludzku 🗣️</Text>
-            <HtmlText html={item.real} inline textStyle={s.realTxt} />
+          <View style={[s.block, { borderLeftColor: hue.color }]}>
+            <Label color={hue.color} style={{ marginBottom: 4 }}>
+              po ludzku
+            </Label>
+            <HtmlText html={item.real} inline textStyle={s.blockTxt} />
           </View>
         ) : null}
         {item.mnemo ? (
-          <View style={s.mnemo}>
-            <Text style={[s.lbl, { color: C.lime }]}>zapamiętaj 🧠</Text>
-            <HtmlText html={item.mnemo} inline textStyle={s.realTxt} />
+          <View style={[s.block, { borderLeftColor: COLORS.accent, backgroundColor: COLORS.bg3 }]}>
+            <Label color={COLORS.accent} style={{ marginBottom: 4 }}>
+              zapamiętaj
+            </Label>
+            <HtmlText html={item.mnemo} inline textStyle={s.blockTxt} />
           </View>
         ) : null}
       </ScrollView>
@@ -34,11 +40,9 @@ export function FeedCard({ item, tag }: { item: FeedItem; tag?: string }) {
 }
 
 const s = StyleSheet.create({
-  card: { flex: 1, backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: R.xl, overflow: "hidden", shadowColor: "#000", shadowOpacity: 0.4, shadowRadius: 30, shadowOffset: { width: 0, height: 20 } },
-  title: { color: C.txt, fontSize: 24, fontWeight: FONT.black, lineHeight: 28, letterSpacing: -0.5, marginBottom: 14 },
-  body: { fontSize: 16, lineHeight: 24, color: "#e7e7f4" },
-  real: { marginTop: 16, padding: 13, paddingHorizontal: 15, backgroundColor: "rgba(0,0,0,0.2)", borderLeftWidth: 3, borderRadius: 12 },
-  mnemo: { marginTop: 12, padding: 12, paddingHorizontal: 15, backgroundColor: "rgba(42,35,0,0.4)", borderLeftWidth: 3, borderLeftColor: C.lime, borderRadius: 12 },
-  lbl: { fontWeight: FONT.bold, fontSize: 12, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 3 },
-  realTxt: { fontSize: 14.5, lineHeight: 21, color: "#dcdcf0" },
+  card: { flex: 1, backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.xl, overflow: "hidden", ...shadowCard },
+  hl: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: COLORS.highlight, zIndex: 2 },
+  body: { fontSize: 16, lineHeight: 26, color: COLORS.textSoft, fontFamily: body(400) },
+  block: { padding: SPACE[4], backgroundColor: COLORS.glass, borderLeftWidth: 2, borderRadius: RADIUS.sm },
+  blockTxt: { fontSize: 14.5, lineHeight: 22, color: COLORS.textSoft },
 });

@@ -1,10 +1,10 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import { View } from "react-native";
-import { AccentProvider } from "@/components/Accent";
-import { Empty, PillButton, TopBar } from "@/components/ui";
+import { HueProvider } from "@/components/Accent";
+import { Button, Empty, TopBar } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
-import { C } from "@/lib/theme";
+import { COLORS } from "@/lib/theme";
 import { FlashcardsTab } from "@/screens/topic/FlashcardsTab";
 
 /** Fiszki z całego przedmiotu (SRS po wszystkich tematach). */
@@ -15,13 +15,13 @@ export default function SubjectCards() {
   const subject = app.findSubject(subjectId ?? "");
   const topics = app.topicsOf(subjectId ?? "");
   const back = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)"));
-  if (!subject) return <Empty emoji="🫥" title="Brak przedmiotu" action={<PillButton label="wróć" onPress={back} />} />;
+  if (!subject) return <Empty icon="?" title="Brak przedmiotu" action={<Button label="Wróć" onPress={back} />} />;
   return (
-    <AccentProvider accent={subject.accent} accent2={subject.accent2}>
-      <View style={{ flex: 1, backgroundColor: C.bg }}>
-        <TopBar onBack={back} title={`🎴 ${subject.name}`} />
+    <HueProvider color={subject.accent2} seed={subject.name}>
+      <View style={{ flex: 1, backgroundColor: COLORS.bg0 }}>
+        <TopBar onBack={back} title="Fiszki" subtitle={subject.name} />
         <FlashcardsTab topics={topics} />
       </View>
-    </AccentProvider>
+    </HueProvider>
   );
 }

@@ -1,14 +1,14 @@
 import React, { useMemo } from "react";
 import { StyleSheet, Text, View, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import { htmlToBoxes, type Block, type Run } from "@/lib/html";
-import { C, FONT } from "@/lib/theme";
-import { useAccent } from "./Accent";
+import { COLORS, RADIUS, SPACE, body, display, shadowCard } from "@/lib/theme";
+import { useHue } from "./Accent";
 
 function Runs({ runs, style, boldColor }: { runs: Run[]; style?: StyleProp<TextStyle>; boldColor?: string }) {
   return (
     <Text style={[s.p, style]}>
       {runs.map((r, i) => (
-        <Text key={i} style={[r.bold && { fontWeight: FONT.bold, color: boldColor ?? "#fff" }, r.italic && { fontStyle: "italic" }]}>
+        <Text key={i} style={[r.bold && { fontFamily: body(700), color: boldColor ?? COLORS.text }, r.italic && { fontStyle: "italic" }]}>
           {r.text}
         </Text>
       ))}
@@ -30,7 +30,7 @@ function BlockView({ b, textStyle, boldColor, headColor }: { b: Block; textStyle
       return (
         <View style={s.tr}>
           {(b.cells ?? []).map((c, i, arr) => (
-            <Runs key={i} runs={c} style={[textStyle, s.td, i === arr.length - 1 && arr.length > 1 && { textAlign: "right", fontWeight: FONT.black, color: C.lime, flex: 0 }]} boldColor={boldColor} />
+            <Runs key={i} runs={c} style={[textStyle, s.td, i === arr.length - 1 && arr.length > 1 && s.tdLast]} boldColor={boldColor} />
           ))}
         </View>
       );
@@ -39,20 +39,18 @@ function BlockView({ b, textStyle, boldColor, headColor }: { b: Block; textStyle
   }
 }
 
-/**
- * Renderuje prosty HTML (b/i/br/p/ul/li/h3/table, div.zbox → karta) jako natywny tekst. Bez WebView.
- * `inline` — bez ramek (feed body); domyślnie zboxy dostają kartę.
- */
+/** Prosty HTML (b/i/br/p/ul/li/h3/table, div.zbox → karta) jako natywny tekst. Bez WebView. */
 export function HtmlText({ html, inline, style, textStyle, boldColor }: { html: string; inline?: boolean; style?: StyleProp<ViewStyle>; textStyle?: StyleProp<TextStyle>; boldColor?: string }) {
   const boxes = useMemo(() => htmlToBoxes(html), [html]);
-  const a = useAccent();
+  const hue = useHue();
   if (!boxes.length) return null;
   return (
     <View style={style}>
       {boxes.map((box, i) => (
         <View key={i} style={[box.boxed && !inline && s.zbox, { gap: 6 }]}>
+          {box.boxed && !inline ? <View style={s.hl} /> : null}
           {box.blocks.map((b, j) => (
-            <BlockView key={j} b={b} textStyle={textStyle} boldColor={boldColor} headColor={a.solid} />
+            <BlockView key={j} b={b} textStyle={textStyle} boldColor={boldColor} headColor={hue.color} />
           ))}
         </View>
       ))}
@@ -61,10 +59,12 @@ export function HtmlText({ html, inline, style, textStyle, boldColor }: { html: 
 }
 
 const s = StyleSheet.create({
-  p: { color: "#e7e7f4", fontSize: 15, lineHeight: 23 },
-  h3: { fontSize: 13, fontWeight: FONT.bold, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 4, marginTop: 2 },
+  p: { color: COLORS.textSoft, fontSize: 15, lineHeight: 23, fontFamily: body(400) },
+  h3: { fontSize: 12, fontFamily: body(600), textTransform: "uppercase", letterSpacing: 1.4, marginBottom: 4, marginTop: 2 },
   li: { paddingLeft: 6 },
-  tr: { flexDirection: "row", justifyContent: "space-between", gap: 10, paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)" },
-  td: { flex: 1, fontSize: 14.5 },
-  zbox: { backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: 18, paddingVertical: 16, paddingHorizontal: 18, marginBottom: 12 },
+  tr: { flexDirection: "row", justifyContent: "space-between", gap: 10, paddingVertical: 7, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.line },
+  td: { flex: 1, fontSize: 14 },
+  tdLast: { textAlign: "right", fontFamily: display(700), color: COLORS.accent, flex: 0 },
+  zbox: { backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.lg, padding: SPACE[5], marginBottom: SPACE[3], overflow: "hidden", ...shadowCard },
+  hl: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: COLORS.highlight },
 });

@@ -2,10 +2,10 @@ import type { Topic } from "@nauka/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { AccentProvider } from "@/components/Accent";
-import { Chip, Empty, Loading, PillButton, StatPill, TopBar } from "@/components/ui";
+import { Glow, HueProvider } from "@/components/Accent";
+import { Button, Chip, Empty, Loading, StatPill, TopBar } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
-import { C } from "@/lib/theme";
+import { COLORS, SPACE, UI } from "@/lib/theme";
 import { ExamTab } from "@/screens/topic/ExamTab";
 import { FlashcardsTab } from "@/screens/topic/FlashcardsTab";
 import { InfoTab } from "@/screens/topic/InfoTab";
@@ -14,11 +14,11 @@ import { QuizTab } from "@/screens/topic/QuizTab";
 
 type Tab = "path" | "cards" | "quiz" | "exam" | "info";
 const TABS: { id: Tab; label: string }[] = [
-  { id: "path", label: "🗺️ Ścieżka" },
-  { id: "cards", label: "🎴 Fiszki" },
-  { id: "quiz", label: "🧠 Quiz" },
-  { id: "exam", label: "🎯 Egzamin" },
-  { id: "info", label: "📋 Info" },
+  { id: "path", label: "Ścieżka" },
+  { id: "cards", label: "Fiszki" },
+  { id: "quiz", label: "Quiz" },
+  { id: "exam", label: "Egzamin" },
+  { id: "info", label: "Info" },
 ];
 
 /** Temat: Ścieżka / Fiszki / Quiz / Egzamin / Info. */
@@ -44,24 +44,26 @@ export default function TopicScreen() {
   if (topic === undefined) return <Loading label="wczytuję temat…" />;
   if (!topic)
     return (
-      <View style={{ flex: 1, backgroundColor: C.bg }}>
-        <TopBar title="🫥" onBack={back} />
-        <Empty emoji="🫥" title="Nie znalazłem tego tematu" text="Może został usunięty albo jesteś offline i nie ma go w cache." action={<PillButton label="wróć" onPress={back} />} />
+      <View style={{ flex: 1, backgroundColor: COLORS.bg0 }}>
+        <TopBar title="Temat" onBack={back} />
+        <Empty icon="?" title="Nie znalazłem tego tematu" text="Może został usunięty albo jesteś offline i nie ma go w cache." action={<Button label="Wróć" onPress={back} />} />
       </View>
     );
 
   const subject = app.findSubject(topic.subjectId);
   const p = app.progressFor(topic.id);
   return (
-    <AccentProvider accent={subject?.accent ?? topic.accent} accent2={subject?.accent2 ?? topic.accent2}>
-      <View style={{ flex: 1, backgroundColor: C.bg }}>
+    <HueProvider color={subject?.accent2 ?? topic.accent2} seed={subject?.name ?? topic.name}>
+      <View style={{ flex: 1, backgroundColor: COLORS.bg0 }}>
+        <Glow size={420} alpha={0.12} style={{ top: -230, alignSelf: "center" }} />
         <TopBar
           onBack={back}
-          title={`${topic.emoji} ${topic.short || topic.name}`}
+          title={topic.name}
+          subtitle={subject?.name}
           right={
             <>
-              <StatPill icon="🔥" value={app.streak} unit="dni" />
-              <StatPill icon="⚡" value={p.xp} unit="xp" />
+              <StatPill kind="streak" value={app.streak} />
+              <StatPill kind="xp" value={p.xp} />
             </>
           }
         />
@@ -80,10 +82,10 @@ export default function TopicScreen() {
           {tab === "info" ? <InfoTab topic={topic} /> : null}
         </View>
       </View>
-    </AccentProvider>
+    </HueProvider>
   );
 }
 
 const s = StyleSheet.create({
-  tabs: { gap: 7, paddingHorizontal: 16, paddingVertical: 4, paddingBottom: 10 },
+  tabs: { gap: SPACE[2], paddingHorizontal: UI.gutter, paddingVertical: SPACE[1], paddingBottom: SPACE[3] },
 });

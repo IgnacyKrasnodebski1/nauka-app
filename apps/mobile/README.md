@@ -45,6 +45,21 @@ W Supabase Auth → URL Configuration dodaj redirecty: `nauka://auth/callback` (
 | `t/[topicId]` | temat: Ścieżka (odblokowywanie z shared) · Fiszki (flip + SRS) · Quiz · Egzamin (timer z `grading.examMin`, `gradeFor`, przegląd błędów) · Info (HTML → tekst, bez WebView). |
 | `t/[topicId]/l/[levelId]` | lekcja: feed → fiszki → mini-gry (match/cloze/truefalse/order) → quiz → wynik. Po quizie: `applyQuizResult`, `markWeak` → `progress.weak`, `log_activity(xp, minuty)`, `touchStreak`. Przycisk 🤖 wytłumacz → tutor (`POST /api/tutor` z `topicId`, streaming jeśli RN fetch to umie). |
 
+## Design system „Premium dark”
+
+Tokeny wyłącznie z `@nauka/shared` (`COLORS`, `SUBJECT_HUES`, `RADIUS`, `SPACE`, `TYPE`, `SHADOW`, `MOTION`, `subjectHue`) — patrz `docs/DESIGN.md`. W apce nic nie jest hardkodowane poza wariantami alfa tokenów.
+
+- `src/lib/theme.ts` — re-eksport tokenów, nazwy fontów (`FONT.display700` = `BricolageGrotesque_700Bold`, `FONT.body500` = `Manrope_500Medium`…), `hueFrom(subject.accent2)` → `{ color, soft, ring, glow }`, cienie (`shadowCard`, `shadowGlow`), `tabular`.
+- Fonty: `@expo-google-fonts/bricolage-grotesque` (600/700/800) + `@expo-google-fonts/manrope` (400–700) ładowane w `app/_layout.tsx` przez `expo-font`; splash trzymany do czasu załadowania.
+- `src/components/Text.tsx` — `Display` (Bricolage, −0.02em), `Title`, `Body`, `Muted`, `Label` (eyebrow 12px, letter-spacing 1.4, uppercase), `Num` (tabular-nums).
+- `src/components/ui.tsx` — `Button` (primary = złoty gradient accentStrong→accent, tekst accentInk, glow; secondary = szkło; ghost; danger), `Touch` (press scale 0.98 na Reanimated, respektuje Reduce Motion), `Card` (bg2 + hairline + 1px highlight + shadow.card), `IconTile` (hue.soft + ring 40%), `StatPill` (streak pomarańcz / XP złoto), `MiniPill`, `Chip(s)`, `ProgressBar` (w kolorze przedmiotu), `Input`, `Empty`, `Toast` (dół, szkło).
+- `src/components/Accent.tsx` — `HueProvider`/`useHue()` (kolor przedmiotu dla poddrzewa) i `Glow` (miękka pseudo-radialna poświata 0.10–0.18 alfa: 14 koncentrycznych kół, bez ostrych krawędzi).
+- Ruch: `useReduceMotion()` (`AccessibilityInfo.isReduceMotionEnabled`) wyłącza puls aktywnego węzła ścieżki, licznik XP, gwiazdki, confetti (max 40 cząstek, 1.2 s, plain `Animated`), flip fiszki (spring z `MOTION.spring`).
+- Tab bar: `expo-blur` (`BlurView tint="dark"`) + szkło, aktywna ikona i etykieta złote (11px).
+- Lekcja ma opcjonalny param `?phase=feed|cards|games|quiz` (deep link / podgląd — start od danego etapu).
+
+Podgląd (Playwright, 390×844 @2x, web export): `scratchpad/shots-mobile.mjs` — loguje się kontem testowym i robi zrzuty login → home → przedmiot → temat → quiz → wynik → Dziś → profil → fiszki.
+
 ## Kod
 
 ```
@@ -59,9 +74,9 @@ src/lib/
   upload.ts                Storage upload (File.base64 → ArrayBuffer) + `materials`
   html.ts                  mini HTML → bloki tekstu (b/i/br/p/h3/ul/li/table, div.zbox)
   games.ts                 fallback „dopasuj pary” z fiszek gdy poziom nie ma `games`, etykiety gier, `minutesSince`
-  theme.ts                 kolory z legacy/styles.css, `parseAccent()` (CSS gradient → expo-linear-gradient)
-src/components/            ui, SubjectCard (+ examCountdown), TopicCard, ExamPlanView, LevelPath, FeedCard, Flashcard, QuizCard,
-                           games/*, TutorModal, Onboarding (StagePicker, SubjectChips), ResultView, HtmlText, Accent
+  theme.ts                 tokeny z @nauka/shared + fonty + `hueFrom()`; plural.ts — polska liczba mnoga
+src/components/            Text, ui, Accent (HueProvider, Glow), SubjectCard, TopicCard, ExamPlanView, LevelPath (pulsujący węzeł), FeedCard,
+                           Flashcard (3D flip), QuizCard, games/*, TutorModal, Onboarding (StagePicker, SubjectChips), ResultView (XP counter, gwiazdki, confetti), HtmlText
 src/screens/topic/         PathTab, FlashcardsTab (1 temat albo cały przedmiot), QuizTab, ExamTab (1 temat albo cały przedmiot), InfoTab
 ```
 

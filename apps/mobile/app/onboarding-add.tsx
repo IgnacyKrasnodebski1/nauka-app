@@ -1,12 +1,13 @@
 import { type Stage } from "@nauka/shared";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { SubjectChips, type SubjectPick } from "@/components/Onboarding";
-import { BackButton, Muted, PillButton } from "@/components/ui";
+import { Body, Display, Label } from "@/components/Text";
+import { BackButton, Button, Input } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
-import { C, FONT, R } from "@/lib/theme";
+import { COLORS, SPACE } from "@/lib/theme";
 
 /** „+ przedmiot” z Home: te same chipsy co w onboardingu (już dodane wyszarzone) + własna nazwa. */
 export default function AddSubject() {
@@ -28,7 +29,7 @@ export default function AddSubject() {
     setBusy(true);
     try {
       await app.createSubjects(list.map((p) => ({ name: p.name, emoji: p.emoji, category: p.key, stage })));
-      app.showToast("Dodane ✅");
+      app.showToast("Dodane");
       close();
     } catch (e) {
       app.showToast(e instanceof Error ? e.message : "Nie udało się dodać.");
@@ -38,23 +39,24 @@ export default function AddSubject() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: C.bg }}>
-      <ScrollView contentContainerStyle={[s.wrap, { paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }]} keyboardShouldPersistTaps="handled">
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: COLORS.bg0 }}>
+      <ScrollView contentContainerStyle={[s.wrap, { paddingTop: insets.top + SPACE[3], paddingBottom: insets.bottom + SPACE[6] }]} keyboardShouldPersistTaps="handled">
+        <View style={{ flexDirection: "row", alignItems: "center", gap: SPACE[3] }}>
           <BackButton onPress={close} label="✕" />
-          <Text style={s.h}>Nowy przedmiot</Text>
+          <Display size="lg" weight={700}>
+            Nowy przedmiot
+          </Display>
         </View>
-        <Muted>Wybierz z listy albo wpisz własny.</Muted>
+        <Body color={COLORS.muted}>Wybierz z listy albo wpisz własny.</Body>
         <SubjectChips stage={stage} selected={picked.map((p) => p.key)} taken={taken} onToggle={toggle} />
-        <TextInput value={custom} onChangeText={setCustom} placeholder="własny przedmiot, np. Łacina" placeholderTextColor={C.muted} style={s.input} />
-        <PillButton label={busy ? "zapisuję…" : "dodaj ✅"} disabled={busy || (!picked.length && !custom.trim())} onPress={save} />
+        <Label>własny</Label>
+        <Input value={custom} onChangeText={setCustom} placeholder="np. Łacina" />
+        <Button label={busy ? "Zapisuję…" : "Dodaj"} disabled={busy || (!picked.length && !custom.trim())} onPress={save} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const s = StyleSheet.create({
-  wrap: { flexGrow: 1, paddingHorizontal: 20, gap: 14 },
-  h: { color: C.txt, fontSize: 22, fontWeight: FONT.black, letterSpacing: -0.4 },
-  input: { backgroundColor: "#0e0e1a", borderWidth: 2, borderColor: C.border2, borderRadius: R.md, color: C.txt, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15.5 },
+  wrap: { flexGrow: 1, paddingHorizontal: SPACE[5], gap: SPACE[4] },
 });

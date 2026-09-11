@@ -3,15 +3,17 @@ import React, { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { haptic } from "@/lib/app-state";
 import { shuffle } from "@/lib/games";
-import { C, FONT } from "@/lib/theme";
-import { PillButton, Touch } from "../ui";
+import { COLORS, SPACE, display } from "@/lib/theme";
+import { useHue } from "../Accent";
+import { Muted } from "../Text";
+import { Button, Touch } from "../ui";
 import { Feedback, g, GameHead, type GameProps } from "./shared";
 
-/** Ułóż w kolejności: tapnij klocki po kolei; tapnięcie w ułożony klocek cofa go. Sprawdź → zielone/czerwone pozycje. */
+/** Ułóż w kolejności: tapnij klocki po kolei; tapnięcie w ułożony klocek cofa go. Sprawdź → success/danger na pozycjach. */
 export function OrderGame({ game, onDone }: GameProps<OrderGameT>) {
+  const hue = useHue();
   const pool = useMemo(() => {
     let sh = shuffle(game.steps.map((t, i) => ({ i, t })));
-    // nie pokazujemy od razu poprawnej kolejności
     if (sh.every((x, k) => x.i === k) && sh.length > 1) sh = [...sh.slice(1), sh[0]!];
     return sh;
   }, [game]);
@@ -24,10 +26,7 @@ export function OrderGame({ game, onDone }: GameProps<OrderGameT>) {
     haptic.tap();
     setOrder([...order, i]);
   };
-  const remove = (k: number) => {
-    if (checked) return;
-    setOrder(order.filter((_, j) => j !== k));
-  };
+  const remove = (k: number) => !checked && setOrder(order.filter((_, j) => j !== k));
   const check = () => {
     setChecked(true);
     if (correctCount === game.steps.length) haptic.ok();
@@ -36,18 +35,22 @@ export function OrderGame({ game, onDone }: GameProps<OrderGameT>) {
 
   return (
     <View>
-      <GameHead title={game.title ?? "Ułóż w kolejności 🔢"} sub={game.prompt} />
+      <GameHead title={game.title ?? "Ułóż w kolejności"} sub={game.prompt} />
       <View style={s.build}>
-        {order.length === 0 ? <Text style={s.hint}>tapnij klocki poniżej w dobrej kolejności 👇</Text> : null}
+        {order.length === 0 ? (
+          <Muted size="xs" center style={{ paddingVertical: SPACE[3] }}>
+            dotykaj klocków poniżej w dobrej kolejności
+          </Muted>
+        ) : null}
         {order.map((i, k) => (
-          <Touch key={i} onPress={() => remove(k)} style={[g.tile, s.row, checked && (i === k ? g.tileOk : g.tileBad), checked && { opacity: 1 }]}>
-            <Text style={s.num}>{k + 1}.</Text>
+          <Touch key={i} onPress={() => remove(k)} style={[g.tile, s.row, { borderColor: hue.ring }, checked && (i === k ? g.tileOk : g.tileBad)]}>
+            <Text style={[s.num, { color: hue.color }]}>{k + 1}</Text>
             <Text style={[g.tileTxt, { flex: 1 }]}>{game.steps[i]}</Text>
             {checked && i !== k ? <Text style={s.fix}>→ {i + 1}</Text> : null}
           </Touch>
         ))}
       </View>
-      <View style={s.pool}>
+      <View style={{ gap: SPACE[2] }}>
         {pool
           .filter((x) => !order.includes(x.i))
           .map((x) => (
@@ -57,11 +60,11 @@ export function OrderGame({ game, onDone }: GameProps<OrderGameT>) {
           ))}
       </View>
       {!checked ? (
-        <PillButton label="sprawdź ✅" onPress={check} disabled={order.length !== game.steps.length} style={{ marginTop: 14 }} />
+        <Button label="Sprawdź" onPress={check} disabled={order.length !== game.steps.length} style={{ marginTop: SPACE[4] }} />
       ) : (
         <>
           <Feedback ok={correctCount === game.steps.length} text={`${correctCount}/${game.steps.length} na dobrym miejscu`} />
-          <PillButton label="dalej 🏁" onPress={() => onDone(correctCount, game.steps.length)} style={{ marginTop: 14 }} />
+          <Button label="Dalej" onPress={() => onDone(correctCount, game.steps.length)} style={{ marginTop: SPACE[4] }} />
         </>
       )}
     </View>
@@ -69,10 +72,8 @@ export function OrderGame({ game, onDone }: GameProps<OrderGameT>) {
 }
 
 const s = StyleSheet.create({
-  build: { minHeight: 64, borderBottomWidth: 2, borderStyle: "dashed", borderBottomColor: "rgba(255,255,255,0.15)", paddingBottom: 10, marginBottom: 12, gap: 8 },
-  hint: { color: C.muted, fontSize: 13, fontWeight: FONT.semi, textAlign: "center", paddingVertical: 14 },
-  row: { flexDirection: "row", alignItems: "center", gap: 10 },
-  num: { color: C.cyan, fontWeight: FONT.black, fontSize: 14, width: 24 },
-  fix: { color: C.red, fontWeight: FONT.black, fontSize: 13 },
-  pool: { gap: 8 },
+  build: { minHeight: 64, borderBottomWidth: 1, borderStyle: "dashed", borderBottomColor: COLORS.lineStrong, paddingBottom: SPACE[3], marginBottom: SPACE[3], gap: SPACE[2] },
+  row: { flexDirection: "row", alignItems: "center", gap: SPACE[3] },
+  num: { fontFamily: display(700), fontSize: 14, width: 20 },
+  fix: { color: COLORS.danger, fontFamily: display(700), fontSize: 13 },
 });

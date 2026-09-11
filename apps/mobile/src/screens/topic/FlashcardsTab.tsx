@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Flashcard } from "@/components/Flashcard";
 import { Chips, Empty, ProgressRow, Touch } from "@/components/ui";
 import { haptic, useApp } from "@/lib/app-state";
-import { FONT } from "@/lib/theme";
+import { COLORS, RADIUS, SPACE, UI, body } from "@/lib/theme";
 
 interface CardRef {
   t: string;
@@ -16,10 +16,33 @@ interface CardRef {
   levelId: string;
 }
 
-/**
- * Fiszki z jednego tematu albo z całego przedmiotu (`topics` > 1): filtr „do powtórki” (SRS z shared `review()`),
- * „wszystko” i po poziomach/tematach. Ocena 0–3: „jeszcze nie” = 0, „trudne” = 1, „umiem” = 2, „łatwe” = 3.
- */
+export const GRADES: { g: SrsGrade; label: string; color: string; soft: string }[] = [
+  { g: 0, label: "Nie", color: COLORS.danger, soft: COLORS.dangerSoft },
+  { g: 1, label: "Trudne", color: COLORS.streak, soft: "rgba(255,138,61,0.14)" },
+  { g: 2, label: "Umiem", color: COLORS.success, soft: COLORS.successSoft },
+  { g: 3, label: "Łatwe", color: COLORS.info, soft: COLORS.infoSoft },
+];
+
+/** 4 chipy oceny 0–3 (SRS). */
+export function GradeRow({ onGrade }: { onGrade: (g: SrsGrade) => void }) {
+  return (
+    <View style={gr.row}>
+      {GRADES.map((x) => (
+        <Touch key={x.g} onPress={() => onGrade(x.g)} style={[gr.btn, { backgroundColor: x.soft, borderColor: x.color }]}>
+          <Text style={[gr.txt, { color: x.color }]}>{x.label}</Text>
+        </Touch>
+      ))}
+    </View>
+  );
+}
+export const gr = StyleSheet.create({
+  row: { flexDirection: "row", gap: SPACE[2], marginTop: SPACE[4] },
+  btn: { flex: 1, height: 48, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  txt: { fontSize: 14, fontFamily: body(700) },
+  show: { height: 48, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.lineStrong, marginTop: SPACE[4] },
+});
+
+/** Fiszki z jednego tematu albo z całego przedmiotu: „do powtórki” (SRS), „wszystko”, po poziomach/tematach. */
 export function FlashcardsTab({ topics }: { topics: Topic[] }) {
   const app = useApp();
   const insets = useSafeAreaInsets();
@@ -55,7 +78,6 @@ export function FlashcardsTab({ topics }: { topics: Topic[] }) {
     app.setSrsFor(card.topicId, { ...srs, [card.key]: review(srs[card.key] ?? newCard(), g) });
     if (g >= 2) {
       app.addXp(card.topicId, XP.flashcardKnown);
-      app.showToast(`+${XP.flashcardKnown}xp 💪`);
       haptic.ok();
     } else haptic.tap();
     setFlipped(false);
@@ -64,13 +86,13 @@ export function FlashcardsTab({ topics }: { topics: Topic[] }) {
   };
 
   const chips = [
-    { id: "due", label: `🔁 do powtórki (${due.length})` },
-    { id: "all", label: "Wszystko 🌀" },
+    { id: "due", label: `Do powtórki · ${due.length}` },
+    { id: "all", label: "Wszystkie" },
     ...(multi ? topics.map((t) => ({ id: t.id, label: `${t.emoji} ${t.name}` })) : (topics[0]?.levels ?? []).map((l) => ({ id: l.id, label: l.title }))),
   ];
 
   return (
-    <View style={[s.wrap, { paddingBottom: insets.bottom + 12 }]}>
+    <View style={[s.wrap, { paddingBottom: insets.bottom + SPACE[3] }]}>
       <Chips
         items={chips}
         value={filter}
@@ -81,32 +103,17 @@ export function FlashcardsTab({ topics }: { topics: Topic[] }) {
         }}
       />
       {!card ? (
-        <Empty emoji={filter === "due" ? "🧘" : "🫥"} title={filter === "due" ? "Nic do powtórki" : "Brak fiszek"} text={filter === "due" ? "Wszystko ogarnięte na dziś. Wróć jutro albo przejdź na „Wszystko”." : "Nie ma tu jeszcze fiszek."} />
+        <Empty icon="✓" title={filter === "due" ? "Nic do powtórki" : "Brak fiszek"} text={filter === "due" ? "Na dziś czysto. Wróć jutro albo przejrzyj wszystkie." : "Nie ma tu jeszcze fiszek."} />
       ) : (
         <>
           <ProgressRow pct={list.length ? (safeIdx / list.length) * 100 : 0} label={`${safeIdx + 1}/${list.length}`} />
           <Flashcard term={card.t} def={card.d} tag={card.lvl} flipped={flipped} onFlip={() => setFlipped((f) => !f)} />
           {flipped ? (
-            <View style={s.btns}>
-              <Touch onPress={() => grade(0)} style={[s.btn, s.no]}>
-                <Text style={[s.btnTxt, { color: "#ff7a99" }]}>nie 😵</Text>
-              </Touch>
-              <Touch onPress={() => grade(1)} style={[s.btn, s.hard]}>
-                <Text style={[s.btnTxt, { color: "#ffc46b" }]}>trudne 😬</Text>
-              </Touch>
-              <Touch onPress={() => grade(2)} style={[s.btn, s.yes]}>
-                <Text style={[s.btnTxt, { color: "#7dffa6" }]}>umiem 💪</Text>
-              </Touch>
-              <Touch onPress={() => grade(3)} style={[s.btn, s.easy]}>
-                <Text style={[s.btnTxt, { color: "#8ff0ff" }]}>łatwe 😎</Text>
-              </Touch>
-            </View>
+            <GradeRow onGrade={grade} />
           ) : (
-            <View style={s.btns}>
-              <Touch onPress={() => setFlipped(true)} style={[s.btn, s.show]}>
-                <Text style={s.btnTxt}>pokaż odpowiedź 👀</Text>
-              </Touch>
-            </View>
+            <Touch onPress={() => setFlipped(true)} style={gr.show}>
+              <Text style={[gr.txt, { color: COLORS.text }]}>Pokaż odpowiedź</Text>
+            </Touch>
           )}
         </>
       )}
@@ -115,13 +122,5 @@ export function FlashcardsTab({ topics }: { topics: Topic[] }) {
 }
 
 const s = StyleSheet.create({
-  wrap: { flex: 1, paddingHorizontal: 16 },
-  btns: { flexDirection: "row", gap: 8, marginTop: 14 },
-  btn: { flex: 1, paddingVertical: 14, paddingHorizontal: 6, borderRadius: 16, alignItems: "center", borderWidth: 1 },
-  no: { backgroundColor: "#33222e", borderColor: "rgba(255,59,92,.25)" },
-  hard: { backgroundColor: "#33291f", borderColor: "rgba(255,196,107,.25)" },
-  yes: { backgroundColor: "#16331f", borderColor: "rgba(30,215,96,.25)" },
-  easy: { backgroundColor: "#0f2f33", borderColor: "rgba(34,211,238,.25)" },
-  show: { backgroundColor: "rgba(255,255,255,0.08)", borderColor: "rgba(255,255,255,0.13)" },
-  btnTxt: { fontSize: 13.5, fontWeight: FONT.bold, color: "#fff" },
+  wrap: { flex: 1, paddingHorizontal: UI.gutter },
 });

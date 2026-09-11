@@ -1,11 +1,12 @@
 import type { Topic } from "@nauka/shared";
 import React from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { HtmlText } from "@/components/HtmlText";
-import { Card, H1, Muted } from "@/components/ui";
+import { Body, Display, Label, Muted } from "@/components/Text";
+import { Card } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
-import { C, FONT } from "@/lib/theme";
+import { COLORS, SPACE, UI, display, tabular } from "@/lib/theme";
 
 export function InfoTab({ topic }: { topic: Topic }) {
   const app = useApp();
@@ -16,33 +17,37 @@ export function InfoTab({ topic }: { topic: Topic }) {
   return (
     <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: 60 + insets.bottom }]} showsVerticalScrollIndicator={false}>
       <View style={s.hero}>
-        <H1>
-          {topic.emoji} {topic.name}
-        </H1>
-        {topic.tagline ? <Muted>{topic.tagline}</Muted> : null}
-        <Text style={s.meta}>
-          {subject ? `${subject.emoji} ${subject.name} · ` : ""}
-          {topic.source === "prompt" ? "✍️ z hasła" : "📸 z materiałów"} · {topic.levels.length} poziomów · {nQ} pytań · {nF} fiszek
-        </Text>
+        <Label>{subject ? subject.name : "temat"}</Label>
+        <Display size="2xl" weight={700}>
+          {topic.name}
+        </Display>
+        {topic.tagline ? <Body color={COLORS.muted}>{topic.tagline}</Body> : null}
+        <Muted size="xs" style={tabular}>
+          {topic.source === "prompt" ? "z hasła" : "z materiałów"} · {topic.levels.length} poziomów · {nQ} pytań · {nF} fiszek
+        </Muted>
       </View>
       {topic.info?.trim() ? (
         <HtmlText html={topic.info} />
       ) : (
         <Card>
-          <Text style={s.p}>Brak dodatkowych informacji o tym temacie.</Text>
+          <Body color={COLORS.muted}>Brak dodatkowych informacji o tym temacie.</Body>
         </Card>
       )}
-      <Card style={{ marginTop: 4 }}>
-        <Text style={s.h3}>Siatka ocen (egzamin)</Text>
+      <Card style={{ marginTop: SPACE[1] }}>
+        <Label style={{ marginBottom: SPACE[2] }}>siatka ocen · egzamin</Label>
         {topic.grading.scale.map(([thr, label]) => (
           <View key={`${thr}-${label}`} style={s.row}>
-            <Text style={s.p}>≥ {thr}%</Text>
-            <Text style={s.grade}>{label}</Text>
+            <Body style={tabular}>≥ {thr}%</Body>
+            <Body weight={700} color={COLORS.accent} style={{ fontFamily: display(700) }}>
+              {label}
+            </Body>
           </View>
         ))}
-        <View style={s.row}>
-          <Text style={s.p}>{"<"} {topic.grading.pass}%</Text>
-          <Text style={[s.grade, { color: "#ff8aa3" }]}>{topic.grading.failLabel}</Text>
+        <View style={[s.row, { borderBottomWidth: 0 }]}>
+          <Body style={tabular}>{"<"} {topic.grading.pass}%</Body>
+          <Body weight={700} color={COLORS.danger}>
+            {topic.grading.failLabel}
+          </Body>
         </View>
       </Card>
     </ScrollView>
@@ -50,11 +55,7 @@ export function InfoTab({ topic }: { topic: Topic }) {
 }
 
 const s = StyleSheet.create({
-  scroll: { paddingHorizontal: 16 },
-  hero: { paddingVertical: 10, paddingBottom: 16, paddingHorizontal: 4, gap: 6 },
-  meta: { color: C.muted, fontSize: 12.5, fontWeight: FONT.semi, marginTop: 4 },
-  h3: { color: C.cyan, fontSize: 13, fontWeight: FONT.bold, textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 8 },
-  p: { color: "#e7e7f4", fontSize: 15, lineHeight: 22 },
-  row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)" },
-  grade: { color: C.lime, fontWeight: FONT.black, fontSize: 15 },
+  scroll: { paddingHorizontal: UI.gutter },
+  hero: { paddingVertical: SPACE[3], paddingBottom: SPACE[5], gap: SPACE[2] },
+  row: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: COLORS.line },
 });

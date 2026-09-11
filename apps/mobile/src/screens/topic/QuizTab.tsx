@@ -1,12 +1,13 @@
 import type { QuizQuestion, Topic } from "@nauka/shared";
 import React, { useMemo, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { QuizCard } from "@/components/QuizCard";
 import { ResultView, ScoreLine } from "@/components/ResultView";
-import { Chips, Empty, PillButton, ProgressRow } from "@/components/ui";
+import { Button, Card, Chips, Empty, ProgressRow } from "@/components/ui";
 import { haptic, useApp } from "@/lib/app-state";
 import { shuffle } from "@/lib/games";
+import { SPACE, UI } from "@/lib/theme";
 
 interface Q extends QuizQuestion {
   lvl: string;
@@ -44,40 +45,36 @@ export function QuizTab({ topic }: { topic: Topic }) {
     if (i === q.c) {
       setScore((x) => x + 1);
       app.addXp(topic.id, PRACTICE_XP);
-      app.showToast(`GIT +${PRACTICE_XP}xp 🟢`);
       haptic.ok();
-    } else {
-      app.showToast("mid, czytaj wyjaśnienie 👇");
-      haptic.bad();
-    }
+    } else haptic.bad();
   };
 
-  const chips = [{ id: "all", label: "Wszystko 🌀" }, ...topic.levels.map((l) => ({ id: l.id, label: l.title }))];
+  const chips = [{ id: "all", label: "Wszystkie" }, ...topic.levels.map((l) => ({ id: l.id, label: l.title }))];
   const pct = list.length ? Math.round((score / list.length) * 100) : 0;
 
   return (
     <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: 60 + insets.bottom }]} showsVerticalScrollIndicator={false}>
       <Chips items={chips} value={filter} onChange={reset} />
       {!list.length ? (
-        <Empty emoji="🫥" title="Brak pytań" text="Ten poziom nie ma quizu." />
+        <Empty icon="?" title="Brak pytań" text="Ten poziom nie ma quizu." />
       ) : idx >= list.length ? (
-        <View style={s.card}>
-          <ResultView emoji={pct >= 70 ? "🔥" : pct >= 50 ? "😎" : "💀"} title="Wynik" score={<ScoreLine correct={score} total={list.length} />} verdict={pct >= 70 ? "Solidnie ogarniasz ten temat." : pct >= 50 ? "Spoko, ale przejedź jeszcze fiszki." : "Wróć do fiszek i ścieżki, potem tu wróć."}>
-            <PillButton label="jeszcze raz 🔁" onPress={() => reset()} style={{ marginTop: 6 }} />
+        <Card>
+          <ResultView eyebrow="quiz" title={pct >= 70 ? "Solidnie" : pct >= 50 ? "Nieźle" : "Do powtórki"} score={<ScoreLine correct={score} total={list.length} />} verdict={pct >= 70 ? "Ogarniasz ten temat." : pct >= 50 ? "Spoko, ale przejrzyj jeszcze fiszki." : "Wróć do fiszek i ścieżki, potem tu wróć."} celebrate={pct >= 70}>
+            <Button label="Jeszcze raz" variant="secondary" onPress={() => reset()} />
           </ResultView>
-        </View>
+        </Card>
       ) : q ? (
         <>
           <ProgressRow pct={(idx / list.length) * 100} label={`${idx + 1}/${list.length}`} />
           <QuizCard q={q} picked={picked} reveal={picked !== null} onPick={pick} tag={q.lvl}>
             {picked !== null ? (
-              <PillButton
-                label={idx + 1 >= list.length ? "wynik 🏁" : "dalej →"}
+              <Button
+                label={idx + 1 >= list.length ? "Zobacz wynik" : "Następne"}
                 onPress={() => {
                   setIdx(idx + 1);
                   setPicked(null);
                 }}
-                style={{ marginTop: 14 }}
+                style={{ marginTop: SPACE[4] }}
               />
             ) : null}
           </QuizCard>
@@ -88,6 +85,5 @@ export function QuizTab({ topic }: { topic: Topic }) {
 }
 
 const s = StyleSheet.create({
-  scroll: { paddingHorizontal: 16 },
-  card: { backgroundColor: "#1a1a2e", borderRadius: 24, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
+  scroll: { paddingHorizontal: UI.gutter },
 });

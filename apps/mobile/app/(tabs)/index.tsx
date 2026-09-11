@@ -1,12 +1,14 @@
 import { useRouter } from "expo-router";
 import React from "react";
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { AccentGradient } from "@/components/Accent";
+import { Glow } from "@/components/Accent";
 import { SubjectCard } from "@/components/SubjectCard";
-import { H1, Muted, StatPill, TopBar, Touch } from "@/components/ui";
+import { Body, Display, Label, Muted, Title } from "@/components/Text";
+import { Button, MiniPill, SectionHead, StatPill, TopBar, Touch } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
-import { C, FONT, R } from "@/lib/theme";
+import { dni } from "@/lib/plural";
+import { COLORS, RADIUS, SPACE, UI, hueFrom, shadowCard, tabular } from "@/lib/theme";
 
 /** Home „Przedmioty”: streak/XP, karta „Dziś”, siatka przedmiotów, „+ przedmiot”. */
 export default function Home() {
@@ -15,53 +17,68 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const d = app.daily;
   const hasSession = d.items.length > 0;
+  const sessionSubject = d.newLevel ? app.findSubject(app.findTopic(d.newLevel.topicId)?.subjectId ?? "") : app.subjects[0];
+  const hue = hueFrom(sessionSubject?.accent2, sessionSubject?.name);
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
+    <View style={{ flex: 1, backgroundColor: COLORS.bg0 }}>
       <TopBar
         title={
-          <Text style={s.logo}>
-            📚 <Text style={{ color: C.pink }}>NAUKA</Text>
-          </Text>
+          <View style={s.logo}>
+            <View style={s.logoMark} />
+            <Display size="md" weight={800} style={{ letterSpacing: 2 }}>
+              NAUKA
+            </Display>
+          </View>
         }
         right={
           <>
-            <StatPill icon="🔥" value={app.streak} unit="dni" />
-            <StatPill icon="⚡" value={app.totalXp} unit="xp" />
+            <StatPill kind="streak" value={app.streak} unit={dni(app.streak)} />
+            <StatPill kind="xp" value={app.totalXp} unit="xp" />
           </>
         }
       />
-      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: 40 + insets.bottom }]} refreshControl={<RefreshControl refreshing={app.refreshing} onRefresh={app.refresh} tintColor={C.cyan} />} showsVerticalScrollIndicator={false}>
-        <View style={s.hero}>
-          <H1>Twoje przedmioty</H1>
-          <Muted>Do każdego dodajesz tematy — ze zdjęć notatek, PDF-a albo z samego hasła. Potem 10 minut dziennie.</Muted>
-        </View>
-
-        <Touch onPress={() => router.push("/(tabs)/today")} style={s.todayWrap}>
-          <AccentGradient style={s.today}>
-            <View style={{ flex: 1 }}>
-              <Text style={s.todayTitle}>⚡ Dziś · ~{d.minutes} min</Text>
-              <Text style={s.todaySub}>
-                {hasSession
-                  ? [d.reviewCount ? `${d.reviewCount} fiszek do powtórki` : null, d.weakCount ? `${d.weakCount} słabych pytań` : null, d.newLevel ? `nowy poziom: ${d.newLevel.title}` : null].filter(Boolean).join(" · ")
-                  : "brak zadań — dodaj temat, a ułożę Ci sesję"}
-              </Text>
+      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: 110 + insets.bottom }]} refreshControl={<RefreshControl refreshing={app.refreshing} onRefresh={app.refresh} tintColor={COLORS.accent} />} showsVerticalScrollIndicator={false}>
+        <Touch onPress={() => router.push("/(tabs)/today")} style={s.today}>
+          <View style={s.hl} />
+          <Glow color={hue.color} size={360} alpha={0.16} style={{ top: -170, right: -110 }} />
+          <Label>dziś · ~{d.minutes} min</Label>
+          <Display size="xl" weight={700} style={{ marginTop: SPACE[2] }}>
+            {hasSession ? (d.newLevel ? d.newLevel.title : "Powtórka na dziś") : "Dodaj pierwszy temat"}
+          </Display>
+          <Body color={COLORS.muted} style={{ marginTop: 4 }}>
+            {hasSession ? "Powtórki, słabe pytania i jeden nowy poziom." : "Ułożę Ci sesję, gdy pojawi się pierwszy temat."}
+          </Body>
+          {hasSession ? (
+            <View style={s.metrics}>
+              <MiniPill value={d.reviewCount} label="powtórki" />
+              <MiniPill value={d.weakCount} label="słabe" />
+              <MiniPill value={d.newLevel ? 1 : 0} label="nowy" />
             </View>
-            <View style={s.startBtn}>
-              <Text style={s.startTxt}>{hasSession ? "Start ›" : "Zobacz ›"}</Text>
-            </View>
-          </AccentGradient>
+          ) : null}
+          <Button label={hasSession ? "Start" : "Zobacz"} onPress={() => router.push("/(tabs)/today")} style={{ marginTop: SPACE[5] }} />
         </Touch>
 
-        {app.offline ? <Text style={s.offline}>📴 offline — pokazuję zapisane dane</Text> : null}
+        {app.offline ? (
+          <Muted size="xs" center style={{ marginBottom: SPACE[3] }}>
+            offline — pokazuję zapisane dane
+          </Muted>
+        ) : null}
 
+        <SectionHead label="przedmioty" right={<Muted size="xs" style={tabular}>{app.subjects.length}</Muted>} />
         <View style={s.grid}>
           {app.subjects.map((sub) => (
             <SubjectCard key={sub.id} subject={sub} onPress={() => router.push({ pathname: "/s/[subjectId]", params: { subjectId: sub.id } })} />
           ))}
           <Touch onPress={() => router.push("/onboarding-add")} style={s.addcard}>
-            <Text style={{ fontSize: 30, color: C.muted }}>＋</Text>
-            <Text style={s.addTitle}>przedmiot</Text>
+            <View style={s.plus}>
+              <Title size="lg" color={COLORS.muted}>
+                +
+              </Title>
+            </View>
+            <Muted size="sm" weight={600}>
+              przedmiot
+            </Muted>
           </Touch>
         </View>
       </ScrollView>
@@ -70,17 +87,13 @@ export default function Home() {
 }
 
 const s = StyleSheet.create({
-  logo: { color: C.txt, fontWeight: FONT.black, fontSize: 18, letterSpacing: -0.5 },
-  scroll: { paddingHorizontal: 16, paddingTop: 6 },
-  hero: { paddingVertical: 12, paddingHorizontal: 4, gap: 6 },
-  todayWrap: { marginBottom: 16, borderRadius: R.lg, overflow: "hidden" },
-  today: { flexDirection: "row", alignItems: "center", gap: 12, padding: 18, borderRadius: R.lg },
-  todayTitle: { color: "#fff", fontSize: 18, fontWeight: FONT.black, letterSpacing: -0.3 },
-  todaySub: { color: "rgba(255,255,255,0.88)", fontSize: 13, marginTop: 3, lineHeight: 17, fontWeight: FONT.semi },
-  startBtn: { backgroundColor: "rgba(0,0,0,0.28)", borderRadius: R.pill, paddingVertical: 10, paddingHorizontal: 14 },
-  startTxt: { color: "#fff", fontWeight: FONT.black, fontSize: 14 },
-  offline: { color: C.muted, fontSize: 13, fontWeight: FONT.semi, marginBottom: 12, textAlign: "center" },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  addcard: { flexBasis: "47%", flexGrow: 1, minHeight: 150, borderWidth: 1.5, borderStyle: "dashed", borderColor: "rgba(255,255,255,0.15)", borderRadius: R.lg, alignItems: "center", justifyContent: "center", gap: 4 },
-  addTitle: { color: C.muted, fontWeight: FONT.bold, fontSize: 14 },
+  logo: { flexDirection: "row", alignItems: "center", gap: SPACE[2] },
+  logoMark: { width: 10, height: 10, borderRadius: 3, backgroundColor: COLORS.accent },
+  scroll: { paddingHorizontal: UI.gutter, paddingTop: SPACE[2] },
+  today: { backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.xl, padding: SPACE[6], marginBottom: SPACE[6], overflow: "hidden", ...shadowCard },
+  hl: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: COLORS.highlight, zIndex: 2 },
+  metrics: { flexDirection: "row", flexWrap: "wrap", gap: SPACE[2], marginTop: SPACE[4] },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACE[3] },
+  addcard: { flexBasis: "47%", flexGrow: 1, minHeight: 164, borderWidth: 1, borderStyle: "dashed", borderColor: COLORS.lineStrong, borderRadius: RADIUS.lg, alignItems: "center", justifyContent: "center", gap: SPACE[2] },
+  plus: { width: 44, height: 44, borderRadius: 14, backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.line, alignItems: "center", justifyContent: "center" },
 });

@@ -1,8 +1,14 @@
+import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type PressableProps, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type PressableProps, type StyleProp, type TextInputProps, type ViewStyle } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { C, FONT, R, SP } from "@/lib/theme";
-import { AccentGradient, useAccent } from "./Accent";
+import { useReduceMotion } from "@/lib/motion";
+import { COLORS, MOTION, RADIUS, SPACE, UI, body, display, shadowCard, shadowGlow, tabular, type Hue } from "@/lib/theme";
+import { useHue } from "./Accent";
+import { Body, Display, Label, Muted, Num, Title } from "./Text";
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
 /* ------------------------------------------------------------- layout */
 
@@ -18,19 +24,26 @@ export function Screen({ children, style, scroll = false, padded = true, bottom 
   return <View style={[s.screen, padded && s.pad, style]}>{children}</View>;
 }
 
-export function TopBar({ left, title, right, onBack }: { left?: React.ReactNode; title: React.ReactNode; right?: React.ReactNode; onBack?: () => void }) {
+export function TopBar({ left, title, right, onBack, subtitle }: { left?: React.ReactNode; title: React.ReactNode; subtitle?: string; right?: React.ReactNode; onBack?: () => void }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[s.topbar, { paddingTop: insets.top + 10 }]}>
+    <View style={[s.topbar, { paddingTop: insets.top + SPACE[2] }]}>
       <View style={s.topLeft}>
         {onBack ? <BackButton onPress={onBack} /> : left}
-        {typeof title === "string" ? (
-          <Text style={s.logo} numberOfLines={1}>
-            {title}
-          </Text>
-        ) : (
-          title
-        )}
+        <View style={{ flexShrink: 1, minWidth: 0 }}>
+          {typeof title === "string" ? (
+            <Title size="md" numberOfLines={1}>
+              {title}
+            </Title>
+          ) : (
+            title
+          )}
+          {subtitle ? (
+            <Muted size="xs" numberOfLines={1}>
+              {subtitle}
+            </Muted>
+          ) : null}
+        </View>
       </View>
       {right ? <View style={s.pills}>{right}</View> : null}
     </View>
@@ -39,83 +52,117 @@ export function TopBar({ left, title, right, onBack }: { left?: React.ReactNode;
 
 export function BackButton({ onPress, label = "‹" }: { onPress: () => void; label?: string }) {
   return (
-    <Pressable onPress={onPress} hitSlop={10} style={({ pressed }) => [s.backbtn, pressed && { opacity: 0.7 }]} accessibilityLabel="Wróć">
-      <Text style={s.backtxt}>{label}</Text>
-    </Pressable>
+    <Touch onPress={onPress} hitSlop={10} style={s.backbtn} accessibilityLabel="Wróć">
+      <Text style={[s.backtxt, label !== "‹" && { fontSize: 16, marginTop: 0 }]}>{label}</Text>
+    </Touch>
   );
 }
 
-/** Pigułka statystyki: 🔥 3 dni / ⚡ 120 xp */
-export function StatPill({ icon, value, unit }: { icon: string; value: number | string; unit?: string }) {
+/** Pills: streak (pomarańcz) / XP (złoto). Szkło, liczba display 600, etykieta muted. */
+export function StatPill({ kind, value, unit }: { kind: "streak" | "xp"; value: number | string; unit?: string }) {
+  const color = kind === "streak" ? COLORS.streak : COLORS.xp;
   return (
-    <View style={s.streak}>
-      <Text style={s.streakTxt}>
-        {icon} {value}
-        {unit ? <Text style={s.streakUnit}> {unit}</Text> : null}
-      </Text>
+    <View style={s.pill}>
+      <Text style={{ fontSize: 13 }}>{kind === "streak" ? "🔥" : "⚡"}</Text>
+      <Num size="sm" weight={600} color={color} style={{ fontSize: 15, lineHeight: 18 }}>
+        {value}
+      </Num>
+      {unit ? <Muted size="xs">{unit}</Muted> : null}
     </View>
   );
 }
 
-/* ------------------------------------------------------------- text */
-
-export function H1({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
-  return <Text style={[s.h1, style]}>{children}</Text>;
-}
-export function Muted({ children, style, numberOfLines }: { children: React.ReactNode; style?: StyleProp<TextStyle>; numberOfLines?: number }) {
+/** Mini-pill metryki (Dziś, wynik): ikona + liczba + etykieta. */
+export function MiniPill({ icon, value, label, color = COLORS.text }: { icon?: string; value: number | string; label: string; color?: string }) {
   return (
-    <Text style={[s.muted, style]} numberOfLines={numberOfLines}>
+    <View style={s.mini}>
+      {icon ? <Text style={{ fontSize: 13 }}>{icon}</Text> : null}
+      <Num size="base" weight={700} color={color} style={{ fontSize: 16, lineHeight: 20 }}>
+        {value}
+      </Num>
+      <Muted size="xs">{label}</Muted>
+    </View>
+  );
+}
+
+/* ------------------------------------------------------------- pressables */
+
+/** Pressable ze skalą 0.98 (Reanimated), respektuje Reduce Motion. */
+export function Touch({ children, style, onPressIn, onPressOut, disabled, ...rest }: PressableProps & { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  const sc = useSharedValue(1);
+  const reduce = useReduceMotion();
+  const anim = useAnimatedStyle(() => ({ transform: [{ scale: sc.value }] }));
+  return (
+    <AnimatedPressable
+      {...rest}
+      disabled={disabled}
+      onPressIn={(e) => {
+        if (!reduce) sc.set(withTiming(0.98, { duration: MOTION.fast }));
+        onPressIn?.(e);
+      }}
+      onPressOut={(e) => {
+        sc.set(withTiming(1, { duration: MOTION.base }));
+        onPressOut?.(e);
+      }}
+      style={[style, anim, disabled && { opacity: 0.45 }]}
+    >
       {children}
+    </AnimatedPressable>
+  );
+}
+
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+
+/** primary = złoty gradient (accentStrong→accent, tekst accentInk 700, glow); secondary = szkło; ghost = sam tekst; danger = dangerSoft. */
+export function Button({ label, onPress, variant = "primary", small, disabled, style, icon }: { label: string; onPress?: () => void; variant?: ButtonVariant; small?: boolean; disabled?: boolean; style?: StyleProp<ViewStyle>; icon?: string }) {
+  const h = small ? UI.buttonHsm : UI.buttonH;
+  const txt = (color: string) => (
+    <Text style={[s.btnTxt, small && { fontSize: 14 }, { color }]} numberOfLines={1}>
+      {icon ? `${icon} ` : ""}
+      {label}
     </Text>
   );
-}
-export function Tag({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+  if (variant === "primary") {
+    return (
+      <Touch onPress={onPress} disabled={disabled} style={[s.btnWrap, !disabled && shadowGlow, style]}>
+        <LinearGradient colors={[COLORS.accentStrong, COLORS.accent]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.btn, { height: h }]}>
+          <View style={s.btnHighlight} />
+          {txt(COLORS.accentInk)}
+        </LinearGradient>
+      </Touch>
+    );
+  }
+  if (variant === "ghost") {
+    return (
+      <Touch onPress={onPress} disabled={disabled} style={[s.btnWrap, style]}>
+        <View style={[s.btn, { height: h }]}>{txt(COLORS.textSoft)}</View>
+      </Touch>
+    );
+  }
+  const danger = variant === "danger";
   return (
-    <View style={[s.tag, style]}>
-      <Text style={s.tagTxt}>{children}</Text>
-    </View>
+    <Touch onPress={onPress} disabled={disabled} style={[s.btnWrap, style]}>
+      <View style={[s.btn, s.btnGlass, { height: h }, danger && { backgroundColor: COLORS.dangerSoft, borderColor: "rgba(255,107,122,0.3)" }]}>
+        <View style={s.btnHighlight} />
+        {txt(danger ? COLORS.danger : COLORS.text)}
+      </View>
+    </Touch>
   );
 }
-/** Tekst z gradientem nie istnieje w RN bez masek — używamy koloru akcentu. */
-export function AccentText({ children, style }: { children: React.ReactNode; style?: StyleProp<TextStyle> }) {
-  const a = useAccent();
-  return <Text style={[{ color: a.solid }, style]}>{children}</Text>;
-}
 
-/* ------------------------------------------------------------- buttons */
-
-export function PillButton({ label, onPress, ghost, disabled, style, small, danger }: { label: string; onPress?: () => void; ghost?: boolean; disabled?: boolean; style?: StyleProp<ViewStyle>; small?: boolean; danger?: boolean }) {
-  const inner = <Text style={[s.pillTxt, small && { fontSize: 14 }, ghost && { color: C.txt }, danger && { color: "#ff8aa3" }]}>{label}</Text>;
+export function Chip({ label, active, onPress, hue }: { label: string; active?: boolean; onPress?: () => void; hue?: Hue }) {
+  const h = useHue();
+  const c = hue ?? h;
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [s.pillWrap, small && { minHeight: 42 }, pressed && { transform: [{ scale: 0.97 }] }, disabled && { opacity: 0.45 }, style]}>
-      {ghost ? (
-        <View style={[s.pill, s.pillGhost, small && s.pillSmall, danger && { borderColor: "rgba(255,59,92,.35)", backgroundColor: "#33222e" }]}>{inner}</View>
-      ) : (
-        <AccentGradient style={[s.pill, small && s.pillSmall]}>{inner}</AccentGradient>
-      )}
-    </Pressable>
-  );
-}
-
-export function Chip({ label, active, onPress }: { label: string; active?: boolean; onPress?: () => void }) {
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [pressed && { opacity: 0.8 }]}>
-      {active ? (
-        <AccentGradient style={s.chip}>
-          <Text style={[s.chipTxt, { color: "#fff" }]}>{label}</Text>
-        </AccentGradient>
-      ) : (
-        <View style={[s.chip, s.chipIdle]}>
-          <Text style={s.chipTxt}>{label}</Text>
-        </View>
-      )}
-    </Pressable>
+    <Touch onPress={onPress} style={[s.chip, active && { backgroundColor: c.soft, borderColor: c.ring }]}>
+      <Text style={[s.chipTxt, active && { color: COLORS.text }]}>{label}</Text>
+    </Touch>
   );
 }
 
 export function Chips({ items, value, onChange }: { items: { id: string; label: string }[]; value: string; onChange: (id: string) => void }) {
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips} keyboardShouldPersistTaps="handled">
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0, flexShrink: 0 }} contentContainerStyle={[s.chips, { alignItems: "center" }]} keyboardShouldPersistTaps="handled">
       {items.map((it) => (
         <Chip key={it.id} label={it.label} active={value === it.id} onPress={() => onChange(it.id)} />
       ))}
@@ -123,25 +170,35 @@ export function Chips({ items, value, onChange }: { items: { id: string; label: 
   );
 }
 
-export function Touch({ children, style, ...rest }: PressableProps & { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
+/* ------------------------------------------------------------- surfaces */
+
+/** Karta: bg2, hairline, shadow.card, 1px górny highlight. `raised` → bg3. */
+export function Card({ children, style, raised, flat }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; raised?: boolean; flat?: boolean }) {
   return (
-    <Pressable {...rest} style={({ pressed }) => [style, pressed && { transform: [{ scale: 0.985 }] }]}>
+    <View style={[s.card, raised && { backgroundColor: COLORS.bg3 }, !flat && shadowCard, style]}>
+      <View style={s.highlight} />
       {children}
-    </Pressable>
+    </View>
   );
 }
 
-/* ------------------------------------------------------------- cards / bars */
-
-export function Card({ children, style }: { children: React.ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[s.card, style]}>{children}</View>;
+/** Kwadratowa ikona przedmiotu: hue.soft + ring 40%, emoji na środku. */
+export function IconTile({ emoji, hue, size = UI.tile, style }: { emoji: string; hue?: Hue; size?: number; style?: StyleProp<ViewStyle> }) {
+  const h = useHue();
+  const c = hue ?? h;
+  return (
+    <View style={[{ width: size, height: size, borderRadius: Math.round(size * 0.31), backgroundColor: c.soft, borderWidth: 1, borderColor: c.ring, alignItems: "center", justifyContent: "center" }, style]}>
+      <Text style={{ fontSize: Math.round(size / 2) }}>{emoji}</Text>
+    </View>
+  );
 }
 
-export function ProgressBar({ pct, height = 8, style }: { pct: number; height?: number; style?: StyleProp<ViewStyle> }) {
+export function ProgressBar({ pct, height = 6, color, style }: { pct: number; height?: number; color?: string; style?: StyleProp<ViewStyle> }) {
+  const hue = useHue();
   const w = Math.max(0, Math.min(100, pct));
   return (
     <View style={[s.bar, { height, borderRadius: height }, style]}>
-      <AccentGradient style={{ width: `${w}%`, height: "100%", borderRadius: height }} />
+      <View style={{ width: `${w}%`, height: "100%", borderRadius: height, backgroundColor: color ?? hue.color }} />
     </View>
   );
 }
@@ -150,16 +207,27 @@ export function ProgressRow({ pct, label }: { pct: number; label: string }) {
   return (
     <View style={s.progressRow}>
       <ProgressBar pct={pct} style={{ flex: 1 }} />
-      <Text style={s.counter}>{label}</Text>
+      <Muted size="xs" weight={600} style={tabular}>
+        {label}
+      </Muted>
     </View>
   );
 }
 
-export function Spec({ value, label }: { value: string | number; label: string }) {
+export function Divider({ style }: { style?: StyleProp<ViewStyle> }) {
+  return <View style={[s.divider, style]} />;
+}
+
+export function Input(props: TextInputProps) {
+  return <TextInput placeholderTextColor={COLORS.faint} {...props} style={[s.input, props.multiline && { minHeight: 100, paddingTop: 12, textAlignVertical: "top" }, props.style]} />;
+}
+
+/** Wiersz sekcji: eyebrow po lewej, akcja po prawej. */
+export function SectionHead({ label, right, style }: { label: string; right?: React.ReactNode; style?: StyleProp<ViewStyle> }) {
   return (
-    <View style={s.spec}>
-      <Text style={s.specVal}>{value}</Text>
-      <Text style={s.specLbl}>{label}</Text>
+    <View style={[s.section, style]}>
+      <Label>{label}</Label>
+      {right}
     </View>
   );
 }
@@ -167,72 +235,78 @@ export function Spec({ value, label }: { value: string | number; label: string }
 export function Loading({ label = "ładowanie…" }: { label?: string }) {
   return (
     <View style={s.loading}>
-      <ActivityIndicator color={C.cyan} />
-      <Text style={s.muted}>{label}</Text>
+      <ActivityIndicator color={COLORS.accent} />
+      <Muted>{label}</Muted>
     </View>
   );
 }
 
-export function Empty({ emoji = "🫥", title, text, action }: { emoji?: string; title: string; text?: string; action?: React.ReactNode }) {
+/** Pusty stan: ikona w tinted tile, jedno zdanie, jeden przycisk. */
+export function Empty({ icon = "◌", title, text, action }: { icon?: string; title: string; text?: string; action?: React.ReactNode }) {
+  const hue = useHue();
   return (
     <View style={s.empty}>
-      <Text style={{ fontSize: 52 }}>{emoji}</Text>
-      <Text style={s.emptyTitle}>{title}</Text>
-      {text ? <Text style={[s.muted, { textAlign: "center" }]}>{text}</Text> : null}
-      {action ? <View style={{ marginTop: 8, alignSelf: "stretch" }}>{action}</View> : null}
+      <IconTile emoji={icon} hue={hue} size={64} />
+      <Display size="lg" weight={600} center>
+        {title}
+      </Display>
+      {text ? (
+        <Body center color={COLORS.muted} style={{ maxWidth: 300 }}>
+          {text}
+        </Body>
+      ) : null}
+      {action ? <View style={{ marginTop: SPACE[2], alignSelf: "stretch" }}>{action}</View> : null}
     </View>
   );
 }
 
+/** Toast: dół, szkło. */
 export function Toast({ text }: { text: string | null }) {
   const insets = useSafeAreaInsets();
   if (!text) return null;
   return (
-    <View pointerEvents="none" style={[s.toast, { top: insets.top + 56 }]}>
-      <Text style={s.toastTxt}>{text}</Text>
+    <View pointerEvents="none" style={[s.toast, { bottom: insets.bottom + 96 }]}>
+      <View style={s.toastBox}>
+        <View style={s.highlight} />
+        <Body weight={600} color={COLORS.text} center>
+          {text}
+        </Body>
+      </View>
     </View>
   );
 }
 
+export { Body, Display, Label, Muted, Num, Title };
+
 /* ------------------------------------------------------------- styles */
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: C.bg },
-  pad: { paddingHorizontal: 16, paddingTop: 6 },
-  topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingBottom: 8, gap: 10, backgroundColor: C.bg },
-  topLeft: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1, minWidth: 0 },
-  logo: { color: C.txt, fontWeight: FONT.black, fontSize: 18, letterSpacing: -0.5, flexShrink: 1 },
-  backbtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: C.card, borderWidth: 1, borderColor: C.border2, alignItems: "center", justifyContent: "center" },
-  backtxt: { color: C.txt, fontSize: 22, fontWeight: FONT.bold, marginTop: -2 },
-  pills: { flexDirection: "row", alignItems: "center", gap: 7 },
-  streak: { backgroundColor: C.card, borderWidth: 1, borderColor: C.border2, paddingVertical: 7, paddingHorizontal: 11, borderRadius: R.pill },
-  streakTxt: { color: C.txt, fontWeight: FONT.bold, fontSize: 14 },
-  streakUnit: { color: C.muted, fontWeight: FONT.semi, fontSize: 12 },
-  h1: { color: C.txt, fontSize: 27, fontWeight: FONT.black, letterSpacing: -0.6, lineHeight: 31 },
-  muted: { color: C.muted, fontSize: 15, lineHeight: 21 },
-  tag: { alignSelf: "flex-start", backgroundColor: C.faint2, paddingVertical: 5, paddingHorizontal: 11, borderRadius: R.pill, marginBottom: 14 },
-  tagTxt: { color: C.txt, fontSize: 11, fontWeight: FONT.bold, textTransform: "uppercase", letterSpacing: 0.7 },
-  pillWrap: { width: "100%", minHeight: 52 },
-  pill: { paddingVertical: 15, paddingHorizontal: 16, borderRadius: R.md, alignItems: "center", justifyContent: "center", minHeight: 52 },
-  pillSmall: { paddingVertical: 10, minHeight: 42 },
-  pillGhost: { backgroundColor: C.faint2, borderWidth: 1, borderColor: "rgba(255,255,255,0.13)" },
-  pillTxt: { color: "#fff", fontSize: 16, fontWeight: FONT.black },
-  chips: { gap: 8, paddingVertical: 2, paddingBottom: 12 },
-  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: R.pill },
-  chipIdle: { backgroundColor: C.faint, borderWidth: 1, borderColor: C.border2 },
-  chipTxt: { color: C.muted, fontSize: 13, fontWeight: FONT.bold },
-  card: { backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, padding: 18 },
-  bar: { backgroundColor: "rgba(255,255,255,0.07)", overflow: "hidden" },
-  progressRow: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 12 },
-  counter: { color: C.muted, fontSize: 13, fontWeight: FONT.bold },
-  spec: { backgroundColor: C.card, borderWidth: 1, borderColor: C.border2, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 16, alignItems: "center", minWidth: 90 },
-  specVal: { color: C.txt, fontWeight: FONT.bold, fontSize: 15 },
-  specLbl: { color: C.muted, fontWeight: FONT.semi, fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5, marginTop: 2 },
-  loading: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, padding: 30 },
-  empty: { alignItems: "center", justifyContent: "center", gap: 10, padding: 28, paddingTop: 40 },
-  emptyTitle: { color: C.txt, fontSize: 20, fontWeight: FONT.black, textAlign: "center" },
-  toast: { position: "absolute", left: 0, right: 0, alignItems: "center", zIndex: 99 },
-  toastTxt: { backgroundColor: C.card2, borderWidth: 1, borderColor: "rgba(255,255,255,0.13)", color: C.txt, paddingVertical: 10, paddingHorizontal: 18, borderRadius: R.pill, fontWeight: FONT.bold, fontSize: 14, overflow: "hidden" },
+  screen: { flex: 1, backgroundColor: COLORS.bg0 },
+  pad: { paddingHorizontal: UI.gutter, paddingTop: SPACE[2] },
+  topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: UI.gutter, paddingBottom: SPACE[3], gap: SPACE[3], backgroundColor: COLORS.bg0 },
+  topLeft: { flexDirection: "row", alignItems: "center", gap: SPACE[3], flex: 1, minWidth: 0 },
+  backbtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.line, alignItems: "center", justifyContent: "center" },
+  backtxt: { color: COLORS.text, fontSize: 24, fontFamily: display(600), marginTop: -3 },
+  pills: { flexDirection: "row", alignItems: "center", gap: SPACE[2] },
+  pill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.line, paddingVertical: 6, paddingHorizontal: 10, borderRadius: RADIUS.pill },
+  mini: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.line, paddingVertical: 8, paddingHorizontal: 12, borderRadius: RADIUS.pill },
+  btnWrap: { borderRadius: RADIUS.md },
+  btn: { borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center", paddingHorizontal: SPACE[5], overflow: "hidden" },
+  btnGlass: { backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.lineStrong },
+  btnHighlight: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(255,255,255,0.25)" },
+  btnTxt: { fontFamily: body(700), fontSize: 15.5, letterSpacing: 0.1 },
+  chips: { gap: SPACE[2], paddingVertical: 2, paddingBottom: SPACE[3] },
+  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: RADIUS.pill, backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.line },
+  chipTxt: { color: COLORS.muted, fontSize: 13, fontFamily: body(600) },
+  card: { backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.lg, padding: SPACE[5], overflow: "hidden" },
+  highlight: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: COLORS.highlight },
+  bar: { backgroundColor: COLORS.bg3, overflow: "hidden" },
+  progressRow: { flexDirection: "row", alignItems: "center", gap: SPACE[3], marginBottom: SPACE[3] },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: COLORS.lineStrong },
+  input: { height: UI.inputH, backgroundColor: COLORS.bg3, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.md, color: COLORS.text, paddingHorizontal: SPACE[4], fontSize: 15, fontFamily: body(500) },
+  section: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: SPACE[3], marginTop: SPACE[2] },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center", gap: SPACE[3], padding: SPACE[8], backgroundColor: COLORS.bg0 },
+  empty: { alignItems: "center", justifyContent: "center", gap: SPACE[3], paddingHorizontal: SPACE[6], paddingVertical: SPACE[10] },
+  toast: { position: "absolute", left: UI.gutter, right: UI.gutter, alignItems: "center", zIndex: 99 },
+  toastBox: { backgroundColor: COLORS.bg3, borderWidth: 1, borderColor: COLORS.lineStrong, paddingVertical: 12, paddingHorizontal: 18, borderRadius: RADIUS.md, overflow: "hidden", ...shadowCard },
 });
-
-export const SPACE = SP;

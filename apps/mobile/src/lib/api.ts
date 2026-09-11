@@ -21,10 +21,16 @@ function url(path: string): string {
 }
 
 async function request<T>(path: string, token: string, init: RequestInit = {}): Promise<T> {
-  const res = await fetch(url(path), {
-    ...init,
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(init.headers ?? {}) },
-  });
+  let res: Response;
+  try {
+    res = await fetch(url(path), {
+      ...init,
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}`, ...(init.headers ?? {}) },
+    });
+  } catch (e) {
+    if (e instanceof ApiError) throw e;
+    throw new ApiError("Brak połączenia z API — sprawdź sieć albo spróbuj później.", 0, "network");
+  }
   if (!res.ok) {
     let body: { error?: string; code?: string; [k: string]: unknown } = {};
     try {
