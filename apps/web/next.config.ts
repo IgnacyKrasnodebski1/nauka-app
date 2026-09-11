@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@nauka/shared", "@nauka/content", "@nauka/ai"],
+  transpilePackages: ["@nauka/shared", "@nauka/ai"],
   serverExternalPackages: ["@anthropic-ai/sdk"],
   reactStrictMode: true,
   poweredByHeader: false,

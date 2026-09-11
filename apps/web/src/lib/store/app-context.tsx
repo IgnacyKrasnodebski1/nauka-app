@@ -1,118 +1,81 @@
 "use client";
-import { streakDisplay, touchStreak, type Stage, type SubjectProgress, type UserMeta } from "@nauka/shared";
-import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { streakDisplay, touchStreak, type Stage, type SubjectProgress, type UserMeta, type WeakMap } from "@nauka/shared";
+import type { Session, SupabaseClient } from "@supabase/supabase-js";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getBrowserSupabase } from "@/lib/supabase/client";
-import { LS, lsGet, lsSet } from "@/lib/store/local";
-import { mergeLocalIntoSupabase } from "@/lib/store/merge";
-import { LocalProgressStore, SupabaseProgressStore, type ProgressStore, type SrsMap } from "@/lib/store/progress-store";
-import { localKeyFor, type AppSubject } from "@/lib/types";
+import { ProgressStore, type SrsMap } from "@/lib/store/progress-store";
 
 export interface Toast {
   id: number;
   text: string;
 }
 
+export interface AppUser {
+  id: string;
+  email: string | null;
+  name: string | null;
+}
+
 interface AppState {
+  /** store hydrated */
   ready: boolean;
-  user: User | null;
+  user: AppUser;
   session: Session | null;
-  supabase: SupabaseClient | null;
-  store: ProgressStore;
-  /** Storage key for a subject in the current store (slug for guests, uuid for logged users). */
-  keyFor(s: Pick<AppSubject, "id" | "slug">): string;
-  progressOf(s: Pick<AppSubject, "id" | "slug">): SubjectProgress;
-  setProgress(s: Pick<AppSubject, "id" | "slug">, p: SubjectProgress): void;
-  /** Add XP to a subject and register today's activity. */
-  addXp(s: Pick<AppSubject, "id" | "slug">, n: number): void;
+  /** bearer token for /api calls (falls back to cookie session server-side) */
+  authHeaders(): Record<string, string>;
+  supabase: SupabaseClient;
+  store: ProgressStore | null;
+  progressOf(topicId: string): SubjectProgress;
+  allProgress(): Record<string, SubjectProgress>;
+  setProgress(topicId: string, p: SubjectProgress): void;
+  /** Add XP to a topic and register today's activity (streak). */
+  addXp(topicId: string, n: number): void;
+  weak: WeakMap;
+  setWeak(next: WeakMap, topicId: string): void;
+  srsOf(topicId: string): SrsMap;
+  allSrs(): Record<string, SrsMap>;
+  setSrs(topicId: string, cards: SrsMap): void;
+  logActivity(xp: number, minutes: number): void;
   meta: UserMeta;
   streak: number;
   totalXp: number;
   stage: Stage | null;
   setStage(st: Stage): void;
-  srsOf(s: Pick<AppSubject, "id" | "slug">): SrsMap;
-  setSrs(s: Pick<AppSubject, "id" | "slug">, cards: SrsMap): void;
   toast(text: string): void;
   toasts: Toast[];
   signOut(): Promise<void>;
-  onboarded: boolean;
-  setOnboarded(): void;
   version: number;
 }
 
 const Ctx = createContext<AppState | null>(null);
+const EMPTY: SubjectProgress = { xp: 0, levels: {} };
 
-export function AppProvider({ children }: { children: ReactNode }) {
-  const supabase = useMemo(() => (typeof window === "undefined" ? null : getBrowserSupabase()), []);
+export function AppProvider({ user, children }: { user: AppUser; children: ReactNode }) {
+  const supabase = useMemo(() => getBrowserSupabase()!, []);
   const [session, setSession] = useState<Session | null>(null);
-  const [ready, setReady] = useState(false);
-  const [store, setStore] = useState<ProgressStore>(() => new LocalProgressStore());
+  const [store, setStore] = useState<ProgressStore | null>(null);
   const [version, setVersion] = useState(0);
   const [toasts, setToasts] = useState<Toast[]>([]);
-  const [onboarded, setOnb] = useState(true);
   const bump = useCallback(() => setVersion((v) => v + 1), []);
-  const loadedFor = useRef<string | null>(null);
 
-  // auth bootstrap
   useEffect(() => {
-    let alive = true;
-    if (!supabase) {
-      const local = new LocalProgressStore();
-      local.load().then(() => {
-        if (!alive) return;
-        setStore(local);
-        setOnb(!!lsGet(LS.onboarded) || !!local.getStage());
-        setReady(true);
-      });
-      return () => {
-        alive = false;
-      };
-    }
-    supabase.auth.getSession().then(({ data }) => alive && setSession(data.session));
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => {
-      alive = false;
-      sub.subscription.unsubscribe();
-    };
+    return () => sub.subscription.unsubscribe();
   }, [supabase]);
 
-  // pick store for the current user
   useEffect(() => {
     if (!supabase) return;
     let alive = true;
-    const uid = session?.user.id ?? null;
-    if (loadedFor.current === uid && ready) return;
-    loadedFor.current = uid;
-    setReady(false);
-    (async () => {
-      if (uid) {
-        try {
-          await mergeLocalIntoSupabase(supabase, uid);
-        } catch (e) {
-          console.warn("[merge] failed", e);
-        }
-        const s = new SupabaseProgressStore(supabase, uid);
-        try {
-          await s.load();
-        } catch (e) {
-          console.warn("[store] load failed", e);
-        }
-        if (!alive) return;
-        setStore(s);
-        setOnb(!!s.getStage() || !!lsGet(LS.onboarded));
-      } else {
-        const s = new LocalProgressStore();
-        await s.load();
-        if (!alive) return;
-        setStore(s);
-        setOnb(!!lsGet(LS.onboarded) || !!s.getStage());
-      }
-      setReady(true);
-    })();
+    const s = new ProgressStore(supabase, user.id);
+    s.load()
+      .catch((e) => console.warn("[store] load failed", e))
+      .then(() => alive && setStore(s));
     return () => {
       alive = false;
     };
-  }, [supabase, session, ready]);
+  }, [supabase, user.id]);
 
   const toast = useCallback((text: string) => {
     const id = Date.now() + Math.random();
@@ -120,26 +83,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 1700);
   }, []);
 
-  const keyFor = useCallback((s: Pick<AppSubject, "id" | "slug">) => (store.kind === "supabase" ? s.id : localKeyFor(s)), [store]);
-
   const value = useMemo<AppState>(() => {
-    const meta = store.getMeta();
+    const meta = store?.getMeta() ?? { streak: 0, best: 0, lastDay: null };
     return {
-      ready,
-      user: session?.user ?? null,
+      ready: !!store,
+      user,
       session,
+      authHeaders: () => (session?.access_token ? { authorization: `Bearer ${session.access_token}` } : {}),
       supabase,
       store,
-      keyFor,
-      progressOf: (s) => store.getProgress(keyFor(s)),
-      setProgress: (s, p) => {
-        store.setProgress(keyFor(s), p);
+      progressOf: (id) => store?.getProgress(id) ?? EMPTY,
+      allProgress: () => store?.allProgress() ?? {},
+      setProgress: (id, p) => {
+        store?.setProgress(id, p);
         bump();
       },
-      addXp: (s, n) => {
-        const k = keyFor(s);
-        const p = store.getProgress(k);
-        store.setProgress(k, { ...p, xp: p.xp + n });
+      addXp: (id, n) => {
+        if (!store) return;
+        const p = store.getProgress(id);
+        if (n) store.setProgress(id, { ...p, xp: p.xp + n });
         const { meta: m, extended } = touchStreak(store.getMeta());
         if (extended) {
           store.setMeta(m);
@@ -147,34 +109,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
         bump();
       },
-      meta,
-      streak: streakDisplay(meta),
-      totalXp: store.totalXp(),
-      stage: store.getStage(),
-      setStage: (st) => {
-        store.setStage(st);
+      weak: store?.getWeak() ?? {},
+      setWeak: (next, topicId) => {
+        store?.setWeak(next, topicId);
         bump();
       },
-      srsOf: (s) => store.getSrs(keyFor(s)),
-      setSrs: (s, cards) => {
-        store.setSrs(keyFor(s), cards);
+      srsOf: (id) => store?.getSrs(id) ?? {},
+      allSrs: () => store?.allSrs() ?? {},
+      setSrs: (id, cards) => {
+        store?.setSrs(id, cards);
+        bump();
+      },
+      logActivity: (xp, minutes) => store?.logActivity(xp, minutes),
+      meta,
+      streak: streakDisplay(meta),
+      totalXp: store?.totalXp() ?? 0,
+      stage: store?.getStage() ?? null,
+      setStage: (st) => {
+        store?.setStage(st);
         bump();
       },
       toast,
       toasts,
       signOut: async () => {
-        await supabase?.auth.signOut();
-        loadedFor.current = null;
-        setSession(null);
-      },
-      onboarded,
-      setOnboarded: () => {
-        lsSet(LS.onboarded, "1");
-        setOnb(true);
+        await supabase.auth.signOut();
       },
       version,
     };
-  }, [ready, session, supabase, store, keyFor, toasts, onboarded, version, bump, toast]);
+  }, [user, session, supabase, store, toasts, version, bump, toast]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -1,15 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-/** Klucze — kompatybilne z legacy/web. NIE zmieniać bez migracji. */
+/** Klucze AsyncStorage — tylko cache do odczytu offline + flagi UI. Źródłem prawdy jest Supabase. */
 export const KEYS = {
-  progress: "nauka_progress_v1",
-  meta: "nauka_meta_v1",
-  srs: "nauka_srs_v1",
+  /** snapshot danych zalogowanego usera: `${KEYS.cache}:${userId}` */
+  cache: "nauka_cache_v2",
+  /** ostatni etap (do prefill w onboardingu) */
   stage: "nauka_stage_v1",
-  merged: "nauka_merged_v1",
-  onboarded: "nauka_onboarded_v1",
-  subjectsCache: "nauka_subjects_cache_v1",
-  library: "nauka_library_v1",
 } as const;
 
 export async function getJson<T>(key: string, fallback: T): Promise<T> {

@@ -1,7 +1,6 @@
-import type { GenerationOptions, Plan, PLANS, Stage } from "@nauka/shared";
+import type { GenerationOptions, Plan, PLANS, Stage, Topic } from "@nauka/shared";
+import { rowToTopic, type TopicRow } from "./data";
 import { ENV, hasApi } from "./env";
-import type { AppSubject, SubjectRow } from "./subjects";
-import { rowToSubject } from "./subjects";
 
 /** Klient API weba (apps/web) — patrz docs/API.md. Wszystko z Bearer tokenem Supabase. */
 
@@ -51,22 +50,21 @@ export function getMe(token: string): Promise<MeResponse> {
 }
 
 export interface GenerateBody {
-  materialIds: string[];
+  subjectId: string;
+  materialIds?: string[];
   text?: string;
   options: GenerationOptions;
 }
 
-export async function generate(token: string, body: GenerateBody): Promise<{ generationId: string; subjectId: string; subject: AppSubject }> {
-  const r = await request<{ generationId: string; subjectId: string; subject: SubjectRow | AppSubject }>("/api/generate", token, {
-    method: "POST",
-    body: JSON.stringify(body),
-  });
-  const s = r.subject as SubjectRow | AppSubject;
-  const subject = "content" in s && typeof s.content === "object" ? rowToSubject(s as SubjectRow) : (s as AppSubject);
-  return { generationId: r.generationId, subjectId: r.subjectId, subject };
+/** POST /api/generate → nowy temat w przedmiocie. API może zwrócić wiersz DB (`content`) albo gotowy `Topic`. */
+export async function generate(token: string, body: GenerateBody): Promise<{ generationId: string; topicId: string; topic: Topic | null }> {
+  const r = await request<{ generationId: string; topicId: string; topic?: TopicRow | Topic }>("/api/generate", token, { method: "POST", body: JSON.stringify(body) });
+  let topic: Topic | null = null;
+  if (r.topic) topic = "content" in r.topic && typeof r.topic.content === "object" ? rowToTopic(r.topic as TopicRow) : (r.topic as Topic);
+  return { generationId: r.generationId, topicId: r.topicId, topic };
 }
 
-export function generationStatus(token: string, id: string): Promise<{ status: string; subjectId?: string; error?: string }> {
+export function generationStatus(token: string, id: string): Promise<{ status: string; topicId?: string; error?: string }> {
   return request(`/api/generate?id=${encodeURIComponent(id)}`, token);
 }
 
@@ -89,7 +87,7 @@ export interface TutorMessage {
  */
 export async function tutorAsk(
   token: string,
-  body: { subjectId: string; levelId: string; question: string; history: TutorMessage[] },
+  body: { topicId: string; levelId: string; question: string; history: TutorMessage[] },
   onChunk?: (text: string) => void,
   signal?: AbortSignal,
 ): Promise<string> {

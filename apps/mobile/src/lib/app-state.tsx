@@ -1,71 +1,66 @@
 import {
+  buildDailySession,
+  emptyMeta,
   emptyProgress,
   streakDisplay,
   touchStreak,
+  type DailySession,
   type Stage,
+  type Subject,
   type SubjectProgress,
+  type Topic,
   type UserMeta,
+  type WeakMap,
 } from "@nauka/shared";
 import * as Haptics from "expo-haptics";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "./auth";
-import { KEYS, getJson, setJson } from "./storage";
-import { mergeLocalIntoSupabase } from "./store/merge";
-import { LocalProgressStore, SupabaseProgressStore, type ProgressStore, type SrsMap } from "./store/progress-store";
-import {
-  fetchLibraryIds,
-  fetchOwnSubjects,
-  fetchPublicSubjects,
-  fetchSubjectById,
-  loadSeedSubjects,
-  mergeById,
-  progressKey,
-  readSubjectsCache,
-  writeSubjectsCache,
-  type AppSubject,
-} from "./subjects";
-import { isUuid, supabase } from "./supabase";
+import { fetchTopic, fetchUserData, insertSubjects, readCache, writeCache, type SrsMap, type SubjectInput, type UserData } from "./data";
+import { KEYS, setJson } from "./storage";
+import { ProgressStore } from "./store/progress-store";
+import { supabase } from "./supabase";
 
 export interface AppState {
+  /** dane załadowane (z sieci albo z cache) */
   ready: boolean;
-  store: ProgressStore;
-  /** wszystkie znane przedmioty (public + własne + cache) */
-  subjects: AppSubject[];
-  /** publiczne (biblioteka) */
-  publicSubjects: AppSubject[];
-  /** własne (owner = user) */
-  ownSubjects: AppSubject[];
-  /** id/slugi dodane „do moich” */
-  libraryIds: string[];
-  /** przedmioty na ekranie głównym: własne + biblioteka */
-  homeSubjects: AppSubject[];
+  /** brak danych i brak sieci */
   offline: boolean;
   refreshing: boolean;
   refresh(): Promise<void>;
-  getSubject(idOrSlug: string): Promise<AppSubject | null>;
-  findSubject(idOrSlug: string): AppSubject | undefined;
-  registerSubject(s: AppSubject): void;
-  inLibrary(s: AppSubject): boolean;
-  toggleLibrary(s: AppSubject): Promise<void>;
-  /* progress */
-  keyFor(s: AppSubject): string;
-  progressFor(s: AppSubject): SubjectProgress;
-  setProgressFor(s: AppSubject, p: SubjectProgress): void;
-  /** dodaje XP (bez zmiany poziomów) i odnotowuje streak */
-  addXp(s: AppSubject, n: number): void;
-  srsFor(s: AppSubject): SrsMap;
-  setSrsFor(s: AppSubject, m: SrsMap): void;
+  store: ProgressStore | null;
+  subjects: Subject[];
+  topics: Topic[];
+  topicsOf(subjectId: string): Topic[];
+  findSubject(id: string): Subject | undefined;
+  findTopic(id: string): Topic | undefined;
+  /** temat: z pamięci, a gdy brak — z Supabase (np. świeżo wygenerowany) */
+  getTopic(id: string): Promise<Topic | null>;
+  registerTopic(t: Topic): void;
+  createSubjects(inputs: SubjectInput[]): Promise<Subject[]>;
+  updateSubject(id: string, patch: { examDate?: string | null; examLabel?: string | null; name?: string; emoji?: string }): Promise<void>;
+  deleteSubject(id: string): Promise<void>;
+  /* progress (per topic) */
+  progress: Record<string, SubjectProgress>;
+  progressFor(topicId: string): SubjectProgress;
+  setProgressFor(topicId: string, p: SubjectProgress): void;
+  addXp(topicId: string, n: number): void;
+  srs: Record<string, SrsMap>;
+  srsFor(topicId: string): SrsMap;
+  setSrsFor(topicId: string, m: SrsMap): void;
+  weak: WeakMap;
+  setWeak(topicId: string, levelId: string, wrongIdx: number[], rightIdx: number[]): void;
+  logActivity(xp: number, minutes: number): void;
   meta: UserMeta;
   streak: number;
   totalXp: number;
   stage: Stage | null;
   setStage(st: Stage): void;
+  /** onboarding zrobiony = jest etap i ≥1 przedmiot */
   onboarded: boolean;
-  setOnboarded(): void;
+  daily: DailySession;
   /* toast */
   toast: string | null;
   showToast(t: string): void;
-  /** licznik zmian — komponenty re-renderują się po zapisach */
   tick: number;
 }
 
@@ -74,17 +69,18 @@ const Ctx = createContext<AppState | null>(null);
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const auth = useAuth();
   const userId = auth.user?.id ?? null;
-  const [store, setStore] = useState<ProgressStore>(() => new LocalProgressStore());
+  const [store, setStore] = useState<ProgressStore | null>(null);
   const [ready, setReady] = useState(false);
-  const [tick, setTick] = useState(0);
-  const bump = useCallback(() => setTick((t) => t + 1), []);
-  const [subjects, setSubjects] = useState<AppSubject[]>([]);
-  const [libraryIds, setLibraryIds] = useState<string[]>([]);
   const [offline, setOffline] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [onboarded, setOnb] = useState(true);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [tick, setTick] = useState(0);
+  const bump = useCallback(() => setTick((t) => t + 1), []);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const latest = useRef<{ subjects: Subject[]; topics: Topic[] }>({ subjects: [], topics: [] });
+  latest.current = { subjects, topics };
 
   const showToast = useCallback((t: string) => {
     setToast(t);
@@ -92,146 +88,157 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     toastTimer.current = setTimeout(() => setToast(null), 1700);
   }, []);
 
-  /* ---------- store per użytkownik ---------- */
+  /** snapshot całości do AsyncStorage — używany przez store po każdym zapisie */
+  const attachSnapshot = useCallback((s: ProgressStore) => {
+    s.snapshot = () => ({ subjects: latest.current.subjects, topics: latest.current.topics, progress: s.progress, srs: s.srs, weak: s.weak, meta: s.meta, stage: s.stage });
+  }, []);
+
+  const load = useCallback(
+    async (uid: string, s: ProgressStore, silent: boolean) => {
+      if (!supabase) return;
+      if (!silent) setRefreshing(true);
+      try {
+        const d = await fetchUserData(supabase, uid);
+        s.hydrate(d);
+        setSubjects(d.subjects);
+        setTopics(d.topics);
+        latest.current = { subjects: d.subjects, topics: d.topics };
+        setOffline(false);
+        void writeCache(uid, d);
+        if (d.stage) void setJson(KEYS.stage, d.stage);
+      } catch (e) {
+        console.warn("[app] load failed → cache", e);
+        const c = await readCache(uid);
+        if (c) {
+          s.hydrate(c);
+          setSubjects(c.subjects);
+          setTopics(c.topics);
+          latest.current = { subjects: c.subjects, topics: c.topics };
+        }
+        setOffline(true);
+        showToast("📴 Brak sieci — pokazuję zapisane dane");
+      } finally {
+        setRefreshing(false);
+        bump();
+      }
+    },
+    [bump, showToast],
+  );
+
+  /* ---------- store per user ---------- */
   useEffect(() => {
     if (auth.loading) return;
     let alive = true;
     (async () => {
       setReady(false);
-      let s: ProgressStore;
-      if (userId && supabase) {
-        s = new SupabaseProgressStore(supabase, userId);
-        try {
-          const merged = await mergeLocalIntoSupabase(supabase, userId);
-          await s.load();
-          if (merged) showToast("Postępy gościa scalone z kontem ✅");
-        } catch (e) {
-          console.warn("[app] supabase store load failed, using cached snapshot", e);
-          // brak sieci: snapshot z ostatniego load()
-          const snap = await getJson<Record<string, SubjectProgress>>(`${KEYS.progress}:${userId}`, {});
-          for (const [k, v] of Object.entries(snap)) s.setProgress(k, v);
-        }
-      } else {
-        s = new LocalProgressStore();
-        await s.load();
+      if (!userId || !supabase) {
+        setStore(null);
+        setSubjects([]);
+        setTopics([]);
+        setReady(true);
+        return;
       }
-      const onb = await getJson<boolean>(KEYS.onboarded, false);
+      const s = new ProgressStore(supabase, userId);
+      attachSnapshot(s);
+      // najpierw cache (natychmiast), potem sieć
+      const c = await readCache(userId);
+      if (c && alive) {
+        s.hydrate(c);
+        setSubjects(c.subjects);
+        setTopics(c.topics);
+        latest.current = { subjects: c.subjects, topics: c.topics };
+        setStore(s);
+        setReady(true);
+      }
+      await load(userId, s, !!c);
       if (!alive) return;
-      setOnb(onb || !!s.getStage());
       setStore(s);
       setReady(true);
-      bump();
     })();
     return () => {
       alive = false;
     };
-  }, [userId, auth.loading, bump, showToast]);
+  }, [userId, auth.loading, load, attachSnapshot]);
 
-  /* ---------- przedmioty ---------- */
   const refresh = useCallback(async () => {
-    setRefreshing(true);
-    try {
-      const cached = await readSubjectsCache();
-      const seeds = loadSeedSubjects();
-      let pub: AppSubject[] | null = null;
-      let own: AppSubject[] = [];
-      let lib: string[] | null = null;
-      if (supabase) {
-        try {
-          pub = await fetchPublicSubjects(supabase);
-          if (userId) {
-            own = await fetchOwnSubjects(supabase, userId);
-            lib = await fetchLibraryIds(supabase, userId);
-          }
-          setOffline(false);
-        } catch (e) {
-          console.warn("[app] subjects fetch failed → cache/seeds", e);
-          setOffline(true);
-        }
-      }
-      // gdy Supabase pusty / brak env / offline → seedy (slug jako id)
-      const publicList = pub && pub.length ? pub : seeds;
-      const all = mergeById(cached.filter((c) => !!c.ownerId), publicList, own);
-      setSubjects(all);
-      if (lib) setLibraryIds(lib);
-      else setLibraryIds(await getJson<string[]>(KEYS.library, []));
-      void writeSubjectsCache(all);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [userId]);
+    if (userId && store) await load(userId, store, false);
+  }, [userId, store, load]);
 
-  useEffect(() => {
-    if (auth.loading) return;
-    // najpierw cache (natychmiast), potem sieć
-    (async () => {
-      const cached = await readSubjectsCache();
-      if (cached.length) setSubjects((cur) => (cur.length ? cur : cached));
-      else setSubjects(loadSeedSubjects());
-      await refresh();
-    })();
-  }, [refresh, auth.loading]);
+  /* ---------- subjects / topics ---------- */
+  const topicsOf = useCallback((subjectId: string) => topics.filter((t) => t.subjectId === subjectId), [topics]);
+  const findSubject = useCallback((id: string) => subjects.find((s) => s.id === id), [subjects]);
+  const findTopic = useCallback((id: string) => topics.find((t) => t.id === id), [topics]);
 
-  const findSubject = useCallback((idOrSlug: string) => subjects.find((s) => s.id === idOrSlug || (s.slug && s.slug === idOrSlug)), [subjects]);
-
-  const registerSubject = useCallback((s: AppSubject) => {
-    setSubjects((cur) => {
-      const next = mergeById(cur, [s]);
-      void writeSubjectsCache(next);
+  const registerTopic = useCallback((t: Topic) => {
+    setTopics((cur) => {
+      const next = cur.some((x) => x.id === t.id) ? cur.map((x) => (x.id === t.id ? t : x)) : [...cur, t];
+      latest.current = { ...latest.current, topics: next };
+      if (store?.snapshot && userId) void writeCache(userId, store.snapshot());
       return next;
     });
-  }, []);
+  }, [store, userId]);
 
-  const getSubject = useCallback(
-    async (idOrSlug: string): Promise<AppSubject | null> => {
-      const local = findSubject(idOrSlug);
+  const getTopic = useCallback(
+    async (id: string) => {
+      const local = findTopic(id);
       if (local) return local;
-      if (supabase) {
-        try {
-          const r = await fetchSubjectById(supabase, idOrSlug, isUuid(idOrSlug));
-          if (r) {
-            registerSubject(r);
-            return r;
-          }
-        } catch {
-          /* offline */
-        }
-      }
-      return loadSeedSubjects().find((s) => s.id === idOrSlug) ?? null;
-    },
-    [findSubject, registerSubject],
-  );
-
-  const publicSubjects = useMemo(() => subjects.filter((s) => s.isPublic && s.ownerId === null), [subjects]);
-  const ownSubjects = useMemo(() => (userId ? subjects.filter((s) => s.ownerId === userId) : []), [subjects, userId]);
-
-  const inLibrary = useCallback((s: AppSubject) => libraryIds.includes(s.id) || (!!s.slug && libraryIds.includes(s.slug)), [libraryIds]);
-
-  const toggleLibrary = useCallback(
-    async (s: AppSubject) => {
-      const has = inLibrary(s);
-      const next = has ? libraryIds.filter((x) => x !== s.id && x !== s.slug) : [...libraryIds, s.id];
-      setLibraryIds(next);
-      if (userId && supabase && isUuid(s.id)) {
-        if (has) await supabase.from("library").delete().eq("user_id", userId).eq("subject_id", s.id);
-        else await supabase.from("library").upsert({ user_id: userId, subject_id: s.id }, { onConflict: "user_id,subject_id" });
-      } else {
-        await setJson(KEYS.library, next);
+      if (!supabase) return null;
+      try {
+        const t = await fetchTopic(supabase, id);
+        if (t) registerTopic(t);
+        return t;
+      } catch {
+        return null;
       }
     },
-    [inLibrary, libraryIds, userId],
+    [findTopic, registerTopic],
   );
 
-  const homeSubjects = useMemo(() => {
-    const lib = publicSubjects.filter(inLibrary);
-    return [...ownSubjects, ...lib];
-  }, [ownSubjects, publicSubjects, inLibrary]);
+  const createSubjects = useCallback(
+    async (inputs: SubjectInput[]) => {
+      if (!supabase || !userId) throw new Error("Zaloguj się.");
+      const created = await insertSubjects(supabase, userId, inputs, subjects.length);
+      setSubjects((cur) => {
+        const next = [...cur, ...created];
+        latest.current = { ...latest.current, subjects: next };
+        return next;
+      });
+      bump();
+      return created;
+    },
+    [subjects.length, userId, bump],
+  );
 
-  /* ---------- progress helpers ---------- */
-  const keyFor = useCallback((s: AppSubject) => progressKey(s, store.kind), [store]);
-  const progressFor = useCallback((s: AppSubject) => (ready ? store.getProgress(keyFor(s)) : emptyProgress()), [store, keyFor, ready]);
+  const updateSubject = useCallback(
+    async (id: string, patch: { examDate?: string | null; examLabel?: string | null; name?: string; emoji?: string }) => {
+      if (!supabase) return;
+      const row: Record<string, unknown> = {};
+      if ("examDate" in patch) row.exam_date = patch.examDate ?? null;
+      if ("examLabel" in patch) row.exam_label = patch.examLabel ?? null;
+      if (patch.name) row.name = patch.name;
+      if (patch.emoji) row.emoji = patch.emoji;
+      setSubjects((cur) => cur.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+      const { error } = await supabase.from("subjects").update(row).eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    [],
+  );
 
+  const deleteSubject = useCallback(
+    async (id: string) => {
+      if (!supabase) return;
+      const { error } = await supabase.from("subjects").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+      setSubjects((cur) => cur.filter((s) => s.id !== id));
+      setTopics((cur) => cur.filter((t) => t.subjectId !== id));
+      bump();
+    },
+    [bump],
+  );
+
+  /* ---------- progress ---------- */
   const touch = useCallback(() => {
+    if (!store) return;
     const { meta, extended } = touchStreak(store.getMeta());
     if (extended) {
       store.setMeta(meta);
@@ -239,90 +246,69 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, [store, showToast]);
 
+  const progressFor = useCallback((id: string) => store?.getProgress(id) ?? emptyProgress(), [store]);
   const setProgressFor = useCallback(
-    (s: AppSubject, p: SubjectProgress) => {
-      store.setProgress(keyFor(s), p);
+    (id: string, p: SubjectProgress) => {
+      store?.setProgress(id, p);
       touch();
       bump();
     },
-    [store, keyFor, touch, bump],
+    [store, touch, bump],
   );
-
   const addXp = useCallback(
-    (s: AppSubject, n: number) => {
-      if (n <= 0) return;
-      const p = store.getProgress(keyFor(s));
-      store.setProgress(keyFor(s), { ...p, xp: p.xp + n });
+    (id: string, n: number) => {
+      if (!store || n <= 0) return;
+      const p = store.getProgress(id);
+      store.setProgress(id, { ...p, xp: p.xp + n });
       touch();
       bump();
     },
-    [store, keyFor, touch, bump],
+    [store, touch, bump],
   );
-
-  const srsFor = useCallback((s: AppSubject) => store.getSrs(keyFor(s)), [store, keyFor]);
+  const srsFor = useCallback((id: string) => store?.getSrs(id) ?? {}, [store]);
   const setSrsFor = useCallback(
-    (s: AppSubject, m: SrsMap) => {
-      store.setSrs(keyFor(s), m);
-      bump();
-    },
-    [store, keyFor, bump],
-  );
-
-  const setStage = useCallback(
-    (st: Stage) => {
-      store.setStage(st);
+    (id: string, m: SrsMap) => {
+      store?.setSrs(id, m);
       bump();
     },
     [store, bump],
   );
-  const setOnboarded = useCallback(() => {
-    setOnb(true);
-    void setJson(KEYS.onboarded, true);
-  }, []);
+  const setWeak = useCallback(
+    (topicId: string, levelId: string, wrong: number[], right: number[]) => {
+      store?.setWeak(topicId, levelId, wrong, right);
+      bump();
+    },
+    [store, bump],
+  );
+  const logActivity = useCallback((xp: number, minutes: number) => store?.logActivity(xp, minutes), [store]);
+  const setStage = useCallback(
+    (st: Stage) => {
+      store?.setStage(st);
+      void setJson(KEYS.stage, st);
+      bump();
+    },
+    [store, bump],
+  );
 
-  // tick w deps, żeby meta/xp odświeżały się po zapisach
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const meta = useMemo(() => store.getMeta(), [store, tick]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const totalXp = useMemo(() => store.totalXp(), [store, tick]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stage = useMemo(() => store.getStage(), [store, tick]);
+  /* eslint-disable react-hooks/exhaustive-deps -- `tick` wymusza odczyt po zapisach w mutowalnym store */
+  const meta = useMemo(() => store?.getMeta() ?? emptyMeta(), [store, tick]);
+  const totalXp = useMemo(() => store?.totalXp() ?? 0, [store, tick]);
+  const stage = useMemo(() => store?.stage ?? null, [store, tick]);
+  const progress = useMemo(() => store?.progress ?? {}, [store, tick]);
+  const srs = useMemo(() => store?.srs ?? {}, [store, tick]);
+  const weak = useMemo(() => store?.weak ?? {}, [store, tick]);
+  /* eslint-enable react-hooks/exhaustive-deps */
+
+  const daily = useMemo(() => buildDailySession(topics, progress, srs, weak), [topics, progress, srs, weak]);
+  const onboarded = !!stage && subjects.length > 0;
 
   const value = useMemo<AppState>(
     () => ({
-      ready,
-      store,
-      subjects,
-      publicSubjects,
-      ownSubjects,
-      libraryIds,
-      homeSubjects,
-      offline,
-      refreshing,
-      refresh,
-      getSubject,
-      findSubject,
-      registerSubject,
-      inLibrary,
-      toggleLibrary,
-      keyFor,
-      progressFor,
-      setProgressFor,
-      addXp,
-      srsFor,
-      setSrsFor,
-      meta,
-      streak: streakDisplay(meta),
-      totalXp,
-      stage,
-      setStage,
-      onboarded,
-      setOnboarded,
-      toast,
-      showToast,
-      tick,
+      ready, offline, refreshing, refresh, store, subjects, topics, topicsOf, findSubject, findTopic, getTopic, registerTopic, createSubjects, updateSubject, deleteSubject,
+      progress, progressFor, setProgressFor, addXp, srs, srsFor, setSrsFor, weak, setWeak, logActivity,
+      meta, streak: streakDisplay(meta), totalXp, stage, setStage, onboarded, daily, toast, showToast, tick,
     }),
-    [ready, store, subjects, publicSubjects, ownSubjects, libraryIds, homeSubjects, offline, refreshing, refresh, getSubject, findSubject, registerSubject, inLibrary, toggleLibrary, keyFor, progressFor, setProgressFor, addXp, srsFor, setSrsFor, meta, totalXp, stage, setStage, onboarded, setOnboarded, toast, showToast, tick],
+    [ready, offline, refreshing, refresh, store, subjects, topics, topicsOf, findSubject, findTopic, getTopic, registerTopic, createSubjects, updateSubject, deleteSubject, progress, progressFor, setProgressFor, addXp, srs, srsFor, setSrsFor, weak, setWeak, logActivity, meta, totalXp, stage, setStage, onboarded, daily, toast, showToast, tick],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

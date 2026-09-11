@@ -1,13 +1,12 @@
-import { isLevelUnlocked, levelProgress, type SubjectProgress } from "@nauka/shared";
+import { isLevelUnlocked, levelProgress, type SubjectProgress, type Topic } from "@nauka/shared";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
-import type { AppSubject } from "@/lib/subjects";
 import { C, FONT } from "@/lib/theme";
 import { AccentGradient, useAccent } from "./Accent";
 import { Touch } from "./ui";
 
 /** Ścieżka poziomów w stylu Duolingo (zygzak, kółka: done / open / lock, gwiazdki). */
-export function LevelPath({ subject, progress, onOpen, onLocked }: { subject: AppSubject; progress: SubjectProgress; onOpen: (levelId: string) => void; onLocked: () => void }) {
+export function LevelPath({ subject, progress, onOpen, onLocked }: { subject: Topic; progress: SubjectProgress; onOpen: (levelId: string) => void; onLocked: () => void }) {
   const a = useAccent();
   return (
     <View style={s.path}>

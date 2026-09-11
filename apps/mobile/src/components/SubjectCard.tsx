@@ -1,53 +1,75 @@
-import { subjectCompletion } from "@nauka/shared";
+import { dayDiff, subjectCompletion, todayStr, type Subject, type Topic } from "@nauka/shared";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useApp } from "@/lib/app-state";
-import type { AppSubject } from "@/lib/subjects";
 import { C, FONT, R, parseAccent } from "@/lib/theme";
-import { AccentWash, AccentGradient } from "./Accent";
+import { AccentGradient, AccentWash } from "./Accent";
 import { Touch } from "./ui";
 
-export function SubjectCard({ subject, onPress, right }: { subject: AppSubject; onPress: () => void; right?: React.ReactNode }) {
+/** Ile dni do sprawdzianu (null gdy brak daty / już minął). */
+export function examCountdown(s: Pick<Subject, "examDate">): number | null {
+  if (!s.examDate) return null;
+  const d = dayDiff(todayStr(), s.examDate);
+  return d < 0 ? null : d;
+}
+
+export function examBadge(days: number): string {
+  if (days === 0) return "sprawdzian DZIŚ 😱";
+  if (days === 1) return "sprawdzian jutro";
+  if (days < 5) return `sprawdzian za ${days} dni`;
+  return `sprawdzian za ${days} dni`;
+}
+
+/** Statystyka przedmiotu: tematy, poziomy zrobione / wszystkie. */
+export function subjectStats(topics: Topic[], progress: ReturnType<ReturnType<typeof useApp>["progressFor"]> extends infer P ? (id: string) => P : never) {
+  let done = 0, total = 0;
+  for (const t of topics) {
+    const c = subjectCompletion(t, progress(t.id));
+    done += c.done;
+    total += c.total;
+  }
+  return { topics: topics.length, done, total, pct: total ? Math.round((done / total) * 100) : 0 };
+}
+
+/** Karta przedmiotu (kontenera) na Home: emoji, nazwa, liczba tematów, % poziomów, badge sprawdzianu. */
+export function SubjectCard({ subject, onPress }: { subject: Subject; onPress: () => void }) {
   const app = useApp();
-  const p = app.progressFor(subject);
-  const { done, total, pct } = subjectCompletion(subject, p);
+  const st = subjectStats(app.topicsOf(subject.id), app.progressFor);
   const accent = parseAccent(subject.accent, subject.accent2);
+  const days = examCountdown(subject);
   return (
     <Touch onPress={onPress} style={s.card}>
       <AccentWash accent={accent} radius={R.lg} />
-      <View style={s.emoji}>
-        <Text style={{ fontSize: 38 }}>{subject.emoji}</Text>
-      </View>
-      <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={s.name} numberOfLines={2}>
-          {subject.name}
-        </Text>
-        {subject.tagline ? (
-          <Text style={s.sub} numberOfLines={2}>
-            {subject.tagline}
-          </Text>
-        ) : null}
-        <View style={s.prog}>
-          <View style={s.bar}>
-            <AccentGradient accent={accent} style={{ width: `${pct}%`, height: "100%", borderRadius: 999 }} />
-          </View>
-          <Text style={s.small}>
-            {done}/{total} poziomów
-          </Text>
+      <View style={s.top}>
+        <View style={s.emoji}>
+          <Text style={{ fontSize: 30 }}>{subject.emoji}</Text>
         </View>
+        {days !== null ? (
+          <View style={[s.badge, days <= 2 && { backgroundColor: "rgba(255,59,92,.25)" }]}>
+            <Text style={s.badgeTxt}>⏰ {examBadge(days)}</Text>
+          </View>
+        ) : null}
       </View>
-      {right ?? <Text style={s.chev}>›</Text>}
+      <Text style={s.name} numberOfLines={2}>
+        {subject.name}
+      </Text>
+      <Text style={s.sub}>
+        {st.topics === 0 ? "pusto — dodaj temat" : `${st.topics} ${st.topics === 1 ? "temat" : st.topics < 5 ? "tematy" : "tematów"} · ${st.done}/${st.total} poziomów`}
+      </Text>
+      <View style={s.bar}>
+        <AccentGradient accent={accent} style={{ width: `${st.pct}%`, height: "100%", borderRadius: 999 }} />
+      </View>
     </Touch>
   );
 }
 
 const s = StyleSheet.create({
-  card: { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, padding: 16, marginBottom: 14, overflow: "hidden" },
-  emoji: { width: 62, height: 62, borderRadius: 18, backgroundColor: "rgba(0,0,0,0.25)", alignItems: "center", justifyContent: "center" },
-  name: { color: C.txt, fontSize: 18, fontWeight: FONT.black, letterSpacing: -0.3 },
-  sub: { color: C.muted, fontSize: 13, marginTop: 3, lineHeight: 17 },
-  prog: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 9 },
-  bar: { flex: 1, height: 7, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 999, overflow: "hidden" },
-  small: { color: C.muted, fontSize: 12, fontWeight: FONT.bold },
-  chev: { color: C.muted, fontSize: 24 },
+  card: { flexBasis: "47%", flexGrow: 1, backgroundColor: C.card, borderWidth: 1, borderColor: C.border, borderRadius: R.lg, padding: 14, overflow: "hidden", gap: 6, minHeight: 150 },
+  top: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: 6 },
+  emoji: { width: 50, height: 50, borderRadius: 15, backgroundColor: "rgba(0,0,0,0.25)", alignItems: "center", justifyContent: "center" },
+  badge: { backgroundColor: "rgba(255,255,255,0.1)", borderRadius: R.pill, paddingVertical: 4, paddingHorizontal: 8, flexShrink: 1 },
+  badgeTxt: { color: C.txt, fontSize: 10.5, fontWeight: FONT.bold },
+  name: { color: C.txt, fontSize: 16.5, fontWeight: FONT.black, letterSpacing: -0.3, marginTop: 4 },
+  sub: { color: C.muted, fontSize: 12, fontWeight: FONT.semi, lineHeight: 16 },
+  bar: { height: 6, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 999, overflow: "hidden", marginTop: "auto" },
 });

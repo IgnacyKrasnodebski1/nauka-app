@@ -1,0 +1,139 @@
+import { paletteFor, type Stage, type Subject, type SubjectProgress, type Topic, type TopicContent, type SrsCard, type UserMeta, type WeakMap } from "@nauka/shared";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { KEYS, getJson, setJson } from "./storage";
+
+/** Mapowanie wierszy Supabase → typy shared. Wszystko tylko własne (RLS). */
+
+export interface SubjectRow {
+  id: string;
+  owner_id: string;
+  name: string;
+  emoji: string;
+  category: string;
+  stage: Stage;
+  accent: string;
+  accent2: string;
+  exam_date: string | null;
+  exam_label: string | null;
+  position: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TopicRow {
+  id: string;
+  subject_id: string;
+  owner_id: string;
+  name: string;
+  emoji: string;
+  source: "materials" | "prompt";
+  content: TopicContent;
+  generation_id: string | null;
+  position: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export const SUBJECT_SELECT = "id,owner_id,name,emoji,category,stage,accent,accent2,exam_date,exam_label,position,created_at,updated_at";
+export const TOPIC_SELECT = "id,subject_id,owner_id,name,emoji,source,content,generation_id,position,created_at,updated_at";
+
+export function rowToSubject(r: SubjectRow): Subject {
+  return { id: r.id, ownerId: r.owner_id, name: r.name, emoji: r.emoji, category: r.category, stage: r.stage, accent: r.accent, accent2: r.accent2, examDate: r.exam_date, examLabel: r.exam_label, createdAt: r.created_at, updatedAt: r.updated_at };
+}
+
+export function rowToTopic(r: TopicRow): Topic {
+  return { ...r.content, name: r.name || r.content.name, emoji: r.emoji || r.content.emoji, id: r.id, subjectId: r.subject_id, ownerId: r.owner_id, position: r.position, source: r.source, generationId: r.generation_id, createdAt: r.created_at, updatedAt: r.updated_at };
+}
+
+export type SrsMap = Record<string, SrsCard>;
+
+export interface UserData {
+  subjects: Subject[];
+  topics: Topic[];
+  progress: Record<string, SubjectProgress>;
+  srs: Record<string, SrsMap>;
+  weak: WeakMap;
+  meta: UserMeta;
+  stage: Stage | null;
+}
+
+const clampStars = (n: number) => Math.max(0, Math.min(3, Math.round(n || 0))) as 0 | 1 | 2 | 3;
+
+export function normaliseProgress(p: Partial<SubjectProgress> | null | undefined): SubjectProgress {
+  const levels: SubjectProgress["levels"] = {};
+  for (const [id, l] of Object.entries(p?.levels ?? {})) {
+    const lv = l as Partial<SubjectProgress["levels"][string]>;
+    levels[id] = { done: !!lv.done, best: Number(lv.best ?? 0), stars: clampStars(Number(lv.stars ?? 0)), attempts: Number(lv.attempts ?? (lv.done ? 1 : 0)) };
+  }
+  const out: SubjectProgress = { xp: Number(p?.xp ?? 0), levels };
+  if (p?.bestExam !== undefined && p.bestExam !== null) out.bestExam = p.bestExam;
+  return out;
+}
+
+/** Pełne pobranie danych usera (jedno „odświeżenie”). */
+export async function fetchUserData(sb: SupabaseClient, userId: string): Promise<UserData> {
+  const [subj, top, prog, srs, meta, prof] = await Promise.all([
+    sb.from("subjects").select(SUBJECT_SELECT).eq("owner_id", userId).order("position", { ascending: true }).order("created_at", { ascending: true }),
+    sb.from("topics").select(TOPIC_SELECT).eq("owner_id", userId).order("position", { ascending: true }).order("created_at", { ascending: true }),
+    sb.from("progress").select("topic_id,xp,levels,weak,best_exam").eq("user_id", userId),
+    sb.from("srs_cards").select("topic_id,card_key,state").eq("user_id", userId),
+    sb.from("user_meta").select("streak,best,last_day").eq("user_id", userId).maybeSingle(),
+    sb.from("profiles").select("stage").eq("id", userId).maybeSingle(),
+  ]);
+  const firstErr = [subj, top, prog, srs, meta, prof].find((r) => r.error)?.error;
+  if (firstErr) throw new Error(firstErr.message);
+
+  const progress: Record<string, SubjectProgress> = {};
+  const weak: WeakMap = {};
+  for (const r of (prog.data ?? []) as { topic_id: string; xp: number; levels: SubjectProgress["levels"]; weak: Record<string, number[]> | null; best_exam: number | null }[]) {
+    progress[r.topic_id] = normaliseProgress({ xp: r.xp, levels: r.levels, bestExam: r.best_exam ?? undefined });
+    if (r.weak && Object.keys(r.weak).length) weak[r.topic_id] = r.weak;
+  }
+  const srsMap: Record<string, SrsMap> = {};
+  for (const r of (srs.data ?? []) as { topic_id: string; card_key: string; state: SrsCard }[]) (srsMap[r.topic_id] ??= {})[r.card_key] = r.state;
+  const m = meta.data as { streak: number; best: number; last_day: string | null } | null;
+  return {
+    subjects: ((subj.data ?? []) as SubjectRow[]).map(rowToSubject),
+    topics: ((top.data ?? []) as TopicRow[]).map(rowToTopic),
+    progress,
+    srs: srsMap,
+    weak,
+    meta: m ? { streak: m.streak, best: m.best, lastDay: m.last_day } : { streak: 0, best: 0, lastDay: null },
+    stage: (prof.data as { stage: Stage } | null)?.stage ?? null,
+  };
+}
+
+export async function fetchTopic(sb: SupabaseClient, topicId: string): Promise<Topic | null> {
+  const { data } = await sb.from("topics").select(TOPIC_SELECT).eq("id", topicId).maybeSingle();
+  return data ? rowToTopic(data as TopicRow) : null;
+}
+
+export interface SubjectInput {
+  name: string;
+  emoji: string;
+  category: string;
+  stage: Stage;
+  examDate?: string | null;
+  examLabel?: string | null;
+}
+
+/** Wstawia przedmioty (kolor z `paletteFor(name)`). Zwraca wiersze. */
+export async function insertSubjects(sb: SupabaseClient, userId: string, inputs: SubjectInput[], startPosition = 0): Promise<Subject[]> {
+  if (!inputs.length) return [];
+  const rows = inputs.map((s, i) => {
+    const [accent, accent2] = paletteFor(s.name);
+    return { owner_id: userId, name: s.name.trim(), emoji: s.emoji || "📘", category: s.category, stage: s.stage, accent, accent2, exam_date: s.examDate ?? null, exam_label: s.examLabel ?? null, position: startPosition + i };
+  });
+  const { data, error } = await sb.from("subjects").insert(rows).select(SUBJECT_SELECT);
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as SubjectRow[]).map(rowToSubject);
+}
+
+/* ------------------------------------------------------------- cache (offline read) */
+
+export async function readCache(userId: string): Promise<UserData | null> {
+  return getJson<UserData | null>(`${KEYS.cache}:${userId}`, null);
+}
+export async function writeCache(userId: string, d: UserData): Promise<void> {
+  await setJson(`${KEYS.cache}:${userId}`, d);
+}

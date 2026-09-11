@@ -1,56 +1,98 @@
-import type { Stage, Subject, SubjectContent } from "@nauka/shared";
+import type { Stage, Subject, Topic, TopicContent } from "@nauka/shared";
 
-/** Subject as used by the web UI: shared `Subject` + slug (seed subjects are addressable by slug). */
-export interface AppSubject extends Subject {
-  slug?: string | null;
-}
-
+/** `subjects` row (user's container shell). */
 export interface SubjectRow {
   id: string;
-  slug: string | null;
-  owner_id: string | null;
+  owner_id: string;
   name: string;
+  emoji: string;
+  category: string;
   stage: Stage;
-  category: string | null;
-  is_public: boolean;
-  content: SubjectContent;
+  accent: string;
+  accent2: string;
+  exam_date: string | null;
+  exam_label: string | null;
+  position: number;
   created_at?: string;
   updated_at?: string;
 }
 
-export function rowToSubject(r: SubjectRow): AppSubject {
+export const SUBJECT_SELECT = "id,owner_id,name,emoji,category,stage,accent,accent2,exam_date,exam_label,position,created_at,updated_at";
+
+export function rowToSubject(r: SubjectRow): Subject {
   return {
-    ...r.content,
     id: r.id,
-    slug: r.slug,
     ownerId: r.owner_id,
-    stage: r.stage,
-    isPublic: r.is_public,
+    name: r.name,
+    emoji: r.emoji,
     category: r.category,
+    stage: r.stage,
+    accent: r.accent,
+    accent2: r.accent2,
+    examDate: r.exam_date,
+    examLabel: r.exam_label,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
 }
 
-/** Seed subject JSON shape from @nauka/content. */
-export interface SeedSubject {
+/** `topics` row (AI-generated unit inside a subject). */
+export interface TopicRow {
   id: string;
-  stage: Stage;
-  category: string;
-  isPublic: boolean;
-  content: SubjectContent;
+  subject_id: string;
+  owner_id: string;
+  name: string;
+  emoji: string;
+  source: "materials" | "prompt";
+  content: TopicContent;
+  generation_id: string | null;
+  position: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
-export function seedToSubject(s: SeedSubject): AppSubject {
-  return { ...s.content, id: s.id, slug: s.id, ownerId: null, stage: s.stage, isPublic: true, category: s.category };
+export const TOPIC_SELECT = "id,subject_id,owner_id,name,emoji,source,content,generation_id,position,created_at,updated_at";
+
+export function rowToTopic(r: TopicRow): Topic {
+  return {
+    ...r.content,
+    name: r.name || r.content.name,
+    emoji: r.emoji || r.content.emoji,
+    id: r.id,
+    subjectId: r.subject_id,
+    ownerId: r.owner_id,
+    position: r.position,
+    source: r.source,
+    generationId: r.generation_id,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+  };
 }
 
-/** Key under which progress for this subject is stored locally (legacy-compatible: seed slug). */
-export function localKeyFor(s: Pick<AppSubject, "id" | "slug">): string {
-  return s.slug || s.id;
+/** Topic without feed bodies / games — enough for progress, sessions, flashcards and exams; keeps payloads small. */
+export type SlimTopic = Topic;
+
+export function slimTopic(t: Topic): SlimTopic {
+  return { ...t, info: "", levels: t.levels.map((l) => ({ ...l, feed: [], games: [] })) };
 }
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const isUuid = (s: string) => UUID_RE.test(s);
 
-export type ProgressMap = Record<string, import("@nauka/shared").SubjectProgress>;
+/** Days until `date` (YYYY-MM-DD) from today, negative when past. */
+export function daysUntil(date: string, today = new Date()): number {
+  const [y, m, d] = date.split("-").map(Number) as [number, number, number];
+  const target = Date.UTC(y, m - 1, d);
+  const now = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  return Math.round((target - now) / 86400000);
+}
+
+export function examBadge(examDate: string | null | undefined, label?: string | null): string | null {
+  if (!examDate) return null;
+  const n = daysUntil(examDate);
+  const what = label?.trim() || "sprawdzian";
+  if (n < 0) return `${what} był ${-n} dni temu`;
+  if (n === 0) return `${what} DZIŚ`;
+  if (n === 1) return `${what} jutro`;
+  return `${what} za ${n} dni`;
+}

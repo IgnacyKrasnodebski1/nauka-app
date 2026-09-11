@@ -4,16 +4,17 @@
 | Co | Status | Identyfikator |
 |---|---|---|
 | Supabase projekt `nauka` (eu-central-1) | utworzony, schemat v1 wgrany | ref `zhgxhdsnizujzygpcyfl` |
-| Supabase schemat v2 (przedmioty → tematy) | **do wklejenia**: `supabase/dev_upgrade_v1_to_v2.sql` w SQL Editor | |
-| Supabase auth | email (auto-confirm), redirecty localhost / `*.vercel.app` / `nauka://` | Google: do włączenia ręcznie |
+| Supabase schemat v2 (przedmioty → tematy) | wgrany (`supabase/dev_upgrade_v1_to_v2.sql`) | |
+| Supabase auth | email (auto-confirm), site URL `https://nauka-jet.vercel.app`, redirecty localhost / `*.vercel.app` / `nauka://` | Google: do włączenia ręcznie (pkt 1.4) |
 | Stripe (test) produkt „NAUKA Pro” | utworzony | `prod_VEwoeIrg8evsMf` |
 | Stripe ceny | 29 zł/mies `price_1UESvFRsoBaIQwwLY3S0hjrd`, 199 zł/rok `price_1UESvGRsoBaIQwwL8c0rRt0s` | |
 | Stripe Customer Portal | skonfigurowany | `bpc_1UESvGRsoBaIQwwL6jxvaNG3` |
-| Stripe webhook | **do zrobienia** po deployu (potrzebny URL) | |
-| Vercel projekt | **do zrobienia** (import repo, root `apps/web`) | team `ignacykrasnodebski1s-projects` |
+| Stripe webhook | `https://nauka-jet.vercel.app/api/stripe/webhook`, secret w env Vercela | `we_1UETG1RsoBaIQwwLW8dYAsaZ` |
+| Vercel projekt `nauka` | utworzony, podpięty do repo (root `apps/web`), wszystkie env ustawione | `prj_Fxj3EGxACbjEJdjzAbPWSXex2KHS`, domena `nauka-jet.vercel.app` |
+| Vercel produkcja | buduje z brancha `main` → **zmerguj `claude/peaceful-hamilton-jy11e3` do `main`** (pushe na inne branche = preview) | |
 | Anthropic key | **brak** → apka w trybie demo | |
 
-Czas na resztę: ~30 min.
+Zostało: merge do `main` (deploy), Google OAuth (1.4), klucz Anthropic (2), test płatności (4).
 
 ## 0. Wymagania
 - Node 22+, npm 10+, konto GitHub (repo już jest), Supabase, Vercel, Stripe, Anthropic Console, Expo (EAS).

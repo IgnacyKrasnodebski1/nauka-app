@@ -2,7 +2,7 @@
   "name": "@nauka/web",
   "version": "0.1.0",
   "private": true,
-  "description": "NAUKA web — Next.js app: landing, auth, learning app, API (generate, tutor, stripe).",
+  "description": "NAUKA web \u2014 Next.js app: landing, auth, learning app, API (generate, tutor, stripe).",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@nauka/ai": "*",
-    "@nauka/content": "*",
     "@nauka/shared": "*",
     "@supabase/ssr": "0.12.7",
     "@supabase/supabase-js": "2.116.0",

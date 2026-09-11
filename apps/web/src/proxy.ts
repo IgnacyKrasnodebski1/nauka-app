@@ -24,11 +24,19 @@ export async function proxy(request: NextRequest) {
     },
   });
   // Touching the user refreshes an expired access token and rewrites the cookies.
+  let user = null;
   try {
-    await supabase.auth.getUser();
+    user = (await supabase.auth.getUser()).data.user;
   } catch (e) {
     console.warn("[proxy] session refresh failed", (e as Error).message);
   }
+  const path = request.nextUrl.pathname;
+  if (!user && (path === "/app" || path.startsWith("/app/"))) {
+    const login = new URL("/login", request.url);
+    login.searchParams.set("next", path + request.nextUrl.search);
+    return NextResponse.redirect(login);
+  }
+  if (user && path === "/login") return NextResponse.redirect(new URL(request.nextUrl.searchParams.get("next") || "/app", request.url));
   return response;
 }
 

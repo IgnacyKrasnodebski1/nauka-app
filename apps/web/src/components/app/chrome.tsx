@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { STAGES, type Stage } from "@nauka/shared";
 import { useApp } from "@/lib/store/app-context";
 import { cn } from "@/lib/utils";
 
@@ -17,41 +16,52 @@ export function AppChrome({ children }: { children: ReactNode }) {
         ))}
       </div>
       <BottomNav />
-      <Onboarding />
     </div>
   );
 }
 
-export function Pills({ subjectXp }: { subjectXp?: number }) {
+/** Rendered instead of the app when NEXT_PUBLIC_SUPABASE_* is missing (build/preview without env). */
+export function NoConfig() {
+  return (
+    <main className="min-h-dvh flex items-center justify-center px-4">
+      <div className="result">
+        <div className="big">🔌</div>
+        <h2>Brak konfiguracji Supabase</h2>
+        <p>Apka wymaga konta, a ta instancja nie ma ustawionych <code>NEXT_PUBLIC_SUPABASE_URL</code> i <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>. Uzupełnij <code>apps/web/.env.local</code> i uruchom ponownie.</p>
+        <Link href="/" className="pill sm:w-auto sm:px-8">Strona główna</Link>
+      </div>
+    </main>
+  );
+}
+
+export function Pills({ xp }: { xp?: number }) {
   const { streak, totalXp, ready } = useApp();
   return (
     <div className="pills">
       <div className="streak" title="seria dni">🔥 <span>{ready ? streak : "·"}</span> <small>dni</small></div>
-      <div className="streak" title="punkty XP">⚡ <span>{ready ? (subjectXp ?? totalXp) : "·"}</span> <small>xp</small></div>
+      <div className="streak" title="punkty XP">⚡ <span>{ready ? (xp ?? totalXp) : "·"}</span> <small>xp</small></div>
     </div>
   );
 }
 
-export function TopBar({ back, title, subjectXp, right }: { back?: string; title: ReactNode; subjectXp?: number; right?: ReactNode }) {
+export function TopBar({ back, title, xp, right }: { back?: string; title: ReactNode; xp?: number; right?: ReactNode }) {
   return (
     <div className="topbar">
       <div className="flex items-center gap-2 min-w-0">
-        {back && (
-          <Link href={back} className="backbtn" aria-label="Wstecz">‹</Link>
-        )}
+        {back && <Link href={back} className="backbtn" aria-label="Wstecz">‹</Link>}
         <div className="logo truncate">{title}</div>
       </div>
-      {right ?? <Pills subjectXp={subjectXp} />}
+      {right ?? <Pills xp={xp} />}
     </div>
   );
 }
 
 function BottomNav() {
   const path = usePathname();
-  if (/^\/app\/s\/[^/]+\/l\//.test(path)) return null; // lesson = full screen
+  if (/^\/app\/t\/[^/]+\/l\//.test(path) || path === "/app/today") return null; // lesson & session = full screen
   const items = [
-    { href: "/app", ic: "🏠", label: "Start", match: (p: string) => p === "/app" || p.startsWith("/app/s/") },
-    { href: "/app/new", ic: "✨", label: "Dodaj", match: (p: string) => p.startsWith("/app/new") },
+    { href: "/app", ic: "🏠", label: "Start", match: (p: string) => p === "/app" || p.startsWith("/app/s/") || p.startsWith("/app/t/") },
+    { href: "/app/today", ic: "⚡", label: "Dziś", match: (p: string) => p.startsWith("/app/today") },
     { href: "/app/account", ic: "👤", label: "Konto", match: (p: string) => p.startsWith("/app/account") },
   ];
   return (
@@ -63,33 +73,5 @@ function BottomNav() {
         </Link>
       ))}
     </nav>
-  );
-}
-
-function Onboarding() {
-  const { ready, onboarded, stage, setStage, setOnboarded, toast } = useApp();
-  if (!ready || onboarded) return null;
-  const pick = (s: Stage) => {
-    setStage(s);
-    setOnboarded();
-    toast("Git, lecimy 🚀");
-  };
-  return (
-    <div className="fixed inset-0 z-[75] bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="onb-title">
-      <div className="card w-full max-w-md pop">
-        <span className="tag">hej 👋</span>
-        <h2 id="onb-title" className="text-2xl font-black tracking-tight">Na jakim etapie jesteś?</h2>
-        <p className="text-muted text-sm mt-1 mb-4">Dopasujemy język, trudność pytań i siatkę ocen. Zmienisz to potem w koncie.</p>
-        <div className="grid grid-cols-2 gap-3">
-          {STAGES.map((s) => (
-            <button key={s.id} type="button" onClick={() => pick(s.id)} className={cn("card text-left !p-4 hover:border-white/30 transition", stage === s.id && "!border-[var(--accent2)]")}>
-              <div className="text-3xl">{s.emoji}</div>
-              <div className="font-black mt-1">{s.label}</div>
-              <div className="text-muted text-xs">{s.hint}</div>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
   );
 }

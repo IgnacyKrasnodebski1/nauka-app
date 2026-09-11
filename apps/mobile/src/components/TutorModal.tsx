@@ -1,4 +1,3 @@
-import { useRouter } from "expo-router";
 import React, { useRef, useState } from "react";
 import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -6,12 +5,11 @@ import { ApiError, tutorAsk, type TutorMessage } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { hasApi } from "@/lib/env";
 import { C, FONT, R } from "@/lib/theme";
-import { BackButton, PillButton, Touch } from "./ui";
+import { BackButton, Touch } from "./ui";
 
 /** Czat z tutorem AI (POST /api/tutor, streaming gdy RN fetch to umie). */
-export function TutorModal({ open, onClose, subjectId, levelId, levelTitle }: { open: boolean; onClose: () => void; subjectId: string; levelId: string; levelTitle: string }) {
+export function TutorModal({ open, onClose, topicId, levelId, levelTitle }: { open: boolean; onClose: () => void; topicId: string; levelId: string; levelTitle: string }) {
   const auth = useAuth();
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const [msgs, setMsgs] = useState<TutorMessage[]>([]);
   const [input, setInput] = useState("");
@@ -25,7 +23,7 @@ export function TutorModal({ open, onClose, subjectId, levelId, levelTitle }: { 
     if (!question || busy) return;
     const token = await auth.accessToken();
     if (!token) {
-      setErr("Tutor działa tylko po zalogowaniu — załóż konto, to za darmo.");
+      setErr("Sesja wygasła — zaloguj się ponownie.");
       return;
     }
     setErr(null);
@@ -37,7 +35,7 @@ export function TutorModal({ open, onClose, subjectId, levelId, levelTitle }: { 
     try {
       await tutorAsk(
         token,
-        { subjectId, levelId, question, history },
+        { topicId, levelId, question, history },
         (text) => setMsgs((m) => [...m.slice(0, -1), { role: "assistant", content: text }]),
         abort.current.signal,
       );
@@ -73,17 +71,13 @@ export function TutorModal({ open, onClose, subjectId, levelId, levelTitle }: { 
             <View style={{ gap: 10 }}>
               <Text style={s.hello}>Siema 👋 Jestem Twoim tutorem od tego poziomu. Pytaj o cokolwiek — wytłumaczę po ludzku, dam przykład, przepytam.</Text>
               {!hasApi ? <Text style={s.err}>Brak EXPO_PUBLIC_API_URL — tutor wymaga API weba.</Text> : null}
-              {!auth.user ? (
-                <PillButton label="zaloguj się, żeby gadać z tutorem" ghost small onPress={() => { close(); router.push("/(auth)/login"); }} />
-              ) : (
-                <View style={s.sugg}>
-                  {["Wytłumacz to jak 12-latkowi", "Daj przykład z życia", "Przepytaj mnie z tego"].map((t) => (
-                    <Touch key={t} onPress={() => send(t)} style={s.suggBtn}>
-                      <Text style={s.suggTxt}>{t}</Text>
-                    </Touch>
-                  ))}
-                </View>
-              )}
+              <View style={s.sugg}>
+                {["Wytłumacz to jak 12-latkowi", "Daj przykład z życia", "Przepytaj mnie z tego"].map((t) => (
+                  <Touch key={t} onPress={() => send(t)} style={s.suggBtn}>
+                    <Text style={s.suggTxt}>{t}</Text>
+                  </Touch>
+                ))}
+              </View>
             </View>
           ) : null}
           {msgs.map((m, i) => (

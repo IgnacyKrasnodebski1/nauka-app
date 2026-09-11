@@ -1,6 +1,9 @@
 -- ONE-OFF for the dev project created before the subjects→topics restructure. Fresh projects: run migrations/0001_init.sql only.
 -- one-off in-place upgrade of the dev project from schema v1 (subject=content) to v2 (subjects→topics)
 delete from public.subjects where owner_id is null; -- 7 legacy seed subjects
+drop policy if exists "subjects read" on public.subjects; drop policy if exists "subjects insert" on public.subjects;
+drop policy if exists "subjects update" on public.subjects; drop policy if exists "subjects delete" on public.subjects;
+drop table if exists public.library;
 alter table public.subjects
   drop column if exists slug, drop column if exists is_public, drop column if exists content, drop column if exists generation_id,
   add column if not exists emoji text not null default '📘',
