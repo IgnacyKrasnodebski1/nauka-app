@@ -2,9 +2,12 @@
 import { useMemo, useState } from "react";
 import { shuffle, type MatchGame } from "@nauka/shared";
 import { cn } from "@/lib/utils";
+import { useSfx } from "@/lib/sfx";
+import type { GameProps } from "@/components/lesson/games";
 
-/** Tap-to-match pairs: pick left, pick right. */
-export function MatchGameView({ game, onDone }: { game: MatchGame; onDone: (correct: number, total: number) => void }) {
+/** Tap-to-match pairs: pick left, pick right. Each matched pair counts as a correct answer (combo); misses shake. */
+export function MatchGameView({ game, onAnswer, onDone }: GameProps<MatchGame>) {
+  const sfx = useSfx();
   const pairs = useMemo(() => game.pairs.slice(0, 6), [game]);
   const left = useMemo(() => shuffle(pairs.map((p, i) => ({ i, t: p.l }))), [pairs]);
   const right = useMemo(() => shuffle(pairs.map((p, i) => ({ i, t: p.r }))), [pairs]);
@@ -22,8 +25,10 @@ export function MatchGameView({ game, onDone }: { game: MatchGame; onDone: (corr
       setDone(n);
       setSelL(null);
       setSelR(null);
-      if (n.size === pairs.length) setTimeout(() => onDone(Math.max(0, pairs.length - misses), pairs.length), 350);
+      onAnswer(true, null, () => {});
+      if (n.size === pairs.length) setTimeout(() => onDone(Math.max(0, pairs.length - misses), pairs.length), 380);
     } else {
+      sfx.play("wrong");
       setMisses((m) => m + 1);
       setBad([l, r]);
       setTimeout(() => {
@@ -38,16 +43,16 @@ export function MatchGameView({ game, onDone }: { game: MatchGame; onDone: (corr
   return (
     <div>
       <div className="exprompt">{game.title || "Połącz w pary"}</div>
-      <p className="text-muted text-sm mb-3">Tapnij z lewej, potem z prawej.</p>
+      <p className="text-muted text-sm mb-3 font-semibold">Tapnij z lewej, potem z prawej.</p>
       <div className="matchwrap">
         <div className="mcol">
           {left.map((o) => (
-            <button type="button" key={"l" + o.i} className={cn("mitem", done.has(o.i) && "done", selL === o.i && "sel", bad?.[0] === o.i && "bad")} onClick={() => { setSelL(o.i); attempt(o.i, selR); }} disabled={done.has(o.i)}>{trunc(o.t)}</button>
+            <button type="button" key={"l" + o.i} className={cn("mitem", done.has(o.i) && "done", selL === o.i && "sel", bad?.[0] === o.i && "bad")} onClick={() => { sfx.play("tap"); setSelL(o.i); attempt(o.i, selR); }} disabled={done.has(o.i)}>{trunc(o.t)}</button>
           ))}
         </div>
         <div className="mcol">
           {right.map((o) => (
-            <button type="button" key={"r" + o.i} className={cn("mitem", done.has(o.i) && "done", selR === o.i && "sel", bad?.[1] === o.i && "bad")} onClick={() => { setSelR(o.i); attempt(selL, o.i); }} disabled={done.has(o.i)}>{trunc(o.t)}</button>
+            <button type="button" key={"r" + o.i} className={cn("mitem", done.has(o.i) && "done", selR === o.i && "sel", bad?.[1] === o.i && "bad")} onClick={() => { sfx.play("tap"); setSelR(o.i); attempt(selL, o.i); }} disabled={done.has(o.i)}>{trunc(o.t)}</button>
           ))}
         </div>
       </div>

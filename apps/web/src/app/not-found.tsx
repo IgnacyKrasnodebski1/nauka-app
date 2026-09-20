@@ -7,7 +7,7 @@ export default function NotFound() {
         <div className="tile gold mb-4" aria-hidden="true">?</div>
         <h2>404 — nie ma takiej strony</h2>
         <p className="mt-2">Może temat został usunięty albo link jest krzywy.</p>
-        <Link href="/app" className="pill mt-5">Do apki</Link>
+        <Link href="/app" className="btn3d green mt-5">Do apki</Link>
       </div>
     </main>
   );

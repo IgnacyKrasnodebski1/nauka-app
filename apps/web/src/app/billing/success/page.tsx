@@ -10,7 +10,7 @@ export default function BillingSuccess() {
         <div className="tile gold mb-4" aria-hidden="true">✦</div>
         <h2>Witaj w Pro</h2>
         <p className="mt-2">Płatność przeszła. Limity odblokują się w ciągu kilku sekund. Jeśli płaciłeś z telefonu — wróć do apki, wszystko już czeka.</p>
-        <Link href="/app?upgraded=1" className="pill mt-5">Do apki</Link>
+        <Link href="/app?upgraded=1" className="btn3d green mt-5">Do apki</Link>
       </div>
     </main>
   );

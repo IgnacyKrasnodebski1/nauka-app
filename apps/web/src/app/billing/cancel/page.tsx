@@ -10,7 +10,7 @@ export default function BillingCancel() {
         <div className="tile gold mb-4" aria-hidden="true">↩</div>
         <h2>Nic nie pobraliśmy</h2>
         <p className="mt-2">Plan Free działa dalej. Pro czeka, kiedy tylko będziesz gotowy.</p>
-        <Link href="/app" className="pill mt-5">Wróć do apki</Link>
+        <Link href="/app" className="btn3d green mt-5">Wróć do apki</Link>
       </div>
     </main>
   );

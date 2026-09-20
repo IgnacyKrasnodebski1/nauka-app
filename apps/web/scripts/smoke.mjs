@@ -65,6 +65,8 @@ const checks = [
   { path: "/api/stripe/portal", method: "POST", expect: apiErr },
   { path: "/api/stripe/webhook", method: "POST", body: "{}", expect: (r) => r.status === 503 || r.status === 400 },
   { path: "/nie-ma-takiej", expect: (r) => r.status === 404 },
+  // component gallery: only when the build was made with NEXT_PUBLIC_DEV_UI=1 (next build sets NODE_ENV=production)
+  ...(process.env.NEXT_PUBLIC_DEV_UI === "1" ? [{ path: "/dev/ui", expect: (r, body) => r.status === 200 && body.includes("UI gallery") && body.includes("Maskotka") }] : []),
 ];
 
 let failed = 0;

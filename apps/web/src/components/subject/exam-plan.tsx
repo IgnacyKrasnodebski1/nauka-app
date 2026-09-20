@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { buildExamPlan, todayStr, type Subject, type Topic } from "@nauka/shared";
 import { useApp } from "@/lib/store/app-context";
 import { daysUntil } from "@/lib/types";
+import { Btn3d } from "@/components/ui/btn3d";
+import { Icon } from "@/components/ui/icons";
+import { Mascot } from "@/components/mascot/mascot";
 
 const DAY = ["nd", "pn", "wt", "śr", "cz", "pt", "sb"];
 function fmtDay(d: string): string {
@@ -13,9 +16,9 @@ function fmtDay(d: string): string {
   return `${DAY[dt.getDay()]} ${dd}.${String(m).padStart(2, "0")}`;
 }
 
-/** "Mam sprawdzian" — exam date + label on the subject, plan from buildExamPlan, countdown. */
+/** "Mam sprawdzian" — exam date + label on the subject, plan from buildExamPlan, countdown with the thinking mascot. */
 export function ExamPlan({ subject, topics }: { subject: Subject; topics: Topic[] }) {
-  const { supabase, allProgress, ready, toast } = useApp();
+  const { supabase, allProgress, ready, toast, streak } = useApp();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [date, setDate] = useState(subject.examDate ?? "");
@@ -26,27 +29,27 @@ export function ExamPlan({ subject, topics }: { subject: Subject; topics: Topic[
     setBusy(true);
     const { error } = await supabase.from("subjects").update({ exam_date: clear ? null : date || null, exam_label: clear ? null : label.trim() || null }).eq("id", subject.id);
     setBusy(false);
-    if (error) return toast("Nie udało się zapisać 😵");
-    toast(clear ? "Usunięte" : "Plan gotowy 📅");
+    if (error) return toast("Nie udało się zapisać");
+    toast(clear ? "Usunięte" : "Plan gotowy");
     setEditing(false);
     router.refresh();
   }
 
   if (!subject.examDate && !editing)
     return (
-      <div className="card mb-4 flex items-center gap-4">
-        <div className="tile sm neutral" aria-hidden="true">📅</div>
+      <div className="card3d soft-orange mt-3 mb-4 flex items-center gap-3">
+        <div className="tile sm" style={{ background: "var(--play-orange-soft)", borderColor: "var(--play-orange-deep)", boxShadow: "0 3px 0 var(--play-orange-deep)", color: "var(--play-orange)" }} aria-hidden="true"><Icon name="calendar" size={20} /></div>
         <div className="flex-1 min-w-0">
           <h3>Mam sprawdzian</h3>
           <p>Podaj datę — rozłożymy poziomy na dni.</p>
         </div>
-        <button type="button" className="pill ghost sm" onClick={() => setEditing(true)}>Ustaw</button>
+        <Btn3d variant="orange" size="sm" onClick={() => setEditing(true)}>Ustaw</Btn3d>
       </div>
     );
 
   if (editing)
     return (
-      <form className="card mb-4 space-y-3" onSubmit={(e) => { e.preventDefault(); save(); }}>
+      <form className="card3d mt-3 mb-4 space-y-3" onSubmit={(e) => { e.preventDefault(); save(); }}>
         <span className="tag">Sprawdzian</span>
         <div>
           <label className="label" htmlFor="exam-date">Data</label>
@@ -57,9 +60,9 @@ export function ExamPlan({ subject, topics }: { subject: Subject; topics: Topic[
           <input id="exam-label" className="input" placeholder="np. kartkówka z fotosyntezy" maxLength={80} value={label} onChange={(e) => setLabel(e.target.value)} />
         </div>
         <div className="flex gap-2">
-          <button type="submit" className="pill" disabled={busy || !date}>Zapisz</button>
-          <button type="button" className="pill ghost" onClick={() => setEditing(false)}>Anuluj</button>
-          {subject.examDate && <button type="button" className="pill ghost" onClick={() => save(true)}>Usuń</button>}
+          <button type="submit" className="btn3d green" disabled={busy || !date}>Zapisz</button>
+          <Btn3d variant="ghost" onClick={() => setEditing(false)}>Anuluj</Btn3d>
+          {subject.examDate && <Btn3d variant="ghost" onClick={() => save(true)}>Usuń</Btn3d>}
         </div>
       </form>
     );
@@ -67,32 +70,36 @@ export function ExamPlan({ subject, topics }: { subject: Subject; topics: Topic[
   const n = daysUntil(subject.examDate!);
   const plan = ready ? buildExamPlan(topics, allProgress(), subject.examDate!) : null;
   return (
-    <div className="card mb-4">
+    <div className="card3d soft-orange mt-3 mb-4">
       <div className="flex items-start justify-between gap-2">
-        <div>
-          <span className="tag">Sprawdzian</span>
+        <div className="flex-1 min-w-0">
+          <span className="tag" style={{ color: "var(--play-orange)" }}>Sprawdzian</span>
           <h3>{subject.examLabel || "Sprawdzian"}</h3>
-          <p>{n < 0 ? `${-n} dni temu — jak poszło?` : n === 0 ? "DZIŚ. Powodzenia 🍀" : `za ${n} ${n === 1 ? "dzień" : "dni"} · ${plan?.levelsLeft ?? "…"} poziomów do zrobienia`}</p>
+          <div className="flex items-baseline gap-2 mt-1">
+            <span className="display font-extrabold text-txt" style={{ fontSize: 34, lineHeight: 1 }}>{n < 0 ? -n : n}</span>
+            <span className="text-muted text-sm font-bold">{n < 0 ? "dni temu — jak poszło?" : n === 0 ? "DZIŚ. Powodzenia" : `${n === 1 ? "dzień" : "dni"} · ${plan?.levelsLeft ?? "…"} poziomów do zrobienia`}</span>
+          </div>
         </div>
-        <button type="button" className="chip" onClick={() => setEditing(true)}>zmień</button>
+        <Mascot state="think" size={64} streak={streak} />
       </div>
+      <button type="button" className="chip mt-2" onClick={() => setEditing(true)}>zmień datę</button>
       {plan && n >= 0 && topics.length > 0 && (
-        <ol className="mt-4 list-none p-0 m-0 divide-y divide-[var(--line)]">
+        <ol className="mt-3 list-none p-0 m-0 divide-y divide-[var(--line)]">
           {plan.days.slice(0, 7).map((d, i) => (
             <li key={d.date} className="text-sm flex gap-3 py-2.5">
               <span className="eyebrow w-[64px] shrink-0 pt-0.5">{i === 0 ? "dziś" : fmtDay(d.date)}</span>
               <span className="flex-1 flex flex-wrap gap-x-2 gap-y-1">
                 {d.tasks.map((t, k) =>
                   t.kind === "level" ? (
-                    <Link key={k} href={`/app/t/${t.topicId}/l/${t.levelId}`} className="hue font-semibold">{t.label}</Link>
+                    <Link key={k} href={`/app/t/${t.topicId}/l/${t.levelId}`} className="hue font-bold">{t.label}</Link>
                   ) : (
-                    <span key={k} className="text-muted">{t.label}</span>
+                    <span key={k} className="text-muted font-semibold">{t.label}</span>
                   ),
                 )}
               </span>
             </li>
           ))}
-          {plan.days.length > 7 && <li className="text-xs text-muted">… i {plan.days.length - 7} kolejnych dni</li>}
+          {plan.days.length > 7 && <li className="text-xs text-muted pt-2">… i {plan.days.length - 7} kolejnych dni</li>}
         </ol>
       )}
       {plan && topics.length === 0 && <p className="text-sm mt-2">Najpierw dodaj tematy — wtedy ułożymy plan.</p>}

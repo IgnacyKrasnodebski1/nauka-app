@@ -2,17 +2,25 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useApp } from "@/lib/store/app-context";
 import type { Topic } from "@nauka/shared";
+import { Icon } from "@/components/ui/icons";
+import { Btn3d } from "@/components/ui/btn3d";
+import { Mascot } from "@/components/mascot/mascot";
 
 interface Msg {
   role: "user" | "assistant";
   content: string;
 }
 
-export function TutorFab({ topic, levelId }: { topic: Topic; levelId: string }) {
+/** Floating "Wytłumacz" button, or (`compact`) a small header icon button. */
+export function TutorFab({ topic, levelId, compact }: { topic: Topic; levelId: string; compact?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="fab" onClick={() => setOpen(true)} aria-haspopup="dialog">✦ Wytłumacz</button>
+      {compact ? (
+        <button type="button" className="mutebtn" style={{ color: "var(--play-purple)" }} onClick={() => setOpen(true)} aria-haspopup="dialog" aria-label="Wytłumacz (tutor AI)" title="Wytłumacz"><Icon name="sparkles" size={20} /></button>
+      ) : (
+        <button type="button" className="fab" onClick={() => setOpen(true)} aria-haspopup="dialog"><Icon name="sparkles" size={16} />Wytłumacz</button>
+      )}
       {open && <TutorDrawer topic={topic} levelId={levelId} onClose={() => setOpen(false)} />}
     </>
   );
@@ -68,11 +76,14 @@ function TutorDrawer({ topic, levelId, onClose }: { topic: Topic; levelId: strin
     <div className="fixed inset-0 z-[69] bg-black/50" onClick={onClose}>
       <div className="drawer" role="dialog" aria-modal="true" aria-label="Tutor AI" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-[var(--line)]">
-          <div className="min-w-0">
-            <div className="eyebrow">Tutor</div>
-            <div className="display font-bold text-txt truncate">{topic.levels.find((l) => l.id === levelId)?.title}</div>
+          <div className="flex items-center gap-3 min-w-0">
+            <Mascot state="think" size={44} />
+            <div className="min-w-0">
+              <div className="eyebrow" style={{ color: "var(--play-purple)" }}>Tutor Rec</div>
+              <div className="display font-bold text-txt truncate">{topic.levels.find((l) => l.id === levelId)?.title}</div>
+            </div>
           </div>
-          <button type="button" className="backbtn" onClick={onClose} aria-label="Zamknij">✕</button>
+          <button type="button" className="backbtn" onClick={onClose} aria-label="Zamknij"><Icon name="close" size={18} /></button>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-2 flex flex-col gap-2 min-h-[200px]">
           {msgs.map((m, i) => (
@@ -85,7 +96,7 @@ function TutorDrawer({ topic, levelId, onClose }: { topic: Topic; levelId: strin
           <form onSubmit={send} className="flex gap-2 p-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
             <label htmlFor="tutor-q" className="sr-only">Pytanie do tutora</label>
             <input id="tutor-q" className="input" value={q} onChange={(e) => setQ(e.target.value)} placeholder="np. czemu to jest fałsz?" disabled={busy} autoComplete="off" />
-            <button type="submit" className="pill sm" disabled={busy || !q.trim()}>Wyślij</button>
+            <Btn3d variant="purple" size="sm" type="submit" disabled={busy || !q.trim()}>Wyślij</Btn3d>
           </form>
         )}
       </div>

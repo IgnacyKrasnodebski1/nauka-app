@@ -7,6 +7,8 @@ import { useApp } from "@/lib/store/app-context";
 import { TopBar } from "@/components/app/chrome";
 import { SubjectTheme } from "@/components/topic/theme";
 import { cn, extOf } from "@/lib/utils";
+import { Icon } from "@/components/ui/icons";
+import { Mascot } from "@/components/mascot/mascot";
 
 const FUN = ["czytam Twoje notatki…", "rozszyfrowuję pismo z ostatniej ławki…", "układam poziomy…", "piszę wersję „po ludzku”…", "wymyślam pytania (bez podchwytliwych, no może parę)…", "robię fiszki i mini-gry…", "sprawdzam, czy nic nie zmyśliłem…", "jeszcze chwila, dopinam egzamin…"];
 const FUN_PROMPT = ["sprawdzam podstawę programową…", "układam poziomy od podstaw do trudniejszych…", "piszę wersję „po ludzku”…", "wymyślam pytania z wyjaśnieniami…", "robię fiszki i mini-gry…", "jeszcze chwila, dopinam egzamin…"];
@@ -124,12 +126,13 @@ export function NewTopic({ subject, mode }: { subject: Subject; mode: "materials
       <TopBar back={`/app/s/${subject.id}`} title="Nowy temat" sub={subject.name} />
       <div className="glow-head px-4 pt-5 pb-8">
         <div className="chips mb-2" role="tablist" aria-label="Źródło">
-          <Link href={`/app/s/${subject.id}/new?mode=materials`} className={cn("chip", mode === "materials" && "active")} role="tab" aria-selected={mode === "materials"}>📸 Z materiałów</Link>
-          <Link href={`/app/s/${subject.id}/new?mode=prompt`} className={cn("chip", mode === "prompt" && "active")} role="tab" aria-selected={mode === "prompt"}>✍️ Z hasła</Link>
+          <Link href={`/app/s/${subject.id}/new?mode=materials`} className={cn("chip", mode === "materials" && "active")} role="tab" aria-selected={mode === "materials"}><Icon name="camera" size={14} />Z materiałów</Link>
+          <Link href={`/app/s/${subject.id}/new?mode=prompt`} className={cn("chip", mode === "prompt" && "active")} role="tab" aria-selected={mode === "prompt"}><Icon name="pen" size={14} />Z hasła</Link>
         </div>
         {busy ? (
           <div className="result mt-10" aria-live="polite">
-            <span className="spinner !w-12 !h-12 !border-[3px]" />
+            <Mascot state="think" size={130} say="Czytam, układam, sprawdzam…" bubbleSide="top" />
+            <span className="spinner !w-10 !h-10 !border-[3px]" />
             <h2>Robię z tego temat</h2>
             <p className="pop" key={funIdx}>{busy.startsWith("wysyłam") ? busy : fun[funIdx % fun.length]}</p>
             <p className="!text-[13px]">To trwa zwykle 1–3 minuty. Nie zamykaj karty.</p>
@@ -151,7 +154,7 @@ export function NewTopic({ subject, mode }: { subject: Subject; mode: "materials
                   onKeyDown={(e) => e.key === "Enter" && input.current?.click()}
                   aria-label="Dodaj pliki"
                 >
-                  <div className="tile mx-auto mb-3" aria-hidden="true">📸</div>
+                  <div className="tile mx-auto mb-3" aria-hidden="true" style={{ color: "var(--hue)" }}><Icon name="camera" size={26} /></div>
                   <div className="display font-bold text-txt text-[16px]">Przeciągnij pliki albo kliknij</div>
                   <div className="text-xs mt-1">zdjęcia, PDF, txt · max {limits.filesPerGeneration} plików · do {limits.maxFileMb} MB każdy</div>
                   <input ref={input} type="file" multiple accept={ACCEPTED_MIME.join(",")} className="hidden" onChange={(e) => e.target.files && addFiles(e.target.files)} />
@@ -160,10 +163,10 @@ export function NewTopic({ subject, mode }: { subject: Subject; mode: "materials
                   <ul className="space-y-2">
                     {files.map((f) => (
                       <li key={f.name + f.size} className="flex items-center gap-3 card raised !p-3 text-sm">
-                        <span aria-hidden="true">{f.type.startsWith("image/") ? "🖼️" : f.type === "application/pdf" ? "📄" : "📝"}</span>
+                        <Icon name={f.type.startsWith("image/") ? "camera" : f.type === "application/pdf" ? "exam" : "pen"} size={18} style={{ color: "var(--hue)" }} />
                         <span className="flex-1 truncate">{f.name}</span>
                         <span className="text-muted">{(f.size / 1024 / 1024).toFixed(1)} MB</span>
-                        <button type="button" className="text-muted" onClick={() => setFiles(files.filter((x) => x !== f))} aria-label={`Usuń ${f.name}`}>✕</button>
+                        <button type="button" className="text-muted" onClick={() => setFiles(files.filter((x) => x !== f))} aria-label={`Usuń ${f.name}`}><Icon name="close" size={16} /></button>
                       </li>
                     ))}
                   </ul>
@@ -197,7 +200,7 @@ export function NewTopic({ subject, mode }: { subject: Subject; mode: "materials
             </div>
 
             {err && <div className="exfb bad" role="alert">{err}</div>}
-            <button type="submit" className="pill" disabled={!canSubmit}>Generuj temat</button>
+            <button type="submit" className="btn3d purple lg" disabled={!canSubmit}><Icon name="sparkles" size={18} />Generuj temat</button>
             {mode === "materials" && <p className="text-[12px] text-muted text-center">Wrzucaj tylko materiały, do których masz prawo. AI uczy wyłącznie z tego, co wrzucisz.</p>}
           </form>
         )}

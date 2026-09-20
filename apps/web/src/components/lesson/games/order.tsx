@@ -2,9 +2,12 @@
 import { useMemo, useState } from "react";
 import { shuffle, type OrderGame } from "@nauka/shared";
 import { cn } from "@/lib/utils";
+import { Btn3d } from "@/components/ui/btn3d";
+import { Icon } from "@/components/ui/icons";
+import type { GameProps } from "@/components/lesson/games";
 
-/** Put steps in order: tap ▲/▼ to move (works on touch), or drag with the mouse. */
-export function OrderGameView({ game, onDone }: { game: OrderGame; onDone: (correct: number, total: number) => void }) {
+/** Put steps in order: tap the arrows (touch) or drag with the mouse. One answer = the whole sequence. */
+export function OrderGameView({ game, onAnswer, onDone }: GameProps<OrderGame>) {
   const steps = useMemo(() => game.steps.slice(0, 8), [game]);
   const [order, setOrder] = useState<number[]>(() => {
     let o = shuffle(steps.map((_, i) => i));
@@ -22,6 +25,11 @@ export function OrderGameView({ game, onDone }: { game: OrderGame; onDone: (corr
     setOrder(n);
   };
   const correct = order.filter((v, i) => v === i).length;
+  const check = () => {
+    setChecked(true);
+    const all = correct === steps.length;
+    onAnswer(all, all ? "Idealna kolejność." : <>{correct}/{steps.length} na miejscu. Dobra kolejność: {steps.map((s, i) => `${i + 1}. ${s}`).join(" → ")}</>, () => onDone(correct, steps.length));
+  };
 
   return (
     <div>
@@ -41,21 +49,14 @@ export function OrderGameView({ game, onDone }: { game: OrderGame; onDone: (corr
             <span className="flex-1">{steps[stepIdx]}</span>
             {!checked && (
               <span className="mv">
-                <button type="button" aria-label="W górę" onClick={() => move(pos, pos - 1)} disabled={pos === 0}>▲</button>
-                <button type="button" aria-label="W dół" onClick={() => move(pos, pos + 1)} disabled={pos === order.length - 1}>▼</button>
+                <button type="button" aria-label="W górę" onClick={() => move(pos, pos - 1)} disabled={pos === 0}><Icon name="arrow-up" size={12} /></button>
+                <button type="button" aria-label="W dół" onClick={() => move(pos, pos + 1)} disabled={pos === order.length - 1}><Icon name="arrow-down" size={12} /></button>
               </span>
             )}
           </li>
         ))}
       </ol>
-      {!checked ? (
-        <button type="button" className="pill mt-4" onClick={() => setChecked(true)}>Sprawdź</button>
-      ) : (
-        <>
-          <div className={cn("exfb", correct === steps.length ? "ok" : "bad")} role="status">{correct === steps.length ? "Idealna kolejność." : `${correct}/${steps.length} na miejscu. Dobra kolejność: ${steps.map((s, i) => `${i + 1}. ${s}`).join(" → ")}`}</div>
-          <button type="button" className="pill mt-3 pop" onClick={() => onDone(correct, steps.length)}>Dalej</button>
-        </>
-      )}
+      {!checked && <Btn3d variant="green" className="mt-4" onClick={check}>Sprawdź</Btn3d>}
     </div>
   );
 }

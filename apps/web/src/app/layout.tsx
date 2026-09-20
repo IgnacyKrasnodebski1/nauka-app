@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import { COLORS, cssVars } from "@nauka/shared";
+import { MotionProvider } from "@/lib/motion";
+import { SfxProvider } from "@/lib/sfx";
 import "./globals.css";
 
-const FONTS = "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Manrope:wght@400;500;600;700&display=swap";
+const FONTS = "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap";
 
 export const metadata: Metadata = {
   title: { default: "Recall — z notatek do lekcji w minutę", template: "%s · Recall" },
@@ -33,7 +35,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* design tokens from @nauka/shared — single source of truth for web + mobile */}
         <style dangerouslySetInnerHTML={{ __html: cssVars() }} />
       </head>
-      <body>{children}</body>
+      <body>
+        <MotionProvider>
+          <SfxProvider>{children}</SfxProvider>
+        </MotionProvider>
+      </body>
     </html>
   );
 }
