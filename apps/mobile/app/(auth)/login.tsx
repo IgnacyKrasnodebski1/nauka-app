@@ -1,16 +1,21 @@
 import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Glow } from "@/components/Accent";
+import { Button3D } from "@/components/Button3D";
+import { Icon } from "@/components/Icon";
+import { Logo } from "@/components/Logo";
+import { Mascot, MascotBubble } from "@/components/Mascot";
 import { Body, Display, Label, Muted } from "@/components/Text";
-import { Button, Input, Screen, Touch } from "@/components/ui";
+import { Input, Screen, Touch } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
-import { COLORS, RADIUS, SPACE, body } from "@/lib/theme";
+import { COLORS, PLAY, RADIUS, SPACE } from "@/lib/theme";
 
 type Mode = "magic" | "password" | "signup";
 
-/** Logowanie wymagane — brak trybu gościa. Po sesji bramka w _layout przenosi do apki / onboardingu. */
+/** Logowanie wymagane — brak trybu gościa. Logo + maskotka z dymkiem + przyciski 3D. */
 export default function Login() {
   const auth = useAuth();
   const app = useApp();
@@ -49,21 +54,36 @@ export default function Login() {
       return needsConfirm ? "Konto założone. Potwierdź maila (link w skrzynce) i wróć tu." : undefined;
     });
 
+  const bubble = msg ? (msg.ok ? "Sprawdź skrzynkę!" : "Hmm, coś nie zagrało.") : mode === "signup" ? "Nowe konto = nowa seria. Zaczynamy?" : "Cześć! Jestem Rec. Zaloguj się i lecimy.";
+
   return (
     <Screen padded={false}>
-      <Glow color={COLORS.accent} size={420} alpha={0.12} style={{ top: -180, alignSelf: "center" }} />
+      <Glow color={PLAY.purple} size={460} alpha={0.14} style={{ top: -200, alignSelf: "center" }} />
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={[s.wrap, { paddingTop: insets.top + SPACE[12], paddingBottom: insets.bottom + SPACE[6] }]} keyboardShouldPersistTaps="handled">
-          <View style={s.logo}>
-            <View style={s.logoMark} />
-            <Display size="md" weight={800} style={{ letterSpacing: 2 }}>
-              Recall
+        <ScrollView contentContainerStyle={[s.wrap, { paddingTop: insets.top + SPACE[6], paddingBottom: insets.bottom + SPACE[6] }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <Animated.View entering={FadeInDown.duration(300)} style={s.head}>
+            <Logo size={40} />
+          </Animated.View>
+          <Animated.View entering={FadeInDown.delay(60).duration(300)} style={s.hero}>
+            <Mascot state={msg && !msg.ok ? "sad" : msg?.ok ? "cheer" : "happy"} size={120} streak={3} />
+            <View style={{ flex: 1, gap: SPACE[2] }}>
+              <MascotBubble text={bubble} tail="left" style={{ maxWidth: undefined }} />
+              <View style={s.perks}>
+                <Perk icon="heart" color={PLAY.red} label="serca" />
+                <Perk icon="diamond" color={PLAY.gem} label="klejnoty" />
+                <Perk icon="flame" color={PLAY.orange} label="seria" />
+                <Perk icon="trophy" color={PLAY.yellow} label="ranking" />
+              </View>
+            </View>
+          </Animated.View>
+          <Animated.View entering={FadeInDown.delay(120).duration(300)}>
+            <Display size="2xl" weight={800}>
+              Ucz się z tego, co masz.
             </Display>
-          </View>
-          <Display size="3xl" weight={700}>
-            Ucz się z tego, co masz.
-          </Display>
-          <Body color={COLORS.muted}>Notatki, zdjęcia albo samo hasło — AI składa z tego lekcje jak w Duolingo. Konto trzyma Twoje przedmioty i postępy.</Body>
+            <Body color={COLORS.muted} style={{ marginTop: 4 }}>
+              Notatki, zdjęcia albo samo hasło — AI składa z tego lekcje jak w Duolingo. Konto trzyma Twoje przedmioty i postępy.
+            </Body>
+          </Animated.View>
 
           {!auth.enabled ? (
             <View style={s.warn}>
@@ -82,7 +102,7 @@ export default function Login() {
               ] as [Mode, string][]
             ).map(([m, l]) => (
               <Touch key={m} onPress={() => setMode(m)} style={[s.mode, mode === m && s.modeOn]}>
-                <Body size="sm" weight={600} color={mode === m ? COLORS.text : COLORS.muted}>
+                <Body size="sm" weight={700} color={mode === m ? "#fff" : COLORS.muted}>
                   {l}
                 </Body>
               </Touch>
@@ -106,9 +126,9 @@ export default function Login() {
             </Body>
           ) : null}
 
-          <View style={{ gap: SPACE[2], marginTop: SPACE[2] }}>
-            <Button label={busy ? "Chwila…" : mode === "magic" ? "Wyślij link" : mode === "password" ? "Zaloguj się" : "Załóż konto"} onPress={submit} disabled={busy || !auth.enabled} />
-            <Button label="Kontynuuj z Google" variant="secondary" onPress={() => run(() => auth.signInGoogle())} disabled={busy || !auth.enabled} />
+          <View style={{ gap: SPACE[3], marginTop: SPACE[1] }}>
+            <Button3D label={busy ? "Chwila…" : mode === "magic" ? "Wyślij link" : mode === "password" ? "Zaloguj się" : "Załóż konto"} onPress={submit} disabled={busy || !auth.enabled} right={<Icon name="arrow-forward" size={18} color="#fff" />} />
+            <Button3D label="Kontynuuj z Google" variant="ghost" onPress={() => run(() => auth.signInGoogle())} disabled={busy || !auth.enabled} left={<Icon name="logo-google" size={18} color={COLORS.textSoft} />} />
           </View>
           <Muted size="xs" center style={{ marginTop: SPACE[2] }}>
             Free: 3 tematy z AI miesięcznie. Bez karty.
@@ -119,13 +139,25 @@ export default function Login() {
   );
 }
 
+function Perk({ icon, color, label }: { icon: React.ComponentProps<typeof Icon>["name"]; color: string; label: string }) {
+  return (
+    <View style={s.perk}>
+      <Icon name={icon} size={13} color={color} />
+      <Muted size="xs" weight={700} style={{ fontSize: 10 }}>
+        {label}
+      </Muted>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
-  wrap: { flexGrow: 1, paddingHorizontal: SPACE[6], gap: SPACE[4] },
-  logo: { flexDirection: "row", alignItems: "center", gap: SPACE[2], marginBottom: SPACE[2] },
-  logoMark: { width: 12, height: 12, borderRadius: 4, backgroundColor: COLORS.accent },
+  wrap: { flexGrow: 1, paddingHorizontal: SPACE[5], gap: SPACE[4] },
+  head: { flexDirection: "row", alignItems: "center" },
+  hero: { flexDirection: "row", alignItems: "center", gap: SPACE[3] },
+  perks: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
+  perk: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.pill, paddingVertical: 4, paddingHorizontal: 8 },
   warn: { backgroundColor: "rgba(242,193,78,0.10)", borderWidth: 1, borderColor: COLORS.accentGlow, borderRadius: RADIUS.sm, padding: SPACE[3] },
-  modes: { flexDirection: "row", gap: 4, backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.pill, padding: 4 },
-  mode: { flex: 1, paddingVertical: 9, borderRadius: RADIUS.pill, alignItems: "center" },
-  modeOn: { backgroundColor: COLORS.bg4 },
-  _f: { fontFamily: body(500) },
+  modes: { flexDirection: "row", gap: 4, backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.md, padding: 4 },
+  mode: { flex: 1, paddingVertical: 10, borderRadius: RADIUS.sm, alignItems: "center", borderBottomWidth: 3, borderBottomColor: "transparent" },
+  modeOn: { backgroundColor: PLAY.green, borderBottomColor: PLAY.greenDeep },
 });

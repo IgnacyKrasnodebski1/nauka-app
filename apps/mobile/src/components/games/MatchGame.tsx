@@ -30,7 +30,7 @@ function Tile({ text, sel, done, bad, onPress }: { text: string; sel: boolean; d
 }
 
 /** Dopasuj pary: tapnij lewy, potem prawy. Dopasowane znikają (skala/alfa), błędne — czerwony błysk. */
-export function MatchGame({ game, onDone }: GameProps<MatchGameT>) {
+export function MatchGame({ game, onDone, onAnswer }: GameProps<MatchGameT>) {
   const left = useMemo(() => shuffle(game.pairs.map((p, i) => ({ i, t: p.l }))), [game]);
   const right = useMemo(() => shuffle(game.pairs.map((p, i) => ({ i, t: p.r }))), [game]);
   const [selL, setSelL] = useState<number | null>(null);
@@ -41,6 +41,7 @@ export function MatchGame({ game, onDone }: GameProps<MatchGameT>) {
   const finished = useRef(false);
 
   const resolve = (l: number, r: number) => {
+    onAnswer?.(l === r);
     if (l === r) {
       haptic.ok();
       setDone((d) => new Set(d).add(l));

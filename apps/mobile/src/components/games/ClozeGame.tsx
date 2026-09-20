@@ -9,7 +9,7 @@ import { Button, Touch } from "../ui";
 import { Feedback, g, GameHead, type GameProps } from "./shared";
 
 /** Uzupełnij lukę: zdanie z `___` (luka podświetlona ringiem przedmiotu), wybór z opcji. */
-export function ClozeGame({ game, onDone }: GameProps<ClozeGameT>) {
+export function ClozeGame({ game, onDone, onAnswer }: GameProps<ClozeGameT>) {
   const hue = useHue();
   const [idx, setIdx] = useState(0);
   const [picked, setPicked] = useState<string | null>(null);
@@ -22,6 +22,7 @@ export function ClozeGame({ game, onDone }: GameProps<ClozeGameT>) {
   const pick = (o: string) => {
     if (picked !== null) return;
     setPicked(o);
+    onAnswer?.(o === item.answer);
     if (o === item.answer) {
       haptic.ok();
       setScore((x) => x + 1);

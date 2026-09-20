@@ -1,10 +1,10 @@
 /**
- * Motyw „Premium dark” — tokeny z @nauka/shared (docs/DESIGN.md). Nic nie hardkodujemy w komponentach.
+ * Motyw „Duolingo in dark” — tokeny z @nauka/shared (docs/DESIGN.md). Nic nie hardkodujemy w komponentach.
  */
-import { COLORS, MOTION, RADIUS, SHADOW, SPACE, SUBJECT_HUES, TYPE, subjectHue } from "@nauka/shared";
+import { COLORS, HARD_EDGE, MOTION, PLAY, RADIUS, SHADOW, SPACE, SUBJECT_HUES, TYPE, hueDeep, hueFromColor, subjectHue } from "@nauka/shared";
 import type { TextStyle, ViewStyle } from "react-native";
 
-export { COLORS, MOTION, RADIUS, SHADOW, SPACE, SUBJECT_HUES, TYPE, subjectHue };
+export { COLORS, HARD_EDGE, MOTION, PLAY, RADIUS, SHADOW, SPACE, SUBJECT_HUES, TYPE, hueDeep, hueFromColor, subjectHue };
 
 /** Nazwy rodzin fontów = klucze pod którymi expo-font je ładuje (identyczne na iOS/Android/web). */
 export const FONT = {
@@ -24,9 +24,11 @@ export function body(weight: 400 | 500 | 600 | 700 = 400): string {
   return weight === 700 ? FONT.body700 : weight === 600 ? FONT.body600 : weight === 500 ? FONT.body500 : FONT.body400;
 }
 
-/** Kolor przedmiotu: `subjects.accent2` (SUBJECT_HUES) → warianty do ringów, poświat i pasków. */
+/** Kolor przedmiotu: `subjects.accent2` (SUBJECT_HUES) → warianty do ringów, poświat, pasków i krawędzi 3D (`deep`). */
 export interface Hue {
   color: string;
+  /** ciemniejszy odcień pod krawędź 3D */
+  deep: string;
   soft: string;
   ring: string;
   glow: string;
@@ -42,11 +44,12 @@ export function withAlpha(hex: string, a: number): string {
 export function hueFrom(color?: string | null, seed?: string): Hue {
   let c = color && /^#[0-9a-f]{6}$/i.test(color.trim()) ? color.trim() : null;
   if (!c) c = subjectHue(seed ?? "recall").color;
-  const known = SUBJECT_HUES.find((h) => h.color.toLowerCase() === c!.toLowerCase());
-  return { color: c, soft: known?.soft ?? withAlpha(c, 0.16), ring: withAlpha(c, 0.4), glow: withAlpha(c, 0.14) };
+  const known = hueFromColor(c);
+  return { color: c, deep: known.deep, soft: known.soft, ring: withAlpha(c, 0.4), glow: withAlpha(c, 0.14) };
 }
 
-export const GOLD_HUE: Hue = { color: COLORS.accent, soft: withAlpha(COLORS.accent, 0.16), ring: withAlpha(COLORS.accent, 0.4), glow: COLORS.accentGlow };
+export const GOLD_HUE: Hue = { color: COLORS.accent, deep: COLORS.accentDeep, soft: withAlpha(COLORS.accent, 0.16), ring: withAlpha(COLORS.accent, 0.4), glow: COLORS.accentGlow };
+export const GREEN_HUE: Hue = { color: PLAY.green, deep: PLAY.greenDeep, soft: PLAY.greenSoft, ring: withAlpha(PLAY.green, 0.4), glow: withAlpha(PLAY.green, 0.14) };
 
 /** Cienie (RN nie ma inset — górny highlight robimy osobnym 1px View, patrz <Card>). */
 export const shadowCard: ViewStyle = { shadowColor: "#000", shadowOpacity: 0.45, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 8 };
@@ -56,4 +59,4 @@ export const shadowOverlay: ViewStyle = { shadowColor: "#000", shadowOpacity: 0.
 export const tabular: TextStyle = { fontVariant: ["tabular-nums"] };
 
 /** Wysokości/kształty z DESIGN.md */
-export const UI = { buttonH: 48, buttonHsm: 40, inputH: 48, tile: 52, node: 64, gutter: SPACE[4] } as const;
+export const UI = { buttonH: 52, buttonHsm: 40, inputH: 48, tile: 52, node: 76, gutter: SPACE[4] } as const;

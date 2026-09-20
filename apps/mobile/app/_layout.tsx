@@ -1,13 +1,14 @@
 import { BricolageGrotesque_600SemiBold, BricolageGrotesque_700Bold, BricolageGrotesque_800ExtraBold } from "@expo-google-fonts/bricolage-grotesque";
 import { Manrope_400Regular, Manrope_500Medium, Manrope_600SemiBold, Manrope_700Bold } from "@expo-google-fonts/manrope";
 import { useFonts } from "expo-font";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useGlobalSearchParams, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import React, { useEffect } from "react";
 import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
+import { GamificationOverlay } from "@/components/GamificationOverlay";
 import { Toast } from "@/components/ui";
 import { AppProvider, useApp } from "@/lib/app-state";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -22,6 +23,8 @@ function Shell({ fontsReady }: { fontsReady: boolean }) {
   const router = useRouter();
   const segments = useSegments();
   const first = segments[0] as string | undefined;
+  /** `?preview=1` pozwala obejrzeć onboarding po jego zrobieniu (podgląd / zrzuty) */
+  const { preview } = useGlobalSearchParams<{ preview?: string }>();
 
   useEffect(() => {
     if (auth.loading || !app.ready || !fontsReady) return;
@@ -33,8 +36,8 @@ function Shell({ fontsReady }: { fontsReady: boolean }) {
     }
     if (first === "(auth)") return router.replace("/(tabs)");
     if (!app.onboarded && !app.offline && first !== "onboarding" && first !== "auth") router.replace("/onboarding");
-    if (app.onboarded && first === "onboarding") router.replace("/(tabs)");
-  }, [auth.loading, auth.user, app.ready, app.onboarded, app.offline, first, router, fontsReady]);
+    if (app.onboarded && first === "onboarding" && !preview) router.replace("/(tabs)");
+  }, [auth.loading, auth.user, app.ready, app.onboarded, app.offline, first, router, fontsReady, preview]);
 
   if (!fontsReady) return <View style={{ flex: 1, backgroundColor: COLORS.bg0 }} />;
   return (
@@ -47,6 +50,7 @@ function Shell({ fontsReady }: { fontsReady: boolean }) {
         <Stack.Screen name="t/[topicId]/l/[levelId]" options={{ presentation: "fullScreenModal", animation: "fade", gestureEnabled: false }} />
       </Stack>
       <Toast text={app.toast} />
+      <GamificationOverlay />
     </>
   );
 }

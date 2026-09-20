@@ -1,69 +1,27 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Animated as RNAnimated, Easing as RNEasing, StyleSheet, Text, View } from "react-native";
+import type { MascotState } from "@nauka/shared";
+import React, { useEffect } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withDelay, withSpring } from "react-native-reanimated";
 import { useReduceMotion } from "@/lib/motion";
-import { COLORS, MOTION, SPACE, display, tabular } from "@/lib/theme";
+import { COLORS, PLAY, SPACE, display, tabular } from "@/lib/theme";
 import { useHue } from "./Accent";
+import { Confetti } from "./Confetti";
+import { Icon } from "./Icon";
+import { CountUp, StatCard } from "./Lesson";
+import { Mascot } from "./Mascot";
+import { GemIcon } from "./Pills";
+import { Ring } from "./Ring";
 import { Body, Display, Muted } from "./Text";
 
-/** Jedna cząstka confetti (plain RN Animated). */
-function Particle({ color, delay, dx, size, run }: { color: string; delay: number; dx: number; size: number; run: boolean }) {
-  const [t] = useState(() => new RNAnimated.Value(0));
-  useEffect(() => {
-    if (!run) return;
-    RNAnimated.timing(t, { toValue: 1, duration: 1200, delay, easing: RNEasing.out(RNEasing.cubic), useNativeDriver: true }).start();
-  }, [t, delay, run]);
-  const translateY = t.interpolate({ inputRange: [0, 1], outputRange: [0, 260] });
-  const translateX = t.interpolate({ inputRange: [0, 1], outputRange: [0, dx] });
-  const opacity = t.interpolate({ inputRange: [0, 0.15, 0.8, 1], outputRange: [0, 1, 1, 0] });
-  const rotate = t.interpolate({ inputRange: [0, 1], outputRange: ["0deg", `${dx > 0 ? 360 : -360}deg`] });
-  return <RNAnimated.View pointerEvents="none" style={{ position: "absolute", top: 0, left: "50%", width: size, height: size * 0.5, borderRadius: 2, backgroundColor: color, opacity, transform: [{ translateX }, { translateY }, { rotate }] }} />;
-}
-
-/** Deterministyczny pseudo-los (czysta funkcja — bez Math.random w renderze). */
-const pr = (i: number, k: number) => {
-  const x = Math.sin(i * 12.9898 + k * 78.233) * 43758.5453;
-  return x - Math.floor(x);
-};
-
-/** Powściągliwe confetti: max 40 cząstek, hue przedmiotu + złoto, 1.2 s, tylko gdy `celebrate`. */
-export function Confetti({ celebrate }: { celebrate: boolean }) {
-  const hue = useHue();
-  const reduce = useReduceMotion();
-  const parts = useMemo(
-    () => Array.from({ length: 40 }, (_, i) => ({ id: i, color: i % 3 === 0 ? COLORS.accent : hue.color, delay: Math.round(pr(i, 1) * 250), dx: Math.round((pr(i, 2) - 0.5) * 320), size: 6 + Math.round(pr(i, 3) * 6) })),
-    [hue.color],
-  );
-  if (!celebrate || reduce) return null;
-  return (
-    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
-      {parts.map((p) => (
-        <Particle key={p.id} color={p.color} delay={p.delay} dx={p.dx} size={p.size} run />
-      ))}
-    </View>
-  );
-}
+export { Confetti };
 
 /** Animowany licznik XP (display 48, złoto, tabular). */
 export function XpCounter({ value, size = 48 }: { value: number; size?: number }) {
-  const reduce = useReduceMotion();
-  const [n, setN] = useState(0);
-  useEffect(() => {
-    if (reduce) return;
-    const start = Date.now();
-    const dur = 900;
-    const id = setInterval(() => {
-      const k = Math.min(1, (Date.now() - start) / dur);
-      const e = 1 - Math.pow(1 - k, 3);
-      setN(Math.round(value * e));
-      if (k >= 1) clearInterval(id);
-    }, 16);
-    return () => clearInterval(id);
-  }, [value, reduce]);
   return (
-    <Text style={[{ fontFamily: display(800), fontSize: size, lineHeight: Math.round(size * 1.1), color: COLORS.accent, letterSpacing: -size * 0.02 }, tabular]}>
-      +{reduce ? value : n} <Text style={{ fontSize: Math.round(size * 0.4), color: COLORS.accentDeep }}>XP</Text>
-    </Text>
+    <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+      <CountUp value={value} prefix="+" size={size} color={COLORS.accent} />
+      <Text style={[{ fontFamily: display(800), fontSize: Math.round(size * 0.4), color: COLORS.accentDeep, marginLeft: 6 }, tabular]}>XP</Text>
+    </View>
   );
 }
 
@@ -71,40 +29,87 @@ function Star({ on, i }: { on: boolean; i: number }) {
   const reduce = useReduceMotion();
   const sc = useSharedValue(reduce ? 1 : 0);
   useEffect(() => {
-    if (!reduce) sc.set(withDelay(200 + i * 140, withSpring(1, MOTION.spring)));
+    if (!reduce) sc.set(withDelay(300 + i * 160, withSpring(1, { damping: 8, stiffness: 260 })));
   }, [sc, i, reduce]);
-  const st = useAnimatedStyle(() => ({ transform: [{ scale: sc.value }] }));
+  const st = useAnimatedStyle(() => ({ transform: [{ scale: sc.value }, { rotate: `${(sc.value - 1) * 40}deg` }] }));
   return (
-    <Animated.Text style={[{ fontSize: 30, color: on ? COLORS.accent : COLORS.faint, fontFamily: display(700) }, st]}>★</Animated.Text>
+    <Animated.View style={st}>
+      <Icon name="star" size={i === 1 ? 44 : 36} color={on ? PLAY.yellow : COLORS.bg4} />
+    </Animated.View>
   );
 }
 
-/** Gwiazdki wpadające springiem. */
+/** Gwiazdki wpadające springiem (środkowa większa, jak w Duolingo). */
 export function Stars({ count }: { count: 0 | 1 | 2 | 3 }) {
   return (
-    <View style={{ flexDirection: "row", gap: 6 }}>
+    <View style={{ flexDirection: "row", gap: 4, alignItems: "flex-end" }}>
       {[0, 1, 2].map((i) => (
-        <Star key={i} on={i < count} i={i} />
+        <View key={i} style={{ marginBottom: i === 1 ? 6 : 0 }}>
+          <Star on={i < count} i={i} />
+        </View>
       ))}
     </View>
   );
 }
 
-/** Ekran wyniku (lekcja/quiz/egzamin): eyebrow, tytuł display, opcjonalny licznik XP/gwiazdki, werdykt, akcje. */
-export function ResultView({ eyebrow, title, xp, stars, score, verdict, celebrate = false, children }: { eyebrow?: string; title: string; xp?: number; stars?: 0 | 1 | 2 | 3; score?: React.ReactNode; verdict?: string; celebrate?: boolean; children?: React.ReactNode }) {
+export interface ResultStats {
+  xp: number;
+  /** mnożnik combo (dla etykiety) */
+  comboBest?: number;
+  accuracy?: number;
+  seconds?: number;
+  gems?: number;
+}
+
+/**
+ * Ekran wyniku: maskotka cheer/sad + confetti, eyebrow, tytuł, gwiazdki, 4 karty statystyk 3D (XP z combo,
+ * celność jako ring, czas, klejnoty), werdykt, akcje. Bez `stats` → prosty licznik XP.
+ */
+export function ResultView({ eyebrow, title, xp, stars, score, verdict, celebrate = false, stats, mascot, children }: { eyebrow?: string; title: string; xp?: number; stars?: 0 | 1 | 2 | 3; score?: React.ReactNode; verdict?: string; celebrate?: boolean; stats?: ResultStats; mascot?: MascotState; children?: React.ReactNode }) {
+  const hue = useHue();
+  const state: MascotState = mascot ?? (celebrate ? "cheer" : "sad");
   return (
     <View style={s.wrap}>
-      <Confetti celebrate={celebrate} />
+      <Confetti run={celebrate} count={80} origin={0.5} top={40} />
+      <Mascot state={state} size={132} streak={celebrate ? 7 : 0} />
       {eyebrow ? (
-        <Muted size="xs" weight={600} center style={{ letterSpacing: 1.4, textTransform: "uppercase" }}>
+        <Muted size="xs" weight={700} center color={celebrate ? PLAY.green : PLAY.red} style={{ letterSpacing: 1.4, textTransform: "uppercase" }}>
           {eyebrow}
         </Muted>
       ) : null}
-      <Display size="2xl" weight={700} center>
+      <Display size="2xl" weight={800} center>
         {title}
       </Display>
-      {xp !== undefined ? <XpCounter value={xp} /> : null}
       {stars !== undefined ? <Stars count={stars} /> : null}
+      {stats ? (
+        <View style={s.grid}>
+          <StatCard label={stats.comboBest && stats.comboBest >= 5 ? `XP · combo ×${stats.comboBest >= 10 ? 3 : 2}` : "XP"} color={PLAY.yellow} deep={PLAY.yellowDeep} icon={<Icon name="flash" size={16} color="#fff" />} delay={100}>
+            <CountUp value={stats.xp} prefix="+" size={30} />
+          </StatCard>
+          {stats.accuracy !== undefined ? (
+            <StatCard label="Celność" color={hue.color} deep={hue.deep} icon={<Icon name="locate" size={16} color="#fff" />} delay={200}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <Ring pct={stats.accuracy} size={44} stroke={6} color="#fff" track="rgba(0,0,0,0.25)" />
+                <CountUp value={stats.accuracy} suffix="%" size={26} />
+              </View>
+            </StatCard>
+          ) : null}
+          {stats.seconds !== undefined ? (
+            <StatCard label="Czas" color={PLAY.blue} deep={PLAY.blueDeep} icon={<Icon name="time" size={16} color="#fff" />} delay={300}>
+              <Text style={[{ fontFamily: display(800), fontSize: 30, lineHeight: 36, color: "#fff" }, tabular]}>
+                {Math.floor(stats.seconds / 60)}:{String(stats.seconds % 60).padStart(2, "0")}
+              </Text>
+            </StatCard>
+          ) : null}
+          {stats.gems !== undefined ? (
+            <StatCard label="Klejnoty" color={PLAY.gemDeep} deep="#1B6B9A" icon={<GemIcon size={16} color="#fff" />} delay={400}>
+              <CountUp value={stats.gems} prefix="+" size={30} />
+            </StatCard>
+          ) : null}
+        </View>
+      ) : xp !== undefined ? (
+        <XpCounter value={xp} />
+      ) : null}
       {score ? (
         <Body weight={600} color={COLORS.text} center style={tabular}>
           {score}
@@ -115,7 +120,7 @@ export function ResultView({ eyebrow, title, xp, stars, score, verdict, celebrat
           {verdict}
         </Body>
       ) : null}
-      {children ? <View style={{ alignSelf: "stretch", gap: SPACE[2], marginTop: SPACE[2] }}>{children}</View> : null}
+      {children ? <View style={{ alignSelf: "stretch", gap: SPACE[3], marginTop: SPACE[2] }}>{children}</View> : null}
     </View>
   );
 }
@@ -124,11 +129,16 @@ export function ScoreLine({ correct, total, extra }: { correct: number; total: n
   const pct = total ? Math.round((correct / total) * 100) : 0;
   return (
     <>
-      Trafione <Text style={{ color: COLORS.accent }}>{correct}/{total}</Text> ({pct}%){extra ? ` · ${extra}` : ""}
+      Trafione{" "}
+      <Text style={{ color: COLORS.accent }}>
+        {correct}/{total}
+      </Text>{" "}
+      ({pct}%){extra ? ` · ${extra}` : ""}
     </>
   );
 }
 
 const s = StyleSheet.create({
-  wrap: { alignItems: "center", justifyContent: "center", gap: SPACE[3], paddingVertical: SPACE[6], paddingHorizontal: SPACE[4] },
+  wrap: { alignItems: "center", justifyContent: "center", gap: SPACE[3], paddingVertical: SPACE[4], paddingHorizontal: SPACE[2] },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACE[3], alignSelf: "stretch", marginTop: SPACE[2] },
 });

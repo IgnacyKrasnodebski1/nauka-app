@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useMemo } from "react";
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
-import { GOLD_HUE, hueFrom, withAlpha, type Hue } from "@/lib/theme";
+import Svg, { Circle, Defs, RadialGradient, Stop } from "react-native-svg";
+import { GOLD_HUE, hueFrom, type Hue } from "@/lib/theme";
 
 const Ctx = createContext<Hue>(GOLD_HUE);
 
@@ -14,22 +15,25 @@ export function useHue(): Hue {
   return useContext(Ctx);
 }
 
-/**
- * Miękka poświata (pseudo-radial): koncentryczne koła o malejącej alfie, rozmyte przez nakładanie.
- * Alfa łączna w centrum ≈ `alpha` (0.10–0.18 wg DESIGN.md). `pointerEvents="none"`.
- */
+let uid = 0;
+
+/** Miękka poświata: SVG RadialGradient (alfa `alpha` w centrum → 0 na brzegu). `pointerEvents="none"`. */
 export function Glow({ color, size = 320, alpha = 0.14, style }: { color?: string; size?: number; alpha?: number; style?: StyleProp<ViewStyle> }) {
   const hue = useHue();
   const c = color ?? hue.color;
-  // 14 koncentrycznych kół o bardzo małej alfie każdy → gładki spadek bez widocznych pierścieni
-  const N = 14;
-  const rings = Array.from({ length: N }, (_, i) => 1 - i / N);
-  const step = alpha / N;
+  const id = useMemo(() => `glow${++uid}`, []);
   return (
     <View pointerEvents="none" style={[s.glow, { width: size, height: size }, style]}>
-      {rings.map((r, i) => (
-        <View key={i} style={{ position: "absolute", width: size * r, height: size * r, borderRadius: (size * r) / 2, backgroundColor: withAlpha(c, step * (0.6 + (i / N) * 0.8)) }} />
-      ))}
+      <Svg width={size} height={size} viewBox="0 0 100 100">
+        <Defs>
+          <RadialGradient id={id} cx="50%" cy="50%" r="50%">
+            <Stop offset="0" stopColor={c} stopOpacity={alpha} />
+            <Stop offset="0.55" stopColor={c} stopOpacity={alpha * 0.35} />
+            <Stop offset="1" stopColor={c} stopOpacity={0} />
+          </RadialGradient>
+        </Defs>
+        <Circle cx={50} cy={50} r={50} fill={`url(#${id})`} />
+      </Svg>
     </View>
   );
 }

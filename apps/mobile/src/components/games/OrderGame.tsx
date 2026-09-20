@@ -10,7 +10,7 @@ import { Button, Touch } from "../ui";
 import { Feedback, g, GameHead, type GameProps } from "./shared";
 
 /** Ułóż w kolejności: tapnij klocki po kolei; tapnięcie w ułożony klocek cofa go. Sprawdź → success/danger na pozycjach. */
-export function OrderGame({ game, onDone }: GameProps<OrderGameT>) {
+export function OrderGame({ game, onDone, onAnswer }: GameProps<OrderGameT>) {
   const hue = useHue();
   const pool = useMemo(() => {
     let sh = shuffle(game.steps.map((t, i) => ({ i, t })));
@@ -29,6 +29,7 @@ export function OrderGame({ game, onDone }: GameProps<OrderGameT>) {
   const remove = (k: number) => !checked && setOrder(order.filter((_, j) => j !== k));
   const check = () => {
     setChecked(true);
+    onAnswer?.(correctCount === game.steps.length);
     if (correctCount === game.steps.length) haptic.ok();
     else haptic.bad();
   };

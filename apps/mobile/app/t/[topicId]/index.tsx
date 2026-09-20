@@ -1,11 +1,14 @@
 import type { Topic } from "@nauka/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
-import { Glow, HueProvider } from "@/components/Accent";
-import { Button, Chip, Empty, Loading, StatPill, TopBar } from "@/components/ui";
+import { StyleSheet, View } from "react-native";
+import { HueProvider } from "@/components/Accent";
+import { Icon, type IoniconName } from "@/components/Icon";
+import { GemsPill, HeartsPill, StreakPill } from "@/components/Pills";
+import { Muted } from "@/components/Text";
+import { Button, Empty, Loading, TopBar, Touch } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
-import { COLORS, SPACE, UI } from "@/lib/theme";
+import { COLORS, PLAY, RADIUS, SPACE, UI, hueFrom } from "@/lib/theme";
 import { ExamTab } from "@/screens/topic/ExamTab";
 import { FlashcardsTab } from "@/screens/topic/FlashcardsTab";
 import { InfoTab } from "@/screens/topic/InfoTab";
@@ -13,15 +16,15 @@ import { PathTab } from "@/screens/topic/PathTab";
 import { QuizTab } from "@/screens/topic/QuizTab";
 
 type Tab = "path" | "cards" | "quiz" | "exam" | "info";
-const TABS: { id: Tab; label: string }[] = [
-  { id: "path", label: "Ścieżka" },
-  { id: "cards", label: "Fiszki" },
-  { id: "quiz", label: "Quiz" },
-  { id: "exam", label: "Egzamin" },
-  { id: "info", label: "Info" },
+const TABS: { id: Tab; label: string; icon: IoniconName }[] = [
+  { id: "path", label: "Ścieżka", icon: "map" },
+  { id: "cards", label: "Fiszki", icon: "layers" },
+  { id: "quiz", label: "Quiz", icon: "help-circle" },
+  { id: "exam", label: "Egzamin", icon: "school" },
+  { id: "info", label: "Info", icon: "information-circle" },
 ];
 
-/** Temat: Ścieżka / Fiszki / Quiz / Egzamin / Info. */
+/** Temat: Ścieżka / Fiszki / Quiz / Egzamin / Info (zakładki segmentowe z ikonami). */
 export default function TopicScreen() {
   const { topicId, tab: initialTab } = useLocalSearchParams<{ topicId: string; tab?: Tab }>();
   const app = useApp();
@@ -51,28 +54,34 @@ export default function TopicScreen() {
     );
 
   const subject = app.findSubject(topic.subjectId);
-  const p = app.progressFor(topic.id);
+  const hue = hueFrom(subject?.accent2 ?? topic.accent2, subject?.name ?? topic.name);
   return (
-    <HueProvider color={subject?.accent2 ?? topic.accent2} seed={subject?.name ?? topic.name}>
+    <HueProvider color={hue.color}>
       <View style={{ flex: 1, backgroundColor: COLORS.bg0 }}>
-        <Glow size={420} alpha={0.12} style={{ top: -230, alignSelf: "center" }} />
         <TopBar
           onBack={back}
           title={topic.name}
           subtitle={subject?.name}
           right={
             <>
-              <StatPill kind="streak" value={app.streak} />
-              <StatPill kind="xp" value={p.xp} />
+              <StreakPill streak={app.streak} compact />
+              <GemsPill gems={app.gems} compact />
+              <HeartsPill hearts={app.hearts} compact />
             </>
           }
         />
-        <View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.tabs}>
-            {TABS.map((t) => (
-              <Chip key={t.id} label={t.label} active={tab === t.id} onPress={() => setTab(t.id)} />
-            ))}
-          </ScrollView>
+        <View style={s.seg}>
+          {TABS.map((t) => {
+            const on = tab === t.id;
+            return (
+              <Touch key={t.id} onPress={() => setTab(t.id)} style={[s.segItem, on && { backgroundColor: hue.color, borderBottomColor: hue.deep }]} accessibilityLabel={t.label}>
+                <Icon name={t.icon} size={16} color={on ? "#fff" : COLORS.muted} />
+                <Muted size="xs" weight={700} color={on ? "#fff" : COLORS.muted} numberOfLines={1} style={{ fontSize: 10 }}>
+                  {t.label}
+                </Muted>
+              </Touch>
+            );
+          })}
         </View>
         <View style={{ flex: 1 }}>
           {tab === "path" ? <PathTab topic={topic} /> : null}
@@ -87,5 +96,7 @@ export default function TopicScreen() {
 }
 
 const s = StyleSheet.create({
-  tabs: { gap: SPACE[2], paddingHorizontal: UI.gutter, paddingVertical: SPACE[1], paddingBottom: SPACE[3] },
+  seg: { flexDirection: "row", gap: 4, marginHorizontal: UI.gutter, marginBottom: SPACE[3], padding: 4, backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.md },
+  segItem: { flex: 1, alignItems: "center", justifyContent: "center", gap: 2, paddingVertical: 7, borderRadius: RADIUS.sm, borderBottomWidth: 3, borderBottomColor: "transparent" },
+  _p: { color: PLAY.green },
 });

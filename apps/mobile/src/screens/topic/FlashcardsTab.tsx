@@ -1,64 +1,39 @@
 import { XP, cardKey, isDue, newCard, review, type SrsGrade, type Topic } from "@nauka/shared";
 import React, { useMemo, useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Flashcard } from "@/components/Flashcard";
-import { Chips, Empty, ProgressRow, Touch } from "@/components/ui";
+import { Button3D } from "@/components/Button3D";
+import { FlashcardDeck, type DeckCard } from "@/components/FlashcardDeck";
+import { Icon } from "@/components/Icon";
+import { Mascot } from "@/components/Mascot";
+import { Body, Display, Muted, Num } from "@/components/Text";
+import { Chips } from "@/components/ui";
 import { haptic, useApp } from "@/lib/app-state";
-import { COLORS, RADIUS, SPACE, UI, body } from "@/lib/theme";
+import { play } from "@/lib/sfx";
+import { COLORS, PLAY, RADIUS, SPACE, UI, tabular } from "@/lib/theme";
 
-interface CardRef {
-  t: string;
-  d: string;
-  key: string;
+interface CardRef extends DeckCard {
   topicId: string;
-  lvl: string;
   levelId: string;
 }
 
-export const GRADES: { g: SrsGrade; label: string; color: string; soft: string }[] = [
-  { g: 0, label: "Nie", color: COLORS.danger, soft: COLORS.dangerSoft },
-  { g: 1, label: "Trudne", color: COLORS.streak, soft: "rgba(255,138,61,0.14)" },
-  { g: 2, label: "Umiem", color: COLORS.success, soft: COLORS.successSoft },
-  { g: 3, label: "Łatwe", color: COLORS.info, soft: COLORS.infoSoft },
-];
-
-/** 4 chipy oceny 0–3 (SRS). */
-export function GradeRow({ onGrade }: { onGrade: (g: SrsGrade) => void }) {
-  return (
-    <View style={gr.row}>
-      {GRADES.map((x) => (
-        <Touch key={x.g} onPress={() => onGrade(x.g)} style={[gr.btn, { backgroundColor: x.soft, borderColor: x.color }]}>
-          <Text style={[gr.txt, { color: x.color }]}>{x.label}</Text>
-        </Touch>
-      ))}
-    </View>
-  );
-}
-export const gr = StyleSheet.create({
-  row: { flexDirection: "row", gap: SPACE[2], marginTop: SPACE[4] },
-  btn: { flex: 1, height: 48, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center", borderWidth: 1 },
-  txt: { fontSize: 14, fontFamily: body(700) },
-  show: { height: 48, borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center", backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.lineStrong, marginTop: SPACE[4] },
-});
-
-/** Fiszki z jednego tematu albo z całego przedmiotu: „do powtórki” (SRS), „wszystko”, po poziomach/tematach. */
+/** Fiszki jako stos swipe (SwipeDeck): „do powtórki” (SRS), „wszystko”, po poziomach/tematach; licznik sesji. */
 export function FlashcardsTab({ topics }: { topics: Topic[] }) {
   const app = useApp();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<string>("due");
   const [idx, setIdx] = useState(0);
-  const [flipped, setFlipped] = useState(false);
+  const [session, setSession] = useState({ known: 0, again: 0 });
   const multi = topics.length > 1;
 
   const all = useMemo<CardRef[]>(
-    () => topics.flatMap((tp) => tp.levels.flatMap((l) => l.flashcards.map((c, i) => ({ t: c.t, d: c.d, key: cardKey(l.id, i), topicId: tp.id, lvl: multi ? tp.name : l.title, levelId: l.id })))),
+    () => topics.flatMap((tp) => tp.levels.flatMap((l) => l.flashcards.map((c, i) => ({ t: c.t, d: c.d, key: `${tp.id}:${cardKey(l.id, i)}`, tag: multi ? tp.name : l.title, topicId: tp.id, levelId: l.id })))),
     [topics, multi],
   );
   const due = useMemo(
     () =>
       all.filter((c) => {
-        const st = app.srs[c.topicId]?.[c.key];
+        const st = app.srs[c.topicId]?.[c.key.slice(c.topicId.length + 1)];
         return st ? isDue(st) : true;
       }),
     [all, app.srs],
@@ -69,20 +44,32 @@ export function FlashcardsTab({ topics }: { topics: Topic[] }) {
     return all.filter((c) => (multi ? c.topicId === filter : c.levelId === filter));
   }, [filter, all, due, multi]);
 
-  const safeIdx = list.length ? idx % list.length : 0;
-  const card = list[safeIdx];
+  const card = list[idx];
+  const finished = list.length > 0 && idx >= list.length;
 
-  const grade = (g: SrsGrade) => {
-    if (!card) return;
-    const srs = app.srsFor(card.topicId);
-    app.setSrsFor(card.topicId, { ...srs, [card.key]: review(srs[card.key] ?? newCard(), g) });
+  const grade = (g: SrsGrade, c: DeckCard) => {
+    const ref = c as CardRef;
+    const key = ref.key.slice(ref.topicId.length + 1);
+    const srs = app.srsFor(ref.topicId);
+    app.setSrsFor(ref.topicId, { ...srs, [key]: review(srs[key] ?? newCard(), g) });
+    app.questEvent({ type: "review", count: 1 });
+    app.bumpStats((st) => ({ cardsReviewed: st.cardsReviewed + 1 }));
     if (g >= 2) {
-      app.addXp(card.topicId, XP.flashcardKnown);
+      app.addXp(ref.topicId, XP.flashcardKnown);
       haptic.ok();
-    } else haptic.tap();
-    setFlipped(false);
-    if (filter === "due") setIdx((i) => (list.length > 1 ? Math.min(i, list.length - 2) : 0));
-    else setIdx((i) => (i + 1) % Math.max(1, list.length));
+      play("correct");
+      setSession((x) => ({ ...x, known: x.known + 1 }));
+    } else {
+      haptic.tap();
+      setSession((x) => ({ ...x, again: x.again + 1 }));
+    }
+    setIdx((i) => i + 1);
+  };
+
+  const reset = (f = filter) => {
+    setFilter(f);
+    setIdx(0);
+    setSession({ known: 0, again: 0 });
   };
 
   const chips = [
@@ -93,34 +80,76 @@ export function FlashcardsTab({ topics }: { topics: Topic[] }) {
 
   return (
     <View style={[s.wrap, { paddingBottom: insets.bottom + SPACE[3] }]}>
-      <Chips
-        items={chips}
-        value={filter}
-        onChange={(f) => {
-          setFilter(f);
-          setIdx(0);
-          setFlipped(false);
-        }}
-      />
-      {!card ? (
-        <Empty icon="✓" title={filter === "due" ? "Nic do powtórki" : "Brak fiszek"} text={filter === "due" ? "Na dziś czysto. Wróć jutro albo przejrzyj wszystkie." : "Nie ma tu jeszcze fiszek."} />
+      <Chips items={chips} value={filter} onChange={(f) => reset(f)} />
+      {!list.length ? (
+        <View style={s.empty}>
+          <Mascot state="happy" size={120} streak={app.streak} />
+          <Display size="lg" weight={700} center>
+            {filter === "due" ? "Nic do powtórki" : "Brak fiszek"}
+          </Display>
+          <Body center color={COLORS.muted}>
+            {filter === "due" ? "Na dziś czysto. Wróć jutro albo przejrzyj wszystkie." : "Nie ma tu jeszcze fiszek."}
+          </Body>
+          {filter === "due" && all.length ? <Button3D label="Przejrzyj wszystkie" variant="blue" onPress={() => reset("all")} /> : null}
+        </View>
+      ) : finished ? (
+        <View style={s.empty}>
+          <Mascot state="cheer" size={120} streak={app.streak} />
+          <Display size="lg" weight={700} center>
+            Stos przerobiony
+          </Display>
+          <View style={{ flexDirection: "row", gap: SPACE[3] }}>
+            <Stat value={session.known} label="umiem" color={PLAY.green} />
+            <Stat value={session.again} label="do powtórki" color={PLAY.red} />
+            <Stat value={session.known * XP.flashcardKnown} label="XP" color={PLAY.yellow} />
+          </View>
+          <Button3D label="Jeszcze raz" variant="green" onPress={() => reset()} />
+        </View>
       ) : (
         <>
-          <ProgressRow pct={list.length ? (safeIdx / list.length) * 100 : 0} label={`${safeIdx + 1}/${list.length}`} />
-          <Flashcard term={card.t} def={card.d} tag={card.lvl} flipped={flipped} onFlip={() => setFlipped((f) => !f)} />
-          {flipped ? (
-            <GradeRow onGrade={grade} />
-          ) : (
-            <Touch onPress={() => setFlipped(true)} style={gr.show}>
-              <Text style={[gr.txt, { color: COLORS.text }]}>Pokaż odpowiedź</Text>
-            </Touch>
-          )}
+          <View style={s.meta}>
+            <View style={s.count}>
+              <Icon name="layers" size={14} color={COLORS.muted} />
+              <Muted size="xs" weight={700} style={tabular}>
+                {idx + 1}/{list.length}
+              </Muted>
+            </View>
+            <View style={s.count}>
+              <Icon name="checkmark" size={14} color={PLAY.green} />
+              <Muted size="xs" weight={700} color={PLAY.green} style={tabular}>
+                {session.known}
+              </Muted>
+              <Icon name="refresh" size={14} color={PLAY.red} style={{ marginLeft: 6 }} />
+              <Muted size="xs" weight={700} color={PLAY.red} style={tabular}>
+                {session.again}
+              </Muted>
+            </View>
+          </View>
+          <FlashcardDeck cards={list} index={idx} onGrade={(g, c) => grade(g, c)} style={{ flex: 1 }} />
+          {card ? null : null}
         </>
       )}
     </View>
   );
 }
 
+function Stat({ value, label, color }: { value: number; label: string; color: string }) {
+  return (
+    <View style={[s.stat, { borderBottomColor: color }]}>
+      <Num size="lg" weight={800} color={color}>
+        {value}
+      </Num>
+      <Muted size="xs" weight={600}>
+        {label}
+      </Muted>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   wrap: { flex: 1, paddingHorizontal: UI.gutter },
+  meta: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: SPACE[3] },
+  count: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.pill, paddingVertical: 5, paddingHorizontal: 10 },
+  empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: SPACE[3], paddingHorizontal: SPACE[4] },
+  stat: { minWidth: 84, alignItems: "center", backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderBottomWidth: 4, borderRadius: RADIUS.md, padding: SPACE[3] },
 });

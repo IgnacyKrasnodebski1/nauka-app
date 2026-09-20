@@ -1,4 +1,4 @@
-import { paletteFor, type Stage, type Subject, type SubjectProgress, type Topic, type TopicContent, type SrsCard, type UserMeta, type WeakMap } from "@nauka/shared";
+import { normalizeMeta, paletteFor, todayStr, type ActivityMap, type Plan, type Quest, type Stage, type Subject, type SubjectProgress, type Topic, type TopicContent, type SrsCard, type UserMeta, type WeakMap } from "@nauka/shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { KEYS, getJson, setJson } from "./storage";
 
@@ -55,6 +55,53 @@ export interface UserData {
   weak: WeakMap;
   meta: UserMeta;
   stage: Stage | null;
+  /** profiles.plan — zmienia tylko webhook Stripe */
+  plan: Plan;
+  showOnLeaderboard: boolean;
+  displayName: string | null;
+  /** questy z `quests_daily` na dziś (null = brak wiersza) */
+  quests: Quest[] | null;
+  /** klucze odblokowanych odznak */
+  achievements: string[];
+  /** aktywność z ostatnich dni (dzień → xp/minuty) */
+  activity: ActivityMap;
+}
+
+/** Wiersz `user_meta` → UserMeta (brakujące pola uzupełnia `normalizeMeta`). */
+export interface MetaRow {
+  streak: number;
+  best: number;
+  last_day: string | null;
+  gems?: number;
+  hearts?: number;
+  hearts_updated_at?: string;
+  daily_goal?: number;
+  streak_freezes?: number;
+  sound_on?: boolean;
+  stats?: Partial<UserMeta["stats"]> | null;
+}
+export function rowToMeta(m: MetaRow | null): UserMeta {
+  if (!m) return normalizeMeta(null);
+  return normalizeMeta({
+    streak: m.streak,
+    best: m.best,
+    lastDay: m.last_day,
+    gems: m.gems,
+    hearts: m.hearts,
+    heartsUpdatedAt: m.hearts_updated_at,
+    dailyGoal: m.daily_goal as UserMeta["dailyGoal"] | undefined,
+    streakFreezes: m.streak_freezes,
+    soundOn: m.sound_on,
+    stats: (m.stats ?? undefined) as UserMeta["stats"] | undefined,
+  });
+}
+export const META_SELECT = "streak,best,last_day,gems,hearts,hearts_updated_at,daily_goal,streak_freezes,sound_on,stats";
+
+/** Ostatnie N dni (YYYY-MM-DD) do zapytania o aktywność. */
+export function daysAgoStr(n: number, from = new Date()): string {
+  const d = new Date(from);
+  d.setDate(d.getDate() - n);
+  return todayStr(d);
 }
 
 const clampStars = (n: number) => Math.max(0, Math.min(3, Math.round(n || 0))) as 0 | 1 | 2 | 3;
@@ -67,39 +114,55 @@ export function normaliseProgress(p: Partial<SubjectProgress> | null | undefined
   }
   const out: SubjectProgress = { xp: Number(p?.xp ?? 0), levels };
   if (p?.bestExam !== undefined && p.bestExam !== null) out.bestExam = p.bestExam;
+  if (Array.isArray(p?.chests) && p.chests.length) out.chests = p.chests.map(Number);
   return out;
 }
 
 /** Pełne pobranie danych usera (jedno „odświeżenie”). */
 export async function fetchUserData(sb: SupabaseClient, userId: string): Promise<UserData> {
-  const [subj, top, prog, srs, meta, prof] = await Promise.all([
+  const today = todayStr();
+  const [subj, top, prog, srs, meta, prof, quests, ach, act] = await Promise.all([
     sb.from("subjects").select(SUBJECT_SELECT).eq("owner_id", userId).order("position", { ascending: true }).order("created_at", { ascending: true }),
     sb.from("topics").select(TOPIC_SELECT).eq("owner_id", userId).order("position", { ascending: true }).order("created_at", { ascending: true }),
-    sb.from("progress").select("topic_id,xp,levels,weak,best_exam").eq("user_id", userId),
+    sb.from("progress").select("topic_id,xp,levels,weak,best_exam,chests").eq("user_id", userId),
     sb.from("srs_cards").select("topic_id,card_key,state").eq("user_id", userId),
-    sb.from("user_meta").select("streak,best,last_day").eq("user_id", userId).maybeSingle(),
-    sb.from("profiles").select("stage").eq("id", userId).maybeSingle(),
+    sb.from("user_meta").select(META_SELECT).eq("user_id", userId).maybeSingle(),
+    sb.from("profiles").select("stage,plan,show_on_leaderboard,display_name").eq("id", userId).maybeSingle(),
+    sb.from("quests_daily").select("day,quests").eq("user_id", userId).eq("day", today).maybeSingle(),
+    sb.from("achievements").select("key").eq("user_id", userId),
+    sb.from("activity").select("day,xp,minutes").eq("user_id", userId).gte("day", daysAgoStr(13)),
   ]);
   const firstErr = [subj, top, prog, srs, meta, prof].find((r) => r.error)?.error;
   if (firstErr) throw new Error(firstErr.message);
+  // tabele z migracji 0002 — gdy brak (stara baza), nie blokujemy ładowania
+  for (const r of [quests, ach, act]) if (r.error) console.warn("[data] optional query failed", r.error.message);
 
   const progress: Record<string, SubjectProgress> = {};
   const weak: WeakMap = {};
-  for (const r of (prog.data ?? []) as { topic_id: string; xp: number; levels: SubjectProgress["levels"]; weak: Record<string, number[]> | null; best_exam: number | null }[]) {
-    progress[r.topic_id] = normaliseProgress({ xp: r.xp, levels: r.levels, bestExam: r.best_exam ?? undefined });
+  for (const r of (prog.data ?? []) as { topic_id: string; xp: number; levels: SubjectProgress["levels"]; weak: Record<string, number[]> | null; best_exam: number | null; chests?: number[] | null }[]) {
+    progress[r.topic_id] = normaliseProgress({ xp: r.xp, levels: r.levels, bestExam: r.best_exam ?? undefined, chests: r.chests ?? undefined });
     if (r.weak && Object.keys(r.weak).length) weak[r.topic_id] = r.weak;
   }
   const srsMap: Record<string, SrsMap> = {};
   for (const r of (srs.data ?? []) as { topic_id: string; card_key: string; state: SrsCard }[]) (srsMap[r.topic_id] ??= {})[r.card_key] = r.state;
-  const m = meta.data as { streak: number; best: number; last_day: string | null } | null;
+  const p = prof.data as { stage: Stage | null; plan: Plan | null; show_on_leaderboard: boolean | null; display_name: string | null } | null;
+  const activity: ActivityMap = {};
+  for (const r of (act.data ?? []) as { day: string; xp: number; minutes: number }[]) activity[r.day] = { day: r.day, xp: Number(r.xp ?? 0), minutes: Number(r.minutes ?? 0) };
+  const q = quests.data as { day: string; quests: Quest[] } | null;
   return {
     subjects: ((subj.data ?? []) as SubjectRow[]).map(rowToSubject),
     topics: ((top.data ?? []) as TopicRow[]).map(rowToTopic),
     progress,
     srs: srsMap,
     weak,
-    meta: m ? { streak: m.streak, best: m.best, lastDay: m.last_day } : { streak: 0, best: 0, lastDay: null },
-    stage: (prof.data as { stage: Stage } | null)?.stage ?? null,
+    meta: rowToMeta(meta.data as MetaRow | null),
+    stage: p?.stage ?? null,
+    plan: p?.plan ?? "free",
+    showOnLeaderboard: p?.show_on_leaderboard ?? true,
+    displayName: p?.display_name ?? null,
+    quests: q && Array.isArray(q.quests) ? q.quests : null,
+    achievements: ((ach.data ?? []) as { key: string }[]).map((r) => r.key),
+    activity,
   };
 }
 
@@ -132,7 +195,23 @@ export async function insertSubjects(sb: SupabaseClient, userId: string, inputs:
 /* ------------------------------------------------------------- cache (offline read) */
 
 export async function readCache(userId: string): Promise<UserData | null> {
-  return getJson<UserData | null>(`${KEYS.cache}:${userId}`, null);
+  const c = await getJson<Partial<UserData> | null>(`${KEYS.cache}:${userId}`, null);
+  if (!c || !c.subjects || !c.topics) return null;
+  return {
+    subjects: c.subjects,
+    topics: c.topics,
+    progress: c.progress ?? {},
+    srs: c.srs ?? {},
+    weak: c.weak ?? {},
+    meta: normalizeMeta(c.meta ?? null),
+    stage: c.stage ?? null,
+    plan: c.plan ?? "free",
+    showOnLeaderboard: c.showOnLeaderboard ?? true,
+    displayName: c.displayName ?? null,
+    quests: c.quests ?? null,
+    achievements: c.achievements ?? [],
+    activity: c.activity ?? {},
+  };
 }
 export async function writeCache(userId: string, d: UserData): Promise<void> {
   await setJson(`${KEYS.cache}:${userId}`, d);

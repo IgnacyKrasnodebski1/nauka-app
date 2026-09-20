@@ -1,11 +1,12 @@
-import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View, type PressableProps, type StyleProp, type TextInputProps, type ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useReduceMotion } from "@/lib/motion";
-import { COLORS, MOTION, RADIUS, SPACE, UI, body, display, shadowCard, shadowGlow, tabular, type Hue } from "@/lib/theme";
+import { COLORS, MOTION, RADIUS, SPACE, UI, body, shadowCard, tabular, type Hue } from "@/lib/theme";
 import { useHue } from "./Accent";
+import { Button3D, type Button3DVariant } from "./Button3D";
+import { Icon } from "./Icon";
 import { Body, Display, Label, Muted, Num, Title } from "./Text";
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -52,8 +53,8 @@ export function TopBar({ left, title, right, onBack, subtitle }: { left?: React.
 
 export function BackButton({ onPress, label = "‹" }: { onPress: () => void; label?: string }) {
   return (
-    <Touch onPress={onPress} hitSlop={10} style={s.backbtn} accessibilityLabel="Wróć">
-      <Text style={[s.backtxt, label !== "‹" && { fontSize: 16, marginTop: 0 }]}>{label}</Text>
+    <Touch onPress={onPress} hitSlop={10} style={s.backbtn} accessibilityLabel={label === "✕" ? "Zamknij" : "Wróć"}>
+      <Icon name={label === "✕" ? "close" : "chevron-back"} size={22} color={COLORS.text} />
     </Touch>
   );
 }
@@ -63,7 +64,7 @@ export function StatPill({ kind, value, unit }: { kind: "streak" | "xp"; value: 
   const color = kind === "streak" ? COLORS.streak : COLORS.xp;
   return (
     <View style={s.pill}>
-      <Text style={{ fontSize: 13 }}>{kind === "streak" ? "🔥" : "⚡"}</Text>
+      <Icon name={kind === "streak" ? "flame" : "flash"} size={15} color={color} />
       <Num size="sm" weight={600} color={color} style={{ fontSize: 15, lineHeight: 18 }}>
         {value}
       </Num>
@@ -113,41 +114,11 @@ export function Touch({ children, style, onPressIn, onPressOut, disabled, ...res
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
-/** primary = złoty gradient (accentStrong→accent, tekst accentInk 700, glow); secondary = szkło; ghost = sam tekst; danger = dangerSoft. */
+const ALIAS: Record<ButtonVariant, Button3DVariant> = { primary: "green", secondary: "ghost", ghost: "ghost", danger: "red" };
+
+/** Alias na `Button3D` (stare wywołania dostają przycisk 3D): primary = zielony, secondary/ghost = ghost, danger = czerwony. */
 export function Button({ label, onPress, variant = "primary", small, disabled, style, icon }: { label: string; onPress?: () => void; variant?: ButtonVariant; small?: boolean; disabled?: boolean; style?: StyleProp<ViewStyle>; icon?: string }) {
-  const h = small ? UI.buttonHsm : UI.buttonH;
-  const txt = (color: string) => (
-    <Text style={[s.btnTxt, small && { fontSize: 14 }, { color }]} numberOfLines={1}>
-      {icon ? `${icon} ` : ""}
-      {label}
-    </Text>
-  );
-  if (variant === "primary") {
-    return (
-      <Touch onPress={onPress} disabled={disabled} style={[s.btnWrap, !disabled && shadowGlow, style]}>
-        <LinearGradient colors={[COLORS.accentStrong, COLORS.accent]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[s.btn, { height: h }]}>
-          <View style={s.btnHighlight} />
-          {txt(COLORS.accentInk)}
-        </LinearGradient>
-      </Touch>
-    );
-  }
-  if (variant === "ghost") {
-    return (
-      <Touch onPress={onPress} disabled={disabled} style={[s.btnWrap, style]}>
-        <View style={[s.btn, { height: h }]}>{txt(COLORS.textSoft)}</View>
-      </Touch>
-    );
-  }
-  const danger = variant === "danger";
-  return (
-    <Touch onPress={onPress} disabled={disabled} style={[s.btnWrap, style]}>
-      <View style={[s.btn, s.btnGlass, { height: h }, danger && { backgroundColor: COLORS.dangerSoft, borderColor: "rgba(255,107,122,0.3)" }]}>
-        <View style={s.btnHighlight} />
-        {txt(danger ? COLORS.danger : COLORS.text)}
-      </View>
-    </Touch>
-  );
+  return <Button3D label={icon ? `${icon} ${label}` : label} onPress={onPress} variant={ALIAS[variant]} size={small ? "sm" : "md"} disabled={disabled} style={style} />;
 }
 
 export function Chip({ label, active, onPress, hue }: { label: string; active?: boolean; onPress?: () => void; hue?: Hue }) {
@@ -235,7 +206,7 @@ export function SectionHead({ label, right, style }: { label: string; right?: Re
 export function Loading({ label = "ładowanie…" }: { label?: string }) {
   return (
     <View style={s.loading}>
-      <ActivityIndicator color={COLORS.accent} />
+      <ActivityIndicator color={COLORS.success} />
       <Muted>{label}</Muted>
     </View>
   );
@@ -286,15 +257,9 @@ const s = StyleSheet.create({
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: UI.gutter, paddingBottom: SPACE[3], gap: SPACE[3], backgroundColor: COLORS.bg0 },
   topLeft: { flexDirection: "row", alignItems: "center", gap: SPACE[3], flex: 1, minWidth: 0 },
   backbtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.line, alignItems: "center", justifyContent: "center" },
-  backtxt: { color: COLORS.text, fontSize: 24, fontFamily: display(600), marginTop: -3 },
   pills: { flexDirection: "row", alignItems: "center", gap: SPACE[2] },
   pill: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.line, paddingVertical: 6, paddingHorizontal: 10, borderRadius: RADIUS.pill },
   mini: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.line, paddingVertical: 8, paddingHorizontal: 12, borderRadius: RADIUS.pill },
-  btnWrap: { borderRadius: RADIUS.md },
-  btn: { borderRadius: RADIUS.md, alignItems: "center", justifyContent: "center", paddingHorizontal: SPACE[5], overflow: "hidden" },
-  btnGlass: { backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.lineStrong },
-  btnHighlight: { position: "absolute", top: 0, left: 0, right: 0, height: 1, backgroundColor: "rgba(255,255,255,0.25)" },
-  btnTxt: { fontFamily: body(700), fontSize: 15.5, letterSpacing: 0.1 },
   chips: { gap: SPACE[2], paddingVertical: 2, paddingBottom: SPACE[3] },
   chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: RADIUS.pill, backgroundColor: COLORS.glass, borderWidth: 1, borderColor: COLORS.line },
   chipTxt: { color: COLORS.muted, fontSize: 13, fontFamily: body(600) },
