@@ -1,4 +1,4 @@
-# NAUKA — architektura
+# Recall — architektura
 
 ```
 nauka-app/

@@ -1,30 +1,30 @@
 import type { ExpoConfig, ConfigContext } from "expo/config";
 
 /**
- * NAUKA — konfiguracja Expo.
+ * Recall — konfiguracja Expo.
  * Env (EXPO_PUBLIC_*) czytane są bezpośrednio w kodzie przez process.env — patrz src/lib/env.ts i .env.example.
  */
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "NAUKA",
-  slug: "nauka",
+  name: "Recall",
+  slug: "recall",
   version: "0.1.0",
   orientation: "portrait",
-  scheme: "nauka",
+  scheme: "recall",
   icon: "./assets/icon.png",
   userInterfaceStyle: "dark",
   backgroundColor: "#0a0a12",
   ios: {
-    bundleIdentifier: "pl.nauka.app",
+    bundleIdentifier: "app.recall.study",
     supportsTablet: true,
     infoPlist: {
-      NSCameraUsageDescription: "NAUKA robi zdjęcia Twoich notatek i slajdów, żeby zamienić je w lekcje.",
-      NSPhotoLibraryUsageDescription: "NAUKA wybiera zdjęcia materiałów z galerii, żeby zamienić je w lekcje.",
+      NSCameraUsageDescription: "Recall robi zdjęcia Twoich notatek i slajdów, żeby zamienić je w lekcje.",
+      NSPhotoLibraryUsageDescription: "Recall wybiera zdjęcia materiałów z galerii, żeby zamienić je w lekcje.",
       ITSAppUsesNonExemptEncryption: false,
     },
   },
   android: {
-    package: "pl.nauka.app",
+    package: "app.recall.study",
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#0a0a12",
@@ -34,7 +34,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         action: "VIEW",
         autoVerify: false,
-        data: [{ scheme: "nauka", host: "auth" }],
+        data: [{ scheme: "recall", host: "auth" }],
         category: ["BROWSABLE", "DEFAULT"],
       },
     ],
@@ -54,8 +54,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     [
       "expo-image-picker",
       {
-        photosPermission: "NAUKA wybiera zdjęcia materiałów z galerii, żeby zamienić je w lekcje.",
-        cameraPermission: "NAUKA robi zdjęcia Twoich notatek i slajdów, żeby zamienić je w lekcje.",
+        photosPermission: "Recall wybiera zdjęcia materiałów z galerii, żeby zamienić je w lekcje.",
+        cameraPermission: "Recall robi zdjęcia Twoich notatek i slajdów, żeby zamienić je w lekcje.",
       },
     ],
   ],

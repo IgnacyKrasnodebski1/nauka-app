@@ -1,4 +1,4 @@
-# @nauka/web — NAUKA (Next.js 16)
+# @nauka/web — Recall (Next.js 16)
 
 Landing, logowanie, apka do nauki (przedmioty → tematy) i API (generowanie tematów z AI, tutor, Stripe). Logowanie jest wymagane — bez konfiguracji Supabase strony pod `/app` pokazują stan „Brak konfiguracji Supabase” zamiast się wywalać, a API zwraca 503 z czytelnym JSON-em.
 
@@ -35,7 +35,7 @@ Skrypty w `apps/web`:
 | --- | --- |
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | auth, RLS, storage z przeglądarki. Brak = apka wyłączona (landing działa). |
 | `SUPABASE_SERVICE_ROLE_KEY` | tylko API: pobieranie plików z bucketa `materials`, `generations`, `usage` (RPC `increment_usage`), webhook Stripe. |
-| `ANTHROPIC_API_KEY`, `NAUKA_AI_MODEL` | generowanie i tutor przez `@nauka/ai`. Brak klucza = tryb demo (przykładowy temat z `hint`, tagline „DEMO”). |
+| `ANTHROPIC_API_KEY`, `RECALL_AI_MODEL` | generowanie i tutor przez `@nauka/ai`. Brak klucza = tryb demo (przykładowy temat z `hint`, tagline „DEMO”). |
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | Pro (29 zł/mies., 199 zł/rok). Brak = przyciski zwracają 503. |
 | `NEXT_PUBLIC_APP_URL` | absolutny URL (success/cancel URL Stripe). |
 

@@ -7,8 +7,8 @@ import { supabase } from "./supabase";
 
 WebBrowser.maybeCompleteAuthSession();
 
-/** Deep link, na który wraca OAuth / magic link: `nauka://auth/callback` (w Expo Go: exp://.../--/auth/callback). */
-export const REDIRECT_URI = makeRedirectUri({ scheme: "nauka", path: "auth/callback" });
+/** Deep link, na który wraca OAuth / magic link: `recall://auth/callback` (w Expo Go: exp://.../--/auth/callback). */
+export const REDIRECT_URI = makeRedirectUri({ scheme: "recall", path: "auth/callback" });
 
 export interface AuthState {
   session: Session | null;

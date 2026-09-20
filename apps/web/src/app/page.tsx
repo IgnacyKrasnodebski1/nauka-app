@@ -19,7 +19,7 @@ function DeviceMock() {
     <div className="device" style={hue(2)} aria-hidden="true">
       <div className="screen">
         <div className="flex items-center justify-between mb-4">
-          <span className="logo text-[15px]">NAUKA</span>
+          <span className="logo text-[15px]">Recall</span>
           <div className="pills">
             <span className="streak fire !py-1 !px-2 !text-[11px]">🔥 <b className="!text-[12px]">7</b></span>
             <span className="streak xp !py-1 !px-2 !text-[11px]">⚡ <b className="!text-[12px]">1 240</b></span>
@@ -173,7 +173,7 @@ export default function Landing() {
               <div>
                 <PlanSnippet />
                 <h3 className="mt-4">Plan na sprawdzian</h3>
-                <p className="text-muted text-[14.5px] mt-1">Podajesz datę — NAUKA rozkłada poziomy na dni, dorzuca powtórki i symulację dzień wcześniej.</p>
+                <p className="text-muted text-[14.5px] mt-1">Podajesz datę — Recall rozkłada poziomy na dni, dorzuca powtórki i symulację dzień wcześniej.</p>
               </div>
             </div>
           </div>

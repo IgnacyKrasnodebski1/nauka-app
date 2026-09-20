@@ -3,7 +3,7 @@ import React, { useEffect } from "react";
 import { Loading, Screen } from "@/components/ui";
 import { useAuth } from "@/lib/auth";
 
-/** Landing deep linku `nauka://auth/callback` — sesja obsługiwana w AuthProvider (Linking), tu tylko przekierowanie. */
+/** Landing deep linku `recall://auth/callback` — sesja obsługiwana w AuthProvider (Linking), tu tylko przekierowanie. */
 export default function AuthCallback() {
   const router = useRouter();
   const auth = useAuth();

@@ -28,7 +28,7 @@ export function Home({ subjects, topics }: { subjects: Subject[]; topics: Topic[
 
   return (
     <>
-      <TopBar title={<>NAUKA</>} />
+      <TopBar title={<>Recall</>} />
       <div className="px-4" style={hue ? ({ "--hue": hue } as CSSProperties) : undefined}>
         <div className="hero">
           <div className="eyebrow mb-2">{new Date().toLocaleDateString("pl-PL", { weekday: "long", day: "numeric", month: "long" })}</div>

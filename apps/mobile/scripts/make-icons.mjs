@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Generuje assets/icon.png (1024²), adaptive-icon.png (1024²) i splash.png (1284x2778) bez natywnych zależności.
- * Minimalny enkoder PNG: RGBA, filtr 0, deflate przez node:zlib. Rysuje pionowy gradient NAUKA + białą "książkę".
+ * Minimalny enkoder PNG: RGBA, filtr 0, deflate przez node:zlib. Rysuje pionowy gradient Recall + białą "książkę".
  * Uruchom: npm run icons -w @nauka/mobile
  */
 import fs from "node:fs";

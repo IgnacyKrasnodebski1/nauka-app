@@ -41,7 +41,7 @@ export function withAlpha(hex: string, a: number): string {
 
 export function hueFrom(color?: string | null, seed?: string): Hue {
   let c = color && /^#[0-9a-f]{6}$/i.test(color.trim()) ? color.trim() : null;
-  if (!c) c = subjectHue(seed ?? "nauka").color;
+  if (!c) c = subjectHue(seed ?? "recall").color;
   const known = SUBJECT_HUES.find((h) => h.color.toLowerCase() === c!.toLowerCase());
   return { color: c, soft: known?.soft ?? withAlpha(c, 0.16), ring: withAlpha(c, 0.4), glow: withAlpha(c, 0.14) };
 }

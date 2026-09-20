@@ -1,4 +1,4 @@
-# NAUKA — logika produktu (v2)
+# Recall — logika produktu (v2)
 
 ## Model
 - **Przedmiot** (`subjects`) = kontener użytkownika: „Matematyka”, „Biologia”, „Makroekonomia”. Wybierany w onboardingu z `CURRICULUM[stage]` (shared) albo wpisany ręcznie. Ma emoji, kolor (`paletteFor(name)`), etap, opcjonalną datę sprawdzianu (`exam_date`, `exam_label`). Startuje pusty.

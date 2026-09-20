@@ -1,5 +1,5 @@
 # Minimal Supabase CLI config — `supabase link --project-ref <ref>` then `supabase db push` and `supabase db seed` (or run seed.sql in SQL editor).
-project_id = "nauka"
+project_id = "recall"
 
 [db]
 port = 54322
@@ -11,7 +11,7 @@ sql_paths = []
 
 [auth]
 site_url = "http://localhost:3000"
-additional_redirect_urls = ["http://localhost:3000/auth/callback", "nauka://auth/callback", "exp://localhost:8081"]
+additional_redirect_urls = ["http://localhost:3000/auth/callback", "recall://auth/callback", "exp://localhost:8081"]
 enable_signup = true
 
 [auth.email]

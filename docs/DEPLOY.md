@@ -1,12 +1,12 @@
-# NAUKA — wdrożenie (od zera do sprzedaży)
+# Recall — wdrożenie (od zera do sprzedaży)
 
 ## Stan na 2026-09-11 (zrobione z tej sesji)
 | Co | Status | Identyfikator |
 |---|---|---|
 | Supabase projekt `nauka` (eu-central-1) | utworzony, schemat v1 wgrany | ref `zhgxhdsnizujzygpcyfl` |
 | Supabase schemat v2 (przedmioty → tematy) | wgrany (`supabase/dev_upgrade_v1_to_v2.sql`) | |
-| Supabase auth | email (auto-confirm), site URL `https://nauka-jet.vercel.app`, redirecty localhost / `*.vercel.app` / `nauka://` | Google: do włączenia ręcznie (pkt 1.4) |
-| Stripe (test) produkt „NAUKA Pro” | utworzony | `prod_VEwoeIrg8evsMf` |
+| Supabase auth | email (auto-confirm), site URL `https://nauka-jet.vercel.app`, redirecty localhost / `*.vercel.app` / `recall://` | Google: do włączenia ręcznie (pkt 1.4) |
+| Stripe (test) produkt „Recall Pro” | utworzony | `prod_VEwoeIrg8evsMf` |
 | Stripe ceny | 29 zł/mies `price_1UESvFRsoBaIQwwLY3S0hjrd`, 199 zł/rok `price_1UESvGRsoBaIQwwL8c0rRt0s` | |
 | Stripe Customer Portal | skonfigurowany | `bpc_1UESvGRsoBaIQwwL6jxvaNG3` |
 | Stripe webhook | `https://nauka-jet.vercel.app/api/stripe/webhook`, secret w env Vercela | `we_1UETG1RsoBaIQwwLW8dYAsaZ` |
@@ -30,18 +30,18 @@ Zostało: merge do `main`, Google OAuth (1.4), przełączenie Stripe z test na l
    - Google: utwórz OAuth Client w Google Cloud (typ Web), Authorized redirect URI = `https://<ref>.supabase.co/auth/v1/callback`; wklej Client ID/Secret.
 5. Authentication → URL Configuration:
    - Site URL: `https://twoja-domena.pl`
-   - Redirect URLs: `https://twoja-domena.pl/auth/callback`, `http://localhost:3000/auth/callback`, `nauka://auth/callback`, `exp://**`
+   - Redirect URLs: `https://twoja-domena.pl/auth/callback`, `http://localhost:3000/auth/callback`, `recall://auth/callback`, `exp://**`
 6. Storage: bucket `materials` tworzy migracja (prywatny, 25 MB, tylko obrazy/PDF/txt).
 7. Settings → API → skopiuj `anon` i `service_role` (do env Vercela, pkt 4).
 
 ## 2. Anthropic (AI)
 1. https://console.anthropic.com → API Keys → Create key → `ANTHROPIC_API_KEY`.
-2. Model domyślny: `claude-opus-5` (zmiana: `NAUKA_AI_MODEL`). Koszt orientacyjny jednej generacji (5 zdjęć, 4 poziomy): ok. 0,15–0,40 USD. Plan Pro za 29 zł/mies. z limitem 150 generacji jest bezpieczny przy typowym użyciu (kilka–kilkanaście generacji/mies.); limity zmienisz w `packages/shared/src/plans.ts`.
+2. Model domyślny: `claude-opus-5` (zmiana: `RECALL_AI_MODEL`). Koszt orientacyjny jednej generacji (5 zdjęć, 4 poziomy): ok. 0,15–0,40 USD. Plan Pro za 29 zł/mies. z limitem 150 generacji jest bezpieczny przy typowym użyciu (kilka–kilkanaście generacji/mies.); limity zmienisz w `packages/shared/src/plans.ts`.
 3. Bez klucza apka działa w **trybie demo** (generuje przykładowy przedmiot) — dobre do testów UI.
 
 ## 3. Stripe (płatności, karty + Apple/Google Pay)
 1. https://dashboard.stripe.com → aktywuj konto (dane firmy/JDG, IBAN). Do testów działa tryb testowy.
-2. Products → Add product „NAUKA Pro”: dwie ceny recurring — **29 zł / miesiąc** i **199 zł / rok**. Skopiuj `price_...` → `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`.
+2. Products → Add product „Recall Pro”: dwie ceny recurring — **29 zł / miesiąc** i **199 zł / rok**. Skopiuj `price_...` → `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`.
 3. Settings → Payment methods: karty + Apple Pay / Google Pay. **BLIK i Przelewy24 nie działają w trybie subskrypcji** (tylko płatności jednorazowe) — jeśli chcesz BLIK, trzeba dodać plan „Pro na rok” jako zakup jednorazowy.
 4. Settings → Customer portal: włącz (anulowanie, zmiana planu, faktury).
 5. Developers → Webhooks → Add endpoint: `https://twoja-domena.pl/api/stripe/webhook`, eventy: `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.payment_failed`. Skopiuj `whsec_...` → `STRIPE_WEBHOOK_SECRET`.
@@ -54,7 +54,7 @@ Zostało: merge do `main`, Google OAuth (1.4), przełączenie Stripe z test na l
 3. Environment Variables (Production + Preview):
 ```
 NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
-ANTHROPIC_API_KEY, NAUKA_AI_MODEL (opcjonalnie),
+ANTHROPIC_API_KEY, RECALL_AI_MODEL (opcjonalnie),
 STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY,
 NEXT_PUBLIC_APP_URL=https://twoja-domena.pl
 ```

@@ -14,7 +14,7 @@ export function getClient(): Anthropic {
   return _client;
 }
 
-/** Model used for generation & tutor. Override with NAUKA_AI_MODEL. */
+/** Model used for generation & tutor. Override with RECALL_AI_MODEL (legacy alias NAUKA_AI_MODEL). */
 export function modelId(): string {
-  return process.env.NAUKA_AI_MODEL || "claude-opus-5";
+  return process.env.RECALL_AI_MODEL || process.env.NAUKA_AI_MODEL || "claude-opus-5";
 }

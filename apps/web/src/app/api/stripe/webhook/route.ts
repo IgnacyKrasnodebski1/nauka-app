@@ -43,7 +43,7 @@ async function applySubscription(sub: Stripe.Subscription, stripe: Stripe) {
   await admin.from("profiles").update({ plan, stripe_customer_id: customerId }).eq("id", userId);
 }
 
-/** Stripe → NAUKA. Raw body + signature verification; must not be parsed by any middleware. */
+/** Stripe → Recall. Raw body + signature verification; must not be parsed by any middleware. */
 export async function POST(req: Request) {
   const stripe = getStripe();
   if (!stripe || !env.stripeWebhookSecret) return jsonError(NO_STRIPE, 503, { code: "no_config" });

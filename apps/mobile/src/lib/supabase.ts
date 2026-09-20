@@ -6,7 +6,7 @@ import { ENV, hasSupabase } from "./env";
 
 /**
  * Klient Supabase (anon key + RLS). `null` gdy brak env — apka działa wtedy w trybie gościa na seedach.
- * Sesja trzymana w AsyncStorage; PKCE, bo logowanie OAuth/magic link wraca deep linkiem `nauka://auth/callback`.
+ * Sesja trzymana w AsyncStorage; PKCE, bo logowanie OAuth/magic link wraca deep linkiem `recall://auth/callback`.
  */
 export const supabase: SupabaseClient | null = hasSupabase
   ? createClient(ENV.supabaseUrl, ENV.supabaseAnonKey, {

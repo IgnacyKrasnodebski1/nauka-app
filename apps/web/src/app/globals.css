@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ============================================================
-   NAUKA — "Premium dark" design system (docs/DESIGN.md)
+   Recall — "Premium dark" design system (docs/DESIGN.md)
    Colour / radius / shadow / motion tokens come from @nauka/shared `cssVars()` (injected in layout.tsx as :root vars).
    Per-subject hue: set `--hue` on a wrapper (see SubjectTheme). Nothing below hardcodes brand colours.
    ============================================================ */

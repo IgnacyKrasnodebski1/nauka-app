@@ -2,7 +2,7 @@
   "name": "@nauka/ai",
   "version": "0.1.0",
   "private": true,
-  "description": "Server-only: turns study materials into a NAUKA subject with Claude; lesson tutor streaming.",
+  "description": "Server-only: turns study materials into a Recall subject with Claude; lesson tutor streaming.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

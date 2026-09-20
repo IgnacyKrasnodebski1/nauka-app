@@ -1,7 +1,7 @@
 # CLAUDE.md — kontekst projektu dla Claude Code
 
 ## Czym jest ten projekt
-**NAUKA** — apka do nauki (web + mobile) w stylu Duolingo. Użytkownik ma **przedmioty** (kontenery: Matematyka, Biologia…), a w nich **tematy** generowane przez AI (Claude) z materiałów (zdjęcia, PDF, tekst) albo z samego hasła wg podstawy programowej. Temat = poziomy: roladka → fiszki (SRS) → mini-gry → quiz → egzamin. Do tego „Dzisiejsza sesja” i plan do sprawdzianu. Podstawówka, liceum, studia. Freemium przez Stripe. Pełna logika: docs/PRODUCT.md.
+**Recall** — apka do nauki (web + mobile) w stylu Duolingo. Użytkownik ma **przedmioty** (kontenery: Matematyka, Biologia…), a w nich **tematy** generowane przez AI (Claude) z materiałów (zdjęcia, PDF, tekst) albo z samego hasła wg podstawy programowej. Temat = poziomy: roladka → fiszki (SRS) → mini-gry → quiz → egzamin. Do tego „Dzisiejsza sesja” i plan do sprawdzianu. Podstawówka, liceum, studia. Freemium przez Stripe. Pełna logika: docs/PRODUCT.md.
 
 ## Struktura (monorepo, npm workspaces)
 ```
@@ -24,7 +24,7 @@ docs/             ARCHITECTURE.md, API.md, DEPLOY.md
 - Quiz: `c` = indeks poprawnej odpowiedzi od 0, `e` zawsze obecne. Mini-gry: `match | cloze | truefalse | order`.
 - Klucze (Anthropic, Stripe secret, Supabase service role) **tylko** w API weba (`apps/web` server). Przeglądarka i mobile: anon key + RLS.
 - Plan usera (`profiles.plan`) zmienia tylko webhook Stripe (RLS blokuje update przez usera). Limity w `PLANS` (shared).
-- Model AI: `claude-opus-5` domyślnie (`NAUKA_AI_MODEL`), adaptive thinking, structured outputs przez `betaZodOutputFormat(GeneratedTopicSchema)`, fallbacks `"default"`. Bez klucza = tryb demo (nie crashować).
+- Model AI: `claude-opus-5` domyślnie (`RECALL_AI_MODEL`), adaptive thinking, structured outputs przez `betaZodOutputFormat(GeneratedTopicSchema)`, fallbacks `"default"`. Bez klucza = tryb demo (nie crashować).
 - Build weba i typecheck mobile muszą przechodzić **bez** żadnych env (klienci tworzone leniwie).
 - UI po polsku, luźny gen-z; treść merytoryczna poprawna. Bez dodatkowych UI-kitów.
 

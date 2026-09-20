@@ -5,13 +5,13 @@ import "./globals.css";
 const FONTS = "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Manrope:wght@400;500;600;700&display=swap";
 
 export const metadata: Metadata = {
-  title: { default: "NAUKA — z notatek do lekcji w minutę", template: "%s · NAUKA" },
+  title: { default: "Recall — z notatek do lekcji w minutę", template: "%s · Recall" },
   description: "Wrzucasz notatki albo wpisujesz temat — AI robi z tego lekcje jak w Duolingo: feed, fiszki, mini-gry, quizy i egzamin próbny.",
-  applicationName: "NAUKA",
+  applicationName: "Recall",
   manifest: "/manifest.webmanifest",
   icons: { icon: [{ url: "/icons/icon.svg", type: "image/svg+xml" }, { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }], apple: "/icons/icon-192.png" },
-  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "NAUKA" },
-  openGraph: { title: "NAUKA", description: "Z notatek do lekcji, fiszek i mini-gier w minutę.", type: "website", locale: "pl_PL", siteName: "NAUKA" },
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Recall" },
+  openGraph: { title: "Recall", description: "Z notatek do lekcji, fiszek i mini-gier w minutę.", type: "website", locale: "pl_PL", siteName: "Recall" },
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
 };
 

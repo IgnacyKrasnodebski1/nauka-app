@@ -2,7 +2,7 @@
   "name": "nauka",
   "private": true,
   "version": "0.1.0",
-  "description": "NAUKA — AI-powered learning app (web + mobile): upload your materials, get quizzes, flashcards and mini-games.",
+  "description": "Recall — AI-powered learning app (web + mobile): upload your materials, get quizzes, flashcards and mini-games.",
   "workspaces": [
     "packages/*",
     "apps/*"

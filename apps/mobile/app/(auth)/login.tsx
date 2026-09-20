@@ -57,7 +57,7 @@ export default function Login() {
           <View style={s.logo}>
             <View style={s.logoMark} />
             <Display size="md" weight={800} style={{ letterSpacing: 2 }}>
-              NAUKA
+              Recall
             </Display>
           </View>
           <Display size="3xl" weight={700}>

@@ -1,4 +1,4 @@
-# NAUKA — API (apps/web, Next.js route handlers)
+# Recall — API (apps/web, Next.js route handlers)
 
 Wszystkie endpointy poza webhookiem wymagają nagłówka `Authorization: Bearer <supabase access_token>`.
 Błędy: JSON `{ error: string, code?: string }` z odpowiednim statusem (401, 402 limit planu, 400, 500).
@@ -45,7 +45,7 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ANTHROPIC_API_KEY=            # brak = tryb demo
-NAUKA_AI_MODEL=claude-opus-5  # opcjonalnie
+RECALL_AI_MODEL=claude-opus-5   # (alias: NAUKA_AI_MODEL)  # opcjonalnie
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=
 STRIPE_PRICE_MONTHLY=price_...

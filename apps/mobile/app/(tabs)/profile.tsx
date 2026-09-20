@@ -175,7 +175,7 @@ export default function Profile() {
           </Body>
         </Touch>
         <Muted size="xs" center style={{ marginTop: SPACE[4] }}>
-          NAUKA v0.1 · {pl(app.subjects.length, "przedmiot", "przedmioty", "przedmiotów")} · {pl(app.topics.length, "temat", "tematy", "tematów")}{app.offline ? " · offline (cache)" : ""}
+          Recall v0.1 · {pl(app.subjects.length, "przedmiot", "przedmioty", "przedmiotów")} · {pl(app.topics.length, "temat", "tematy", "tematów")}{app.offline ? " · offline (cache)" : ""}
         </Muted>
       </ScrollView>
     </View>

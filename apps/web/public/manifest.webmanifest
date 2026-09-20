@@ -1,6 +1,6 @@
 {
-  "name": "NAUKA — z notatek do quizów",
-  "short_name": "NAUKA",
+  "name": "Recall — z notatek do lekcji",
+  "short_name": "Recall",
   "description": "Wrzucasz screeny, notatki, PDF — AI robi z tego quizy, fiszki i mini-gry.",
   "lang": "pl",
   "start_url": "/app",

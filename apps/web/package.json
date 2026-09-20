@@ -2,7 +2,7 @@
   "name": "@nauka/web",
   "version": "0.1.0",
   "private": true,
-  "description": "NAUKA web \u2014 Next.js app: landing, auth, learning app, API (generate, tutor, stripe).",
+  "description": "Recall web \u2014 Next.js app: landing, auth, learning app, API (generate, tutor, stripe).",
   "scripts": {
     "dev": "next dev",
     "build": "next build",

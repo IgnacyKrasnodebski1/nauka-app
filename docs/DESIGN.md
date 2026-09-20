@@ -1,4 +1,4 @@
-# NAUKA — design system „Premium dark”
+# Recall — design system „Premium dark”
 
 Tokeny: `packages/shared/src/theme.ts` (`COLORS`, `SUBJECT_HUES`, `RADIUS`, `SPACE`, `TYPE`, `SHADOW`, `MOTION`, `cssVars()`, `subjectHue()`). Web i mobile używają **tych samych wartości**. Nic nie hardkodujemy w komponentach.
 

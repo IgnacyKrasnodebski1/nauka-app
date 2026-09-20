@@ -1,5 +1,5 @@
 /**
- * NAUKA design tokens — "Premium dark".
+ * Recall design tokens — "Premium dark".
  * Single source of truth for web (Tailwind @theme / CSS vars) and mobile (RN StyleSheet).
  * See docs/DESIGN.md for the rationale and component rules.
  */

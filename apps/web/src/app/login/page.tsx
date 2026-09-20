@@ -11,7 +11,7 @@ export default function LoginPage() {
     <main className="min-h-dvh flex flex-col">
       <div className="land-header">
         <div className="land-wrap flex items-center justify-between h-14">
-          <Link href="/" className="logo">NAUKA</Link>
+          <Link href="/" className="logo">Recall</Link>
           <Link href="/" className="text-sm font-semibold text-muted hover:text-txt">Strona główna</Link>
         </div>
       </div>

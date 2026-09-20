@@ -1,4 +1,4 @@
-# 📚 NAUKA — AI zamienia Twoje materiały w naukę, która wciąga
+# 📚 Recall — AI zamienia Twoje materiały w naukę, która wciąga
 
 Wrzucasz screeny notatek, slajdy, PDF albo wklejasz tekst → AI robi z tego przedmiot w stylu Duolingo: **poziomy**, **roladkę** (mikro-dawki), **fiszki z powtórkami**, **mini-gry** (dopasuj, luki, prawda/fałsz, ułóż), **quizy** i **egzamin na czas**. Podstawówka → liceum → studia.
 

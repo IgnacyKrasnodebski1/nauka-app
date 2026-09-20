@@ -1,4 +1,4 @@
-# @nauka/mobile — NAUKA na iOS / Android
+# @nauka/mobile — Recall na iOS / Android
 
 Expo SDK 57 + expo-router, TypeScript strict, czysty `StyleSheet` (bez UI-kitów). Ten sam kontrakt danych (`@nauka/shared`) i to samo API (`apps/web`) co wersja webowa. Model produktu: **przedmiot** (kontener użytkownika) → **tematy** generowane przez AI (ze zdjęć/PDF/tekstu albo z samego hasła) → poziomy: feed, fiszki, mini-gry, quiz, egzamin. Logowanie wymagane — brak trybu gościa i cudzej biblioteki (patrz `docs/PRODUCT.md`).
 
@@ -27,7 +27,7 @@ Skrypty: `start`, `ios`, `android`, `web`, `typecheck` (`tsc --noEmit`), `lint` 
 | `EXPO_PUBLIC_API_URL` | adres weba (`apps/web`), np. `https://nauka.pl` — tam żyje `/api/generate`, `/api/tutor`, `/api/me`, `/api/stripe/*` |
 | `EAS_PROJECT_ID` | opcjonalnie, po `eas init` |
 
-W Supabase Auth → URL Configuration dodaj redirecty: `nauka://auth/callback` (build), `exp://…/--/auth/callback` (Expo Go; adres wypisze `REDIRECT_URI` w `src/lib/auth.tsx`). Google OAuth: włącz providera w Supabase, client id/secret z Google Cloud. Baza: `supabase/migrations/0001_init.sql` (tabele `subjects`, `topics`, `progress`, `srs_cards`, `user_meta`, `activity`, RPC `log_activity`).
+W Supabase Auth → URL Configuration dodaj redirecty: `recall://auth/callback` (build), `exp://…/--/auth/callback` (Expo Go; adres wypisze `REDIRECT_URI` w `src/lib/auth.tsx`). Google OAuth: włącz providera w Supabase, client id/secret z Google Cloud. Baza: `supabase/migrations/0001_init.sql` (tabele `subjects`, `topics`, `progress`, `srs_cards`, `user_meta`, `activity`, RPC `log_activity`).
 
 ## Ekrany (`app/`)
 
@@ -69,7 +69,7 @@ src/lib/
   app-state.tsx            AppProvider: ProgressStore, subjects + topics, daily session (buildDailySession), CRUD przedmiotów, XP/streak, toast
   data.ts                  mapowanie wierszy (`rowToSubject`, `rowToTopic`), `fetchUserData`, `insertSubjects` (paletteFor), cache offline
   store/progress-store.ts  Supabase-only: `progress` (xp, levels, weak, best_exam) po topic_id, `srs_cards`, `user_meta`, `profiles.stage`, RPC `log_activity`;
-                           po każdym zapisie snapshot do AsyncStorage (`nauka_cache_v2:<uid>`)
+                           po każdym zapisie snapshot do AsyncStorage (`recall_cache_v3:<uid>`)
   api.ts                   /api/me, /api/generate (→ topicId), /api/tutor (topicId; stream albo pełny tekst), /api/stripe/*
   upload.ts                Storage upload (File.base64 → ArrayBuffer) + `materials`
   html.ts                  mini HTML → bloki tekstu (b/i/br/p/h3/ul/li/table, div.zbox)
@@ -83,7 +83,7 @@ src/screens/topic/         PathTab, FlashcardsTab (1 temat albo cały przedmiot)
 ## Postępy i offline
 
 - Źródło prawdy: Supabase (`progress` kluczowane `topic_id`, `srs_cards`, `user_meta`, `activity` przez RPC). Cała logika XP / gwiazdek / odblokowań / streaka / SRS / sesji / planu pochodzi z `@nauka/shared`.
-- AsyncStorage to **tylko cache do odczytu**: po każdym `fetchUserData` i każdym zapisie store zrzuca snapshot (`subjects`, `topics`, `progress`, `srs`, `weak`, `meta`, `stage`) pod `nauka_cache_v2:<uid>`. Bez sieci apka startuje z cache (toast „📴”), tematy i lekcje działają; zapisy kolejkują się w pamięci i lecą przy następnej okazji w tej sesji (po restarcie bez sieci przepadną — świadome uproszczenie).
+- AsyncStorage to **tylko cache do odczytu**: po każdym `fetchUserData` i każdym zapisie store zrzuca snapshot (`subjects`, `topics`, `progress`, `srs`, `weak`, `meta`, `stage`) pod `recall_cache_v3:<uid>`. Bez sieci apka startuje z cache (toast „📴”), tematy i lekcje działają; zapisy kolejkują się w pamięci i lecą przy następnej okazji w tej sesji (po restarcie bez sieci przepadną — świadome uproszczenie).
 - Bramka w `app/_layout.tsx`: brak sesji → login; sesja bez etapu/przedmiotów (i online) → onboarding.
 
 ## Build / EAS
@@ -97,7 +97,7 @@ eas build --profile production --platform all
 eas submit --platform ios                          # uzupełnij ascAppId w eas.json
 ```
 
-Profile w `eas.json`: `development`, `preview` (APK), `production` (autoIncrement). Zmienne `EXPO_PUBLIC_*` ustaw w EAS (`eas env:create`). Bundle id `pl.nauka.app`, scheme `nauka`. Ikony: `npm run icons` — podmień na finalne przed publikacją.
+Profile w `eas.json`: `development`, `preview` (APK), `production` (autoIncrement). Zmienne `EXPO_PUBLIC_*` ustaw w EAS (`eas env:create`). Bundle id `app.recall.study`, scheme `nauka`. Ikony: `npm run icons` — podmień na finalne przed publikacją.
 
 ## Sklepy — WAŻNE (TODO IAP)
 

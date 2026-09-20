@@ -1,4 +1,4 @@
--- NAUKA — initial schema. Apply with `supabase db push` (or paste into the SQL editor).
+-- Recall — initial schema. Apply with `supabase db push` (or paste into the SQL editor).
 create extension if not exists "pgcrypto";
 
 -- ---------- enums ----------

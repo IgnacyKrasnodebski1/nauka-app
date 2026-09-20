@@ -1,5 +1,5 @@
 /**
- * NAUKA — shared content contract.
+ * Recall — shared content contract.
  * Everything the AI generates, the DB stores and the apps render goes through these types.
  * Keep in sync with schema.ts (zod) — schema.ts is the runtime source of truth.
  */

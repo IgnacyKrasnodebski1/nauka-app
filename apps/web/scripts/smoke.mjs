@@ -44,7 +44,7 @@ const wait = async () => {
 const gated = (r, body) => r.status === 200 && (body.includes("Brak konfiguracji Supabase") || body.includes("Zaloguj"));
 const apiErr = (r, body) => (r.status === 401 || r.status === 503) && r.headers.get("content-type")?.includes("application/json") && JSON.parse(body).error;
 const checks = [
-  { path: "/", expect: (r, body) => r.status === 200 && body.includes("NAUKA") && body.includes("AI robi z tego lekcje") && !body.includes("bez konta") },
+  { path: "/", expect: (r, body) => r.status === 200 && body.includes("Recall") && body.includes("AI robi z tego lekcje") && !body.includes("bez konta") },
   { path: "/login", expect: (r, body) => r.status === 200 && body.includes("Zaloguj") },
   { path: "/app", expect: gated },
   { path: "/app/today", expect: gated },
@@ -56,7 +56,7 @@ const checks = [
   { path: "/regulamin", expect: (r) => r.status === 200 },
   { path: "/prywatnosc", expect: (r) => r.status === 200 },
   { path: "/billing/success", expect: (r) => r.status === 200 },
-  { path: "/manifest.webmanifest", expect: (r, body) => r.status === 200 && body.includes("NAUKA") },
+  { path: "/manifest.webmanifest", expect: (r, body) => r.status === 200 && body.includes("Recall") },
   { path: "/api/me", expect: apiErr },
   { path: "/api/generate", method: "POST", body: "{}", expect: apiErr },
   { path: "/api/generate?id=x", expect: apiErr },
