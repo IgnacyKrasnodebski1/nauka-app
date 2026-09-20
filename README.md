@@ -19,7 +19,8 @@ Patrz [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). API: [docs/API.md](docs/API.
 
 | Pakiet | Co robi |
 |---|---|
-| `packages/shared` | kontrakt danych (typy + zod), XP/gwiazdki/streak, SRS, prompty, plany |
+| `packages/shared` | kontrakt danych (typy + zod), gamifikacja (XP, combo, serca, klejnoty, questy, odznaki, rangi), SRS, prompty, plany, tokeny, maskotka |
+| `packages/assets` | syntezowane dźwięki |
 | `packages/content` | 7 przedmiotów seed (JSON) skonwertowanych ze starej apki |
 | `packages/ai` | Claude: materiały → przedmiot (vision + PDF + structured outputs), tutor |
 | `apps/web` | landing, auth, aplikacja, API (generate, tutor, Stripe) |

@@ -13,6 +13,8 @@
 | Vercel projekt `nauka` | utworzony, podpięty do repo (root `apps/web`), wszystkie env ustawione | `prj_Fxj3EGxACbjEJdjzAbPWSXex2KHS`, domena `nauka-jet.vercel.app` |
 | Vercel produkcja | **wdrożona** z brancha `claude/peaceful-hamilton-jy11e3` → https://nauka-jet.vercel.app. Auto-deploy prod działa z `main` → zmerguj branch do `main` | |
 | Anthropic key | ustawiony na Vercelu (generacja na produkcji przetestowana: 112 s, 2 poziomy) | |
+| Migracja 0002 (gamifikacja: serca, klejnoty, questy, odznaki, ranking) | wgrana na projekt dev | |
+| Rebrand Recall | Supabase redirect `recall://**` dodany, produkt Stripe „Recall Pro” | mobile: nowy slug/scheme → `eas init` od nowa |
 
 Zostało: merge do `main`, Google OAuth (1.4), przełączenie Stripe z test na live (klucze `sk_live`, nowy webhook), własna domena.
 

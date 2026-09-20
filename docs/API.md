@@ -36,7 +36,8 @@ Stripe → weryfikacja podpisu `STRIPE_WEBHOOK_SECRET`. Obsługa: `checkout.sess
 
 ## Dane bezpośrednio przez Supabase (RLS)
 - `subjects` (kontenery), `topics` (treść), `progress`, `srs_cards`, `user_meta`, `activity`, `materials`: tylko własne (`owner_id`/`user_id = auth.uid()`).
-- RPC: `log_activity(p_xp int, p_minutes int)`, `my_total_xp()`.
+- `quests_daily`, `achievements`: tylko własne.
+- RPC: `log_activity(p_xp int, p_minutes int, p_day date)`, `my_total_xp()`, `weekly_leaderboard(p_limit int)` → `(rank, display_name, xp, is_me)`, `my_weekly_rank()` → `(rank, xp, total)` (dwa ostatnie: `security definer`, tylko dla `authenticated`).
 - Storage `materials/{uid}/...`: tylko własne.
 
 ## Env (apps/web/.env.local)

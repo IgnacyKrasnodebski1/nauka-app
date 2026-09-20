@@ -5,13 +5,14 @@
 
 ## Struktura (monorepo, npm workspaces)
 ```
-packages/shared   @nauka/shared  KONTRAKT: typy + zod (schema.ts), gamification.ts (XP/gwiazdki/streak), srs.ts, prompts.ts, plans.ts, finalize.ts. Build: tsc → dist/
+packages/shared   @nauka/shared  KONTRAKT: typy + zod (schema.ts), gamification.ts (XP/gwiazdki/streak), combo/hearts/gems/daily/quests/achievements/rank.ts (gamifikacja v2), srs.ts, prompts.ts, plans.ts, finalize.ts, theme.ts (tokeny), mascot.ts, logo.ts, path-layout.ts, sfx.ts. Build: tsc → dist/
+packages/assets   @nauka/assets  syntezowane dźwięki (npm run sfx → packages/assets/sfx + kopie do apps)
 packages/ai       @nauka/ai      server-only. generateSubject() (Claude vision+PDF+structured outputs, tryb demo bez klucza), tutorStream()
 apps/web          @nauka/web     Next.js 16 App Router + Tailwind 4: landing, auth (Supabase), /app, API routes (docs/API.md)
 apps/mobile       @nauka/mobile  Expo + expo-router, RN StyleSheet, to samo API i kontrakt
-supabase/         migrations/0001_init.sql (tabele, RLS, storage bucket, RPC), config.toml, dev_upgrade_v1_to_v2.sql (jednorazowy)
+supabase/         migrations/0001_init.sql + 0002_gamification.sql (tabele, RLS, storage, RPC), config.toml, dev_upgrade_v1_to_v2.sql (jednorazowy)
 legacy/           stara wersja vanilla JS (nadal działa: node legacy/build.js) — nie rozwijać, tylko nie psuć
-docs/             ARCHITECTURE.md, API.md, DEPLOY.md
+docs/             ARCHITECTURE.md, PRODUCT.md, DESIGN.md (system „Duolingo in dark”), API.md, DEPLOY.md
 ```
 
 ## Komendy
@@ -26,7 +27,8 @@ docs/             ARCHITECTURE.md, API.md, DEPLOY.md
 - Plan usera (`profiles.plan`) zmienia tylko webhook Stripe (RLS blokuje update przez usera). Limity w `PLANS` (shared).
 - Model AI: `claude-opus-5` domyślnie (`RECALL_AI_MODEL`), adaptive thinking, structured outputs przez `betaZodOutputFormat(GeneratedTopicSchema)`, fallbacks `"default"`. Bez klucza = tryb demo (nie crashować).
 - Build weba i typecheck mobile muszą przechodzić **bez** żadnych env (klienci tworzone leniwie).
-- UI po polsku, luźny gen-z; treść merytoryczna poprawna. Bez dodatkowych UI-kitów.
+- UI po polsku, luźny gen-z; treść merytoryczna poprawna. Bez UI-kitów. Wygląd wg docs/DESIGN.md: przyciski 3D (`HARD_EDGE`), paleta `PLAY`, kolor przedmiotu przez `hueFromColor`, maskotka i dźwięki z shared.
+- Gamifikacja: XP/serca/klejnoty/questy liczone funkcjami z shared (`comboXp`, `loseHeart`, `openChest`, `applyQuestEvent`, `evaluateAchievements`, `rankFor`); `addXp` w store jest jedynym lejkiem XP.
 
 ## Workflow przy zmianach
 1. Zmiana kontraktu → `packages/shared` → `npm run build:shared` → dostosuj web i mobile.
