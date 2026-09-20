@@ -1,4 +1,4 @@
-import type { LevelProgress, TopicContent, SubjectProgress, UserMeta } from "./types.js";
+import type { LevelProgress, TopicContent, SubjectProgress, UserMeta, UserStats } from "./types.js";
 
 /** XP rewards — single source of truth for both apps. */
 export const XP = {
@@ -9,6 +9,10 @@ export const XP = {
   levelPass: 25,
   levelPerfect: 50,
   examPass: 100,
+  /** granted once per day when the daily goal is reached */
+  dailyGoalBonus: 10,
+  /** finishing the daily session */
+  sessionDone: 10,
 } as const;
 
 /** Level pass threshold in % (lesson quiz). */
@@ -95,17 +99,43 @@ export function streakDisplay(meta: UserMeta, today = todayStr()): number {
   return d === 0 || d === 1 ? meta.streak : 0;
 }
 
-/** Register activity today. Pure. `extended` is true when the streak grew/started today. */
-export function touchStreak(meta: UserMeta, today = todayStr()): { meta: UserMeta; extended: boolean } {
-  if (meta.lastDay === today) return { meta, extended: false };
+/**
+ * Register activity today. Pure. `extended` is true when the streak grew/started today.
+ * A one-day gap is bridged by a streak freeze when the user owns one (`usedFreeze`).
+ */
+export function touchStreak(meta: UserMeta, today = todayStr()): { meta: UserMeta; extended: boolean; usedFreeze: boolean } {
+  if (meta.lastDay === today) return { meta, extended: false, usedFreeze: false };
   let streak = 1;
+  let freezes = meta.streakFreezes ?? 0;
+  let usedFreeze = false;
   if (meta.lastDay) {
     const d = dayDiff(meta.lastDay, today);
-    streak = d === 1 ? meta.streak + 1 : 1;
+    if (d === 1) streak = meta.streak + 1;
+    else if (d === 2 && freezes > 0) {
+      streak = meta.streak + 1;
+      freezes -= 1;
+      usedFreeze = true;
+    }
   }
-  return { meta: { streak, best: Math.max(meta.best, streak), lastDay: today }, extended: true };
+  return { meta: { ...meta, streak, best: Math.max(meta.best, streak), lastDay: today, streakFreezes: freezes }, extended: true, usedFreeze };
 }
 
-export function emptyMeta(): UserMeta {
-  return { streak: 0, best: 0, lastDay: null };
+/** True when nothing was done today and the evening is here (18:00+) — mascot sleeps, home nags. */
+export function streakAtRisk(meta: UserMeta, now = new Date()): boolean {
+  if (!meta.lastDay || streakDisplay(meta, todayStr(now)) === 0) return false;
+  return meta.lastDay !== todayStr(now) && now.getHours() >= 18;
+}
+
+export function emptyStats(): UserStats {
+  return { cardsReviewed: 0, levelsDone: 0, perfectLevels: 0, examsPassed: 0, comboBest: 0, questsDone: 0, chestsOpened: 0, nightOwl: false, earlyBird: false };
+}
+
+export function emptyMeta(now = new Date()): UserMeta {
+  return { streak: 0, best: 0, lastDay: null, gems: 0, hearts: 5, heartsUpdatedAt: now.toISOString(), dailyGoal: 50, streakFreezes: 0, soundOn: true, stats: emptyStats() };
+}
+
+/** Fill missing fields on a meta row read from an older DB shape / cache. */
+export function normalizeMeta(m: Partial<UserMeta> | null | undefined, now = new Date()): UserMeta {
+  const e = emptyMeta(now);
+  return { ...e, ...(m ?? {}), stats: { ...e.stats, ...((m?.stats as Partial<UserStats>) ?? {}) } };
 }

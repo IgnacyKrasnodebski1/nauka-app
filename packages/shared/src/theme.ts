@@ -1,5 +1,5 @@
 /**
- * Recall design tokens — "Premium dark".
+ * Recall design tokens — "Duolingo in dark": dark layered grounds + saturated PLAY colours + 3D hard edges.
  * Single source of truth for web (Tailwind @theme / CSS vars) and mobile (RN StyleSheet).
  * See docs/DESIGN.md for the rationale and component rules.
  */
@@ -33,27 +33,65 @@ export const COLORS = {
   accentGlow: "rgba(242,193,78,0.28)",
 
   /** semantic */
-  success: "#4ADE9B",
-  successSoft: "rgba(74,222,155,0.14)",
-  danger: "#FF6B7A",
-  dangerSoft: "rgba(255,107,122,0.14)",
-  info: "#7DB4FF",
-  infoSoft: "rgba(125,180,255,0.14)",
-  streak: "#FF8A3D", // flame
+  success: "#58CC02",
+  successSoft: "rgba(88,204,2,0.16)",
+  danger: "#FF4B4B",
+  dangerSoft: "rgba(255,75,75,0.16)",
+  info: "#1CB0F6",
+  infoSoft: "rgba(28,176,246,0.16)",
+  streak: "#FF9600", // flame
   xp: "#F2C14E", // = accent
 } as const;
 
-/** Curated per-subject hues (muted, premium). Assigned by paletteFor(); stored in subjects.accent2. */
-export const SUBJECT_HUES: { name: string; color: string; soft: string }[] = [
-  { name: "lilac", color: "#A78BFA", soft: "rgba(167,139,250,0.16)" },
-  { name: "sky", color: "#67B7FF", soft: "rgba(103,183,255,0.16)" },
-  { name: "mint", color: "#5EE0B5", soft: "rgba(94,224,181,0.16)" },
-  { name: "coral", color: "#FF8C7A", soft: "rgba(255,140,122,0.16)" },
-  { name: "amber", color: "#F2C14E", soft: "rgba(242,193,78,0.16)" },
-  { name: "rose", color: "#F48FB1", soft: "rgba(244,143,177,0.16)" },
-  { name: "sage", color: "#9CCC65", soft: "rgba(156,204,101,0.16)" },
-  { name: "ice", color: "#8FD3E8", soft: "rgba(143,211,232,0.16)" },
+/** Playful saturated palette (Duolingo-like). `*Deep` = the 3D bottom edge colour. */
+export const PLAY = {
+  green: "#58CC02", greenDeep: "#3E9A00", greenSoft: "rgba(88,204,2,0.16)",
+  blue: "#1CB0F6", blueDeep: "#1487C0", blueSoft: "rgba(28,176,246,0.16)",
+  purple: "#CE82FF", purpleDeep: "#9E56D6", purpleSoft: "rgba(206,130,255,0.16)",
+  orange: "#FF9600", orangeDeep: "#CC7200", orangeSoft: "rgba(255,150,0,0.16)",
+  red: "#FF4B4B", redDeep: "#C93A3A", redSoft: "rgba(255,75,75,0.16)",
+  yellow: "#FFC800", yellowDeep: "#CC9F00", yellowSoft: "rgba(255,200,0,0.16)",
+  pink: "#FF86D0", pinkDeep: "#D25FA6", pinkSoft: "rgba(255,134,208,0.16)",
+  gem: "#5EC8FF", gemDeep: "#2E9BD6", heart: "#FF4B4B", flame: "#FF9600",
+  /** 3D edge for glass/secondary surfaces */
+  surfaceDeep: "#05060A",
+  ink: "#0B0C12",
+} as const;
+
+/** Height (px) of the 3D bottom edge on buttons, tiles and path nodes. */
+export const HARD_EDGE = 4;
+
+/** Curated per-subject hues (saturated). Assigned by paletteFor(); stored in subjects.accent2. */
+export const SUBJECT_HUES: { name: string; color: string; deep: string; soft: string }[] = [
+  { name: "lilac", color: "#A66BFF", deep: "#7A44D6", soft: "rgba(166,107,255,0.18)" },
+  { name: "sky", color: "#2EB8FF", deep: "#1B8AC4", soft: "rgba(46,184,255,0.18)" },
+  { name: "mint", color: "#2EE6A6", deep: "#1FAE7C", soft: "rgba(46,230,166,0.18)" },
+  { name: "coral", color: "#FF7A5C", deep: "#CC5540", soft: "rgba(255,122,92,0.18)" },
+  { name: "amber", color: "#FFC53D", deep: "#CC9A24", soft: "rgba(255,197,61,0.18)" },
+  { name: "rose", color: "#FF6FB5", deep: "#C94F8A", soft: "rgba(255,111,181,0.18)" },
+  { name: "sage", color: "#9BE04A", deep: "#6FAA2E", soft: "rgba(155,224,74,0.18)" },
+  { name: "ice", color: "#7DE3F5", deep: "#4FB4C7", soft: "rgba(125,227,245,0.18)" },
 ];
+
+/** Darken a hex colour by `amount` (0..1) — used for the 3D edge of legacy accent2 values. */
+export function hueDeep(hex: string, amount = 0.28): string {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const n = parseInt(m[1]!, 16);
+  const f = (c: number) => Math.max(0, Math.round(c * (1 - amount)));
+  const r = f((n >> 16) & 255), g = f((n >> 8) & 255), b = f(n & 255);
+  return "#" + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+}
+
+/** Resolve a hue record from a stored accent2 (curated) or any hex. */
+export function hueFromColor(color: string): { color: string; deep: string; soft: string } {
+  const found = SUBJECT_HUES.find((h) => h.color.toLowerCase() === color.toLowerCase());
+  if (found) return found;
+  const m = /^#?([0-9a-f]{6})$/i.exec(color.trim());
+  if (!m) return SUBJECT_HUES[0]!;
+  const n = parseInt(m[1]!, 16);
+  return { color, deep: hueDeep(color), soft: `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},0.18)` };
+}
 
 export const RADIUS = { xs: 8, sm: 12, md: 16, lg: 22, xl: 28, pill: 999 } as const;
 
@@ -93,7 +131,9 @@ export function cssVars(): string {
     `--text:${COLORS.text}`, `--text-soft:${COLORS.textSoft}`, `--muted:${COLORS.muted}`, `--faint:${COLORS.faint}`,
     `--accent:${COLORS.accent}`, `--accent-strong:${COLORS.accentStrong}`, `--accent-deep:${COLORS.accentDeep}`, `--accent-ink:${COLORS.accentInk}`, `--accent-glow:${COLORS.accentGlow}`,
     `--success:${COLORS.success}`, `--success-soft:${COLORS.successSoft}`, `--danger:${COLORS.danger}`, `--danger-soft:${COLORS.dangerSoft}`, `--info:${COLORS.info}`, `--info-soft:${COLORS.infoSoft}`, `--streak:${COLORS.streak}`,
-    `--r-xs:${RADIUS.xs}px`, `--r-sm:${RADIUS.sm}px`, `--r-md:${RADIUS.md}px`, `--r-lg:${RADIUS.lg}px`, `--r-xl:${RADIUS.xl}px`,
+    `--r-xs:${RADIUS.xs}px`, `--r-sm:${RADIUS.sm}px`, `--r-md:${RADIUS.md}px`, `--r-lg:${RADIUS.lg}px`, `--r-xl:${RADIUS.xl}px`, `--r-pill:${RADIUS.pill}px`,
+    `--hard-edge:${HARD_EDGE}px`,
+    ...Object.entries(PLAY).map(([k, v]) => `--play-${k.replace(/([A-Z])/g, "-$1").toLowerCase()}:${v}`),
     `--shadow-card:${SHADOW.card}`, `--shadow-glow:${SHADOW.glow}`, `--shadow-overlay:${SHADOW.overlay}`,
     `--ease:${MOTION.ease}`, `--t-fast:${MOTION.fast}ms`, `--t-base:${MOTION.base}ms`, `--t-slow:${MOTION.slow}ms`,
     `--font-display:"${TYPE.display}", "Manrope", system-ui, sans-serif`, `--font-body:"${TYPE.body}", system-ui, sans-serif`,

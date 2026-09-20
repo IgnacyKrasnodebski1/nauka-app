@@ -1,50 +1,49 @@
-# Recall — design system „Premium dark”
+# Recall — design system „Duolingo in dark”
 
-Tokeny: `packages/shared/src/theme.ts` (`COLORS`, `SUBJECT_HUES`, `RADIUS`, `SPACE`, `TYPE`, `SHADOW`, `MOTION`, `cssVars()`, `subjectHue()`). Web i mobile używają **tych samych wartości**. Nic nie hardkodujemy w komponentach.
+Tokeny: `packages/shared/src/theme.ts` (`COLORS` tła/tekst, `PLAY` kolory zabawy z odcieniami `*Deep`, `HARD_EDGE`, `SUBJECT_HUES` z `deep`, `hueFromColor()`, `RADIUS`, `SPACE`, `TYPE`, `MOTION`, `cssVars()`). Maskotka: `mascot.ts`. Logo: `logo.ts`. Ścieżka: `path-layout.ts`. Dźwięki: `sfx.ts` + `packages/assets/sfx`. Web i mobile używają tych samych wartości.
 
 ## Idea
-Ciemny, cichy, drogi. Jak dobry hardware'owy dashboard, nie jak neon w klubie. Głębia przez **warstwy** (bg0 → bg4), **szkło** (półprzezroczyste powierzchnie + 1px hairline + 1px górny highlight), **jeden ciepły akcent** (złoto `#F2C14E`) na chłodnym tle, i **kolor przedmiotu** jako drugi, spokojny kolor. Zero tęczowych gradientów, zero różowo-fioletowo-cyjanowych pasów.
+Ciemne, warstwowe tło (bg0→bg4) zostaje, ale wszystko na nim jest **grube, kolorowe i żywe**: nasycone kolory `PLAY` (zielony `#58CC02`, niebieski `#1CB0F6`, fiolet, pomarańcz, czerwień, żółty), przyciski i kafle z **twardą krawędzią 3D** (4 px ciemniejszego odcienia pod spodem, wciśnięcie = przesunięcie w dół), wijąca się ścieżka z dużymi węzłami, skrzynki i trofea, serca, klejnoty, płomień serii, maskotka **Rec** reagująca na wszystko, krótkie dźwięki. Każdy ekran jest wypełniony: nagłówek z liczbami, karta akcji, lista/siatka, zajawka kolejnej rzeczy. Zero pustych połaci.
 
 ## Kolor
-- Tło strony `bg0 #07080C`, sekcje `bg1`, karty `bg2`, karty uniesione / inputy `bg3`, hover `bg4`. Nigdy czysta czerń.
-- Szkło: `glass` + `line` + `highlight` (inset top). Hover: `glassHover` + `lineStrong`.
-- Tekst: `text` (nagłówki, wartości), `textSoft` (body), `muted` (opisy, etykiety), `faint` (placeholdery, disabled).
-- Akcent **złoty** tylko na: primary CTA, XP, aktywnej zakładce, kluczowej liczbie. Maksymalnie jeden złoty element w polu widzenia poza XP.
-- Kolor przedmiotu (`SUBJECT_HUES`, `subjectHue(name)`): ring ikonki, pasek postępu, poświata nagłówka przedmiotu, aktywny node ścieżki. Nasycenie niskie, jasność wysoka — czytelne na ciemnym.
-- Semantyka: `success` mięta, `danger` łosoś, `info` błękit, `streak` pomarańcz. Zawsze z wariantem `*Soft` jako tło chipa.
-- Poświaty: `radial-gradient` 0.10–0.18 alpha w kolorze przedmiotu za nagłówkiem/hero, rozmyte, nigdy ostre.
+- Tła: `bg0` strona, `bg1` shell, `bg2` karty, `bg3` uniesione/inputy, `bg4` hover. Hairline `line`.
+- **Akcje**: zielony = główne CTA (Start, Dalej, Kontynuuj), niebieski = drugorzędne/informacje, fiolet = AI/generowanie, pomarańcz = seria, czerwony = błąd/serca, żółty = XP/gwiazdki/trofea, `gem` błękit = klejnoty.
+- Kolor przedmiotu (`hueFromColor(subject.accent2)`): kafle przedmiotu, węzły ścieżki, pasek postępu lekcji, baner jednostki. Zawsze para `color` + `deep`.
+- Semantyka: `success`=zielony, `danger`=czerwony, `info`=niebieski, `streak`=pomarańcz. Wersje `*Soft` jako tła chipów i arkuszy feedbacku.
+- Złoto `accent` zostaje tylko dla XP i rangi.
 
 ## Typografia
-- Display: **Bricolage Grotesque** 600–800 (nagłówki, liczby XP, tytuły lekcji). `letter-spacing: -0.02em`, `text-wrap: balance`.
-- Body: **Manrope** 400–700. 15px base na mobile, 15–16 na web, `line-height 1.5–1.65`.
-- Etykiety (eyebrow): 12px, 600, uppercase, `letter-spacing 0.12em`, kolor `muted`.
-- Liczby: `font-variant-numeric: tabular-nums`.
-- Web: Google Fonts link. Mobile: `@expo-google-fonts/bricolage-grotesque` + `@expo-google-fonts/manrope` (ładowane w root layout, splash do czasu załadowania).
+- Display: **Bricolage Grotesque** 700–800 (nagłówki, liczby XP/klejnotów, tytuły lekcji, napisy na przyciskach 3D uppercase 700, `letter-spacing 0.04em`).
+- Body: **Manrope** 400–700, 15–16 px. Etykiety 12 px uppercase `letter-spacing 0.12em`. Liczby `tabular-nums`.
 
-## Kształt i przestrzeń
-- Promienie: karty 22 (`lg`), przyciski 16 (`md`), chipy pill, inputy 14–16, telefon: sekcje 24–28 (`xl`).
-- Gap zamiast marginesów; siatka 8px. Padding kart 20–24. Gutter 16 mobile / 24–48 web.
-- Karta = jeden obiekt: te same krawędzie, ta sama pozycja ikony, ta sama linia bazowa tytułu.
-
-## Komponenty (oba UI mają wyglądać identycznie)
-- **Przycisk primary**: tło złoty gradient (`accentStrong → accent`), tekst `accentInk` 700, `shadow.glow`, hover: jaśniej + uniesienie 1px; active: scale 0.98. Wysokość 48 (mobile) / 44 (web).
-- **Przycisk secondary**: szkło (`glass` + `line`), tekst `text`. **Ghost**: sam tekst `textSoft`.
-- **Karta**: `bg2`, `line`, `shadow.card`, top highlight; hover (web): `lineStrong`, przesunięcie −2px. Nie każda rzecz to karta — listy w sekcji rozdziela hairline, nie ramki.
-- **Ikona przedmiotu**: 52px kwadrat r16, tło `hue.soft`, ring 1px `hue.color` 40%, emoji 26px na środku. Kolor przedmiotu też w pasku postępu.
-- **Pills (streak / XP)**: szkło, ikona + liczba display 600 + etykieta muted. XP w złocie, streak w pomarańczu.
-- **Ścieżka poziomów**: pionowa oś z hairline; węzły 64px: zrobione = wypełnione kolorem przedmiotu + ✓, aktywny = pulsująca poświata w kolorze przedmiotu + złoty ring, zablokowany = `bg3` + kłódka `faint`. Gwiazdki małe, złote, pod węzłem.
-- **Lekcja**: pasek postępu u góry (kolor przedmiotu na `bg3`), etap jako eyebrow. Karty treści (feed) `bg2` z dużym tytułem display. Odpowiedzi quizu: pełnej szerokości, `bg3`, hover `bg4`; wybrana: ring złoty; poprawna: `successSoft` + `success` ring; błędna: `dangerSoft`. Wyjaśnienie w bloku `info`.
-- **Fiszka**: 3D flip (perspective), front `bg3` z display, tył `bg2`; oceny 0–3 jako 4 chipy.
-- **Mini-gry**: te same powierzchnie; dopasowane pary znikają z animacją skali; luka podświetlona ringiem przedmiotu.
-- **Wynik lekcji**: duża liczba XP display 48 w złocie (licznik animowany), gwiazdki wpadające springiem, jedno subtelne „confetti” w kolorze przedmiotu i złocie (max 40 cząstek, 1.2 s).
-- **Dziś**: karta hero z `bg2`, poświata przedmiotu z sesji, tytuł display, 3 metryki (powtórki / słabe / nowy) jako mini-pills, CTA złote.
-- **Nawigacja**: web — górny pasek szkło + blur z logo i pills; mobile — tab bar szkło + blur, aktywna ikona złota, etykieta 11px.
-- **Puste stany**: ikona w tinted tile, jedno zdanie, jeden przycisk. Bez ścian tekstu.
-- **Toast**: dół, szkło, 2.2 s.
+## Komponenty (identyczne w obu UI)
+- **Przycisk 3D** (`.btn3d` / `Button3D`): tło = kolor, `box-shadow: 0 4px 0 deep`, radius 16, wysokość 52 (mobile) / 48 (web), tekst uppercase 700; `:active` = `translateY(4px)` + cień 0; warianty green/blue/purple/gold/red/ghost (ghost = `bg3` + krawędź `surfaceDeep` + hairline). Dźwięk `tap`.
+- **Kafel 3D** (`.card3d`): to samo z krawędzią w `deep` koloru kafla; używany dla przedmiotów, CTA „Z materiałów / Z hasła”, kart statystyk.
+- **Karta** (`.card`): `bg2` + hairline; bez krawędzi 3D (dla treści, list).
+- **Węzeł ścieżki** (`.node3d`): 76 px koło, krawędź 3D 6 px; done = kolor przedmiotu + biały ✓ + 3 gwiazdki pod spodem; aktywny = kolor + biały ring 4 px + pulsująca poświata + dymek „START” skaczący nad węzłem; zablokowany = `bg3` + krawędź `surfaceDeep` + kłódka `faint`; skrzynka = kafel 64 px z ikoną skrzyni (szara zamknięta / złota trzęsąca się gdy otwieralna); trofeum = złoty puchar na końcu. Ścieżka SVG z `layoutPath()`: kreskowana hairline, wypełniona kolorem przedmiotu do aktywnego węzła.
+- **Ring postępu** (SVG): cel dzienny (pomarańcz/zielony), celność, postęp przedmiotu.
+- **Pills**: seria (płomień + liczba, pomarańcz), klejnoty (błękit), serca (5 serc lub ∞ dla Pro), XP (złoto). Szkło `bg3` + hairline.
+- **Pasek segmentowy** lekcji: jeden segment na krok, wypełnienie zielone z animacją; serca i badge combo w nagłówku.
+- **Arkusz feedbacku**: wjeżdża z dołu, zielony (`successSoft`, ramka `success`) lub czerwony; maskotka happy/sad 56 px, tytuł „Dobrze!” / „Nie tym razem”, wyjaśnienie, chip „+5 XP ×2”, przycisk 3D DALEJ (zielony/czerwony).
+- **Combo badge**: pojawia się od 2 z rzędu, licznik, przy 5 → „×2” (niebieski), 10 → „×3” (fiolet) z pulsem i dźwiękiem `combo`.
+- **Karta statystyki** wyniku: kafel 3D z ikoną, etykietą i dużą liczbą (licznik animowany); 4 karty: XP (złoto), celność (ring), czas, klejnoty.
+- **Karta questów**: 3 wiersze (ikona, tytuł, pasek, nagroda „+10 💎”), przycisk „Odbierz” 3D gdy done; po odbiorze animacja klejnotów do pilla.
+- **Kafle przedmiotów**: 2 kolumny, tło `hue.soft`, krawędź `hue.deep`, emoji 40 px, nazwa, „3 tematy”, mini-ring %, badge sprawdzianu.
+- **Ranking**: podium top 3, wiersze (ranga, imię, XP), Twój wiersz przypięty.
+- **Odznaki**: siatka 3–4 kolumn, kafel z ikoną; zablokowane w skali szarości + „?”.
+- **Maskotka**: Home (idle / sleep gdy seria zagrożona / cheer gdy cel zrobiony), arkusz feedbacku, wynik, onboarding, login, puste stany, modal braku serc. Dymek z linią z `MASCOT_LINES`.
+- **Tab bar**: 4 zakładki (Start, Dziś, Ranking, Konto) z ikonami SVG, aktywna ikona zielona + pill pod spodem; mobile z blurem.
+- **Modale**: level-up rangi, odblokowana odznaka, brak serc (czekaj / 150 💎 / Pro), streak (płomień + liczba dni).
 
 ## Ruch
-- Przejścia 140–220 ms `ease` z tokenów. Hover/press tylko transform + kolor. `prefers-reduced-motion` → bez animacji.
-- Spring (`MOTION.spring`) do XP, gwiazdek, flipa fiszki. Nie animować layoutu list.
+- Springi (web `motion`, mobile Reanimated): wejścia kart z opóźnieniem 60 ms na element, skok maskotki, gwiazdki, liczniki XP/klejnotów, badge combo.
+- Przejścia faz lekcji: slide + fade (`AnimatePresence`). Arkusz feedbacku: slide z dołu 260 ms.
+- Ścieżka: auto-scroll do aktywnego węzła; dymek START bounce 1.2 s w pętli; skrzynka „shake” co 3 s gdy otwieralna.
+- Confetti: przy zaliczonym poziomie, skrzynce, level-upie; kolory przedmiotu + złoto + zielony; ≤ 80 cząstek.
+- `prefers-reduced-motion` / Reduce Motion → bez pętli i skoków, zostają fade.
+
+## Dźwięk
+`tap`, `correct`, `wrong`, `combo`, `levelup`, `streak`, `chest`, `gem`. Toggle w ustawieniach (`user_meta.sound_on`) i ikona mute w lekcji. Web odtwarza po pierwszym geście; mobile przez `expo-audio` (cichy tryb telefonu = cisza).
 
 ## Czego nie robić
-- Tęczowe gradienty, neony, `#ff2d95/#a855f7/#22d3ee`. Emoji jako nagłówki sekcji. Wszystko wyśrodkowane. Cień na każdym elemencie. Karty w kartach w kartach.
+Puste ekrany z jedną kartą. Emoji zamiast ikon w nawigacji. Płaskie przyciski bez krawędzi 3D. Neonowe gradienty na tle. Animacje bez celu (ruch ma nagradzać lub prowadzić).

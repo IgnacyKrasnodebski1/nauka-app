@@ -153,6 +153,8 @@ export interface SubjectProgress {
   xp: number;
   levels: Record<string, LevelProgress>;
   bestExam?: number;
+  /** opened chest indexes on the path (see gems.ts chestIndexes) */
+  chests?: number[];
 }
 
 export interface LevelProgress {
@@ -162,12 +164,72 @@ export interface LevelProgress {
   attempts: number;
 }
 
-/** Streak / meta */
+export type DailyGoal = 20 | 50 | 100;
+
+/** Lifetime counters used by achievements and the profile stats grid. */
+export interface UserStats {
+  cardsReviewed: number;
+  levelsDone: number;
+  perfectLevels: number;
+  examsPassed: number;
+  comboBest: number;
+  questsDone: number;
+  chestsOpened: number;
+  nightOwl: boolean;
+  earlyBird: boolean;
+  /** YYYY-MM-DD of the last day the daily-goal bonus was granted */
+  goalBonusDay?: string;
+}
+
+/** Streak / wallet / settings — one row per user (user_meta). */
 export interface UserMeta {
   streak: number;
   best: number;
   /** YYYY-MM-DD */
   lastDay: string | null;
+  gems: number;
+  hearts: number;
+  /** ISO timestamp of the last hearts change (regen folds from here) */
+  heartsUpdatedAt: string;
+  dailyGoal: DailyGoal;
+  streakFreezes: number;
+  soundOn: boolean;
+  stats: UserStats;
+}
+
+export interface ActivityDay {
+  /** YYYY-MM-DD */
+  day: string;
+  xp: number;
+  minutes: number;
+}
+
+export interface LeaderboardRow {
+  rank: number;
+  displayName: string;
+  xp: number;
+  isMe: boolean;
+}
+
+export type QuestKind = "xp" | "combo" | "review" | "perfect" | "levels" | "games" | "minutes" | "correct";
+
+export interface Quest {
+  id: string;
+  kind: QuestKind;
+  title: string;
+  target: number;
+  progress: number;
+  reward: number;
+  done: boolean;
+  claimed: boolean;
+}
+
+export interface Achievement {
+  key: string;
+  title: string;
+  desc: string;
+  icon: string;
+  gems: number;
 }
 
 /** AI generation job */

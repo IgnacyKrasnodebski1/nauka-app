@@ -1,0 +1,1 @@
+{ "name": "@nauka/assets", "version": "0.1.0", "private": true, "description": "Generated brand assets: synthesized sound effects (WAV).", "scripts": { "sfx": "node scripts/synth-sfx.mjs" } }

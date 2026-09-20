@@ -10,7 +10,7 @@ import { subjectHue } from "./theme.js";
  */
 export function paletteFor(seed: string): [string, string] {
   const h = subjectHue(seed);
-  return [`linear-gradient(135deg, ${h.color} 0%, ${h.color}99 55%, ${h.color}33 100%)`, h.color];
+  return [`linear-gradient(135deg, ${h.color} 0%, ${h.deep} 100%)`, h.color];
 }
 
 export const DEFAULT_GRADING: TopicContent["grading"] = {

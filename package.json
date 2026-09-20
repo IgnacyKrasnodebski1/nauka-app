@@ -15,7 +15,8 @@
     "mobile": "npm run start -w @nauka/mobile",
     "typecheck": "npm run build:packages && npm run typecheck -w @nauka/web && npm run typecheck -w @nauka/mobile",
     "test": "npm run build:packages && npm test -w @nauka/shared && npm test -w @nauka/ai",
-    "legacy:build": "node legacy/build.js"
+    "legacy:build": "node legacy/build.js",
+    "sfx": "node packages/assets/scripts/synth-sfx.mjs"
   },
   "engines": {
     "node": ">=20"
