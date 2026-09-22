@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Znajomi</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#B4FF3A;text-decoration:none}
+a:hover{color:#CBFF6E}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <div class="a-float" style="position: absolute; top: -100px; right: -80px; width: 250px; height: 250px; border-radius: 50%; background: #0E2430;"></div>
+
+  <div style="position: relative; z-index: 1; padding: 54px 18px 0; display: flex; align-items: center; gap: 12px;">
+    <a href="League.html" aria-label="Wróć do ligi" style="width: 40px; height: 40px; border-radius: 50%; background: #1B1836; border: 2px solid #2C2850; display: flex; align-items: center; justify-content: center; flex: none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B95C9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+    <div style="flex-grow: 1;">
+      <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.4px;">Znajomi</div>
+      <div style="font-size: 12px; font-weight: 600; color: #9B95C9; margin-top: 2px;">5 osób · uczycie się razem</div>
+    </div>
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 18px 18px 0; display: flex; flex-direction: column; gap: 13px; flex-grow: 1; min-height: 0;">
+
+    <div class="a-up" style="display: flex; align-items: center; gap: 11px; background: #1B1836; border: 2px solid #2C2850; border-radius: 18px; padding: 12px 14px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#6E67A8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+      <label for="find-friend" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Szukaj znajomego</label>
+      <input id="find-friend" type="text" placeholder="Szukaj po nazwie albo kodzie" style="flex-grow: 1; background: transparent; border: none; color: #F4F2FF; font-family: inherit; font-size: 13.5px; font-weight: 700; outline: none;">
+    </div>
+
+    <div class="a-up d1" style="background: #0E2430; border: 2px solid #1A4C5E; border-radius: 22px; padding: 15px; box-shadow: 0 4px 0 #071720; display: flex; align-items: center; gap: 13px;">
+      <div style="flex-grow: 1;">
+        <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #7FAEBC;">Twój kod</div>
+        <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 25px; font-weight: 800; letter-spacing: 2px; color: #7EE8FA; margin-top: 4px;">IGN-4K2P</div>
+      </div>
+      <button type="button" style="flex: none; cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 7px; background: #22D3EE; border: none; box-shadow: 0 4px 0 #108CA1; border-radius: 15px; padding: 12px 15px; color: #04232B; font-size: 13px; font-weight: 800;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#04232B" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M5 16v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3"/></svg>
+        Udostępnij
+      </button>
+    </div>
+
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <span style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Zaproszenia</span>
+      <span class="a-blink" style="font-size: 11.5px; font-weight: 800; color: #FFC043;">2 nowe</span>
+    </div>
+
+    <div class="a-up d2" style="display: flex; align-items: center; gap: 12px; background: #2A2110; border: 2px solid #574319; border-radius: 20px; padding: 12px 14px;">
+      <div style="width: 38px; height: 38px; border-radius: 13px; background: #FFC043; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 14px; font-weight: 800; color: #241800;">ZW</span></div>
+      <div style="flex-grow: 1; min-width: 0;">
+        <div style="font-size: 13.5px; font-weight: 800; color: #FFE3C0;">Zosia W.</div>
+        <div style="font-size: 11.5px; font-weight: 600; color: #D6B48A; margin-top: 2px;">też uczy się Makro</div>
+      </div>
+      <button type="button" aria-label="Odrzuć zaproszenie od Zosi W." style="flex: none; width: 38px; height: 38px; border-radius: 13px; background: #1A1409; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#D6B48A" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <button type="button" aria-label="Przyjmij zaproszenie od Zosi W." style="flex: none; width: 38px; height: 38px; border-radius: 13px; background: #FFC043; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#241800" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4.5 4.5L19 7"/></svg>
+      </button>
+    </div>
+
+    <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Ten tydzień</div>
+
+    <div class="a-up d3" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 22px; padding: 6px 14px; box-shadow: 0 4px 0 #14122A;">
+
+      <div style="display: flex; align-items: center; gap: 12px; padding: 11px 0;">
+        <div style="width: 38px; height: 38px; border-radius: 13px; background: #FF2E93; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 14px; font-weight: 800; color: #200410;">KW</span></div>
+        <div style="flex-grow: 1; min-width: 0;">
+          <div style="font-size: 13.5px; font-weight: 800;">Kamila W.</div>
+          <div style="display: flex; align-items: center; gap: 5px; margin-top: 3px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#FF7A1A" aria-hidden="true"><path d="M12 2c2.6 3.6 1.1 5.7 0 6.8C10.4 7.2 9 5.6 9 3.5 6.4 5.6 5 8.6 5 12a7 7 0 0 0 14 0c0-3.1-1.6-6.6-7-10z"/></svg>
+            <span style="font-size: 11.5px; font-weight: 700; color: #9B95C9;">21 dni</span>
+          </div>
+        </div>
+        <span style="font-size: 14px; font-weight: 800; color: #F4F2FF;">1 840</span>
+      </div>
+      <div style="height: 2px; background: #241F45;"></div>
+
+      <div style="display: flex; align-items: center; gap: 12px; padding: 11px 0;">
+        <div style="width: 38px; height: 38px; border-radius: 13px; background: #22D3EE; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 14px; font-weight: 800; color: #04232B;">TM</span></div>
+        <div style="flex-grow: 1; min-width: 0;">
+          <div style="font-size: 13.5px; font-weight: 800;">Tomek M.</div>
+          <div style="display: flex; align-items: center; gap: 5px; margin-top: 3px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="#FF7A1A" aria-hidden="true"><path d="M12 2c2.6 3.6 1.1 5.7 0 6.8C10.4 7.2 9 5.6 9 3.5 6.4 5.6 5 8.6 5 12a7 7 0 0 0 14 0c0-3.1-1.6-6.6-7-10z"/></svg>
+            <span style="font-size: 11.5px; font-weight: 700; color: #9B95C9;">9 dni</span>
+          </div>
+        </div>
+        <span style="font-size: 14px; font-weight: 800; color: #F4F2FF;">1 605</span>
+      </div>
+      <div style="height: 2px; background: #241F45;"></div>
+
+      <div style="display: flex; align-items: center; gap: 12px; padding: 11px 0;">
+        <div style="width: 38px; height: 38px; border-radius: 13px; background: #FFA023; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 14px; font-weight: 800; color: #201202;">PZ</span></div>
+        <div style="flex-grow: 1; min-width: 0;">
+          <div style="font-size: 13.5px; font-weight: 800;">Patryk Z.</div>
+          <div style="font-size: 11.5px; font-weight: 700; color: #6E67A8; margin-top: 3px;">dziś nic</div>
+        </div>
+        <span style="font-size: 14px; font-weight: 800; color: #9B95C9;">1 320</span>
+      </div>
+      <div style="height: 2px; background: #241F45;"></div>
+
+      <div style="display: flex; align-items: center; gap: 12px; padding: 11px 0;">
+        <div style="width: 38px; height: 38px; border-radius: 13px; background: #A855F7; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 14px; font-weight: 800; color: #1A0A2A;">AN</span></div>
+        <div style="flex-grow: 1; min-width: 0;">
+          <div style="font-size: 13.5px; font-weight: 800;">Ania N.</div>
+          <div style="font-size: 11.5px; font-weight: 700; color: #6E67A8; margin-top: 3px;">uczy się Krypto</div>
+        </div>
+        <span style="font-size: 14px; font-weight: 800; color: #9B95C9;">980</span>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 14px 18px 26px;">
+    <a href="League.html" class="a-glow" style="height: 58px; border-radius: 18px; background: #22D3EE; box-shadow: 0 5px 0 #108CA1; display: flex; align-items: center; justify-content: center; color: #04232B; font-size: 15px; font-weight: 800; letter-spacing: 1.2px;">ZAPROŚ ZNAJOMEGO</a>
+  </div>
+
+</div>
+
+</body>
+</html>

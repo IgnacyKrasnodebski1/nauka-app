@@ -1,0 +1,126 @@
+/* ============================================================
+   NAUKA 2.0 — tokeny motywu i ruch
+   Wklej na początek styles.css (albo zaimportuj jako osobny plik).
+   Zasada: płaskie kolory, grube cienie pod spodem, duże promienie.
+   ============================================================ */
+:root{
+  /* tła */
+  --bg:#0E0C1C;          /* tło ekranu */
+  --surface:#1B1836;     /* karta */
+  --surface-2:#15122B;   /* pasek nawigacji, sekcja */
+  --line:#2C2850;        /* obramowanie karty */
+  --line-2:#241F45;      /* separator, tor paska postępu */
+  --shadow:#14122A;      /* cień pod kartą na tle bg */
+
+  /* tekst */
+  --txt:#F4F2FF;
+  --txt-2:#D6D2F0;
+  --muted:#9B95C9;
+  --muted-2:#6E67A8;
+  --muted-3:#4E4778;
+
+  /* akcenty */
+  --acid:#B4FF3A;   --acid-dark:#7FC400;   --on-acid:#14210A;
+  --pink:#FF2E93;   --pink-dark:#B01460;   --on-pink:#200410;
+  --amber:#FFA023;  --amber-dark:#B36A08;  --on-amber:#201202;
+  --cyan:#22D3EE;   --cyan-dark:#108CA1;   --on-cyan:#04232B;
+  --gold:#FFC043;   --gold-dark:#B3820E;   --on-gold:#241800;
+  --red:#FF4767;    --red-dark:#A8203A;    --on-red:#2A0008;
+  --violet:#A855F7; --violet-dark:#6B2AA8; --on-violet:#1A0A2A;
+  --flame:#FF7A1A;
+
+  /* tinty pod kafle i panele */
+  --tint-acid:#1F2A12;   --tint-acid-line:#4E6B24;
+  --tint-pink:#241536;   --tint-pink-line:#46216B;
+  --tint-amber:#2A1C10;  --tint-amber-line:#5C3812;
+  --tint-cyan:#0E2430;   --tint-cyan-line:#1A4C5E;
+  --tint-gold:#2A2110;   --tint-gold-line:#574319;
+  --tint-red:#2A1017;    --tint-red-line:#5C1F2E;
+
+  /* motyw przedmiotu — nadpisywane per przedmiot */
+  --accent:var(--acid);
+  --accent-dark:var(--acid-dark);
+  --on-accent:var(--on-acid);
+
+  /* kształt */
+  --r-chip:999px; --r-sm:13px; --r-md:18px; --r-lg:22px; --r-xl:28px;
+  --drop:4px;      /* cień kart */
+  --drop-btn:5px;  /* cień przycisków */
+  --drop-node:6px; /* cień węzłów ścieżki */
+
+  /* typografia */
+  --font-display:'Bricolage Grotesque', system-ui, sans-serif; /* 800 */
+  --font-body:'Plus Jakarta Sans', system-ui, sans-serif;      /* 500/600/700/800 */
+}
+
+/* ---------- RUCH ---------- */
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+
+/* ---------- PRZEPISY NA KOMPONENTY ---------- */
+/* Przycisk główny: płaski kolor + cień pod spodem, wciśnięcie zjeżdża w dół. */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  height:58px;border:none;border-radius:var(--r-md);cursor:pointer;
+  font-family:var(--font-body);font-size:15px;font-weight:800;letter-spacing:1.2px;
+  background:var(--accent);color:var(--on-accent);
+  box-shadow:0 var(--drop-btn) 0 var(--accent-dark);
+  transition:transform .08s, box-shadow .08s;
+}
+.btn:active{transform:translateY(var(--drop-btn));box-shadow:0 0 0 var(--accent-dark)}
+.btn--ghost{background:var(--surface);border:2px solid var(--line);color:var(--txt-2);box-shadow:0 var(--drop-btn) 0 var(--shadow)}
+.btn--danger{background:var(--red);color:var(--on-red);box-shadow:0 var(--drop-btn) 0 var(--red-dark)}
+.btn[disabled]{background:#201C3E;color:#5C568F;box-shadow:none;cursor:default}
+
+/* Karta */
+.card{background:var(--surface);border:2px solid var(--line);border-radius:var(--r-lg);
+      box-shadow:0 var(--drop) 0 var(--shadow);padding:16px}
+
+/* Pasek postępu — .bar i{width:X%} animuje się od zera klasą .a-grow */
+.bar{height:10px;border-radius:999px;background:var(--line-2);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:999px;background:var(--accent)}
+
+/* Plakietka */
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--r-chip);
+      font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase}
+
+/* Węzeł ścieżki */
+.node{width:74px;height:74px;border-radius:50%;border:none;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;
+      box-shadow:0 var(--drop-node) 0 var(--accent-dark);background:var(--accent)}
+.node--current{width:88px;height:88px;box-shadow:0 7px 0 var(--accent-dark)}
+.node--locked{background:var(--surface);border:2px solid var(--line);box-shadow:0 var(--drop-node) 0 var(--shadow);cursor:not-allowed}
+.node:active{transform:translateY(3px);box-shadow:0 3px 0 var(--accent-dark)}
+
+/* Minimalny cel dotyku: 44px. Tekst 4.5:1, duży 3:1. */

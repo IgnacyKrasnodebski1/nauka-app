@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Zasady zaliczenia</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#B4FF3A;text-decoration:none}
+a:hover{color:#CBFF6E}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <div class="a-float" style="position: absolute; top: -110px; right: -80px; width: 260px; height: 260px; border-radius: 50%; background: #2A1240;"></div>
+
+  <div style="position: relative; z-index: 1; padding: 54px 18px 0; display: flex; align-items: center; gap: 12px;">
+    <a href="Path.html" aria-label="Wróć do ścieżki" style="width: 40px; height: 40px; border-radius: 50%; background: #1B1836; border: 2px solid #2C2850; display: flex; align-items: center; justify-content: center; flex: none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B95C9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+    <div style="flex-grow: 1;">
+      <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.4px;">Zasady zaliczenia</div>
+      <div style="font-size: 12px; font-weight: 600; color: #9B95C9; margin-top: 2px;">Makro · dr W. Siekierzyński</div>
+    </div>
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 18px 18px 0; display: flex; flex-direction: column; gap: 13px; flex-grow: 1; min-height: 0;">
+
+    <div class="a-up d1" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 24px; padding: 17px; box-shadow: 0 5px 0 #14122A;">
+      <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Z czego składa się ocena</div>
+      <div style="display: flex; height: 16px; border-radius: 999px; overflow: hidden; margin-top: 13px; gap: 3px;">
+        <div class="a-grow d2" style="width: 60%; height: 100%; border-radius: 999px 4px 4px 999px; background: #FF2E93;"></div>
+        <div class="a-grow d3" style="width: 40%; height: 100%; border-radius: 4px 999px 999px 4px; background: #22D3EE;"></div>
+      </div>
+      <div style="display: flex; gap: 14px; margin-top: 13px;">
+        <div style="flex-grow: 1;">
+          <div style="display: flex; align-items: center; gap: 7px;">
+            <div style="width: 10px; height: 10px; border-radius: 3px; background: #FF2E93;"></div>
+            <span style="font-size: 13px; font-weight: 800; color: #F4F2FF;">60% — test</span>
+          </div>
+          <div style="font-size: 12px; font-weight: 600; color: #9B95C9; margin-top: 4px; line-height: 1.35;">minimum 50% żeby zaliczyć</div>
+        </div>
+        <div style="flex-grow: 1;">
+          <div style="display: flex; align-items: center; gap: 7px;">
+            <div style="width: 10px; height: 10px; border-radius: 3px; background: #22D3EE;"></div>
+            <span style="font-size: 13px; font-weight: 800; color: #F4F2FF;">40% — prezentacja</span>
+          </div>
+          <div style="font-size: 12px; font-weight: 600; color: #9B95C9; margin-top: 4px; line-height: 1.35;">zespołowa, na zajęciach</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="a-up d2" style="background: #2E1533; border: 2px solid #FF2E93; border-radius: 24px; padding: 17px; box-shadow: 0 5px 0 #1A0A1E;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <svg class="a-pulse" width="18" height="18" viewBox="0 0 24 24" fill="#FF2E93" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>
+        <span style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #FF7FBE;">Najważniejsze</span>
+      </div>
+      <div style="font-size: 14.5px; font-weight: 700; line-height: 1.5; color: #FFD6EC; margin-top: 9px;">Po 4 pytania z ostatniego slajdu <b style="color: #FFFFFF;">każdej</b> prezentacji zespołowej — łącznie z twoją. To około <b style="color: #FFFFFF;">40% pytań na teście</b>.</div>
+      <div style="display: flex; align-items: center; gap: 7px; margin-top: 12px; background: #1A0A1E; border-radius: 13px; padding: 10px 12px;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FF7FBE" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4.5 4.5L19 7"/></svg>
+        <span style="font-size: 12.5px; font-weight: 700; color: #FF7FBE;">Wszystkie są w poziomie „Pytania grup”</span>
+      </div>
+    </div>
+
+    <div class="a-up d3" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 24px; padding: 17px 15px; box-shadow: 0 5px 0 #14122A;">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <span style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Siatka ocen</span>
+        <span style="font-size: 11.5px; font-weight: 800; color: #B4FF3A;">twój wynik: 78%</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px; padding: 7px 11px; border-radius: 12px;">
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 700; color: #7A74AA;">50–59%</span>
+          <span style="font-size: 13px; font-weight: 800; color: #7A74AA;">3</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 7px 11px; border-radius: 12px;">
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 700; color: #7A74AA;">60–69%</span>
+          <span style="font-size: 13px; font-weight: 800; color: #7A74AA;">3,5</span>
+        </div>
+        <div class="a-glow" style="display: flex; align-items: center; gap: 12px; padding: 9px 11px; border-radius: 13px; background: #1F2A12; border: 2px solid #4E6B24;">
+          <span style="flex-grow: 1; font-size: 13.5px; font-weight: 800; color: #E8FFC7;">70–79%</span>
+          <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #A8C98A;">tu jesteś</span>
+          <span style="font-size: 14px; font-weight: 800; color: #B4FF3A;">4</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 7px 11px; border-radius: 12px;">
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 700; color: #D6D2F0;">80–89%</span>
+          <span style="font-size: 13px; font-weight: 800; color: #D6D2F0;">4,5</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 7px 11px; border-radius: 12px;">
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 700; color: #D6D2F0;">90–97%</span>
+          <span style="font-size: 13px; font-weight: 800; color: #D6D2F0;">5</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 12px; padding: 7px 11px; border-radius: 12px;">
+          <span style="flex-grow: 1; font-size: 13px; font-weight: 700; color: #FFD98A;">98–100%</span>
+          <span style="font-size: 13px; font-weight: 800; color: #FFD98A;">5,5</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="a-up d4" style="display: flex; align-items: center; gap: 12px; background: #2A1017; border: 2px solid #5C1F2E; border-radius: 20px; padding: 13px 15px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF8FA3" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4.5M12 16v.5"/></svg>
+      <div style="font-size: 13px; font-weight: 700; color: #FFD4DC; line-height: 1.4;">Dozwolone łącznie <b style="color: #FFFFFF;">2 nieobecności</b> na warsztatach.</div>
+    </div>
+
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 14px 18px 26px;">
+    <a href="Path.html" class="a-glow" style="height: 58px; border-radius: 18px; background: #B4FF3A; box-shadow: 0 5px 0 #7FC400; display: flex; align-items: center; justify-content: center; color: #14210A; font-size: 15px; font-weight: 800; letter-spacing: 1.2px;">WRÓĆ DO NAUKI</a>
+  </div>
+
+</div>
+
+</body>
+</html>

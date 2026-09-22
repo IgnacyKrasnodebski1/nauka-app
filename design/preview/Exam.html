@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Wynik egzaminu</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#B4FF3A;text-decoration:none}
+a:hover{color:#CBFF6E}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <div class="a-float" style="position: absolute; top: -70px; right: -70px; width: 260px; height: 260px; border-radius: 50%; background: #2A1240;"></div>
+
+  <div style="position: relative; z-index: 1; padding: 52px 18px 0; display: flex; align-items: center; gap: 12px;">
+    <a href="Path.html" aria-label="Wróć do ścieżki" style="width: 40px; height: 40px; border-radius: 50%; background: #1B1836; border: 2px solid #2C2850; display: flex; align-items: center; justify-content: center; flex: none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B95C9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+    <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.4px;">Symulacja egzaminu</div>
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 22px 18px 0; display: flex; flex-direction: column; gap: 16px; flex-grow: 1; min-height: 0;">
+
+    <div style="background: #1F2A12; border: 2px solid #4E6B24; border-radius: 28px; padding: 22px; box-shadow: 0 6px 0 #16200B; display: flex; align-items: center; gap: 20px;">
+      <div class="a-pop" style="width: 108px; height: 108px; border-radius: 50%; border: 9px solid #2E3D18; border-top-color: #B4FF3A; border-right-color: #B4FF3A; border-bottom-color: #B4FF3A; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: none;">
+        <span style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 30px; font-weight: 800; color: #B4FF3A; line-height: 1;">78%</span>
+        <span style="font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #8FA87A; margin-top: 3px;">39/50</span>
+      </div>
+      <div style="flex-grow: 1; min-width: 0;">
+        <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; color: #8FA87A;">Twoja ocena</div>
+        <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 54px; font-weight: 800; letter-spacing: -2px; line-height: 1; color: #E8FFC7; margin-top: 4px;">4</div>
+        <div style="font-size: 12.5px; font-weight: 700; color: #A8C98A; margin-top: 6px;">Do 4,5 brakuje 1 pytania</div>
+      </div>
+    </div>
+
+    <div style="background: #1B1836; border: 2px solid #2C2850; border-radius: 24px; padding: 18px 16px; box-shadow: 0 5px 0 #14122A;">
+      <div style="font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Gdzie tracisz punkty</div>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin-top: 14px;">
+        <span style="flex: none; width: 92px; font-size: 12.5px; font-weight: 700; color: #D6D2F0;">Doktryny</span>
+        <div style="flex-grow: 1; height: 12px; border-radius: 999px; background: #241F45; overflow: hidden;"><div class="a-grow d1" style="width: 45%; height: 100%; border-radius: 999px; background: #FF4767;"></div></div>
+        <span style="flex: none; width: 34px; text-align: right; font-size: 12px; font-weight: 800; color: #FF8FA3;">45%</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin-top: 11px;">
+        <span style="flex: none; width: 92px; font-size: 12.5px; font-weight: 700; color: #D6D2F0;">ESG</span>
+        <div style="flex-grow: 1; height: 12px; border-radius: 999px; background: #241F45; overflow: hidden;"><div class="a-grow d2" style="width: 62%; height: 100%; border-radius: 999px; background: #FFC043;"></div></div>
+        <span style="flex: none; width: 34px; text-align: right; font-size: 12px; font-weight: 800; color: #FFD98A;">62%</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin-top: 11px;">
+        <span style="flex: none; width: 92px; font-size: 12.5px; font-weight: 700; color: #D6D2F0;">Fiskalna</span>
+        <div style="flex-grow: 1; height: 12px; border-radius: 999px; background: #241F45; overflow: hidden;"><div class="a-grow d3" style="width: 88%; height: 100%; border-radius: 999px; background: #B4FF3A;"></div></div>
+        <span style="flex: none; width: 34px; text-align: right; font-size: 12px; font-weight: 800; color: #C6F58A;">88%</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin-top: 11px;">
+        <span style="flex: none; width: 92px; font-size: 12.5px; font-weight: 700; color: #D6D2F0;">Podstawy</span>
+        <div style="flex-grow: 1; height: 12px; border-radius: 999px; background: #241F45; overflow: hidden;"><div class="a-grow d4" style="width: 95%; height: 100%; border-radius: 999px; background: #B4FF3A;"></div></div>
+        <span style="flex: none; width: 34px; text-align: right; font-size: 12px; font-weight: 800; color: #C6F58A;">95%</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 13px; background: #2A1017; border: 2px solid #5C1F2E; border-radius: 22px; padding: 14px 16px; box-shadow: 0 4px 0 #14060A;">
+      <div style="width: 44px; height: 44px; border-radius: 14px; background: #FF4767; display: flex; align-items: center; justify-content: center; flex: none;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2A0008" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8v5M12 16.5v.5"/><path d="M12 3l9 17H3z"/></svg>
+      </div>
+      <div style="flex-grow: 1;">
+        <div style="font-size: 14.5px; font-weight: 800; color: #FFD4DC;">11 błędów do powtórki</div>
+        <div style="font-size: 12.5px; font-weight: 600; color: #C98FA0; margin-top: 2px;">Wrzucone do osobnej talii fiszek</div>
+      </div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#C98FA0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+    </div>
+
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 0 18px 26px; display: flex; flex-direction: column; gap: 10px;">
+    <a class="a-glow" href="Flashcards.html" style="height: 60px; border-radius: 20px; background: #B4FF3A; box-shadow: 0 5px 0 #7FC400; display: flex; align-items: center; justify-content: center; color: #14210A; font-size: 15px; font-weight: 800; letter-spacing: 1.2px;">POWTÓRZ BŁĘDY</a>
+    <a href="Path.html" style="height: 54px; border-radius: 18px; background: #1B1836; border: 2px solid #2C2850; display: flex; align-items: center; justify-content: center; color: #9B95C9; font-size: 14px; font-weight: 800; letter-spacing: 1px;">WRÓĆ DO ŚCIEŻKI</a>
+  </div>
+
+</div>
+
+</body>
+</html>

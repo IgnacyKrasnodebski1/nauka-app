@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Poziom zaliczony</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#B4FF3A;text-decoration:none}
+a:hover{color:#CBFF6E}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <div class="a-float" style="position: absolute; top: 60px; left: 50%; margin-left: -170px; width: 340px; height: 340px; border-radius: 50%; background: #1E2A10;"></div>
+
+  <div class="a-fall" style="position: absolute; top: 96px; left: 44px; width: 13px; height: 13px; border-radius: 4px; background: #FF2E93;"></div>
+  <div class="a-fall d1" style="position: absolute; top: 148px; right: 38px; width: 11px; height: 11px; border-radius: 50%; background: #22D3EE;"></div>
+  <div class="a-fall d2" style="position: absolute; top: 210px; left: 26px; width: 9px; height: 9px; border-radius: 3px; background: #FFC043;"></div>
+  <div class="a-fall d3" style="position: absolute; top: 76px; right: 96px; width: 10px; height: 10px; border-radius: 50%; background: #B4FF3A;"></div>
+  <div class="a-fall d4" style="position: absolute; top: 262px; right: 24px; width: 12px; height: 12px; border-radius: 4px; background: #FF2E93;"></div>
+  <div class="a-fall d5" style="position: absolute; top: 320px; left: 52px; width: 8px; height: 8px; border-radius: 50%; background: #B4FF3A;"></div>
+  <div class="a-fall d6" style="position: absolute; top: 128px; left: 108px; width: 7px; height: 7px; border-radius: 50%; background: #FFC043;"></div>
+
+  <div style="position: relative; z-index: 1; padding: 70px 22px 0; display: flex; flex-direction: column; align-items: center; gap: 18px; flex-grow: 1;">
+
+    <div style="display: flex; align-items: flex-end; gap: 10px;">
+      <svg class="a-pop d1" width="34" height="34" viewBox="0 0 24 24" fill="#FFC043" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>
+      <svg class="a-pop" width="46" height="46" viewBox="0 0 24 24" fill="#FFC043" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>
+      <svg class="a-pop d3" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#4E4778" stroke-width="2" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>
+    </div>
+
+    <div class="a-pop d2" style="width: 132px; height: 132px; border-radius: 50%; background: #B4FF3A; box-shadow: 0 8px 0 #7FC400; display: flex; align-items: center; justify-content: center;">
+      <svg width="66" height="66" viewBox="0 0 24 24" fill="none" stroke="#14210A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4.5 4.5L19 7"/></svg>
+    </div>
+
+    <div style="text-align: center;">
+      <div class="a-up d3" style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 36px; font-weight: 800; letter-spacing: -1.3px; line-height: 1.05; color: #F4F2FF;">Poziom zaliczony!</div>
+      <div style="font-size: 14.5px; font-weight: 700; color: #9B95C9; margin-top: 8px;">Makro · Polityka fiskalna</div>
+    </div>
+
+    <div style="width: 100%; display: flex; gap: 10px;">
+      <div class="a-up d4" style="flex-grow: 1; background: #1B1836; border: 2px solid #2C2850; border-radius: 20px; padding: 14px 10px; text-align: center; box-shadow: 0 4px 0 #14122A;">
+        <div style="font-size: 10px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: #6E67A8;">XP</div>
+        <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 26px; font-weight: 800; color: #FFC043; margin-top: 4px;">+75</div>
+      </div>
+      <div class="a-up d5" style="flex-grow: 1; background: #1B1836; border: 2px solid #2C2850; border-radius: 20px; padding: 14px 10px; text-align: center; box-shadow: 0 4px 0 #14122A;">
+        <div style="font-size: 10px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: #6E67A8;">Celność</div>
+        <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 26px; font-weight: 800; color: #B4FF3A; margin-top: 4px;">92%</div>
+      </div>
+      <div class="a-up d6" style="flex-grow: 1; background: #1B1836; border: 2px solid #2C2850; border-radius: 20px; padding: 14px 10px; text-align: center; box-shadow: 0 4px 0 #14122A;">
+        <div style="font-size: 10px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: #6E67A8;">Combo</div>
+        <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 26px; font-weight: 800; color: #FF2E93; margin-top: 4px;">x6</div>
+      </div>
+    </div>
+
+    <a href="Streak.html" style="width: 100%; display: flex; align-items: center; gap: 13px; background: #2A1C10; border: 2px solid #5C3812; border-radius: 22px; padding: 14px 16px; box-shadow: 0 4px 0 #1B1208; color: #F4F2FF;">
+      <div style="width: 44px; height: 44px; border-radius: 14px; background: #FF7A1A; display: flex; align-items: center; justify-content: center; flex: none;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="#241000" aria-hidden="true"><path d="M12 2c2.6 3.6 1.1 5.7 0 6.8C10.4 7.2 9 5.6 9 3.5 6.4 5.6 5 8.6 5 12a7 7 0 0 0 14 0c0-3.1-1.6-6.6-7-10z"/></svg>
+      </div>
+      <div style="flex-grow: 1;">
+        <div style="font-size: 15px; font-weight: 800;">8 dni z rzędu</div>
+        <div style="font-size: 12.5px; font-weight: 600; color: #D6B48A; margin-top: 2px;">Cel dzienny zrobiony</div>
+      </div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D6B48A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+    </a>
+
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 0 22px 26px; display: flex; flex-direction: column; gap: 10px;">
+    <a class="a-glow" href="Path.html" style="height: 60px; border-radius: 20px; background: #B4FF3A; box-shadow: 0 5px 0 #7FC400; display: flex; align-items: center; justify-content: center; color: #14210A; font-size: 15px; font-weight: 800; letter-spacing: 1.2px;">DALEJ</a>
+    <a href="Lesson.html" style="height: 54px; border-radius: 18px; background: transparent; display: flex; align-items: center; justify-content: center; color: #9B95C9; font-size: 14px; font-weight: 800; letter-spacing: 1px;">POWTÓRZ POZIOM</a>
+  </div>
+
+</div>
+
+</body>
+</html>

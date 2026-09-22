@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Zestaw stylów</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#B4FF3A;text-decoration:none}
+a:hover{color:#CBFF6E}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+
+
+<div style="width: 860px; height: 844px; box-sizing: border-box; background: #0E0C1C; padding: 36px 40px; display: flex; flex-direction: column; gap: 26px;">
+
+  <div>
+    <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 34px; font-weight: 800; letter-spacing: -1.2px;">Zestaw stylów — Nauka v2</div>
+    <div style="font-size: 14px; font-weight: 600; color: #9B95C9; margin-top: 6px;">Płaskie kolory, grube cienie 4–7 px, promienie 18–30 px. Display: Bricolage Grotesque 800. Tekst: Plus Jakarta Sans 600/800.</div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;">
+    <div style="border-radius: 18px; overflow: hidden; border: 2px solid #2C2850;">
+      <div style="height: 62px; background: #0E0C1C;"></div>
+      <div style="padding: 10px 12px; background: #15122B;"><div style="font-size: 12.5px; font-weight: 800;">Tło</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9;">#0E0C1C</div></div>
+    </div>
+    <div style="border-radius: 18px; overflow: hidden; border: 2px solid #2C2850;">
+      <div style="height: 62px; background: #1B1836;"></div>
+      <div style="padding: 10px 12px; background: #15122B;"><div style="font-size: 12.5px; font-weight: 800;">Karta</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9;">#1B1836</div></div>
+    </div>
+    <div style="border-radius: 18px; overflow: hidden; border: 2px solid #2C2850;">
+      <div style="height: 62px; background: #B4FF3A;"></div>
+      <div style="padding: 10px 12px; background: #15122B;"><div style="font-size: 12.5px; font-weight: 800;">Akcja</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9;">#B4FF3A</div></div>
+    </div>
+    <div style="border-radius: 18px; overflow: hidden; border: 2px solid #2C2850;">
+      <div style="height: 62px; background: #FF2E93;"></div>
+      <div style="padding: 10px 12px; background: #15122B;"><div style="font-size: 12.5px; font-weight: 800;">Makro</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9;">#FF2E93</div></div>
+    </div>
+    <div style="border-radius: 18px; overflow: hidden; border: 2px solid #2C2850;">
+      <div style="height: 62px; background: #FFA023;"></div>
+      <div style="padding: 10px 12px; background: #15122B;"><div style="font-size: 12.5px; font-weight: 800;">Krypto / seria</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9;">#FFA023</div></div>
+    </div>
+    <div style="border-radius: 18px; overflow: hidden; border: 2px solid #2C2850;">
+      <div style="height: 62px; background: #22D3EE;"></div>
+      <div style="padding: 10px 12px; background: #15122B;"><div style="font-size: 12.5px; font-weight: 800;">Info / po ludzku</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9;">#22D3EE</div></div>
+    </div>
+    <div style="border-radius: 18px; overflow: hidden; border: 2px solid #2C2850;">
+      <div style="height: 62px; background: #FFC043;"></div>
+      <div style="padding: 10px 12px; background: #15122B;"><div style="font-size: 12.5px; font-weight: 800;">XP / mnemo</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9;">#FFC043</div></div>
+    </div>
+    <div style="border-radius: 18px; overflow: hidden; border: 2px solid #2C2850;">
+      <div style="height: 62px; background: #FF4767;"></div>
+      <div style="padding: 10px 12px; background: #15122B;"><div style="font-size: 12.5px; font-weight: 800;">Błąd / życia</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9;">#FF4767</div></div>
+    </div>
+  </div>
+
+  <div style="display: flex; gap: 26px;">
+
+    <div style="flex-grow: 1; background: #15122B; border: 2px solid #2C2850; border-radius: 24px; padding: 20px;">
+      <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; color: #6E67A8;">Przyciski</div>
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-top: 14px;">
+        <button class="a-glow" type="button" style="height: 54px; border: none; border-radius: 18px; background: #B4FF3A; box-shadow: 0 5px 0 #7FC400; color: #14210A; font-family: inherit; font-size: 14px; font-weight: 800; letter-spacing: 1.2px; cursor: pointer;">GŁÓWNY</button>
+        <button type="button" style="height: 54px; border-radius: 18px; background: #1B1836; border: 2px solid #2C2850; box-shadow: 0 5px 0 #14122A; color: #D6D2F0; font-family: inherit; font-size: 14px; font-weight: 800; letter-spacing: 1.2px; cursor: pointer;">DRUGI</button>
+        <button type="button" disabled style="height: 54px; border: none; border-radius: 18px; background: #201C3E; color: #5C568F; font-family: inherit; font-size: 14px; font-weight: 800; letter-spacing: 1.2px;">NIEAKTYWNY</button>
+        <button type="button" style="height: 54px; border: none; border-radius: 18px; background: #FF4767; box-shadow: 0 5px 0 #A8203A; color: #2A0008; font-family: inherit; font-size: 14px; font-weight: 800; letter-spacing: 1.2px; cursor: pointer;">BŁĄD</button>
+      </div>
+    </div>
+
+    <div style="flex-grow: 1; background: #15122B; border: 2px solid #2C2850; border-radius: 24px; padding: 20px;">
+      <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; color: #6E67A8;">Węzły ścieżki</div>
+      <div style="display: flex; gap: 20px; margin-top: 20px; align-items: flex-start;">
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+          <div style="width: 68px; height: 68px; border-radius: 50%; background: #FF2E93; box-shadow: 0 6px 0 #B01460; display: flex; align-items: center; justify-content: center;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#200410" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4.5 4.5L19 7"/></svg></div>
+          <span style="font-size: 11.5px; font-weight: 800; color: #9B95C9;">zrobione</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+          <div class="a-pulse" style="width: 68px; height: 68px; border-radius: 50%; background: #B4FF3A; box-shadow: 0 6px 0 #7FC400; display: flex; align-items: center; justify-content: center;"><svg width="30" height="30" viewBox="0 0 24 24" fill="#14210A" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg></div>
+          <span style="font-size: 11.5px; font-weight: 800; color: #9B95C9;">teraz</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+          <div style="width: 68px; height: 68px; border-radius: 50%; background: #1B1836; border: 2px solid #2C2850; box-shadow: 0 6px 0 #14122A; display: flex; align-items: center; justify-content: center;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#5C568F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5"/><path d="M8.5 11V8a3.5 3.5 0 0 1 7 0v3"/></svg></div>
+          <span style="font-size: 11.5px; font-weight: 800; color: #9B95C9;">zamknięte</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 10px;">
+          <div class="a-sway" style="width: 68px; height: 68px; border-radius: 18px; background: #1B1836; border: 2px solid #4A3F12; box-shadow: 0 6px 0 #14122A; display: flex; align-items: center; justify-content: center;"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#FFC043" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="18" height="11" rx="2.5"/><path d="M3 13h18M12 9v11M7 9V7a5 5 0 0 1 5 2 5 5 0 0 1 5-2v2"/></svg></div>
+          <span style="font-size: 11.5px; font-weight: 800; color: #9B95C9;">skrzynia</span>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex-grow: 1; background: #15122B; border: 2px solid #2C2850; border-radius: 24px; padding: 20px;">
+      <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; color: #6E67A8;">Plakietki</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px;">
+        <span style="padding: 7px 13px; border-radius: 999px; background: #2A2110; color: #FFC043; font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;">Combo x4</span>
+        <span style="padding: 7px 13px; border-radius: 999px; background: #2E1533; color: #FF7FBE; font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;">Mikro-dawka</span>
+        <span style="padding: 7px 13px; border-radius: 999px; background: #0E2430; color: #22D3EE; font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;">Po ludzku</span>
+        <span style="padding: 7px 13px; border-radius: 999px; background: #2A1017; color: #FF8FA3; font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;">Combo zerwane</span>
+        <span style="padding: 7px 13px; border-radius: 999px; background: #1B1836; border: 2px solid #2C2850; color: #9B95C9; font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;">Pytanie 2 z 5</span>
+      </div>
+      <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.3px; text-transform: uppercase; color: #6E67A8; margin-top: 22px;">Typografia</div>
+      <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-top: 10px;">Nagłówek 30/800</div>
+      <div style="font-size: 15px; font-weight: 600; color: #D6D2F0; margin-top: 6px;">Treść 15/600 — zażółć gęślą jaźń.</div>
+      <div style="font-size: 12.5px; font-weight: 700; color: #9B95C9; margin-top: 4px;">Podpis 12,5/700</div>
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>

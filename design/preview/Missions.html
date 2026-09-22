@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Misje</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#B4FF3A;text-decoration:none}
+a:hover{color:#CBFF6E}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <div class="a-float" style="position: absolute; top: -110px; right: -80px; width: 260px; height: 260px; border-radius: 50%; background: #2A2110;"></div>
+
+  <div style="position: relative; z-index: 1; padding: 54px 18px 0; display: flex; flex-direction: column; gap: 16px; flex-grow: 1;">
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="Main.html" aria-label="Wróć" style="width: 40px; height: 40px; border-radius: 50%; background: #1B1836; border: 2px solid #2C2850; display: flex; align-items: center; justify-content: center; flex: none;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B95C9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+      </a>
+      <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.4px;">Misje</div>
+    </div>
+
+    <div class="a-up" style="display: flex; align-items: center; justify-content: space-between;">
+      <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Dzienne</div>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B95C9" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span class="a-blink" style="font-size: 12px; font-weight: 800; color: #9B95C9;">zostało 7 h 12 min</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 11px;">
+
+      <div class="a-up d1" style="display: flex; align-items: center; gap: 13px; background: #1F2A12; border: 2px solid #4E6B24; border-radius: 22px; padding: 14px; box-shadow: 0 4px 0 #16200B;">
+        <div class="a-pop d2" style="width: 46px; height: 46px; border-radius: 15px; background: #B4FF3A; display: flex; align-items: center; justify-content: center; flex: none;">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#14210A" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4.5 4.5L19 7"/></svg>
+        </div>
+        <div style="flex-grow: 1; min-width: 0;">
+          <div style="font-size: 14px; font-weight: 800; color: #E8FFC7;">Zdobądź 100 XP</div>
+          <div style="font-size: 12px; font-weight: 700; color: #A8C98A; margin-top: 4px;">zrobione</div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 4px; flex: none;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="#22D3EE" aria-hidden="true"><path d="M12 2l7 6-7 14-7-14z"/></svg>
+          <span style="font-size: 13px; font-weight: 800; color: #7EE8FA;">20</span>
+        </div>
+      </div>
+
+      <div class="a-up d2" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 22px; padding: 14px; box-shadow: 0 4px 0 #14122A;">
+        <div style="display: flex; align-items: center; gap: 13px;">
+          <div style="width: 46px; height: 46px; border-radius: 15px; background: #2E1533; display: flex; align-items: center; justify-content: center; flex: none;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF2E93" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>
+          </div>
+          <div style="flex-grow: 1; min-width: 0;">
+            <div style="font-size: 14px; font-weight: 800;">15 poprawnych bez pomyłki</div>
+            <div style="font-size: 12px; font-weight: 700; color: #9B95C9; margin-top: 3px;">9 z 15</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 4px; flex: none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#22D3EE" aria-hidden="true"><path d="M12 2l7 6-7 14-7-14z"/></svg>
+            <span style="font-size: 13px; font-weight: 800; color: #7EE8FA;">30</span>
+          </div>
+        </div>
+        <div style="height: 10px; border-radius: 999px; background: #241F45; overflow: hidden; margin-top: 12px;"><div class="a-grow d2" style="width: 60%; height: 100%; border-radius: 999px; background: #FF2E93;"></div></div>
+      </div>
+
+      <div class="a-up d3" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 22px; padding: 14px; box-shadow: 0 4px 0 #14122A;">
+        <div style="display: flex; align-items: center; gap: 13px;">
+          <div style="width: 46px; height: 46px; border-radius: 15px; background: #0E2430; display: flex; align-items: center; justify-content: center; flex: none;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 1 1 2.5 5.8M4 12V7M4 12h5"/></svg>
+          </div>
+          <div style="flex-grow: 1; min-width: 0;">
+            <div style="font-size: 14px; font-weight: 800;">Powtórz 20 pojęć</div>
+            <div style="font-size: 12px; font-weight: 700; color: #9B95C9; margin-top: 3px;">6 z 20</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 4px; flex: none;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="#22D3EE" aria-hidden="true"><path d="M12 2l7 6-7 14-7-14z"/></svg>
+            <span style="font-size: 13px; font-weight: 800; color: #7EE8FA;">25</span>
+          </div>
+        </div>
+        <div style="height: 10px; border-radius: 999px; background: #241F45; overflow: hidden; margin-top: 12px;"><div class="a-grow d3" style="width: 30%; height: 100%; border-radius: 999px; background: #22D3EE;"></div></div>
+      </div>
+
+    </div>
+
+    <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Tygodniowa</div>
+
+    <div class="a-up d4" style="background: #2A2110; border: 2px solid #574319; border-radius: 24px; padding: 16px; box-shadow: 0 5px 0 #1A1409;">
+      <div style="display: flex; align-items: center; gap: 13px;">
+        <div class="a-sway" style="width: 54px; height: 54px; border-radius: 17px; background: #FFC043; display: flex; align-items: center; justify-content: center; flex: none;">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#241800" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="9" width="18" height="11" rx="2.5"/><path d="M3 13h18M12 9v11M7 9V7a5 5 0 0 1 5 2 5 5 0 0 1 5-2v2"/></svg>
+        </div>
+        <div style="flex-grow: 1;">
+          <div style="font-size: 15px; font-weight: 800; color: #FFE3C0;">Zalicz 5 poziomów</div>
+          <div style="font-size: 12.5px; font-weight: 700; color: #D6B48A; margin-top: 3px;">3 z 5 · skrzynia w nagrodę</div>
+        </div>
+      </div>
+      <div style="height: 12px; border-radius: 999px; background: #1A1409; overflow: hidden; margin-top: 13px;"><div class="a-grow d4" style="width: 60%; height: 100%; border-radius: 999px; background: #FFC043;"></div></div>
+    </div>
+
+    <div class="a-up d5" style="display: flex; align-items: center; gap: 12px; background: #1B1836; border: 2px dashed #3E3870; border-radius: 20px; padding: 13px 15px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6E67A8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16v.5"/></svg>
+      <div style="font-size: 12.5px; font-weight: 600; color: #9B95C9; line-height: 1.4;">Misje odświeżają się o północy. Niedokończone przepadają.</div>
+    </div>
+
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 14px 18px 26px;">
+    <a href="Path.html" class="a-glow" style="height: 58px; border-radius: 18px; background: #B4FF3A; box-shadow: 0 5px 0 #7FC400; display: flex; align-items: center; justify-content: center; color: #14210A; font-size: 15px; font-weight: 800; letter-spacing: 1.2px;">DOKOŃCZ MISJE</a>
+  </div>
+
+</div>
+
+</body>
+</html>
