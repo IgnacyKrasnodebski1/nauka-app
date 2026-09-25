@@ -2,6 +2,7 @@
  * Daily session + exam study plan. Pure functions shared by web and mobile.
  */
 import { allFlashcards, allQuiz, shuffle } from "./finalize.js";
+import { shuffleAnswers } from "./quiz-quality.js";
 import { isLevelUnlocked, levelProgress } from "./gamification.js";
 import { isDue, type SrsCard } from "./srs.js";
 import type { Flashcard, QuizQuestion, SubjectProgress, Topic, TopicContent } from "./types.js";
@@ -57,7 +58,7 @@ export function buildDailySession(
       for (const qi of w[l.id] ?? []) {
         const q = l.quiz[qi];
         if (q && weakCount < 6) {
-          items.push({ topicId: t.id, kind: "weak", question: { ...q, levelId: l.id } });
+          items.push({ topicId: t.id, kind: "weak", question: { ...shuffleAnswers(q), levelId: l.id } });
           weakCount++;
         }
       }

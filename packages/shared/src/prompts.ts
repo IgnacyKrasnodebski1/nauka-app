@@ -17,6 +17,7 @@ const COMMON_RULES = `STRUKTURA
 - Mini-gry: "match" (pary termin↔znaczenie, 4–8 par), "cloze" (zdanie z luką ___ + 3–4 opcje), "truefalse" (5–10 zdań prawda/fałsz z wyjaśnieniem), "order" (ułóż kroki/etapy w kolejności, 3–6 kroków). W obiekcie gry wypełnij TYLKO pola swojego typu; pozostałe tablice zostaw puste, a nieużywane stringi puste.
 - Dla tematu językowego: flashcards = słówko → tłumaczenie + przykład, quiz = tłumaczenia/gramatyka, match = słówko↔znaczenie.
 - Każde pytanie ma dokładnie jedną poprawną odpowiedź i sensowne, nie-oczywiste dystraktory. Pole "e" (wyjaśnienie) zawsze tłumaczy DLACZEGO odpowiedź jest poprawna, w 1–2 zdaniach.
+- ANTY-ZGADYWANIE (ważne): wszystkie opcje odpowiedzi mają PODOBNĄ DŁUGOŚĆ (różnica max ±20% znaków) i ten sam poziom szczegółowości. Poprawna odpowiedź NIE może być najdłuższa, najbardziej precyzyjna ani najbardziej „podręcznikowa” — dystraktory muszą być równie konkretne, prawdopodobne i gramatycznie równoległe. Zakazane: „wszystkie powyższe”, „żadne z powyższych”, dystraktory absurdalne, dystraktory dużo krótsze od poprawnej. Rozkładaj poprawną odpowiedź losowo między pozycje.
 - info_html: 2–4 bloki <div class="zbox"><h3>…</h3><p>…</p></div>: zakres tematu, co najważniejsze na sprawdzian, cheat-sheet.
 - name: nazwa tematu (np. "Fotosynteza", "Tryby warunkowe", "Polityka fiskalna"). short: max 12 znaków. emoji: jedno pasujące emoji. category: jedna z: matematyka, fizyka, chemia, biologia, geografia, historia, polski, wos, angielski, inny-język, informatyka, ekonomia, prawo, psychologia, medycyna, technika, inne.
 
@@ -85,3 +86,10 @@ Nie wchodź w zakres pozostałych poziomów. Zwróć feed, flashcards, quiz i ga
 
 /** System prompt for the in-lesson tutor chat ("wytłumacz mi to"). */
 export const TUTOR_SYSTEM_PROMPT = `Jesteś korepetytorem w aplikacji Recall. Odpowiadasz krótko (max 6 zdań), po polsku, luźno ale konkretnie. Tłumaczysz na przykładach. Jeśli uczeń pyta o coś spoza materiału, odpowiedz, ale zaznacz, że to poza zakresem. Nie podawaj gotowych odpowiedzi do pytań quizowych — naprowadzaj.`;
+
+/** Prompt for the distractor-rewrite pass (cheap model). Input: JSON of the biased questions; output: same shape. */
+export const FIX_DISTRACTORS_PROMPT = `Dostajesz listę pytań quizowych (JSON: q, a[], c, e), w których poprawna odpowiedź da się odgadnąć po długości (jest wyraźnie dłuższa lub krótsza od pozostałych). Przepisz WYŁĄCZNIE dystraktory (opcje inne niż a[c]) tak, aby:
+- każda opcja miała długość zbliżoną do poprawnej (±15% znaków) i ten sam poziom szczegółowości,
+- dystraktory były merytorycznie błędne, ale prawdopodobne i równoległe gramatycznie,
+- treść pytania, poprawna odpowiedź (tekst a[c]), indeks c i wyjaśnienie e pozostały bez zmian.
+Zwróć tę samą listę pytań, w tej samej kolejności, ze zmienionymi tylko dystraktorami.`;

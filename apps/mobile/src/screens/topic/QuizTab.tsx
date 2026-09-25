@@ -1,4 +1,4 @@
-import type { QuizQuestion, Topic } from "@nauka/shared";
+import { shuffleAnswers, type QuizQuestion, type Topic } from "@nauka/shared";
 import React, { useMemo, useState } from "react";
 import { ScrollView, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -26,7 +26,7 @@ export function QuizTab({ topic }: { topic: Topic }) {
 
   const list = useMemo<Q[]>(() => {
     const src = filter === "all" ? topic.levels : topic.levels.filter((l) => l.id === filter);
-    return shuffle(src.flatMap((l) => l.quiz.map((q) => ({ ...q, lvl: l.title }))));
+    return shuffle(src.flatMap((l) => l.quiz.map((q) => ({ ...shuffleAnswers(q), lvl: l.title }))));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [topic, filter, seed]);
 

@@ -18,3 +18,4 @@ export * from "./path-layout.js";
 export * from "./sfx.js";
 export * from "./mascot.js";
 export * from "./logo.js";
+export * from "./quiz-quality.js";

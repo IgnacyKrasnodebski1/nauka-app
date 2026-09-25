@@ -2,6 +2,7 @@ import { TopicContentSchema, type GeneratedTopic } from "./schema.js";
 import type { MiniGame, TopicContent, Stage } from "./types.js";
 
 import { subjectHue } from "./theme.js";
+import { shuffleAnswers } from "./quiz-quality.js";
 
 /**
  * Subject/topic palette: [accent, accent2].
@@ -69,7 +70,9 @@ export function finalizeGenerated(gen: GeneratedTopic, stage: Stage, opts: { lan
         .filter((f) => f.title && f.body)
         .map((f) => ({ title: f.title, body: f.body, real: f.real || undefined, mnemo: f.mnemo || undefined })),
       flashcards: l.flashcards.filter((c) => c.t && c.d),
-      quiz: l.quiz.filter((q) => q.q && q.a.length >= 2 && q.c >= 0 && q.c < q.a.length && q.e).map((q) => ({ ...q, a: q.a.slice(0, 5) })),
+      quiz: l.quiz
+        .filter((q) => q.q && q.a.length >= 2 && q.c >= 0 && q.c < q.a.length && q.e)
+        .map((q) => shuffleAnswers({ ...q, a: q.a.slice(0, 5), c: Math.min(q.c, 4) })),
       games: l.games.map(convertGame).filter((g): g is MiniGame => g !== null),
     }))
     .filter((l) => l.quiz.length > 0 || l.flashcards.length > 0 || l.feed.length > 0);
@@ -93,8 +96,9 @@ export function finalizeGenerated(gen: GeneratedTopic, stage: Stage, opts: { lan
 export function allFlashcards(s: Pick<TopicContent, "levels">) {
   return s.levels.flatMap((l) => l.flashcards.map((c, i) => ({ ...c, lvl: l.title, levelId: l.id, index: i })));
 }
+/** Every quiz question of a topic, with answer positions re-shuffled for this call (anti-guessing). */
 export function allQuiz(s: Pick<TopicContent, "levels">) {
-  return s.levels.flatMap((l) => l.quiz.map((q) => ({ ...q, lvl: l.title, levelId: l.id })));
+  return s.levels.flatMap((l) => l.quiz.map((q, qi) => ({ ...shuffleAnswers(q), lvl: l.title, levelId: l.id, qi })));
 }
 export function allGames(s: Pick<TopicContent, "levels">) {
   return s.levels.flatMap((l) => (l.games ?? []).map((g) => ({ ...g, lvl: l.title, levelId: l.id })));

@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { applyQuizResult, comboMultiplier, comboStep, comboTierHit, comboXp, emptyCombo, GEMS, markWeak, nextComboAt, shuffle, XP, type ComboState, type MiniGame, type QuizQuestion, type Subject, type Topic } from "@nauka/shared";
+import { applyQuizResult, comboMultiplier, comboStep, comboTierHit, comboXp, emptyCombo, GEMS, markWeak, nextComboAt, shuffle, shuffleAnswers, XP, type ComboState, type MiniGame, type QuizQuestion, type Subject, type Topic } from "@nauka/shared";
 import { useApp } from "@/lib/store/app-context";
 import { useMounted } from "@/lib/use-mounted";
 import { burst } from "@/lib/confetti";
@@ -51,7 +51,7 @@ export function Lesson({ topic, subject, levelId }: { topic: Topic; subject: Sub
   const games = useMemo<MiniGame[]>(() => (level.games ?? []).slice(0, 4), [level]);
   const [round, setRound] = useState(0);
   // keep original indices so wrong answers can be stored in progress.weak
-  const quiz = useMemo<(QuizQuestion & { qi: number })[]>(() => shuffle(level.quiz.map((q, qi) => ({ ...q, qi }))).slice(0, Math.min(8, level.quiz.length)), [level, round]); // eslint-disable-line react-hooks/exhaustive-deps
+  const quiz = useMemo<(QuizQuestion & { qi: number })[]>(() => shuffle(level.quiz.map((q, qi) => ({ ...shuffleAnswers(q), qi }))).slice(0, Math.min(8, level.quiz.length)), [level, round]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const firstPhase = (): Phase => (feed.length ? "feed" : cards.length ? "cards" : games.length ? "games" : quiz.length ? "quiz" : "result");
   const [phase, setPhase] = useState<Phase>(firstPhase);

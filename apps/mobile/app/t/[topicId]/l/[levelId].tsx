@@ -1,4 +1,4 @@
-import { GEMS, XP, applyQuizResult, cardKey, comboMultiplier, comboStep, comboTierHit, comboXp, emptyCombo, levelProgress, newCard, nextComboAt, review, type Level, type MiniGame, type QuizQuestion, type Topic } from "@nauka/shared";
+import { GEMS, XP, applyQuizResult, shuffleAnswers, cardKey, comboMultiplier, comboStep, comboTierHit, comboXp, emptyCombo, levelProgress, newCard, nextComboAt, review, type Level, type MiniGame, type QuizQuestion, type Topic } from "@nauka/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Platform, ScrollView, StyleSheet, View } from "react-native";
@@ -72,7 +72,7 @@ function Lesson({ topic, level, onClose, startPhase }: { topic: Topic; level: Le
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const games = useMemo<MiniGame[]>(() => gamesForLevel(level), [level]);
-  const quiz = useMemo<QRef[]>(() => shuffle(level.quiz.map((q, qi) => ({ ...q, qi }))).slice(0, Math.min(QUIZ_N, level.quiz.length)), [level]);
+  const quiz = useMemo<QRef[]>(() => shuffle(level.quiz.map((q, qi) => ({ ...shuffleAnswers(q), qi }))).slice(0, Math.min(QUIZ_N, level.quiz.length)), [level]);
   const cards = level.flashcards;
   const deckCards = useMemo(() => cards.map((c, i) => ({ key: cardKey(level.id, i), t: c.t, d: c.d, tag: `fiszka ${i + 1} / ${cards.length}` })), [cards, level.id]);
 

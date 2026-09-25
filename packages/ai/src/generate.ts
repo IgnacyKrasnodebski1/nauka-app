@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import {
   GENERATION_SYSTEM_PROMPT,
@@ -8,6 +9,10 @@ import {
   GenerationOptionsSchema,
   OutlineSchema,
   LevelGenSchema,
+  FIX_DISTRACTORS_PROMPT,
+  needsLengthFix,
+  biasedQuestionIndexes,
+  answerLengthBias,
   buildGenerationUserPrompt,
   finalizeGenerated,
   type GeneratedTopic,
@@ -34,6 +39,8 @@ export interface GenerateResult {
   model: string;
   usage: { input: number; output: number };
   demo: boolean;
+  /** quiz quality: how many levels needed a distractor rewrite and the residual length bias */
+  quality: { levelsFixed: number; lengthBias: number };
 }
 
 export class GenerationError extends Error {
@@ -70,7 +77,7 @@ export async function generateTopic(input: GenerateInput): Promise<GenerateResul
 
   if (!aiConfigured()) {
     const gen = demoGenerated(options.hint || input.text?.split("\n")[0] || "Demo", options.levels ?? 3);
-    return { content: finalizeGenerated(gen, options.stage, { lang: options.lang }), category: gen.category, model: "demo", usage: { input: 0, output: 0 }, demo: true };
+    return { content: finalizeGenerated(gen, options.stage, { lang: options.lang }), category: gen.category, model: "demo", usage: { input: 0, output: 0 }, demo: true, quality: { levelsFixed: 0, lengthBias: 0 } };
   }
 
   const { blocks, summary } = mode === "materials" ? materialsToBlocks(input.materials, input.text) : { blocks: [] as Anthropic.Beta.BetaContentBlockParam[], summary: "brak" };
@@ -132,6 +139,26 @@ export async function generateTopic(input: GenerateInput): Promise<GenerateResul
     outline.levels.map((_, i) => call<LevelGen>(`${basePrompt}\n\n${levelInstructions(outline, i)}`, betaZodOutputFormat(LevelGenSchema), 16000, (t) => safeParse(LevelGenSchema, t))),
   );
 
+  // ---- phase 3: anti-guessing — rewrite distractors where the correct option stands out by length
+  input.onProgress?.("levels", "sprawdzam pytania");
+  let levelsFixed = 0;
+  await Promise.all(
+    levels.map(async (lv) => {
+      if (!needsLengthFix(lv.quiz)) return;
+      const idxs = biasedQuestionIndexes(lv.quiz);
+      const fixed = await fixDistractors(client, lv.quiz.filter((_, i) => idxs.includes(i)));
+      if (!fixed) return;
+      idxs.forEach((qi, k) => {
+        const f = fixed[k];
+        const orig = lv.quiz[qi]!;
+        // accept only when the correct text is intact and option count unchanged
+        if (f && f.a.length === orig.a.length && f.a[orig.c] === orig.a[orig.c]) lv.quiz[qi] = { ...orig, a: f.a };
+      });
+      levelsFixed++;
+    }),
+  );
+  const lengthBias = Math.max(0, ...levels.map((lv) => answerLengthBias(lv.quiz).longest));
+
   const gen: GeneratedTopic = {
     name: outline.name,
     short: outline.short,
@@ -143,7 +170,32 @@ export async function generateTopic(input: GenerateInput): Promise<GenerateResul
   };
   input.onProgress?.("done");
   const content = finalizeGenerated(gen, options.stage, { lang: options.lang });
-  return { content, category: outline.category || "inne", model: servedModel, usage, demo: false };
+  return { content, category: outline.category || "inne", model: servedModel, usage, demo: false, quality: { levelsFixed, lengthBias } };
+
+  /** Cheap targeted rewrite of distractors (keeps q/c/e). Returns null on any failure — the original quiz stays. */
+  async function fixDistractors(c: Anthropic, questions: { q: string; a: string[]; c: number; e: string }[]) {
+    if (!questions.length) return null;
+    const FixSchema = z.object({ questions: z.array(z.object({ q: z.string(), a: z.array(z.string()), c: z.number(), e: z.string() })) });
+    try {
+      const msg = await c.beta.messages
+        .stream({
+          model: process.env.RECALL_AI_FIX_MODEL || "claude-sonnet-5",
+          max_tokens: 8000,
+          betas: ["server-side-fallback-2026-07-01"],
+          fallbacks: "default",
+          thinking: { type: "adaptive" },
+          output_config: { effort: "low", format: betaZodOutputFormat(FixSchema) },
+          system: FIX_DISTRACTORS_PROMPT,
+          messages: [{ role: "user", content: JSON.stringify({ questions }) }],
+        })
+        .finalMessage();
+      usage = addUsage(usage, msg);
+      const out = (msg.parsed_output as z.infer<typeof FixSchema> | null)?.questions;
+      return out && out.length === questions.length ? out : null;
+    } catch {
+      return null;
+    }
+  }
 }
 
 function safeParse<T>(schema: { parse: (v: unknown) => T }, text: string): T | null {
