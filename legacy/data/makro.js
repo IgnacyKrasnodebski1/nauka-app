@@ -49,6 +49,18 @@ window.SUBJECTS.push({
       {q:"Ile rodzajów instrumentów ma polityka społeczna?",a:["3: prawne, kadrowe, militarne","4: ekonomiczne, prawne, informacyjne, kadrowe","2: podatki i zasiłki","5: w tym cyfrowe"],c:1,e:"Cztery: KASA, PRAWO, GADANIE, LUDZIE."},
       {q:"Co znaczy, że człowiek nie jest 'homo economicus'?",a:["Że nie zna ekonomii","Że działa na heurystykach i biasach, nie jak idealny kalkulator","Że zawsze decyduje racjonalnie","Że nie płaci podatków"],c:1,e:"Racjonalność ograniczona, heurystyki, status quo bias, normy."},
       {q:"Trzy sfery zrównoważonego rozwoju to:",a:["polityczna, militarna, kulturowa","ekonomiczna, społeczna, ekologiczna","lokalna, krajowa, globalna","prawna, fiskalna, monetarna"],c:1,e:"Równowaga 3 sfer — rozwój niezagrażający przyszłym pokoleniom."}
+     ],
+     /* krok 5: zadania (opcjonalne) — mieszane z pytaniami quizu w sesji poziomu; src = źródło (na razie tylko przepuszczane) */
+     tasks:[
+      {type:"fill",text:"Polityka społeczna ma cztery instrumenty: ekonomiczne, {0}, informacyjne oraz {1}.",blanks:["prawne","kadrowe"],bank:["militarne","cyfrowe","fiskalne","medialne"],hint:"KASA · PRAWO · GADANIE · LUDZIE",e:"Cztery dźwignie państwa: ekonomiczne (kasa), prawne, informacyjne (gadanie) i kadrowe (ludzie).",src:{material:"cz1",page:12,quote:"Instrumenty polityki społecznej: ekonomiczne, prawne, informacyjne, kadrowe."}},
+      {type:"order",title:"Etapy polityki społecznej",items:["Diagnoza","Analiza przyczyn","Propozycje","Decyzja","Legislacja","Wdrożenie","Ewaluacja"],e:"Od rozpoznania problemu do sprawdzenia, czy rozwiązanie zadziałało — ewaluacja zamyka cykl."},
+      {type:"sort",title:"Który to instrument?",buckets:[{name:"Ekonomiczne",items:["zasiłki","ulga podatkowa"]},{name:"Prawne",items:["Kodeks pracy"]},{name:"Informacyjne",items:["kampania społeczna"]},{name:"Kadrowe",items:["pracownik socjalny"]}],e:"Pieniądze, przepisy, komunikacja, ludzie — każdy instrument działa inaczej."},
+      {type:"tf",seconds:45,statements:[
+        {s:"Zrównoważony rozwój opiera się na trzech sferach: ekonomicznej, społecznej i ekologicznej.",v:true,e:"EKO-SPO-EKO — jak trzy nogi stołka."},
+        {s:"Kwestia społeczna to pech pojedynczej osoby, a nie problem systemowy.",v:false,e:"Kwestia społeczna to wspólne, systemowe podłoże problemów (Rysz-Kowalczyk)."},
+        {s:"Realny człowiek działa jak homo economicus — zawsze racjonalnie liczy zyski i straty.",v:false,e:"Racjonalność ograniczona, heurystyki, status quo bias."},
+        {s:"Polityka makroekonomiczna zarządza gospodarką jako całością (dług, stopy procentowe).",v:true,e:"Makro pilnuje finansów państwa, polityka społeczna — warunków życia ludzi."}
+      ]}
      ]},
     /* ---------------- L2 ---------------- */
     {id:"l2",title:"Doktryny",emoji:"🏛️",
@@ -71,6 +83,10 @@ window.SUBJECTS.push({
       {q:"Hasło Społecznej Gospodarki Rynkowej (Erhard):",a:["'Równość przez redystrybucję'","'Dobrobyt przez konkurencję'","'Państwo ponad wszystko'","'Wolny rynek bez granic'"],c:1,e:"SGR = wdrożenie ordoliberalizmu, fundament: subsydiarność."},
       {q:"Co krytycy SGR zarzucają państwu opiekuńczemu?",a:["Że jest za tanie","Że generuje moral hazard i może stać się 'państwem długu'","Że za mało redystrybuuje","Że nie istnieje"],c:1,e:"Moral hazard, dezaktywizacja, ewolucja w 'państwo długu' (Streeck)."},
       {q:"Ile zasad konstytuujących wymienił Eucken?",a:["3","5","7","10"],c:2,e:"Siedem fundamentów ładu konkurencyjnego."}
+     ],
+     tasks:[
+      {type:"match",title:"Doktryna i jej sedno",pairs:[["Ordoliberalizm","państwo ustala reguły gry"],["Społeczna gospodarka rynkowa","dobrobyt przez konkurencję"],["Państwo opiekuńcze","szeroka redystrybucja i transfery"],["Subsydiarność","najpierw jednostka i rodzina"]],e:"Ordoliberalizm — państwo jak sędzia na meczu; SGR (Erhard) — dobrobyt przez konkurencję; państwo opiekuńcze — transfery; subsydiarność — pomoc dopiero, gdy rodzina nie da rady."},
+      {type:"fill",text:"Krytyka ordoliberalna państwa opiekuńczego: szeroka redystrybucja rodzi {0}, a „państwo podatków” zmienia się w „państwo {1}”.",blanks:["moral hazard","długu"],bank:["konkurencję","subsydiarność","dobrobytu","ładu"],hint:"Streeck: skąd bierze się pieniądz, gdy podatki nie wystarczają?",e:"Moral hazard — ludzie przywykają do transferów; „państwo podatków” zmienia się w „państwo długu” (Streeck)."}
      ]},
     /* ---------------- L3 ---------------- */
     {id:"l3",title:"Polityka fiskalna",emoji:"💰",
@@ -92,6 +108,16 @@ window.SUBJECTS.push({
       {q:"Czym jest 'deficit bias'?",a:["Błąd księgowy","Systemowa skłonność polityków do deficytu (głosy teraz, dług na przyszłość)","Zakaz zadłużania państwa","Nadwyżka budżetowa"],c:1,e:"Wydatki dają głosy natychmiast, koszty długu spadają na przyszłe pokolenia."},
       {q:"Trójkąt wiarygodności fiskalnej to:",a:["podatki, wydatki, dług","reguły fiskalne, niezależne instytucje, przejrzystość budżetu","ZUS, NBP, GUS","deficyt, inflacja, bezrobocie"],c:1,e:"Reguły + Rady Fiskalne + przejrzystość."},
       {q:"Magiczny Czworokąt celów makro (Kaldor) NIE obejmuje:",a:["wzrostu PKB","pełnego zatrudnienia","stabilności cen","maksymalizacji eksportu zbrojeniowego"],c:3,e:"4 cele: wzrost, zatrudnienie, stabilne ceny, równowaga bilansu płatniczego."}
+     ],
+     tasks:[
+      {type:"tf",seconds:60,statements:[
+        {s:"Pakt Stabilności i Wzrostu UE dopuszcza deficyt do 3% PKB.",v:true,e:"3% deficytu i 60% długu — te dwie liczby warto znać na pamięć."},
+        {s:"Limit długu publicznego w Pakcie Stabilności to 90% PKB.",v:false,e:"Limit to 60% PKB."},
+        {s:"Magiczny czworokąt Kaldora to: wzrost, pełne zatrudnienie, stabilne ceny i równowaga bilansu płatniczego.",v:true,e:"WZROST · PRACA · CENY · BILANS (Kaldor 1967)."},
+        {s:"Deficit bias to skłonność demokracji do nadwyżek budżetowych.",v:false,e:"Odwrotnie: do deficytu — korzyści teraz, koszty dla przyszłych pokoleń."},
+        {s:"Wydatki przez BGK i PFR nie wchodzą do deficytu budżetu, ale liczą się do długu sektora.",v:true,e:"Tak wygląda wypychanie długu poza budżet — rynki i tak to widzą."}
+      ]},
+      {type:"sort",title:"Trójkąt wiarygodności fiskalnej",buckets:[{name:"Reguły fiskalne",items:["limit 3% deficytu","limit 60% długu"]},{name:"Niezależne instytucje",items:["Rada Fiskalna"]},{name:"Przejrzystość budżetu",items:["jawne dane o długu","czytelna klasyfikacja wydatków"]}],e:"Reguły + niezależne instytucje + przejrzystość = trzy boki trójkąta wiarygodności."}
      ]},
     /* ---------------- L4 ---------------- */
     {id:"l4",title:"Polska: demografia i mieszkania",emoji:"🇵🇱",

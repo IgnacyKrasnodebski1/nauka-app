@@ -41,6 +41,17 @@ window.SUBJECTS.push({
       {q:"W którym roku opublikowano białą księgę Bitcoina?",a:["2008","2013","2015","2020"],c:0,e:"2008 (Satoshi Nakamoto); sieć ruszyła 2009."},
       {q:"Problem 'double spending' to:",a:["podwójne opodatkowanie krypto","ryzyko wydania tej samej jednostki cyfrowej dwa razy","podwójne szyfrowanie danych","dwa portfele na jednym urządzeniu"],c:1,e:"Bitcoin rozwiązuje go rozproszonym rejestrem + konsensusem."},
       {q:"Co było bezpośrednim katalizatorem powstania Bitcoina?",a:["pandemia COVID","kryzys finansowy 2008 i spadek zaufania do banków","wojna w Ukrainie","wprowadzenie MiCA"],c:1,e:"Upadek Lehman Brothers, bailouty, moral hazard → biała księga 2008."}
+     ],
+     /* krok 5: zadania (opcjonalne) — mieszane z pytaniami quizu w sesji poziomu */
+     tasks:[
+      {type:"tf",seconds:60,statements:[
+        {s:"Biała księga Bitcoina powstała w 2008 roku.",v:true,e:"2008 — white paper, 2009 — start sieci."},
+        {s:"Sieć Bitcoin wystartowała w 2015 roku.",v:false,e:"2009 — Genesis Block. 2015 to Ethereum."},
+        {s:"Blockchain ma jednego właściciela, który zatwierdza wpisy.",v:false,e:"Decentralizacja — nie ma jednego właściciela, o wpisach decyduje konsensus sieci."},
+        {s:"Double spending to ryzyko wydania tej samej jednostki cyfrowej dwa razy.",v:true,e:"Bitcoin rozwiązuje to rozproszonym rejestrem i konsensusem."},
+        {s:"Bezpośrednim katalizatorem powstania Bitcoina był kryzys finansowy 2008.",v:true,e:"Lehman Brothers, bailouty, moral hazard → biała księga."}
+      ]},
+      {type:"match",title:"Data i wydarzenie",pairs:[["2008","biała księga Bitcoina"],["2009","Genesis Block, start sieci"],["2015","Ethereum i dApps"],["2017","fala ICO"],["2021","NFT w głównym nurcie"]],e:"Bitcoin 2008/2009, Ethereum 2015 — te dwie daty są najważniejsze."}
      ]},
     /* ---------------- L2 ---------------- */
     {id:"k2",title:"Konsensus: PoW i PoS",emoji:"⚙️",
@@ -63,6 +74,11 @@ window.SUBJECTS.push({
       {q:"Czym jest slashing w Proof of Stake?",a:["nagrodą za wydobycie bloku","karą — utratą części stake przez nieuczciwego walidatora","opłatą transakcyjną","procesem kopania"],c:1,e:"Slashing zniechęca do oszustwa: oszukasz → tracisz kapitał."},
       {q:"Główna różnica zasobu konkurencji PoW vs PoS:",a:["PoW = kapitał, PoS = energia","PoW = energia/sprzęt, PoS = kapitał/stake","oba używają energii","oba używają kapitału"],c:1,e:"PoW konkuruje energią/sprzętem, PoS kapitałem (stake)."},
       {q:"Który mechanizm zużywa znacznie mniej energii?",a:["Proof of Work","Proof of Stake","oba tyle samo","Proof of Work z ASIC"],c:1,e:"PoS nie wymaga energochłonnego hashowania — stąd Ethereum 2.0 przeszło na PoS."}
+     ],
+     tasks:[
+      {type:"sort",title:"PoW czy PoS?",buckets:[{name:"Proof of Work",items:["górnicy i hashowanie","koszt = energia i sprzęt","Bitcoin"]},{name:"Proof of Stake",items:["walidator blokuje stake","slashing za oszustwo","Ethereum 2.0"]}],e:"PoW = praca i prąd, PoS = zablokowany kapitał (stake)."},
+      {type:"fill",text:"W PoW bezpieczeństwo bierze się z wysokiego kosztu {0}, a w PoS nieuczciwy walidator traci część stake przez {1}.",blanks:["energii","slashing"],bank:["kapitału","halving","mining pool","forka"],hint:"PoW = Work (prąd), PoS = Stake (kaucja)",e:"PoW: atak oznacza spalenie fortuny na prąd. PoS: kto oszuka, traci kaucję (slashing)."},
+      {type:"order",title:"Jak powstaje blok w PoW",items:["Użytkownik podpisuje transakcję kluczem prywatnym","Transakcja trafia do puli oczekujących","Górnik pakuje transakcje do bloku","Górnik znajduje hash spełniający warunek trudności","Sieć weryfikuje blok i dołącza go do łańcucha"],e:"Podpis → pula → blok → hash (praca) → weryfikacja i dołączenie do łańcucha."}
      ]},
     /* ---------------- L3 ---------------- */
     {id:"k3",title:"Kryptografia i klucze",emoji:"🔐",
