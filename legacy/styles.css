@@ -367,3 +367,47 @@ h1,h2,h3,.logo,.ftitle,.qq,.term,.exq{font-family:var(--font-display);font-weigh
 .mitem.sel{border-color:var(--accent);background:var(--accent-tint)}
 .mitem.done{opacity:.35;border-color:var(--tint-acid-line);background:var(--tint-acid);pointer-events:none;box-shadow:none}
 .mitem.bad{border-color:var(--red);background:var(--tint-red);animation:dcShake .55s ease-in-out both}
+
+/* ============================================================
+   KROK 2 — IKONY (inline SVG z engine.icon()) i MONOGRAMY zamiast emoji
+   Reguły tylko dopisane; kolory wyłącznie przez tokeny z :root.
+   ============================================================ */
+svg.ic{display:inline-block;flex:none;vertical-align:-.2em}
+.ic-acid{color:var(--acid)}.ic-gold{color:var(--gold)}.ic-flame{color:var(--flame)}.ic-red{color:var(--red)}
+.ic-cyan{color:var(--cyan)}.ic-muted{color:var(--muted)}.ic-dim{color:var(--muted-3)}.ic-accent{color:var(--accent)}
+/* przyciski i plakietki z ikoną: flex + odstęp (spacja w etykiecie jest wtedy ignorowana) */
+.pill,.fbtn,.backbtn,.lessonhead .x{display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.pill.qnext.show{display:inline-flex}
+.subtab,.chips .chip{display:inline-flex;align-items:center;gap:6px}
+.subtab .ic{opacity:.85}.subtab.active .ic{opacity:1}
+.timer{display:inline-flex;align-items:center;gap:6px}
+.toast{display:flex;align-items:center;gap:7px}
+.real .lbl,.mnemo .lbl{display:flex;align-items:center;gap:6px}
+.subjcard .chev{display:flex;align-items:center}
+.hero h1{display:flex;align-items:center;gap:12px}
+.exfb .ic{vertical-align:-.25em}
+.addcard .subjemoji{color:var(--acid)}
+.excard .eemoji{color:var(--accent)}
+
+/* monogram: pierwsza litera nazwy w kafelku w kolorze przedmiotu (DESIGN.md §1) */
+.mono{display:inline-flex;align-items:center;justify-content:center;flex:none;width:44px;height:44px;border-radius:15px;
+      background:var(--accent-tint);border:2px solid var(--accent-tint-line);color:var(--accent);
+      font-family:var(--font-display);font-weight:800;font-size:20px;letter-spacing:-.5px;line-height:1}
+.mono.sm{width:34px;height:34px;border-radius:11px;font-size:16px}
+.subjcard .subjemoji.mono{width:64px;height:64px;border-radius:var(--r-md);font-size:30px;
+      background:color-mix(in srgb,var(--sa) 14%,var(--surface));border-color:color-mix(in srgb,var(--sa) 36%,var(--surface));color:var(--sa)}
+
+/* ścieżka: check / bolt / lock w węźle, gwiazdki jako małe ikony w pigułce pod węzłem */
+.nodebtn .stars{display:flex;align-items:center;gap:2px;bottom:-13px;padding:3px 7px;background:var(--surface);border:2px solid var(--line);border-radius:var(--r-chip);box-shadow:0 2px 0 var(--shadow)}
+.starrow{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;margin-left:6px}
+
+/* wynik: duży okrągły kafel z ikoną (LevelComplete.html) zamiast emoji 60px */
+.result .big{width:112px;height:112px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0;
+      background:var(--accent);color:var(--on-accent);box-shadow:0 8px 0 var(--accent-dark);margin-bottom:4px}
+.result .big.ok{background:var(--acid);color:var(--on-acid);box-shadow:0 8px 0 var(--acid-dark)}
+.result .big.gold{background:var(--gold);color:var(--on-gold);box-shadow:0 8px 0 var(--gold-dark)}
+.result .big.hot{background:var(--amber);color:var(--on-amber);box-shadow:0 8px 0 var(--amber-dark)}
+.result .big.fail{background:var(--red);color:var(--on-red);box-shadow:0 8px 0 var(--red-dark)}
+/* miejsce na pigułkę gwiazdek pod zaliczonym węzłem; przyciski z 2-liniową etykietą nie wychodzą poza 58px */
+.pathnode:has(.node-done) .nodelabel{margin-top:10px}
+.pill{height:auto;min-height:58px;padding:8px 16px;line-height:1.2}

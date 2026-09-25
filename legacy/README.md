@@ -101,3 +101,17 @@ nauka-app/
 - Liczba potwierdzeń/streak dzienny.
 - Import pytań z CSV → generator `data/*.js`.
 - Tryb „pojedynek" / dzielenie wyniku egzaminu.
+
+---
+
+## Nauka 2.0 — krok 2: ikony zamiast emoji (design/DESIGN.md §5.2)
+
+- **Zero emoji w UI silnika.** Wszystkie ikony to inline SVG (24×24, `stroke:currentColor` 2.4–3.4, zaokrąglone końce; glify pełne — płomień, błyskawica, gwiazdka, serce, klejnot — `fill:currentColor`). Ścieżki skopiowane z `design/preview/*.html`.
+- Nowe helpery w `engine.js` (w IIFE, obok helpers):
+  - `icon(name,{size,stroke,fill,cls})` → string `<svg class="ic …" aria-hidden="true">`. Mapa `ICONS`: back, close, check, lock, bolt, flame, gem, heart, star, book, cards, brain, target, info, list, clock, chevron-right, plus, refresh, trophy, chest, home, calendar, settings, user, search, x-circle, alert, bulb, bookmark, file, question, edit, link, map, grid, flag. Nieznana nazwa → `alert`.
+  - `initial(str)` + `mono(txt,cls)` — monogram (pierwsza litera/cyfra nazwy) w kafelku `.mono` w kolorze `--accent` na tincie; `.mono.sm` = 34 px (topbar, Info).
+  - `starRow(n,size)` — 3 gwiazdki (zdobyte złote pełne, reszta kontur), `bigTile(kind,icon)` — duży okrągły kafel wyniku (`ok|gold|hot|fail|''`), `LBL` — gotowe etykiety przycisków z ikoną, `toast(text, iconName)` — toast z ikoną (drugi argument opcjonalny).
+- **Emoji z danych nie są już renderowane** (pola `emoji` w `data/*.js` zostają, są ignorowane): karta przedmiotu / topbar / Info → monogram z `short||name`; węzeł ścieżki → `check` (zaliczony) / `bolt` (otwarty) / `lock` (zamknięty), gwiazdki pod węzłem jako ikony w pigułce.
+- `applyTheme(s)` ustawia inline `--accent`, `--accent2` oraz opcjonalne `--accent-dark` / `--on-accent` z `accentDark` / `onAccent` w danych (brak → `color-mix` z `styles.css`). Na ekranie startowym właściwości są zdejmowane, więc obowiązuje domyślny `--acid` — koniec z gradientem z engine.
+- `styles.css`: tylko dopisany blok „KROK 2" (`svg.ic`, `.ic-*` kolory z tokenów, flex+gap w przyciskach z ikoną, `.mono`, `.nodebtn .stars`, `.starrow`, `.result .big.*`), zero literałów kolorów.
+- HTML w danych (`info`, `title` poziomu, `body` roladki) nadal może zawierać emoji — to treść, nie UI; do wyczyszczenia razem z krokiem 4.4 (kafle Info).
