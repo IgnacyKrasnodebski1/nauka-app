@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Odkrywaj przedmioty</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#B4FF3A;text-decoration:none}
+a:hover{color:#CBFF6E}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body style="margin:0">
+
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <div style="position: relative; z-index: 1; padding: 54px 18px 0; display: flex; align-items: center; justify-content: space-between;">
+    <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -0.9px;">Odkrywaj</div>
+    <a href="Main.html" aria-label="Zamknij" style="width: 40px; height: 40px; border-radius: 50%; background: #1B1836; border: 2px solid #2C2850; display: flex; align-items: center; justify-content: center; flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B95C9" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></a>
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 20px 18px 0; display: flex; flex-direction: column; gap: 13px; flex-grow: 1; min-height: 0;">
+    
+    <div class="a-up" style="display: flex; align-items: center; gap: 11px; background: #1B1836; border: 2px solid #2C2850; border-radius: 18px; padding: 12px 14px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#6E67A8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5L21 21"/></svg>
+      <label for="cat-search" style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Szukaj przedmiotu</label>
+      <input id="cat-search" type="text" placeholder="Przedmiot, dział albo temat" style="flex-grow: 1; background: transparent; border: none; outline: none; color: #F4F2FF; font-family: inherit; font-size: 13.5px; font-weight: 700;">
+    </div>
+    <div style="display: flex; gap: 7px;">
+      <span style="padding: 8px 14px; border-radius: 999px; background: #1B1836; border: 2px solid #2C2850; color: #9B95C9; font-size: 12.5px; font-weight: 800;">Podstawówka</span>
+      <span style="padding: 8px 14px; border-radius: 999px; background: #B4FF3A; color: #14210A; font-size: 12.5px; font-weight: 800;">Liceum</span>
+      <span style="padding: 8px 14px; border-radius: 999px; background: #1B1836; border: 2px solid #2C2850; color: #9B95C9; font-size: 12.5px; font-weight: 800;">Studia</span>
+    </div>
+    <a href="QuickAdd.html" class="a-glow" style="display: flex; align-items: center; gap: 13px; background: #1F2A12; border: 2px solid #B4FF3A; border-radius: 22px; padding: 14px 15px; box-shadow: 0 4px 0 #7FC400; color: #F4F2FF;">
+      <div class="a-bob" style="width: 44px; height: 44px; border-radius: 15px; background: #B4FF3A; display: flex; align-items: center; justify-content: center; flex: none;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#14210A" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+      </div>
+      <div style="flex-grow: 1; min-width: 0;"><div style="font-size: 14.5px; font-weight: 800; color: #E8FFC7;">Masz notatki od nauczyciela?</div><div style="font-size: 12px; font-weight: 600; color: #A8C98A; margin-top: 2px;">Zrób z nich przedmiot w 3 minuty</div></div>
+    </a>
+    <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Pod maturę rozszerzoną</div>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px;">
+      <a href="Path.html" class="a-up d1" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 22px; padding: 14px; box-shadow: 0 4px 0 #14122A; display: flex; flex-direction: column; gap: 10px; color: #F4F2FF;">
+        <div style="width: 44px; height: 44px; border-radius: 15px; background: #FFC043; display: flex; align-items: center; justify-content: center;"><span style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 18px; font-weight: 800; color: #241800;">M</span></div>
+        <div><div style="font-size: 14px; font-weight: 800; line-height: 1.25;">Matematyka</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9; margin-top: 3px;">funkcje, ciągi, pochodne</div></div>
+      </a>
+      <a href="Path.html" class="a-up d2" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 22px; padding: 14px; box-shadow: 0 4px 0 #14122A; display: flex; flex-direction: column; gap: 10px; color: #F4F2FF;">
+        <div style="width: 44px; height: 44px; border-radius: 15px; background: #B4FF3A; display: flex; align-items: center; justify-content: center;"><span style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 18px; font-weight: 800; color: #14210A;">B</span></div>
+        <div><div style="font-size: 14px; font-weight: 800; line-height: 1.25;">Biologia</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9; margin-top: 3px;">komórka, genetyka, ekologia</div></div>
+      </a>
+      <a href="Path.html" class="a-up d3" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 22px; padding: 14px; box-shadow: 0 4px 0 #14122A; display: flex; flex-direction: column; gap: 10px; color: #F4F2FF;">
+        <div style="width: 44px; height: 44px; border-radius: 15px; background: #22D3EE; display: flex; align-items: center; justify-content: center;"><span style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 18px; font-weight: 800; color: #04232B;">Ch</span></div>
+        <div><div style="font-size: 14px; font-weight: 800; line-height: 1.25;">Chemia</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9; margin-top: 3px;">reakcje, stechiometria</div></div>
+      </a>
+      <a href="Path.html" class="a-up d4" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 22px; padding: 14px; box-shadow: 0 4px 0 #14122A; display: flex; flex-direction: column; gap: 10px; color: #F4F2FF;">
+        <div style="width: 44px; height: 44px; border-radius: 15px; background: #FF2E93; display: flex; align-items: center; justify-content: center;"><span style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 18px; font-weight: 800; color: #200410;">H</span></div>
+        <div><div style="font-size: 14px; font-weight: 800; line-height: 1.25;">Historia</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9; margin-top: 3px;">od starożytności do XX w.</div></div>
+      </a>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

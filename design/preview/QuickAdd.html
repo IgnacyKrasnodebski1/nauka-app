@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Dodaj materiał</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#B4FF3A;text-decoration:none}
+a:hover{color:#CBFF6E}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body style="margin:0">
+
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; padding: 54px 20px 0; opacity: 0.22;">
+    <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 30px; font-weight: 800; margin-top: 40px;">Plan na dziś</div>
+    <div style="height: 200px; border-radius: 24px; background: #1B1836; margin-top: 20px;"></div>
+  </div>
+  <div class="a-rise" style="position: absolute; left: 0; right: 0; bottom: 0; top: 118px; background: #15122B; border-top: 3px solid #B4FF3A; border-radius: 32px 32px 0 0; padding: 12px 18px 26px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; justify-content: center;"><div style="width: 44px; height: 5px; border-radius: 3px; background: #3E3870;"></div></div>
+    <div style="display: flex; align-items: center; justify-content: space-between;">
+      <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 25px; font-weight: 800; letter-spacing: -0.8px;">Dodaj materiał</div>
+      <a href="Main.html" aria-label="Zamknij" style="width: 40px; height: 40px; border-radius: 50%; background: #1B1836; border: 2px solid #2C2850; display: flex; align-items: center; justify-content: center; flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B95C9" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></a>
+    </div>
+    <a href="Scanner.html" class="a-pop" style="display: flex; align-items: center; gap: 16px; background: #B4FF3A; border-radius: 26px; padding: 20px; box-shadow: 0 6px 0 #7FC400; color: #14210A;">
+      <div class="a-bob" style="width: 62px; height: 62px; border-radius: 20px; background: #14210A; display: flex; align-items: center; justify-content: center; flex: none;"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#B4FF3A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="12" cy="13.5" r="3.5"/><path d="M9 7l1.5-3h3L15 7"/></svg></div>
+      <div style="flex-grow: 1;"><div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;">Zrób zdjęcie</div><div style="font-size: 13px; font-weight: 700; color: #2C4A14; margin-top: 3px;">strona z podręcznika, zeszyt, tablica</div></div>
+    </a>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px;">
+      <a href="Detected.html" class="a-up d1" style="display: flex; flex-direction: column; gap: 10px; background: #241536; border: 2px solid #46216B; border-radius: 22px; padding: 15px 14px; box-shadow: 0 4px 0 #0A0914; color: #F4F2FF;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FF7FBE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M8 8l4-4 4 4"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+        <div><div style="font-size: 14px; font-weight: 800;">Wgraj plik</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9; margin-top: 3px; line-height: 1.35;">PDF, prezentacja, Word</div></div>
+      </a>
+      <a href="Detected.html" class="a-up d2" style="display: flex; flex-direction: column; gap: 10px; background: #0E2430; border: 2px solid #1A4C5E; border-radius: 22px; padding: 15px 14px; box-shadow: 0 4px 0 #0A0914; color: #F4F2FF;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 11h16M4 16h9"/></svg>
+        <div><div style="font-size: 14px; font-weight: 800;">Wklej tekst</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9; margin-top: 3px; line-height: 1.35;">notatki, konspekt, zagadnienia</div></div>
+      </a>
+      <a href="Detected.html" class="a-up d3" style="display: flex; flex-direction: column; gap: 10px; background: #2A2110; border: 2px solid #574319; border-radius: 22px; padding: 15px 14px; box-shadow: 0 4px 0 #0A0914; color: #F4F2FF;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFC043" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+        <div><div style="font-size: 14px; font-weight: 800;">Nagraj zajęcia</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9; margin-top: 3px; line-height: 1.35;">z nagrania powstaną notatki</div></div>
+      </a>
+      <a href="Detected.html" class="a-up d4" style="display: flex; flex-direction: column; gap: 10px; background: #1F2A12; border: 2px solid #4E6B24; border-radius: 22px; padding: 15px 14px; box-shadow: 0 4px 0 #0A0914; color: #F4F2FF;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#B4FF3A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>
+        <div><div style="font-size: 14px; font-weight: 800;">Wklej link</div><div style="font-size: 11.5px; font-weight: 600; color: #9B95C9; margin-top: 3px; line-height: 1.35;">artykuł, strona z materiałem</div></div>
+      </a>
+    </div>
+    <a href="TestPlan.html" class="a-up d5" style="display: flex; align-items: center; gap: 12px; background: #2A1017; border: 2px solid #5C1F2E; border-radius: 18px; padding: 13px 15px; color: #FFD4DC;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FF8FA3" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg><span style="flex-grow: 1; font-size: 14px; font-weight: 800;">Mam sprawdzian — ułóż mi plan</span>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C98FA0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+    </a>
+    <a href="Catalog.html" class="a-up d6" style="text-align: center; font-size: 13px; font-weight: 800; color: #9B95C9; padding: 6px;">albo weź gotowy przedmiot z katalogu</a>
+  </div>
+
+</div>
+
+</body>
+</html>
