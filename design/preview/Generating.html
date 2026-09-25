@@ -47,7 +47,7 @@ a:hover{color:#CBFF6E}
 @media (prefers-reduced-motion: reduce){*{animation:none !important}}
 </style>
 </head>
-<body>
+<body style="margin:0">
 
 
 <div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
@@ -68,11 +68,11 @@ a:hover{color:#CBFF6E}
     </div>
   </div>
 
-  <div style="position: relative; z-index: 1; padding: 26px 18px 0; display: flex; flex-direction: column; align-items: center; gap: 16px;">
-    <div style="position: relative; width: 150px; height: 150px; display: flex; align-items: center; justify-content: center;">
+  <div style="position: relative; z-index: 1; padding: 14px 18px 0; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+    <div style="position: relative; width: 122px; height: 122px; display: flex; align-items: center; justify-content: center;">
       <div class="a-spin" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; border-radius: 50%; border: 12px solid #241F45; border-top-color: #B4FF3A; border-right-color: #B4FF3A;"></div>
       <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
-        <span style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 40px; font-weight: 800; color: #B4FF3A; line-height: 1;">64%</span>
+        <span style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 33px; font-weight: 800; color: #B4FF3A; line-height: 1;">64%</span>
         <span style="font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #6E67A8; margin-top: 4px;">gotowe</span>
       </div>
     </div>
@@ -134,7 +134,11 @@ a:hover{color:#CBFF6E}
   </div>
 
   <div style="position: relative; z-index: 1; margin-top: auto; padding: 0 18px 26px; display: flex; flex-direction: column; gap: 10px;">
-    <div style="font-size: 12.5px; font-weight: 600; color: #6E67A8; text-align: center; line-height: 1.4;">Możesz zamknąć aplikację — wyślę powiadomienie, gdy będzie gotowe.</div>
+    <a href="Quiz.html" class="a-pop d4" style="display: flex; align-items: center; gap: 13px; background: #1F2A12; border: 2px solid #B4FF3A; box-shadow: 0 5px 0 #7FC400; border-radius: 20px; padding: 13px 15px; color: #F4F2FF;">
+      <div class="a-pulse" style="width: 42px; height: 42px; border-radius: 14px; background: #B4FF3A; display: flex; align-items: center; justify-content: center; flex: none;"><svg width="22" height="22" viewBox="0 0 24 24" fill="#14210A" aria-hidden="true"><path d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg></div>
+      <div style="flex-grow: 1;"><div style="font-size: 14.5px; font-weight: 800; color: #E8FFC7;">Pierwsze 8 pytań gotowe</div><div style="font-size: 12px; font-weight: 600; color: #A8C98A; margin-top: 2px;">zacznij teraz, reszta dojdzie w tle</div></div>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#A8C98A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+    </a>
     <a href="SubjectReady.html" style="height: 58px; border-radius: 18px; background: #1B1836; border: 2px solid #2C2850; box-shadow: 0 5px 0 #14122A; display: flex; align-items: center; justify-content: center; color: #D6D2F0; font-size: 14px; font-weight: 800; letter-spacing: 1.1px;">DZIAŁAJ W TLE</a>
   </div>
 

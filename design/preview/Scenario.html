@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Zadanie — scenariusz</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#B4FF3A;text-decoration:none}
+a:hover{color:#CBFF6E}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body style="margin:0">
+
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+<div class="a-float" style="position: absolute; top: 130px; left: -110px; width: 260px; height: 260px; border-radius: 50%; background: #2A1017;"></div>
+  <div style="position: relative; z-index: 1; padding: 52px 18px 0; display: flex; align-items: center; gap: 12px;">
+    <a href="Path.html" aria-label="Zamknij zadanie" style="width: 40px; height: 40px; border-radius: 50%; background: #1B1836; border: 2px solid #2C2850; display: flex; align-items: center; justify-content: center; flex: none;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B95C9" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></a>
+    <div style="flex-grow: 1; height: 12px; border-radius: 999px; background: #241F45; overflow: hidden;"><div class="a-grow" style="width: 70%; height: 100%; border-radius: 999px; background: #B4FF3A;"></div></div>
+    <div style="display: flex; align-items: center; gap: 5px; flex: none;"><svg class="a-beat" width="18" height="18" viewBox="0 0 24 24" fill="#FF4767" aria-hidden="true"><path d="M12 20.5S4 15.6 4 10.4A4.4 4.4 0 0 1 12 7.9a4.4 4.4 0 0 1 8 2.5c0 5.2-8 10.1-8 10.1z"/></svg><span style="font-size: 15px; font-weight: 800; color: #FF8FA3;">5</span></div>
+  </div>
+  <div style="position: relative; z-index: 1; padding: 20px 18px 0; display: flex; flex-direction: column; gap: 14px; flex-grow: 1; min-height: 0;">
+    
+    <div class="a-up" style="display: flex; gap: 8px; flex-wrap: wrap;"><span style="padding: 6px 12px; border-radius: 999px; background: #2A1017; color: #FF8FA3; font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; white-space: nowrap;">Scenariusz</span><span style="padding: 6px 12px; border-radius: 999px; background: #1B1836; border: 2px solid #2C2850; color: #9B95C9; font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; white-space: nowrap;">Psychologia · studia</span></div>
+    <div class="a-up d1" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 24px; padding: 14px 16px 16px; box-shadow: 0 6px 0 #14122A;">
+      <svg width="100%" height="118" viewBox="0 0 320 118" aria-hidden="true">
+        <rect x="0" y="92" width="320" height="26" rx="6" fill="#241F45"/>
+        <rect x="20" y="20" width="60" height="72" rx="6" fill="#2C2850"/>
+        <rect x="240" y="10" width="64" height="82" rx="6" fill="#2C2850"/>
+        <circle cx="120" cy="60" r="8" fill="#6E67A8"/><rect x="113" y="70" width="14" height="22" rx="5" fill="#6E67A8"/>
+        <circle cx="148" cy="56" r="8" fill="#6E67A8"/><rect x="141" y="66" width="14" height="26" rx="5" fill="#6E67A8"/>
+        <circle cx="206" cy="58" r="8" fill="#6E67A8"/><rect x="199" y="68" width="14" height="24" rx="5" fill="#6E67A8"/>
+        <circle cx="228" cy="62" r="8" fill="#6E67A8"/><rect x="221" y="72" width="14" height="20" rx="5" fill="#6E67A8"/>
+        <circle cx="96" cy="64" r="8" fill="#6E67A8"/><rect x="89" y="74" width="14" height="18" rx="5" fill="#6E67A8"/>
+        <rect x="160" y="84" width="34" height="11" rx="5" fill="#FF4767"/><circle cx="198" cy="88" r="7" fill="#FF4767"/>
+      </svg>
+      <div style="font-size: 15px; font-weight: 700; line-height: 1.5; color: #D6D2F0; margin-top: 8px;">Na zatłoczonym dworcu ktoś upada. Obok stoi kilkadziesiąt osób — nikt nie podchodzi.</div>
+    </div>
+    <div class="a-up d2" style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 21px; font-weight: 800; letter-spacing: -0.8px; line-height: 1.15;">Co najlepiej to wyjaśnia?</div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <button type="button" class="a-up d2" style="display: flex; align-items: center; gap: 13px; width: 100%; text-align: left; cursor: pointer; font-family: inherit; background: #1B1836; border: 2px solid #2C2850; box-shadow: 0 4px 0 #14122A; border-radius: 18px; padding: 12px 14px; min-height: 54px;">
+        <span style="flex: none; width: 30px; height: 30px; border-radius: 10px; background: #241F45; color: #9B95C9; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800;">A</span>
+        <span style="font-size: 14px; font-weight: 700; color: #D6D2F0; line-height: 1.35;">Efekt widza — rozproszenie odpowiedzialności</span>
+      </button>
+      <button type="button" class="a-up d3" style="display: flex; align-items: center; gap: 13px; width: 100%; text-align: left; cursor: pointer; font-family: inherit; background: #1B1836; border: 2px solid #2C2850; box-shadow: 0 4px 0 #14122A; border-radius: 18px; padding: 12px 14px; min-height: 54px;">
+        <span style="flex: none; width: 30px; height: 30px; border-radius: 10px; background: #241F45; color: #9B95C9; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800;">B</span>
+        <span style="font-size: 14px; font-weight: 700; color: #D6D2F0; line-height: 1.35;">Dysonans poznawczy</span>
+      </button>
+      <button type="button" class="a-up d4" style="display: flex; align-items: center; gap: 13px; width: 100%; text-align: left; cursor: pointer; font-family: inherit; background: #1B1836; border: 2px solid #2C2850; box-shadow: 0 4px 0 #14122A; border-radius: 18px; padding: 12px 14px; min-height: 54px;">
+        <span style="flex: none; width: 30px; height: 30px; border-radius: 10px; background: #241F45; color: #9B95C9; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800;">C</span>
+        <span style="font-size: 14px; font-weight: 700; color: #D6D2F0; line-height: 1.35;">Efekt aureoli</span>
+      </button>
+      <button type="button" class="a-up d5" style="display: flex; align-items: center; gap: 13px; width: 100%; text-align: left; cursor: pointer; font-family: inherit; background: #1B1836; border: 2px solid #2C2850; box-shadow: 0 4px 0 #14122A; border-radius: 18px; padding: 12px 14px; min-height: 54px;">
+        <span style="flex: none; width: 30px; height: 30px; border-radius: 10px; background: #241F45; color: #9B95C9; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800;">D</span>
+        <span style="font-size: 14px; font-weight: 700; color: #D6D2F0; line-height: 1.35;">Konformizm normatywny</span>
+      </button>
+    </div>
+
+  </div>
+  <div style="position: relative; z-index: 1; padding: 14px 18px 26px; display: flex; flex-direction: column; gap: 10px;">
+    <a href="Swipe.html" style="height: 58px; border-radius: 18px; background: #201C3E; display: flex; align-items: center; justify-content: center; color: #5C568F; font-size: 15px; font-weight: 800; letter-spacing: 1.2px;">SPRAWDŹ</a>
+  </div>
+</div>
+
+</body>
+</html>
