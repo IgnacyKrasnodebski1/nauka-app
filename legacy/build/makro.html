@@ -159,6 +159,9 @@
   --line-dash:#3E3870;                                       /* kreskowana ramka kafla „dodaj” (Main/EmptyState) */
   --accent-shadow:var(--shadow);
   --accent-shadow:color-mix(in srgb, var(--accent) 10%, var(--bg)); /* cień pod kaflem w tincie przedmiotu */
+  /* krok 4: jaśniejsze odcienie tekstu na tintach (serce, panel dobrze/źle) */
+  --red-soft:color-mix(in srgb, var(--red) 55%, var(--txt));
+  --acid-soft:color-mix(in srgb, var(--acid) 45%, var(--muted));
 }
 
 /* ---------- BAZA ---------- */
@@ -225,8 +228,8 @@ h1,h2,h3,.logo,.ftitle,.qq,.term,.exq{font-family:var(--font-display);font-weigh
 .pathnode:has(.node-open) .nodelabel{color:var(--acid)}
 .connector{width:5px;height:16px;background:var(--line);border-radius:3px}
 .connector.done{background:var(--accent)}
-.pathzig:nth-child(odd){transform:translateX(-46px)}
-.pathzig:nth-child(even){transform:translateX(46px)}
+/* wężyk: offset per węzeł/łącznik przez --x (inline z engine.js); stary .pathzig:nth-child liczył też łączniki i psuł naprzemienność */
+.pathnode,.connector{transform:translateX(var(--x,0px))}
 
 /* ---------- karty / tagi (wspólne) ---------- */
 .tag{display:inline-block;font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;padding:6px 12px;border-radius:var(--r-chip);background:var(--surface-2);border:2px solid var(--line);color:var(--muted);margin-bottom:14px}
@@ -590,6 +593,188 @@ button.setrow{cursor:pointer}
 .step .t{font-size:14.5px;font-weight:800}
 .step .s{font-size:12.5px;font-weight:600;color:var(--muted);margin-top:2px}
 .efoot{margin-top:auto;display:flex;flex-direction:column;gap:10px}
+
+/* ============================================================
+   KROK 4 — ŚCIEŻKA, ROLADKA, QUIZ (DESIGN.md §5.4): pas nagłówka przedmiotu, wężyk ze skrzyniami, dymek ZACZNIJ,
+   roladka na pełnym ekranie z paskiem segmentowym, kafle quizu 3D, panel dobrze/źle/koniec żyć (.sheet),
+   serca (.hearts), combo, konfetti, LevelComplete. Tylko dopisane reguły; kolory przez tokeny i color-mix.
+   ============================================================ */
+/* pas nagłówka przedmiotu (Path.html): wstecz, monogram + nazwa, pasek poziomów, info, serca; pod spodem chipy zakładek */
+.band{position:relative;z-index:30;padding:14px 18px 12px;background:var(--surface-2);border-bottom:2px solid var(--line)}
+.brow{display:flex;align-items:center;gap:10px}
+.bmeta{flex:1;min-width:0}
+.bname{display:flex;align-items:center;gap:8px;font-family:var(--font-display);font-size:19px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+.bname span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bname .mono.xs{width:26px;height:26px;border-radius:9px;font-size:13px}
+.bprog{display:flex;align-items:center;gap:8px;margin-top:7px}
+.bprog .bar{flex:1;height:10px}
+.bprog span{font-size:11.5px;font-weight:800;color:color-mix(in srgb,var(--accent) 30%,var(--txt-2));white-space:nowrap}
+.bprog b{color:var(--txt)}
+.infobtn{width:44px;height:44px;border-radius:50%;background:var(--surface);border:2px solid var(--line);color:var(--muted);display:flex;align-items:center;justify-content:center;flex:none;cursor:pointer;transition:transform .08s}
+.infobtn:active{transform:translateY(2px)}
+.infobtn.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.band .subtabs{padding:0;margin-top:12px}
+.subtab{border:none;min-height:38px}
+.subtab:not(.active){border:2px solid var(--line)}
+/* serca: pigułka (w pasie przedmiotu i w nagłówku lekcji) */
+.hearts{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;background:var(--surface);border:2px solid var(--line);border-radius:var(--r-chip);padding:8px 12px 8px 10px;flex:none;min-height:40px;color:var(--red-soft);font-family:var(--font-body);font-size:14px;font-weight:800;cursor:pointer;transition:transform .08s}
+.hearts:active{transform:translateY(2px)}
+.hearts .ic{color:var(--red)}
+.hearts.zero{color:var(--muted-2)}.hearts.zero .ic{color:var(--tint-red-line)} /* .zero, nie .empty (kolizja z pustym stanem) */
+.hearts .minus{font-size:12px;color:var(--red)}
+.counter.red{color:var(--red-soft);display:inline-flex;align-items:center;gap:3px}
+.counter.red .ic{color:var(--red)}
+
+/* ścieżka: karta rozdziału + wężyk */
+.pathview{padding:14px 18px 150px;position:relative}
+.blob.mid{top:210px;left:50%;right:auto;margin-left:-150px;width:300px;height:300px}
+.chapter{position:relative;z-index:1;display:flex;align-items:center;gap:10px;background:var(--accent-tint);border:2px solid var(--accent-tint-line);border-radius:16px;padding:10px 14px;box-shadow:0 4px 0 var(--accent-shadow);color:color-mix(in srgb,var(--accent) 30%,var(--txt-2))}
+.chapter>i{width:6px;height:26px;border-radius:3px;background:var(--accent);flex:none}
+.chapter .grow{flex:1;min-width:0}
+.chapter .eyebrow{font-size:10.5px;letter-spacing:1.2px;color:inherit}
+.chapter .t{font-size:14px;font-weight:800;color:var(--txt);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.path{position:relative;z-index:1;padding:8px 0 0;gap:6px}
+.pathnode{gap:0}
+.pathnode.cur{padding-top:52px}
+.connector.first{margin-top:2px}
+.nodelabel{margin-top:12px;font-size:12px;max-width:150px}
+.nodelabel.cur{color:var(--acid);font-size:12.5px}
+.nodelabel.lock{color:var(--muted-2)}
+.nodelabel.gold{color:var(--gold)}
+.node-lock{color:var(--muted-2)}
+.node-chest{width:74px;height:74px;border-radius:18px;background:var(--surface);border:2px solid var(--tint-gold-line);color:var(--gold);box-shadow:0 var(--drop-node) 0 var(--shadow);cursor:pointer}
+.node-chest:active{transform:translateY(3px);box-shadow:0 3px 0 var(--shadow)}
+.pathnode:has(.node-done) .nodelabel{margin-top:18px}
+/* dymek ZACZNIJ nad bieżącym węzłem (trójkąt = obrócony kwadrat, bez przezroczystych obramowań) */
+.bubble{position:absolute;top:0;left:50%;margin-left:-54px;width:108px;background:var(--acid);color:var(--on-acid);border-radius:12px;padding:8px 0;text-align:center;font-size:12px;font-weight:800;letter-spacing:1px;box-shadow:0 4px 0 var(--acid-dark);z-index:2}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-5px;width:12px;height:12px;background:var(--acid);transform:translateX(-50%) rotate(45deg);border-radius:2px}
+
+/* roladka na pełnym ekranie (Lesson.html) */
+.lessonhead{padding:14px 18px 0;gap:12px}
+.segbar{flex:1;display:flex;gap:5px}
+.segbar i{flex:1;height:10px;border-radius:999px;background:var(--line-2)}
+.segbar i.on{background:var(--acid)}
+.segbar i.bad{background:var(--red)}
+.lessonbody{padding:18px 18px 0;overflow:hidden}
+.lesson .fcard{position:relative;z-index:1;flex:1;min-height:0;display:flex;flex-direction:column;border-radius:28px;padding:22px 20px;box-shadow:0 6px 0 var(--shadow)}
+.fcard .fin{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;gap:16px;scrollbar-width:none}
+.fcard .fin::-webkit-scrollbar{display:none}
+.fcard .fin>*{flex:none}
+.fcard .fin .tag{align-self:flex-start;margin:0}
+.tag.accent{background:var(--accent-tint);border-color:var(--accent-tint);color:var(--accent)}
+.lesson .ftitle{font-size:28px;letter-spacing:-.9px;line-height:1.1;margin:0}
+.lesson .fbody{font-size:15.5px;line-height:1.55}
+.lesson .real,.lesson .mnemo{margin:0;border-radius:18px;padding:14px 16px}
+.lessonfoot{padding:16px 18px calc(24px + env(safe-area-inset-bottom))}
+.lessonfoot.col{display:flex;flex-direction:column;gap:12px}
+.swipehint2{display:flex;align-items:center;justify-content:center;gap:7px;font-size:12px;font-weight:700;color:var(--muted-2)}
+.pill.text{background:none;box-shadow:none;color:var(--muted);min-height:54px;letter-spacing:1px;font-size:14px}
+.pill.text:active{transform:none}
+.blob.cyan{top:120px;right:-120px;width:320px;height:320px;background:color-mix(in srgb,var(--cyan) 12%,var(--bg))}
+
+/* quiz: chipy (combo / pytanie N z M), pytanie, kafle 3D z literą, SPRAWDŹ */
+.quiz{position:relative;z-index:1;display:flex;flex-direction:column;gap:18px;flex:1;min-height:0;overflow-y:auto;padding:4px 0 8px;scrollbar-width:none}
+.quiz::-webkit-scrollbar{display:none}
+.qchips{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.qchips .qn,.combo{display:inline-flex;align-items:center;padding:6px 12px;border-radius:var(--r-chip);font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;line-height:1.2}
+.qchips .qn{background:var(--surface);border:2px solid var(--line);color:var(--muted)}
+.combo{background:var(--tint-gold);color:var(--gold)}
+.combo.bad{background:var(--tint-red);color:var(--red-soft)}
+.quiz .qq{font-size:26px;letter-spacing:-.8px;line-height:1.15;margin:0}
+.quiz .qq.muted{color:var(--muted)}
+.qopts{display:flex;flex-direction:column;gap:12px}
+.qopt{display:flex;align-items:center;gap:14px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-body);padding:14px 16px;border-radius:20px;min-height:60px;background:var(--surface);border:2px solid var(--line);box-shadow:0 4px 0 var(--shadow);color:var(--txt-2);font-size:14.5px;font-weight:700;line-height:1.35;transition:transform .08s,box-shadow .08s,background .15s,border-color .15s}
+.qopt:active{transform:translateY(4px);box-shadow:0 0 0 var(--shadow)}
+.qopt .k{flex:none;width:34px;height:34px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;background:var(--line-2);color:var(--muted)}
+.qopt .t{flex:1;min-width:0}
+.qopt.sel,.qopt.correct{background:var(--tint-acid);border-color:var(--acid);box-shadow:0 4px 0 var(--acid);color:color-mix(in srgb,var(--acid) 25%,var(--txt))}
+.qopt.sel .k,.qopt.correct .k{background:var(--acid);color:var(--on-acid)}
+.qopt.correct{font-weight:800}
+.qopt.wrong{background:var(--tint-red);border-color:var(--red);box-shadow:0 4px 0 var(--red-dark);color:color-mix(in srgb,var(--red) 20%,var(--txt));font-weight:800}
+.qopt.wrong .k{background:var(--red);color:var(--on-red)}
+.qopt.dim{opacity:.55;background:color-mix(in srgb,var(--surface) 60%,var(--bg));border-color:var(--line-2);box-shadow:none;color:var(--muted)}
+.qopt.dim .k{color:var(--muted-2)}
+.qopt[disabled]{cursor:default}
+.qopt[disabled]:active{transform:none}
+.pill[disabled]{background:color-mix(in srgb,var(--surface) 70%,var(--line-2));color:var(--muted-2);box-shadow:none;cursor:default}
+.pill[disabled]:active{transform:none}
+.pill.hide{visibility:hidden}
+.quizview .qcheck{margin-top:14px}
+
+/* panel od dołu: dobrze / źle / koniec żyć */
+.sheetback{position:absolute;inset:0;z-index:69;background:var(--bg);opacity:.75}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:70;border-radius:30px 30px 0 0;padding:22px 18px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:14px;border-top:3px solid var(--line);background:var(--surface-2);max-height:80dvh}
+.sheet.ok{background:var(--tint-acid);border-top-color:var(--acid)}
+.sheet.bad{background:var(--tint-red);border-top-color:var(--red)}
+.srow{display:flex;align-items:center;gap:12px}
+.srow .grow{flex:1;min-width:0}
+.sico{width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;background:var(--acid);color:var(--on-acid);box-shadow:0 4px 0 var(--acid-dark)}
+.sheet.bad .sico{background:var(--red);color:var(--on-red);box-shadow:0 4px 0 var(--red-dark)}
+.sheet .st{font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:-.6px;color:var(--acid);line-height:1.1}
+.sheet.bad .st{color:var(--red-soft)}
+.sheet .ss{font-size:12.5px;font-weight:700;color:var(--acid-soft);margin-top:2px}
+.sheet.bad .ss{color:color-mix(in srgb,var(--red) 40%,var(--muted))}
+.xpchip{flex:none;background:var(--gold);color:var(--on-gold);border-radius:var(--r-chip);padding:8px 15px;font-size:14px;font-weight:800;box-shadow:0 4px 0 var(--gold-dark);white-space:nowrap}
+.sbox{background:color-mix(in srgb,var(--tint-acid) 70%,var(--bg));border-radius:16px;padding:13px 15px;font-size:14px;font-weight:600;line-height:1.5;color:color-mix(in srgb,var(--acid) 30%,var(--txt));overflow-y:auto;min-height:0}
+.sheet.bad .sbox{background:color-mix(in srgb,var(--tint-red) 70%,var(--bg));color:color-mix(in srgb,var(--red) 20%,var(--txt))}
+.sbox .lbl{font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--acid-soft);margin-bottom:5px}
+.sheet.bad .sbox .lbl{color:color-mix(in srgb,var(--red) 40%,var(--muted))}
+.sbox b{color:var(--txt)}
+.sbtns{display:flex;gap:10px}
+.sbtns .pill{flex:1;letter-spacing:1px;font-size:14px}
+.pill.red{background:var(--red);color:var(--on-red);box-shadow:0 var(--drop-btn) 0 var(--red-dark)}
+.pill.red:active{box-shadow:0 0 0 var(--red-dark)}
+.pill.ghost.red{background:color-mix(in srgb,var(--tint-red) 60%,var(--bg));border-color:var(--tint-red-line);color:var(--red-soft);box-shadow:0 var(--drop-btn) 0 color-mix(in srgb,var(--tint-red) 50%,var(--bg))}
+/* koniec żyć (NoHearts.html) */
+.sheet.nohearts{border-top-color:var(--red);border-radius:32px 32px 0 0;padding:26px 20px calc(24px + env(safe-area-inset-bottom));gap:16px}
+.nhh{display:flex;justify-content:center;gap:10px;color:var(--tint-red-line)}
+.nht{text-align:center}
+.nht .st{font-size:30px;letter-spacing:-1px;color:var(--red-soft)}
+.nht .ss{font-size:13.5px;font-weight:600;color:color-mix(in srgb,var(--red) 40%,var(--muted));margin-top:7px;line-height:1.45}
+.nht .ss b{color:color-mix(in srgb,var(--red) 20%,var(--txt))}
+.nhcard{display:flex;align-items:center;gap:14px;width:100%;text-align:left;background:var(--tint-acid);border:2px solid var(--tint-acid-line);border-radius:22px;padding:15px;box-shadow:0 5px 0 color-mix(in srgb,var(--tint-acid) 60%,var(--bg));color:var(--txt);font-family:var(--font-body);cursor:pointer;transition:transform .08s,box-shadow .08s}
+.nhcard:active{transform:translateY(5px);box-shadow:0 0 0 var(--bg)}
+.nhcard .ico{width:46px;height:46px;border-radius:15px;background:var(--acid);color:var(--on-acid);display:flex;align-items:center;justify-content:center;flex:none}
+.nhcard .grow{flex:1;min-width:0}
+.nhcard .t{font-size:15px;font-weight:800;color:color-mix(in srgb,var(--acid) 25%,var(--txt))}
+.nhcard .s{font-size:12.5px;font-weight:600;color:var(--acid-soft);margin-top:2px}
+.nhcard>svg:last-child{color:var(--acid-soft)}
+
+/* konfetti (kolor i rozmiar kawałka przez --c / --s, ustawiane inline z tokenów) */
+.confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:3}
+.confetti i{position:absolute;display:block;width:var(--s,10px);height:var(--s,10px);border-radius:3px;background:var(--c,var(--acid))}
+.confetti i.round{border-radius:50%}
+
+/* LevelComplete.html */
+.lessonbody.done{padding:0 22px}
+.done .blob{top:60px;left:50%;right:auto;margin-left:-170px;width:340px;height:340px;background:color-mix(in srgb,var(--acid) 12%,var(--bg))}
+.done .blob.red{background:color-mix(in srgb,var(--red) 12%,var(--bg))}
+.lc{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:18px;padding:52px 0 12px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:none;width:100%}
+.lc::-webkit-scrollbar{display:none}
+.lc>*{flex:none}
+.lcstars{display:flex;align-items:flex-end;gap:10px}
+.lcbig{width:132px;height:132px;border-radius:50%;background:var(--acid);color:var(--on-acid);box-shadow:0 8px 0 var(--acid-dark);display:flex;align-items:center;justify-content:center}
+.lcbig.fail{background:var(--red);color:var(--on-red);box-shadow:0 8px 0 var(--red-dark)}
+.lctxt{text-align:center}
+.lct{font-family:var(--font-display);font-size:36px;font-weight:800;letter-spacing:-1.3px;line-height:1.05}
+.lcs{font-size:14.5px;font-weight:700;color:var(--muted);margin-top:8px}
+.lcstats{width:100%;display:flex;gap:10px}
+.lcstat{flex:1;min-width:0;background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:14px 8px;text-align:center;box-shadow:0 4px 0 var(--shadow)}
+.lcstat .k{font-size:10px;font-weight:800;letter-spacing:1.1px;text-transform:uppercase;color:var(--muted-2)}
+.lcstat .v{font-family:var(--font-display);font-size:26px;font-weight:800;margin-top:4px;line-height:1.1}
+.lcstat .v.gold{color:var(--gold)}.lcstat .v.acid{color:var(--acid)}.lcstat .v.pink{color:var(--pink)}
+.lcp{font-size:14px;font-weight:600;color:var(--muted);text-align:center;line-height:1.45;max-width:300px}
+.lcstreak{width:100%;display:flex;align-items:center;gap:13px;background:var(--tint-amber);border:2px solid var(--tint-amber-line);border-radius:22px;padding:14px 16px;box-shadow:0 4px 0 color-mix(in srgb,var(--tint-amber) 60%,var(--bg));color:var(--txt);font-family:var(--font-body);text-align:left;cursor:pointer;transition:transform .08s}
+.lcstreak:active{transform:translateY(4px)}
+.lcstreak .ico{width:44px;height:44px;border-radius:14px;background:var(--flame);color:var(--on-amber);display:flex;align-items:center;justify-content:center;flex:none}
+.lcstreak .grow{flex:1;min-width:0}
+.lcstreak .t{font-size:15px;font-weight:800}
+.lcstreak .s{font-size:12.5px;font-weight:600;color:color-mix(in srgb,var(--amber) 45%,var(--muted));margin-top:2px}
+.lcstreak>svg:last-child{color:color-mix(in srgb,var(--amber) 45%,var(--muted))}
+.lessonfoot .pill.a-glow{min-height:60px;border-radius:20px}
+/* akcja w lekcji i w panelu „dobrze” zawsze w kwaśnej limonce (Lesson/QuizCorrect/LevelComplete.html), nie w kolorze przedmiotu */
+.lesson .pill:not(.text):not([disabled]),.sheet.ok .pill{background:var(--acid);color:var(--on-acid);box-shadow:0 var(--drop-btn) 0 var(--acid-dark)}
+.lesson .pill:not(.text):not([disabled]):active,.sheet.ok .pill:active{box-shadow:0 0 0 var(--acid-dark)}
 
 </style>
 </head>
@@ -957,7 +1142,8 @@ const ICONS={
   map:{d:'M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14',w:2.4},
   grid:{d:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>',w:2.4},
   flag:{d:'M5 21V4M5 4h12l-2 4 2 4H5'},
-  upload:{d:'M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3',w:2.4}
+  upload:{d:'M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3',w:2.4},
+  'arrow-up':{d:'M12 19V5M6 11l6-6 6 6'}
 };
 function icon(name,o){
   o=o||{};const ic=ICONS[name]||ICONS.alert;
@@ -968,6 +1154,8 @@ function icon(name,o){
   return '<svg class="ic'+(o.cls?' '+o.cls:'')+'" width="'+size+'" height="'+size+'" viewBox="0 0 24 24" '+paint+' aria-hidden="true">'+body+'</svg>';
 }
 /* monogram zamiast emoji z danych: pierwsza litera/cyfra nazwy w kafelku w kolorze --accent */
+/* tytuły z danych bez emoji (zero emoji w UI; treść HTML roladki/Info zostaje) */
+function noEmoji(t){return String(t||'').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,'').replace(/\s+/g,' ').trim();}
 function initial(str){const m=String(str||'').match(/[\p{L}\p{N}]/u);return m?m[0].toUpperCase():'?';}
 function mono(txt,cls){return '<div class="mono'+(cls?' '+cls:'')+'" aria-hidden="true">'+txt+'</div>';}
 /* 3 gwiazdki: zdobyte = pełne złote, reszta = kontur */
@@ -983,7 +1171,7 @@ const LBL={
   again:'jeszcze raz '+icon('refresh',{size:18,stroke:2.8}),
   back:icon('back',{size:18,stroke:3})+' '
 };
-const TOAST_TONE={check:'acid',flame:'flame',close:'red','x-circle':'red',lock:'muted',info:'cyan',trophy:'gold',bolt:'gold'};
+const TOAST_TONE={check:'acid',flame:'flame',close:'red','x-circle':'red',lock:'muted',info:'cyan',trophy:'gold',bolt:'gold',heart:'red',gem:'cyan'};
 
 function toast(t,ic){const box=document.getElementById('toast');if(!box)return;box.innerHTML=ic?icon(ic,{size:16,cls:'ic-'+(TOAST_TONE[ic]||'acid')}):'';const s=document.createElement('span');s.textContent=t;box.appendChild(s);box.classList.add('show');clearTimeout(box._t);box._t=setTimeout(()=>box.classList.remove('show'),1500);}
 function addXP(id,n){const s=subjState(id);s.xp+=n;const d=daily();d.xp+=n;saveProgress();const ext=touchStreak();updateXP();updateStreakUI();if(ext&&META.streak>1)setTimeout(()=>toast('seria '+META.streak+' dni z rzędu!','flame'),1600);}
@@ -991,9 +1179,9 @@ function updateXP(){const x=document.getElementById('xpNum');if(x&&current)x.tex
 function updateStreakUI(){const n=streakDisplay();document.querySelectorAll('[id="streakNum"]').forEach(e=>e.textContent=n);}
 
 /* pula wszystkich elementów danego przedmiotu (ze wszystkich poziomów) */
-function allCards(s){return s.levels.flatMap(l=>(l.flashcards||[]).map(c=>({...c,lvl:l.title})));}
-function allQuiz(s){return s.levels.flatMap(l=>(l.quiz||[]).map(q=>({...q,lvl:l.title})));}
-function allFeed(s){return s.levels.flatMap(l=>(l.feed||[]).map(f=>({...f,lvl:l.title})));}
+function allCards(s){return s.levels.flatMap(l=>(l.flashcards||[]).map(c=>({...c,lvl:noEmoji(l.title)})));}
+function allQuiz(s){return s.levels.flatMap(l=>(l.quiz||[]).map(q=>({...q,lvl:noEmoji(l.title)})));}
+function allFeed(s){return s.levels.flatMap(l=>(l.feed||[]).map(f=>({...f,lvl:noEmoji(l.title)})));}
 
 function applyTheme(s){
   const r=document.documentElement.style;
@@ -1012,7 +1200,8 @@ let view='today';
 function go(v){
   view=VIEWS[v]?v:'today';
   current=null;applyTheme(null);
-  try{clearInterval(cwInt);clearInterval(exInt);}catch(e){}
+  try{clearInterval(cwInt);clearInterval(exInt);clearInterval(nhInt);}catch(e){}
+  keyFn=null;lessonState=null;
   VIEWS[view]();
 }
 const renderHome=()=>go('today'); // stary punkt wejścia
@@ -1059,11 +1248,11 @@ function taskInfo(t){
   const short=s.short||s.name;const base={t,s,kind,reward:REWARD[kind]||0};
   const openAt=(tab,setup)=>()=>openSubject(sid,tab,setup);
   if(kind==='lesson'){if(!lv)return null;const nf=(lv.feed||[]).length,nq=(lv.quiz||[]).length;
-    return {...base,icon:'book',title:'Roladka — '+lv.title,sub:`${nf} ${pl(nf,'dawka','dawki','dawek')} · ${nq} ${pl(nq,'pytanie','pytania','pytań')} · +15`,go:openAt('path')};}
+    return {...base,icon:'book',title:'Roladka — '+noEmoji(lv.title),sub:`${nf} ${pl(nf,'dawka','dawki','dawek')} · ${nq} ${pl(nq,'pytanie','pytania','pytań')} · +15`,go:openAt('path')};}
   if(kind==='review'){const n=t.need||12,p=t.prog||0;
     return {...base,icon:'cards',title:`Powtórka — ${n} ${pl(n,'fiszka','fiszki','fiszek')}`,sub:p?`${p} z ${n} przejrzane · +20`:`${short} · ${Math.max(1,Math.round(n/4))} min · +20`,go:openAt('fiszki')};}
   if(kind==='quiz'){if(!lv)return null;const n=(lv.quiz||[]).length,m=Math.max(1,Math.round(n*0.5));
-    return {...base,icon:'question',title:'Quiz — '+lv.title,sub:`${n} ${pl(n,'pytanie','pytania','pytań')} · ${short} · ${m} min · +25`,
+    return {...base,icon:'question',title:'Quiz — '+noEmoji(lv.title),sub:`${n} ${pl(n,'pytanie','pytania','pytań')} · ${short} · ${m} min · +25`,
       go:openAt('quiz',()=>{qState={subj:sid,lvl:lv.id,list:null,idx:0,score:0,answered:false};})};}
   if(kind==='exam'){const N=Math.min(20,allQuiz(s).length);
     return {...base,icon:'file',title:'Egzamin próbny',sub:`${N} ${pl(N,'pytanie','pytania','pytań')} · opcjonalnie · +40`,go:openAt('egzamin')};}
@@ -1258,7 +1447,7 @@ function renderSettings(){
     renderSettings();toast('postępy wyzerowane','refresh');
   };
   scroll.appendChild(reset);
-  scroll.appendChild(el('div','version','Nauka 2.0 · legacy · krok 3'));
+  scroll.appendChild(el('div','version','Nauka 2.0 · legacy · krok 4'));
 }
 
 /* ============================================================ SERIA (Streak.html: płomień, licznik, kropki tygodnia z nauka_meta_v1) */
@@ -1322,7 +1511,134 @@ function renderEmpty(){
   };
 }
 
-/* ============================================================ SUBJECT shell */
+/* ============================================================ KROK 4: życia, combo, panel dobrze/źle, kafle quizu, konfetti
+   Życia (DESIGN.md §4.3) w tym samym kluczu: PROGRESS.hearts={n, refillAt, quest?}.
+   −1 za błąd w quizie lekcji (nie w zakładce Quiz, nie w egzaminie); regeneracja 1/30 min liczona z refillAt przy odczycie. */
+const HEARTS_MAX=5, HEART_MS=30*60*1000, HEART_REV=10;
+function hearts(){
+  let h=PROGRESS.hearts;
+  if(!h||typeof h.n!=='number'){h=PROGRESS.hearts={n:HEARTS_MAX,refillAt:null};saveProgress();}
+  const now=Date.now();let ch=false;
+  while(h.n<HEARTS_MAX&&h.refillAt&&now>=h.refillAt){h.n++;h.refillAt+=HEART_MS;ch=true;}
+  if(h.n>=HEARTS_MAX&&h.refillAt){h.refillAt=null;ch=true;}
+  if(ch)saveProgress();
+  return h;
+}
+function loseHeart(){const h=hearts();if(h.n>0){h.n--;if(!h.refillAt)h.refillAt=Date.now()+HEART_MS;saveProgress();}updateHearts();return h.n;}
+function gainHeart(n){const h=hearts();h.n=Math.min(HEARTS_MAX,h.n+(n||1));if(h.n>=HEARTS_MAX)h.refillAt=null;saveProgress();updateHearts();return h.n;}
+function heartEta(){const h=hearts();return (h.n>=HEARTS_MAX||!h.refillAt)?0:Math.max(0,h.refillAt-Date.now());}
+function etaText(ms){const m=Math.max(1,Math.ceil(ms/60000));return m>=60?`${Math.floor(m/60)} h ${m%60} min`:`${m} ${pl(m,'minutę','minuty','minut')}`;}
+/* „serce za N fiszek”: zadanie odzyskania życia (z panelu Koniec żyć), liczone w renderFiszki */
+function heartReview(){const h=hearts();if(!h.quest)return;h.quest--;if(h.quest<=0){delete h.quest;gainHeart();setTimeout(()=>toast('Życie odzyskane: +1','heart'),350);}saveProgress();}
+/* pigułka serc (przycisk: tap = kiedy wraca życie); .n aktualizowane przez updateHearts() */
+function heartsPill(o){
+  o=o||{};const h=hearts();
+  const b=el('button','hearts'+(o.beat?' a-beat':'')+(h.n===0?' zero':''),icon('heart',{size:o.size||16,cls:o.iconBeat?'a-beat':''})+`<span class="n">${h.n}</span>`);
+  b.setAttribute('aria-label','Życia: '+h.n+' z '+HEARTS_MAX);
+  b.onclick=()=>{const e=heartEta();toast(e?'Kolejne życie za '+etaText(e):'Pełne życia','heart');};
+  return b;
+}
+function updateHearts(){const n=hearts().n;document.querySelectorAll('.hearts').forEach(p=>{const s=p.querySelector('.n');if(s)s.textContent=n;p.classList.toggle('zero',n===0);});}
+/* combo: kolejne poprawne w lekcji; mnożnik XP ×2 od 5, ×3 od 10 */
+function comboMult(c){return c>=10?3:c>=5?2:1;}
+const ORD=['','Pierwsza','Druga','Trzecia','Czwarta','Piąta','Szósta','Siódma','Ósma','Dziewiąta','Dziesiąta'];
+function comboText(c){return c>=2?((ORD[c]||c+'.')+' poprawna z rzędu'):'Tak trzymaj';}
+
+/* klawiatura: jeden nasłuch (INIT), bieżący widok podstawia keyFn; advOk = ochrona przed podwójnym „dalej” (tap + Enter) */
+let keyFn=null,lastAdv=0,nhInt=null;
+function advOk(){const t=Date.now();if(t-lastAdv<350)return false;lastAdv=t;return true;}
+
+/* konfetti: n kawałków .a-fall z różnym opóźnieniem (d1…d6) i kolorem tylko z tokenów (--c) */
+const CONF=['pink','cyan','gold','acid'];
+function confetti(n){
+  const c=el('div','confetti');c.setAttribute('aria-hidden','true');
+  for(let i=0;i<n;i++){const p=el('i','a-fall'+(i%7?' d'+(i%7):'')+(i%3===1?' round':''));p.style.cssText=`left:${(i*37+11)%92}%;top:${(i*53+40)%300}px;--c:var(--${CONF[i%4]});--s:${7+(i*5)%7}px`;c.appendChild(p);}
+  return c;
+}
+
+/* panel od dołu (.sheet.ok / .bad / .nohearts): jeden na raz, [data-primary] = przycisk pod Enter */
+function openSheet(kind,html){
+  closeSheet();
+  const s=el('div','sheet a-rise '+kind,html);s.id='sheet';s.setAttribute('role','dialog');
+  app.appendChild(s);
+  keyFn=e=>{if(e.key==='Enter'||e.key===' '){const b=s.querySelector('[data-primary]');if(b){e.preventDefault();b.click();}}};
+  return s;
+}
+function closeSheet(){const s=document.getElementById('sheet');if(s)s.remove();const b=document.getElementById('sheetback');if(b)b.remove();clearInterval(nhInt);keyFn=null;}
+function sheetBack(){if(!document.getElementById('sheetback')){const b=el('div','sheetback');b.id='sheetback';app.appendChild(b);}}
+/* dobrze: ikona, „Dobrze!”, combo, chip +XP (z mnożnikiem), wyjaśnienie e, DALEJ */
+function sheetOk(q,o){
+  const s=openSheet('ok',`<div class="srow"><div class="sico a-pop d2">${icon('check',{size:26,stroke:3.6})}</div>
+    <div class="grow"><div class="st">Dobrze!</div><div class="ss">${comboText(o.combo)}</div></div>
+    <span class="xpchip a-pop d3">+${o.xp} XP${o.mult>1?' ×'+o.mult:''}</span></div>
+    ${q.e?`<div class="sbox"><div class="lbl">Dlaczego</div><div>${q.e}</div></div>`:''}
+    <button class="pill" id="snext" data-primary>DALEJ</button>`);
+  s.querySelector('#snext').onclick=()=>{if(!advOk())return;closeSheet();o.onNext();};
+  return s;
+}
+/* źle: „Nie tym razem”, poprawna litera, wyjaśnienie, [DO FISZEK] DALEJ */
+function sheetBad(q,o){
+  const s=openSheet('bad',`<div class="srow"><div class="sico">${icon('close',{size:24,stroke:3.6})}</div>
+    <div class="grow"><div class="st">Nie tym razem</div><div class="ss">Poprawna: odpowiedź ${keys[q.c]}</div></div></div>
+    ${q.e?`<div class="sbox"><div class="lbl">Zapamiętaj</div><div>${q.e}</div></div>`:''}
+    <div class="sbtns">${o.onCards?'<button class="pill ghost red" id="scards">DO FISZEK</button>':''}<button class="pill red" id="snext" data-primary>DALEJ</button></div>`);
+  s.querySelector('#snext').onclick=()=>{if(!advOk())return;closeSheet();o.onNext();};
+  const c=s.querySelector('#scards');if(c)c.onclick=()=>{closeSheet();o.onCards();};
+  return s;
+}
+/* Koniec żyć (NoHearts.html): licznik do następnego życia, „Powtórz N fiszek” (+1 życie), „Wróć później”.
+   inLesson=true → lekcja przerwana (poziom niezaliczony); gemy/„Uzupełnij wszystkie” dojdą w kroku 8. */
+function showNoHearts(o){
+  o=o||{};
+  const s=openSheet('nohearts',`<div class="nhh">${[0,1,2,3,4].map(()=>icon('heart',{size:30,fill:false,stroke:2.2})).join('')}</div>
+    <div class="nht"><div class="st a-pop d1">Koniec żyć</div><div class="ss">Kolejne życie wraca za <b class="a-blink" id="nheta">${etaText(heartEta())}</b>. Możesz też odzyskać je od razu.</div></div>
+    <button class="nhcard a-glow" id="nhrev">${'<div class="ico">'+icon('refresh',{size:24,stroke:2.8})+'</div>'}<div class="grow"><div class="t">Powtórz ${HEART_REV} fiszek</div><div class="s">odzyskujesz jedno życie · za darmo</div></div>${icon('chevron-right',{size:20})}</button>
+    <button class="pill text" id="nhlater" data-primary>WRÓĆ PÓŹNIEJ</button>`);
+  sheetBack(); // tło przyciemniające pod panelem (po openSheet, bo closeSheet je zdejmuje)
+  const leave=()=>{closeSheet();if(o.inLesson)closeLesson();};
+  s.querySelector('#nhlater').onclick=leave;
+  s.querySelector('#nhrev').onclick=()=>{hearts().quest=HEART_REV;saveProgress();closeSheet();goCards(o.lv);toast(`Przejrzyj ${HEART_REV} fiszek — wraca życie`,'heart');};
+  nhInt=setInterval(()=>{const e=document.getElementById('nheta');if(!e)return clearInterval(nhInt);if(hearts().n>0){leave();toast('Życie wróciło','heart');return;}e.textContent=etaText(heartEta());},1000);
+  return s;
+}
+/* fiszki przefiltrowane do poziomu (z lekcji: zamyka ją bez wyniku) */
+function goCards(lv){
+  const L=document.getElementById('lesson');if(L)L.classList.remove('open');
+  lessonState=null;fState={subj:current.id,lvl:lv?lv.id:'all',idx:0,flipped:false};curTab='fiszki';renderSubject();
+}
+
+/* pytanie + kafle 3D z literą + SPRAWDŹ (Quiz.html). o={n,total,combo,broken,tag,onAnswer(i,ok)} → {body,foot}.
+   Wybór podświetla kafel i odblokowuje SPRAWDŹ; po sprawdzeniu kafle: correct / wrong (.a-shake) / dim. Klawisze: 1-5 / A-E, Enter. */
+function quizBlock(q,o){
+  const body=el('div','quiz');
+  const chips=[];
+  if(o.combo>=2)chips.push(`<span class="combo a-pop">Combo x${o.combo}</span>`);else if(o.broken)chips.push('<span class="combo bad">Combo zerwane</span>');
+  if(o.tag)chips.push(`<span class="qn">${o.tag}</span>`);
+  chips.push(`<span class="qn">Pytanie ${o.n} z ${o.total}</span>`);
+  body.innerHTML=`<div class="qchips">${chips.join('')}</div><div class="qq a-up">${q.q}</div>
+    <div class="qopts">${q.a.map((a,i)=>`<button class="qopt a-up d${Math.min(6,i+1)}" data-i="${i}"><span class="k">${keys[i]}</span><span class="t">${a}</span></button>`).join('')}</div>`;
+  const btn=el('button','pill qcheck','SPRAWDŹ');btn.disabled=true;btn.id='qcheck';
+  let sel=null,done=false;
+  const opts=[...body.querySelectorAll('.qopt')];
+  const select=i=>{if(done||!opts[i])return;sel=i;opts.forEach(x=>x.classList.toggle('sel',+x.dataset.i===i));btn.disabled=false;};
+  const check=()=>{
+    if(done||sel==null)return;done=true;
+    const ok=sel===q.c;
+    opts.forEach(x=>{const xi=+x.dataset.i;x.disabled=true;x.classList.remove('sel','a-up','d1','d2','d3','d4','d5','d6');
+      if(xi===q.c){x.classList.add('correct',ok?'a-pop':'a-glow');x.querySelector('.k').innerHTML=icon('check',{size:18,stroke:3.6});}
+      else if(xi===sel){x.classList.add('wrong','a-shake');x.querySelector('.k').innerHTML=icon('close',{size:17,stroke:3.6});}
+      else x.classList.add('dim');});
+    body.querySelector('.qq').classList.add('muted');
+    btn.classList.add('hide');btn.disabled=true;keyFn=null;
+    o.onAnswer(sel,ok);
+  };
+  opts.forEach(x=>x.onclick=()=>select(+x.dataset.i));
+  btn.onclick=check;
+  keyFn=e=>{const k=(e.key||'').toLowerCase();const m=/^[1-5]$/.test(k)?+k-1:'abcde'.indexOf(k);if(k.length===1&&m>=0&&m<opts.length)select(m);else if(e.key==='Enter'&&sel!=null){e.preventDefault();check();}};
+  return {body,foot:btn};
+}
+
+/* ============================================================ SUBJECT shell (Path.html: pas nagłówka w --surface-2 + chipy zakładek) */
 function openSubject(id,tab,setup){
   current=SUBJECTS.find(s=>s.id===id);
   if(!current)return go('today');
@@ -1332,26 +1648,27 @@ function openSubject(id,tab,setup){
   renderSubject();
 }
 function renderSubject(){
-  const s=current;
+  const s=current;const st=subjState(s.id);
   try{clearInterval(cwInt);clearInterval(exInt);}catch(e){}
+  closeSheet();keyFn=null;
   app.innerHTML='';
-  const top=el('div','topbar');
-  const back=el('button','backbtn',icon('back',{size:20,stroke:3}));back.setAttribute('aria-label','Wróć do planu dnia');back.onclick=()=>go('today');
-  top.appendChild(back);
-  top.appendChild(el('div','logo',`${mono(initial(s.short||s.name),'sm')}<span class="g">${s.short||s.name}</span>`));
-  const pills=el('div','pills');
-  pills.appendChild(el('div','streak',`${icon('flame',{size:16,cls:'ic-flame a-beat'})}<span id="streakNum">${streakDisplay()}</span> <small>dni</small>`));
-  pills.appendChild(el('div','streak',`${icon('bolt',{size:16,cls:'ic-gold'})}<span id="xpNum">${subjState(s.id).xp}</span> <small>xp</small>`));
-  top.appendChild(pills);
-  app.appendChild(top);
-
+  const total=s.levels.length,done=s.levels.filter(l=>(st.levels[l.id]||{}).done).length,pct=total?Math.round(done/total*100):0;
+  const band=el('div','band');
+  const row=el('div','brow');
+  const back=el('button','backbtn',icon('back',{size:20,stroke:3}));back.setAttribute('aria-label','Wróć do planu dnia');back.onclick=()=>go('today');row.appendChild(back);
+  row.appendChild(el('div','bmeta',`<div class="bname">${mono(initial(s.short||s.name),'xs solid')}<span>${s.short||s.name}</span></div>
+    <div class="bprog"><div class="bar"><i class="a-grow" style="width:${pct}%"></i></div><span>${done}/${total} · <b id="xpNum">${st.xp}</b> xp</span></div>`));
+  const info=el('button','infobtn'+(curTab==='info'?' active':''),icon('info',{size:19}));info.setAttribute('aria-label','Zasady zaliczenia');info.onclick=()=>{curTab='info';renderSubject();};row.appendChild(info);
+  row.appendChild(heartsPill({iconBeat:true}));
+  band.appendChild(row);
   const tabs=el('div','subtabs');
-  [['path','map','Ścieżka'],['fiszki','cards','Fiszki'],['quiz','brain','Quiz'],['cwicz','edit','Ćwiczenia'],['egzamin','target','Egzamin'],['info','info','Info']].forEach(([k,ic,lab])=>{
-    const b=el('div','subtab'+(curTab===k?' active':''),icon(ic,{size:15})+'<span>'+lab+'</span>');
+  [['path','map','Ścieżka'],['fiszki','cards','Fiszki'],['quiz','brain','Quiz'],['cwicz','edit','Ćwiczenia'],['egzamin','target','Egzamin']].forEach(([k,ic,lab])=>{
+    const b=el('button','subtab'+(curTab===k?' active':''),icon(ic,{size:15})+'<span>'+lab+'</span>');
+    if(curTab===k)b.setAttribute('aria-current','page');
     b.onclick=()=>{curTab=k;renderSubject();};
     tabs.appendChild(b);
   });
-  app.appendChild(tabs);
+  band.appendChild(tabs);app.appendChild(band);
 
   const sc=el('div','screen active');sc.id='subjscreen';
   app.appendChild(sc);
@@ -1367,121 +1684,171 @@ function renderSubject(){
   const lesson=el('div','lesson');lesson.id='lesson';app.appendChild(lesson);
 }
 
-/* ---------- ŚCIEŻKA (Duolingo) ---------- */
+/* ---------- ŚCIEŻKA (Path.html): karta rozdziału, wężyk węzłów (offset --x per węzeł, łączniki w połowie drogi), skrzynia co 3 poziomy ---------- */
 function levelUnlocked(s,idx){
   if(idx===0)return true;
   const prev=s.levels[idx-1];
   const st=subjState(s.id);
   return !!(st.levels[prev.id]&&st.levels[prev.id].done);
 }
+const PATH_OFF=[-104,8,96,-28]; // poziome przesunięcia kolejnych węzłów (px), cyklicznie
 function renderPath(sc){
   const s=current;const st=subjState(s.id);
-  const wrap=el('div','scroll');
+  const isDone=lv=>!!(st.levels[lv.id]||{}).done;
+  const wrap=el('div','scroll pathview');
+  wrap.appendChild(el('div','blob a-float mid'));
+  const curIdx=s.levels.findIndex((l,i)=>levelUnlocked(s,i)&&!isDone(l));
+  const all=curIdx<0;
+  wrap.appendChild(el('div','chapter a-up',`<i></i><div class="grow"><div class="eyebrow">Rozdział ${all?s.levels.length:curIdx+1}</div><div class="t">${all?'Wszystko zaliczone':noEmoji(s.levels[curIdx].title)}</div></div>${icon('list',{size:18})}`));
   const path=el('div','path');
-  s.levels.forEach((lv,i)=>{
-    if(i>0){const c=el('div','connector'+( (st.levels[s.levels[i-1].id]||{}).done?' done':''));path.appendChild(c);}
-    const unlocked=levelUnlocked(s,i);
-    const done=(st.levels[lv.id]||{}).done;
-    const stars=(st.levels[lv.id]||{}).stars||0;
-    const node=el('div','pathnode pathzig');
-    const cls = done?'node-done':(unlocked?'node-open':'node-lock');
-    const btn=el('button','nodebtn '+cls, done?icon('check',{size:34,stroke:3.4}):(unlocked?icon('bolt',{size:40}):icon('lock',{size:28})));
-    btn.setAttribute('aria-label',(done?'Powtórz: ':unlocked?'Zacznij: ':'Zablokowane: ')+lv.title);
-    if(done){btn.innerHTML+=`<span class="stars">${starRow(stars,12)}</span>`;}
-    if(unlocked){btn.onclick=()=>startLesson(lv);}else{btn.onclick=()=>toast('Najpierw zalicz poprzedni poziom','lock');}
-    node.appendChild(btn);
-    node.appendChild(el('div','nodelabel',`${lv.title}<small>${(lv.quiz||[]).length} pytań · ${(lv.flashcards||[]).length} fiszek</small>`));
+  const items=[];
+  s.levels.forEach((lv,i)=>{items.push({lv,i});if((i+1)%3===0)items.push({chest:true,after:i});});
+  const xOf=k=>PATH_OFF[k%PATH_OFF.length];
+  const doneOf=it=>it.chest?isDone(s.levels[it.after]):isDone(it.lv);
+  path.appendChild(el('div','connector done first'));
+  items.forEach((it,k)=>{
+    const x=xOf(k);
+    if(k>0){const c=el('div','connector'+(doneOf(items[k-1])?' done':''));c.style.setProperty('--x',((xOf(k-1)+x)/2)+'px');path.appendChild(c);}
+    const node=el('div','pathnode');node.style.setProperty('--x',x+'px');
+    if(it.chest){
+      const open=doneOf(it);
+      const btn=el('button','nodebtn node-chest a-sway',icon('chest',{size:32,stroke:2.4}));
+      btn.setAttribute('aria-label','Skrzynia: '+(open?'do otwarcia':'po zaliczeniu poziomu '+(it.after+1)));
+      btn.onclick=()=>toast(open?'Skrzynia: klejnoty dojdą w kroku 8':'Skrzynia otworzy się po zaliczeniu poziomu '+(it.after+1),open?'gem':'lock');
+      node.appendChild(btn);node.appendChild(el('div','nodelabel gold','Skrzynia'));
+    }else{
+      const lv=it.lv,i=it.i;const unlocked=levelUnlocked(s,i),done=isDone(lv),stars=(st.levels[lv.id]||{}).stars||0;
+      const cur=unlocked&&!done;
+      if(cur){node.classList.add('cur');node.appendChild(el('div','bubble a-bob','ZACZNIJ'));}
+      const btn=el('button','nodebtn '+(done?'node-done':cur?'node-open a-pulse':'node-lock'),done?icon('check',{size:34,stroke:3.4}):cur?icon('bolt',{size:40}):icon('lock',{size:28}));
+      btn.setAttribute('aria-label',(done?'Powtórz: ':cur?'Zacznij: ':'Zablokowane: ')+lv.title);
+      if(done)btn.innerHTML+=`<span class="stars">${starRow(stars,12)}</span>`;
+      btn.onclick=unlocked?()=>startLesson(lv):()=>toast('Najpierw zalicz poprzedni poziom','lock');
+      node.appendChild(btn);
+      node.appendChild(el('div','nodelabel'+(cur?' cur':done?'':' lock'),noEmoji(lv.title)));
+    }
     path.appendChild(node);
   });
-  wrap.appendChild(path);sc.appendChild(wrap);
+  wrap.appendChild(path);sc.innerHTML='';sc.appendChild(wrap);
+  // auto-scroll do bieżącego węzła (na środek ekranu)
+  requestAnimationFrame(()=>{const n=wrap.querySelector('.node-open');if(!n)return;const r=n.getBoundingClientRect(),w=wrap.getBoundingClientRect();wrap.scrollTop=Math.max(0,r.top-w.top+wrap.scrollTop-w.height/2+r.height/2);});
 }
 
-/* ---------- LEKCJA: feed -> quiz bramka ---------- */
+/* ---------- LEKCJA: roladka (Lesson.html) -> quiz z panelem dobrze/źle, życiami i combo -> LevelComplete ---------- */
 let lessonState=null;
 function startLesson(lv){
-  lessonState={lv,phase:'feed',feedIdx:0,quiz:shuffle(lv.quiz||[]).slice(0,Math.min(6,(lv.quiz||[]).length)),qIdx:0,score:0,answered:false};
-  if(!lessonState.quiz.length){ // brak quizu — sam feed
-    lessonState.quiz=[];
-  }
+  if(hearts().n<=0){showNoHearts({inLesson:false,lv});return;} // bez życia nie zaczynasz
+  lessonState={lv,phase:(lv.feed||[]).length?'feed':'quiz',feedIdx:0,quiz:shuffle(lv.quiz||[]).slice(0,Math.min(6,(lv.quiz||[]).length)),qIdx:0,score:0,answered:false,combo:0,maxCombo:0,broken:false,xp:0,marks:[]};
   const L=document.getElementById('lesson');L.classList.add('open');
   renderLesson();
 }
-function closeLesson(){document.getElementById('lesson').classList.remove('open');renderSubject();}
+function closeLesson(){closeSheet();keyFn=null;lessonState=null;const L=document.getElementById('lesson');if(L)L.classList.remove('open');renderSubject();}
+/* nagłówek lekcji: zamknij, pasek segmentowy (krok = dawka albo pytanie; zły = czerwony), serca */
+function lessonHead(ls){
+  const totalFeed=(ls.lv.feed||[]).length,steps=totalFeed+ls.quiz.length;
+  const cur=ls.phase==='feed'?ls.feedIdx:totalFeed+ls.qIdx;
+  const head=el('div','lessonhead');
+  const x=el('button','x',icon('close',{size:18,stroke:3}));x.setAttribute('aria-label','Zamknij lekcję');x.onclick=closeLesson;head.appendChild(x);
+  const seg=el('div','segbar');seg.setAttribute('aria-label',`krok ${Math.min(cur+1,steps)} z ${steps}`);
+  for(let i=0;i<steps;i++)seg.appendChild(el('i',i<cur?(ls.marks[i]==='bad'?'bad':'on'):''));
+  head.appendChild(seg);
+  head.appendChild(heartsPill());
+  return head;
+}
 function renderLesson(){
   const L=document.getElementById('lesson');const s=current;const ls=lessonState;const lv=ls.lv;
   const totalFeed=(lv.feed||[]).length;
-  let progPct;
-  if(ls.phase==='feed') progPct = totalFeed?ls.feedIdx/(totalFeed+ls.quiz.length)*100:0;
-  else progPct = (totalFeed+ls.qIdx)/(totalFeed+ls.quiz.length)*100;
+  closeSheet();
   L.innerHTML='';
-  const head=el('div','lessonhead');
-  const x=el('button','x',icon('close',{size:18,stroke:3}));x.setAttribute('aria-label','Zamknij');x.onclick=closeLesson;head.appendChild(x);
-  head.appendChild(el('div','bar',`<i style="width:${progPct}%"></i>`));
-  L.appendChild(head);
+  L.appendChild(lessonHead(ls));
   const body=el('div','lessonbody');L.appendChild(body);
 
   if(ls.phase==='feed'){
     const f=lv.feed[ls.feedIdx];
-    const fw=el('div');fw.style.cssText='flex:1;display:flex;flex-direction:column;justify-content:center;overflow-y:auto';
-    const card=el('div','fcard');
-    card.innerHTML=`<span class="tag">${lv.title} · ${ls.feedIdx+1}/${totalFeed}</span>
+    body.appendChild(el('div','blob a-float cyan'));
+    const card=el('div','fcard a-up');
+    card.innerHTML=`<div class="fin"><span class="tag accent">Mikro-dawka ${ls.feedIdx+1}/${totalFeed}</span>
       <div class="ftitle">${f.title}</div><div class="fbody">${f.body}</div>
-      ${f.real?`<div class="real"><span class="lbl">${icon('bulb',{size:14})}po ludzku</span>${f.real}</div>`:''}
-      ${f.mnemo?`<div class="mnemo"><span class="lbl">${icon('bookmark',{size:14})}zapamiętaj</span>${f.mnemo}</div>`:''}`;
-    fw.appendChild(card);body.appendChild(fw);
-    const foot=el('div','lessonfoot');
-    const b=el('button','pill', ls.feedIdx+1<totalFeed?LBL.next:(ls.quiz.length?'lecimy z quizem '+icon('brain',{size:18}):'zakończ '+icon('check',{size:18,stroke:3.4})));
-    b.onclick=()=>{ if(ls.feedIdx+1<totalFeed){ls.feedIdx++;renderLesson();} else if(ls.quiz.length){ls.phase='quiz';renderLesson();} else finishLesson(); };
-    foot.appendChild(b);L.appendChild(foot);
+      ${f.real?`<div class="real a-up d2"><span class="lbl">${icon('bulb',{size:15})}po ludzku</span>${f.real}</div>`:''}
+      ${f.mnemo?`<div class="mnemo a-up d3"><span class="lbl">${icon('bookmark',{size:15})}zapamiętaj</span>${f.mnemo}</div>`:''}</div>`;
+    body.appendChild(card);
+    const last=ls.feedIdx+1>=totalFeed;
+    const next=()=>{if(!advOk())return;if(!last){ls.feedIdx++;renderLesson();}else if(ls.quiz.length){ls.phase='quiz';renderLesson();}else finishLesson();};
+    const prev=()=>{if(ls.feedIdx>0&&advOk()){ls.feedIdx--;renderLesson();}};
+    const foot=el('div','lessonfoot col');
+    foot.appendChild(el('div','swipehint2',icon('arrow-up',{size:16,cls:'a-bob'})+'<span>przesuń w górę, żeby przejść dalej</span>'));
+    const b=el('button','pill a-glow',last?(ls.quiz.length?'LECIMY Z QUIZEM':'ZAKOŃCZ'):'KONTYNUUJ');b.id='lnext';b.onclick=next;foot.appendChild(b);
+    L.appendChild(foot);
+    // swipe: w górę = dalej (gdy karta przewinięta do końca), w dół = wstecz
+    let y0=null,x0=0;
+    body.onpointerdown=e=>{y0=e.clientY;x0=e.clientX;};
+    body.onpointerup=e=>{if(y0==null)return;const dy=e.clientY-y0,dx=Math.abs(e.clientX-x0);y0=null;if(dx>60)return;
+      const fin=card.querySelector('.fin');const atEnd=fin.scrollTop+fin.clientHeight>=fin.scrollHeight-6;
+      if(dy<-70&&atEnd)next();else if(dy>70&&fin.scrollTop<=0)prev();};
+    keyFn=e=>{if(e.key==='Enter'||e.key==='ArrowRight'||e.key===' '){e.preventDefault();next();}else if(e.key==='ArrowLeft')prev();};
   } else if(ls.phase==='quiz'){
     if(ls.qIdx>=ls.quiz.length)return finishLesson();
     const q=ls.quiz[ls.qIdx];ls.answered=false;
-    const qc=el('div','qcard');qc.style.cssText='flex:1;overflow-y:auto';
-    qc.innerHTML=`<span class="tag">pytanie ${ls.qIdx+1}/${ls.quiz.length}</span>
-      <div class="qq">${q.q}</div>
-      <div class="opts">${q.a.map((o,i)=>`<button class="opt" data-i="${i}"><span class="k">${keys[i]}</span><span>${o}</span></button>`).join('')}</div>
-      <div class="explain" id="lexp"><b>czemu:</b> ${q.e||''}</div>`;
-    body.appendChild(qc);
-    const foot=el('div','lessonfoot');
-    const nb=el('button','pill qnext',LBL.next);nb.id='lnext';
-    nb.onclick=()=>{ls.qIdx++;renderLesson();};
-    foot.appendChild(nb);L.appendChild(foot);
-    qc.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{
-      if(ls.answered)return;ls.answered=true;const i=+o.dataset.i;
-      qc.querySelectorAll('.opt').forEach(x=>{const xi=+x.dataset.i;if(xi===q.c)x.classList.add('correct');else if(xi===i)x.classList.add('wrong');else x.classList.add('dim');});
-      if(i===q.c){ls.score++;addXP(s.id,5);toast('GIT +5xp','check');}else{toast('mid, czytaj wyjaśnienie','info');}
-      document.getElementById('lexp').classList.add('show');
-      const nx=document.getElementById('lnext');nx.classList.add('show');nx.innerHTML=(ls.qIdx+1>=ls.quiz.length)?'zobacz '+LBL.result:LBL.next;
-    });
+    const stepIdx=totalFeed+ls.qIdx;
+    const qb=quizBlock(q,{n:ls.qIdx+1,total:ls.quiz.length,combo:ls.combo,broken:ls.broken,onAnswer:(i,ok)=>{
+      ls.answered=true;ls.broken=false;
+      const next=()=>{ls.qIdx++;renderLesson();};
+      if(ok){
+        ls.score++;ls.combo++;ls.maxCombo=Math.max(ls.maxCombo,ls.combo);
+        const m=comboMult(ls.combo),xp=5*m;ls.xp+=xp;addXP(s.id,xp);
+        body.appendChild(confetti(4));
+        sheetOk(q,{xp,mult:m,combo:ls.combo,onNext:next});
+      }else{
+        ls.broken=ls.combo>=2;ls.combo=0;ls.marks[stepIdx]='bad';
+        loseHeart();
+        const hp=L.querySelector('.hearts');if(hp){hp.classList.add('a-beat');hp.appendChild(el('span','minus a-blink','−1'));}
+        const seg=L.querySelectorAll('.segbar i')[stepIdx];if(seg)seg.className='bad';
+        sheetBad(q,{onNext:()=>{if(hearts().n<=0)showNoHearts({inLesson:true,lv});else next();},onCards:()=>goCards(lv)});
+      }
+    }});
+    body.appendChild(qb.body);
+    const foot=el('div','lessonfoot');foot.appendChild(qb.foot);L.appendChild(foot);
   }
 }
+/* wynik poziomu (LevelComplete.html); logika XP/gwiazdek/zaliczenia jak dotąd + bonus combo w XP z quizu */
 function finishLesson(){
   const s=current;const ls=lessonState;const lv=ls.lv;
-  const total=ls.quiz.length||1;const pct=ls.quiz.length?Math.round(ls.score/ls.quiz.length*100):100;
+  const pct=ls.quiz.length?Math.round(ls.score/ls.quiz.length*100):100;
   const stars = pct>=90?3:(pct>=70?2:(pct>=50?1:0));
   const passed = ls.quiz.length?pct>=50:true;
   const st=subjState(s.id);const prev=st.levels[lv.id]||{};
+  let bonus=0;
   if(passed){
     st.levels[lv.id]={done:true,stars:Math.max(stars,prev.stars||0),best:Math.max(pct,prev.best||0)};
-    if(!prev.done)addXP(s.id,15);
+    if(!prev.done){bonus=15;addXP(s.id,15);}
     saveProgress();
     completeDaily(s.id,'lesson',lv.id);
   }
-  const L=document.getElementById('lesson');
-  const kind = !passed?'fail':(pct>=90?'gold':pct>=70?'hot':'ok');
-  const verdict = !passed?'Poniżej 50% — poziom niezaliczony. Przejedź feed jeszcze raz i spróbuj ponownie, dasz radę.':
-    (pct>=90?'Mistrzostwo. Trzy gwiazdki, profesor by płakał ze szczęścia.':pct>=70?'Solidnie! Poziom zaliczony, lecimy dalej.':'Zaliczone na styk — wróć kiedyś po więcej gwiazdek.');
-  L.innerHTML=`<div class="lessonhead"><button class="x" id="lx" aria-label="Zamknij">${icon('close',{size:18,stroke:3})}</button><div class="bar"><i style="width:100%"></i></div></div>
-   <div class="lessonbody"><div class="result">
-     ${bigTile(kind)}
-     <h2>${lv.title}</h2>
-     ${ls.quiz.length?`<div class="score">Trafione <b>${ls.score}/${ls.quiz.length}</b> (${pct}%) ${passed?'<span class="starrow">'+starRow(stars,18)+'</span>':''}</div>`:''}
-     <p>${verdict}</p>
-   </div></div>
-   <div class="lessonfoot">${passed?'<button class="pill" id="lcont">dalej na ścieżkę '+icon('map',{size:18})+'</button>':'<button class="pill" id="lretry">spróbuj '+LBL.again+'</button>'}</div>`;
-  document.getElementById('lx').onclick=closeLesson;
-  const cont=document.getElementById('lcont');if(cont)cont.onclick=closeLesson;
-  const retry=document.getElementById('lretry');if(retry)retry.onclick=()=>startLesson(lv);
+  const L=document.getElementById('lesson');closeSheet();
+  const d=daily();const dd=d.tasks.filter(t=>t.done).length;const n=streakDisplay();
+  L.innerHTML='';
+  const body=el('div','lessonbody done');
+  body.appendChild(el('div','blob a-float '+(passed?'acid':'red')));
+  if(passed)body.appendChild(confetti(7));
+  const starIc=(size,cls,on)=>icon('star',{size,fill:on,stroke:2,cls:cls+(on?' ic-gold':' ic-dim')});
+  const lc=el('div','lc');
+  lc.innerHTML=`<div class="lcstars">${starIc(34,'a-pop d1',stars>=2)}${starIc(46,'a-pop',stars>=1)}${starIc(34,'a-pop d3',stars>=3)}</div>
+    <div class="lcbig a-pop d2${passed?'':' fail'}">${passed?icon('check',{size:66,stroke:3.2}):icon('close',{size:60,stroke:3.4})}</div>
+    <div class="lctxt"><div class="lct a-up d3">${passed?'Poziom zaliczony!':'Poziom niezaliczony'}</div><div class="lcs">${s.short||s.name} · ${noEmoji(lv.title)}</div></div>
+    <div class="lcstats"><div class="lcstat a-up d4"><div class="k">XP</div><div class="v gold">+${ls.xp+bonus}</div></div>
+      <div class="lcstat a-up d5"><div class="k">Celność</div><div class="v acid">${pct}%</div></div>
+      <div class="lcstat a-up d6"><div class="k">Combo</div><div class="v pink">x${ls.maxCombo}</div></div></div>
+    ${passed?'':'<p class="lcp">Poniżej 50% — przejedź roladkę jeszcze raz i spróbuj ponownie, dasz radę.</p>'}`;
+  const sk=el('button','lcstreak a-up d6',`<div class="ico">${icon('flame',{size:24})}</div><div class="grow"><div class="t">${n} ${pl(n,'dzień','dni','dni')} z rzędu</div><div class="s">${d.tasks.length&&dd>=d.tasks.length?'Plan dnia zrobiony':'Plan dnia: '+dd+' z '+d.tasks.length}</div></div>${icon('chevron-right',{size:20})}`);
+  sk.onclick=()=>{closeLesson();go('streak');};
+  lc.appendChild(sk);body.appendChild(lc);L.appendChild(body);
+  const foot=el('div','lessonfoot col');
+  const main=el('button','pill a-glow',passed?'DALEJ':'SPRÓBUJ JESZCZE RAZ');main.id=passed?'lcont':'lretry';
+  main.onclick=passed?closeLesson:()=>startLesson(lv);
+  const alt=el('button','pill text',passed?'POWTÓRZ POZIOM':'WRÓĆ NA ŚCIEŻKĘ');alt.id=passed?'lretry':'lcont';
+  alt.onclick=passed?()=>startLesson(lv):closeLesson;
+  foot.appendChild(main);foot.appendChild(alt);L.appendChild(foot);
+  keyFn=e=>{if(e.key==='Enter')main.click();};
 }
 
 /* ---------- FISZKI (cały przedmiot, filtr po poziomach) ---------- */
@@ -1493,13 +1860,14 @@ function renderFiszki(sc){
   const chips=el('div','chips');
   const mk=(id,name)=>{const c=el('div','chip'+(fState.lvl===id?' active':''),name);c.onclick=()=>{fState.lvl=id;fState.idx=0;renderFiszki(sc);};return c;};
   chips.appendChild(mk('all','Wszystko'));
-  s.levels.forEach(l=>chips.appendChild(mk(l.id,l.title)));
+  s.levels.forEach(l=>chips.appendChild(mk(l.id,noEmoji(l.title))));
   wrap.appendChild(chips);
-  const list = fState.lvl==='all'?allCards(s):(s.levels.find(l=>l.id===fState.lvl).flashcards||[]).map(c=>({...c,lvl:s.levels.find(l=>l.id===fState.lvl).title}));
+  const list = fState.lvl==='all'?allCards(s):(s.levels.find(l=>l.id===fState.lvl).flashcards||[]).map(c=>({...c,lvl:noEmoji(s.levels.find(l=>l.id===fState.lvl).title)}));
   if(fState.idx>=list.length)fState.idx=0;
   const c=list[fState.idx]||{t:'—',d:'Brak fiszek'};
-  wrap.appendChild(el('div','progressrow',`<div class="bar"><i style="width:${list.length?fState.idx/list.length*100:0}%"></i></div><div class="counter">${list.length?fState.idx+1:0}/${list.length}</div>`));
-  const flip=el('div','flip'+(fState.flipped?' flipped':''));flip.style.height='calc(100dvh - 320px)';
+  const hq=hearts().quest||0;
+  wrap.appendChild(el('div','progressrow',`<div class="bar"><i style="width:${list.length?fState.idx/list.length*100:0}%"></i></div><div class="counter">${list.length?fState.idx+1:0}/${list.length}</div>${hq?`<div class="counter red">${icon('heart',{size:12})} za ${hq}</div>`:''}`));
+  const flip=el('div','flip'+(fState.flipped?' flipped':''));flip.style.height='calc(100dvh - 340px)';
   flip.innerHTML=`<div class="flipinner">
     <div class="face front"><span class="tag">${c.lvl||''}</span><div class="term">${c.t}</div><div class="tapomat">tapnij = odpowiedź</div></div>
     <div class="face back"><span class="tag">odpowiedź</span><div class="deftxt">${c.d}</div><div class="tapomat">tapnij = wróć</div></div></div>`;
@@ -1507,32 +1875,32 @@ function renderFiszki(sc){
   wrap.appendChild(flip);
   const btns=el('div','fbtns');
   const no=el('button','fbtn no',icon('refresh',{size:18,stroke:2.8})+' jeszcze nie');const yes=el('button','fbtn yes',icon('check',{size:18,stroke:3.4})+' umiem');
-  const next=(known)=>{if(known){addXP(s.id,2);toast('+2xp','check');}tickDaily(s.id,'review',1);fState.flipped=false;fState.idx=(fState.idx+1)%Math.max(1,list.length);renderFiszki(sc);};
+  const next=(known)=>{if(known){addXP(s.id,2);toast('+2xp','check');}tickDaily(s.id,'review',1);heartReview();fState.flipped=false;fState.idx=(fState.idx+1)%Math.max(1,list.length);renderFiszki(sc);};
   no.onclick=()=>next(false);yes.onclick=()=>next(true);
   btns.appendChild(no);btns.appendChild(yes);wrap.appendChild(btns);
   sc.innerHTML='';sc.appendChild(wrap);
 }
 
-/* ---------- QUIZ (cały przedmiot, filtr po poziomach) ---------- */
+/* ---------- QUIZ (cały przedmiot, filtr po poziomach): kafle 3D + panel dobrze/źle; bez serc i combo (to tylko w lekcji) ---------- */
 let qState=null;
 function renderQuiz(sc){
-  const s=current;
+  const s=current;closeSheet();
   if(!qState||qState.subj!==s.id)qState={subj:s.id,lvl:'all',list:null,idx:0,score:0,answered:false};
   if(!qState.list){
     qState.list = qState.lvl==='all'?shuffle(allQuiz(s)):shuffle((s.levels.find(l=>l.id===qState.lvl).quiz||[]));
     qState.idx=0;qState.score=0;
   }
-  const wrap=el('div','scroll');
+  const wrap=el('div','scroll quizview');
   const chips=el('div','chips');
   const mk=(id,name)=>{const c=el('div','chip'+(qState.lvl===id?' active':''),name);c.onclick=()=>{qState.lvl=id;qState.list=null;renderQuiz(sc);};return c;};
   chips.appendChild(mk('all','Wszystko'));
-  s.levels.forEach(l=>chips.appendChild(mk(l.id,l.title)));
+  s.levels.forEach(l=>chips.appendChild(mk(l.id,noEmoji(l.title))));
   wrap.appendChild(chips);
   wrap.appendChild(el('div','progressrow',`<div class="bar"><i style="width:${qState.list.length?qState.idx/qState.list.length*100:0}%"></i></div><div class="counter">${Math.min(qState.idx+1,qState.list.length)}/${qState.list.length}</div>`));
-  const card=el('div','qcard');
   if(qState.idx>=qState.list.length){
     const pct=qState.list.length?Math.round(qState.score/qState.list.length*100):0;
     if(qState.list.length)completeDaily(s.id,'quiz');
+    const card=el('div','qcard');
     card.innerHTML=`<div class="result">${bigTile(pct>=70?'hot':pct>=50?'ok':'fail')}<h2>Wynik</h2>
       <div class="score">Trafione <b>${qState.score}/${qState.list.length}</b> (${pct}%)</div>
       <p>${pct>=70?'Solidnie ogarniasz ten przedmiot.':pct>=50?'Spoko, ale przejedź jeszcze fiszki.':'Wróć do fiszek i ścieżki, potem tu wróć.'}</p>
@@ -1542,19 +1910,14 @@ function renderQuiz(sc){
     return;
   }
   const q=qState.list[qState.idx];qState.answered=false;
-  card.innerHTML=`<span class="tag">${q.lvl||''}</span><div class="qq">${q.q}</div>
-    <div class="opts">${q.a.map((o,i)=>`<button class="opt" data-i="${i}"><span class="k">${keys[i]}</span><span>${o}</span></button>`).join('')}</div>
-    <div class="explain" id="qexp"><b>czemu:</b> ${q.e||''}</div>
-    <button class="pill qnext" id="qnext" style="margin-top:14px">${LBL.next}</button>`;
-  wrap.appendChild(card);sc.innerHTML='';sc.appendChild(wrap);
-  card.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{
-    if(qState.answered)return;qState.answered=true;const i=+o.dataset.i;
-    card.querySelectorAll('.opt').forEach(x=>{const xi=+x.dataset.i;if(xi===q.c)x.classList.add('correct');else if(xi===i)x.classList.add('wrong');else x.classList.add('dim');});
-    if(i===q.c){qState.score++;addXP(s.id,3);toast('GIT +3xp','check');}else toast('mid','info');
-    document.getElementById('qexp').classList.add('show');
-    const n=document.getElementById('qnext');n.classList.add('show');n.innerHTML=(qState.idx+1>=qState.list.length)?LBL.result:LBL.next;
-  });
-  document.getElementById('qnext').onclick=()=>{qState.idx++;renderQuiz(sc);};
+  const qb=quizBlock(q,{n:qState.idx+1,total:qState.list.length,tag:qState.lvl==='all'?(q.lvl||''):'',onAnswer:(i,ok)=>{
+    qState.answered=true;
+    const next=()=>{qState.idx++;renderQuiz(sc);};
+    if(ok){qState.score++;addXP(s.id,3);wrap.appendChild(confetti(4));sheetOk(q,{xp:3,mult:1,combo:0,onNext:next});}
+    else sheetBad(q,{onNext:next});
+  }});
+  wrap.appendChild(qb.body);wrap.appendChild(qb.foot);
+  sc.innerHTML='';sc.appendChild(wrap);
 }
 
 /* ---------- EGZAMIN ---------- */
@@ -1783,6 +2146,8 @@ function cwRenderSpeed(sc){
 document.addEventListener('DOMContentLoaded',()=>{
   app=document.getElementById('app');
   applyMotion();
+  // klawiatura (lekcja, quiz, panele): jeden nasłuch, widok podstawia keyFn; pola tekstowe (ćwiczenia) pomijane
+  document.addEventListener('keydown',e=>{if(!keyFn)return;const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'))return;keyFn(e);});
   if(!SUBJECTS.length)return renderEmpty();
   go('today');
 });
