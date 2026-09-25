@@ -44,14 +44,14 @@ ${engine}
 dataFiles.forEach(f => {
   const data = fs.readFileSync(path.join(DATA, f), 'utf8');
   const id = f.replace(/\.js$/, '');
-  const out = page(`NAUKA — ${id}`, [data]);
+  const out = page(`Recall — ${id}`, [data]);
   fs.writeFileSync(path.join(OUT, `${id}.html`), out);
   console.log('zbudowano:', `build/${id}.html`, `(${Math.round(out.length/1024)} KB)`);
 });
 
 // all-in-one build
 const allData = dataFiles.map(f => fs.readFileSync(path.join(DATA, f), 'utf8'));
-const all = page('NAUKA — wszystkie przedmioty', allData);
+const all = page("Recall — wszystkie przedmioty", allData);
 fs.writeFileSync(path.join(OUT, 'nauka-all.html'), all);
 console.log('zbudowano:', 'build/nauka-all.html', `(${Math.round(all.length/1024)} KB)`);
 console.log('\nGotowe. Otwórz dowolny plik z build/ w przeglądarce lub wrzuć na telefon.');

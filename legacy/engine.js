@@ -1,5 +1,5 @@
 /* ============================================================
-   NAUKA — silnik wieloprzedmiotowej platformy do nauki
+   Recall — silnik wieloprzedmiotowej platformy do nauki
    Dane przedmiotów rejestrują się w window.SUBJECTS (patrz data/*.js)
    Tryby: Ścieżka (Duolingo) + Fiszki + Quiz + Egzamin + Info
    Widoki główne (krok 3): Dziś (plan dnia) · Przedmioty · Profil · Ustawienia · Seria
@@ -290,7 +290,7 @@ function shell(active,o){
   if(o.blob)app.appendChild(el('div','blob a-float'+(o.blob===true?'':' '+o.blob)));
   const top=el('div','topbar');
   if(o.back){const b=el('button','backbtn',icon('back',{size:20,stroke:3}));b.setAttribute('aria-label','Wróć');b.onclick=o.back;top.appendChild(b);}
-  top.appendChild(el('div',o.title?'logo ttl':'logo brand',o.title||'NAUKA<span class="g">.</span>'));
+  top.appendChild(el('div',o.title?'logo ttl':'logo brand',o.title||'Recall<span class="g">.</span>'));
   if(o.pills!==false){
     const pills=el('div','pills');
     const st=el('button','streak',`${icon('flame',{size:16,cls:'ic-flame a-beat'})}<span id="streakNum">${streakDisplay()}</span> <small>dni</small>`);
@@ -669,7 +669,7 @@ function renderEmpty(){
   sc.appendChild(el('div','blob a-float acid'));sc.appendChild(el('div','blob a-float d3 pink'));
   const scroll=el('div','scroll empty');
   const steps=[['Dodajesz zdjęcia, pliki i notatki','strona z podręcznika, PDF, PPTX, wklejony tekst'],['Powstają poziomy, fiszki i pytania','możesz wszystko poprawić przed startem'],['Uczysz się po 10 minut dziennie','materiał wraca tuż przed zapomnieniem']];
-  scroll.innerHTML=`<div class="logo brand">NAUKA<span class="g">.</span></div>
+  scroll.innerHTML=`<div class="logo brand">Recall<span class="g">.</span></div>
     <div class="art"><div class="art-a a-sway"></div><div class="art-b a-sway d2"></div><div class="art-c a-bob">${icon('upload',{size:58,stroke:2.4})}</div></div>
     <div class="a-up d1"><h1>Zacznij od pierwszego przedmiotu</h1><p>Dodaj materiały z zajęć. Reszta powstanie sama.</p></div>
     <div class="steps">${steps.map((s,i)=>`<div class="step a-up d${i+2}"><div class="num">${i+1}</div><div><div class="t">${s[0]}</div><div class="s">${s[1]}</div></div></div>`).join('')}</div>

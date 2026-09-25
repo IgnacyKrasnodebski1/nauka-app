@@ -1,4 +1,4 @@
-# 📚 NAUKA — wieloprzedmiotowa apka do nauki (gen-z)
+# Recall — wersja offline (jednoplikowa)
 
 Platforma do nauki w stylu Duolingo: wybierasz przedmiot, przechodzisz **poziomy** (odblokowują się po kolei), a w każdym masz **roladkę** (mikro-dawki wiedzy), **fiszki**, **quiz** i **symulację egzaminu**. Postępy (XP, gwiazdki, zaliczone poziomy) zapisują się w przeglądarce.
 
