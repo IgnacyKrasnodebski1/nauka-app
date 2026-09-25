@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { getSessionUser, listSubjects, listTopics } from "@/lib/data";
 import { slimTopic } from "@/lib/types";
-import { Home } from "@/components/app/home";
+import { MainScreen } from "@/components/screens/main";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +11,7 @@ export default async function AppHome() {
   const [subjects, topics] = await Promise.all([listSubjects(ctx.sb, ctx.userId), listTopics(ctx.sb, { userId: ctx.userId })]);
   return (
     <Suspense fallback={null}>
-      <Home subjects={subjects} topics={topics.map(slimTopic)} />
+      <MainScreen subjects={subjects} topics={topics.map(slimTopic)} />
     </Suspense>
   );
 }

@@ -1,8 +1,6 @@
-import type { Metadata } from "next";
-import { LeaderboardPage } from "@/components/leaderboard/leaderboard-page";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Ranking" };
-
-export default function Page() {
-  return <LeaderboardPage />;
+/** 1.x „Ranking” → 2.0 Liga. */
+export default function LeaderboardPage() {
+  redirect("/app/league");
 }

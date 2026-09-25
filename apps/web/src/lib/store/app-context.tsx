@@ -1,7 +1,11 @@
 "use client";
 import {
   addGems,
+  albumCheck,
+  applyBoost,
   applyQuestEvent,
+  boostActive,
+  boostUntil as boostUntilPure,
   claimQuest as claimQuestPure,
   claimTrophy as claimTrophyPure,
   dailyGoalPct,
@@ -17,6 +21,7 @@ import {
   refillHearts as refillHeartsPure,
   spendGems as spendGemsPure,
   streakDisplay,
+  THEMES,
   todayStr,
   todayXp as todayXpOf,
   touchStreak,
@@ -24,13 +29,18 @@ import {
   XP,
   type Achievement,
   type ActivityMap,
+  type AlbumEntry,
+  type AlbumMap,
   type DailyGoal,
   type HeartsView,
   type LeaderboardRow,
+  type LevelProgress,
   type Plan,
   type Quest,
   type QuestEvent,
+  type QuizQuestion,
   type Rank,
+  type SrsCard,
   type Stage,
   type SubjectProgress,
   type UserMeta,
@@ -42,12 +52,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { ProgressStore, type MyRank, type SrsMap } from "@/lib/store/progress-store";
 import { Emitter, type AppEvent, type AppEventType } from "@/lib/store/events";
+import { emptyExtra, hideKey, ovKey, type DailyPlan, type ExamRec, type Extra, type Goal, type HistDay, type Overrides, type Reminder, type Themes } from "@/lib/store/extra";
+import type { TestPlan } from "@/lib/tests";
 import { useSfx } from "@/lib/sfx";
 
 export interface Toast {
   id: number;
   text: string;
-  kind?: "xp" | "gem" | "heart" | "info";
+  /** icon name (legacy toast(text, icon)) */
+  icon?: string;
+  anim?: string;
 }
 
 export interface AppUser {
@@ -63,21 +77,19 @@ interface AppState {
   ready: boolean;
   user: AppUser;
   session: Session | null;
-  /** bearer token for /api calls (falls back to cookie session server-side) */
   authHeaders(): Record<string, string>;
   supabase: SupabaseClient;
   store: ProgressStore | null;
   progressOf(topicId: string): SubjectProgress;
   allProgress(): Record<string, SubjectProgress>;
   setProgress(topicId: string, p: SubjectProgress): void;
-  /** The single XP funnel: topic XP → activity → quests → daily goal bonus → rank change. */
+  /** The single XP funnel: boost ×2 → topic XP → activity → quests → daily goal bonus → rank change. */
   addXp(topicId: string, n: number): void;
   weak: WeakMap;
   setWeak(next: WeakMap, topicId: string): void;
   srsOf(topicId: string): SrsMap;
   allSrs(): Record<string, SrsMap>;
   setSrs(topicId: string, cards: SrsMap): void;
-  /** Minutes (and optionally extra XP already added elsewhere) to today's activity row. */
   logActivity(xp: number, minutes: number): void;
   meta: UserMeta;
   streak: number;
@@ -94,6 +106,7 @@ interface AppState {
   goalMet: boolean;
   activity: ActivityMap;
   week: WeekStrip;
+  /** daily quests + the weekly one */
   quests: Quest[];
   questEvent(ev: QuestEvent): void;
   claimQuest(id: string): void;
@@ -110,9 +123,7 @@ interface AppState {
   setShowOnLeaderboard(v: boolean): void;
   displayName: string | null;
   setDisplayName(v: string | null): void;
-  /** wallet credit (level pass, session, exam…) */
   addGems(n: number): void;
-  /** false when not enough gems */
   spendGems(cost: number): boolean;
   refillHearts(): boolean;
   buyStreakFreeze(): boolean;
@@ -124,10 +135,42 @@ interface AppState {
   fetchLeaderboard(limit?: number): Promise<LeaderboardRow[]>;
   myWeeklyRank(): Promise<MyRank | null>;
   on<T extends AppEventType>(type: T, fn: (e: Extract<AppEvent, { type: T }>) => void): () => void;
-  toast(text: string, kind?: Toast["kind"]): void;
+  toast(text: string, icon?: string, anim?: string): void;
   toasts: Toast[];
   signOut(): Promise<void>;
   version: number;
+  /* ---- 2.0 ---- */
+  extra: Extra;
+  goal: Goal | null;
+  setGoal(g: Goal | null): void;
+  themes: Themes;
+  setTheme(id: string): void;
+  /** Shop: next theme for GEM_COSTS.theme — false when short or complete */
+  buyTheme(): string | null;
+  boostUntil: number | null;
+  boostOn: boolean;
+  buyBoost(): boolean;
+  album: AlbumMap;
+  /** after an SRS review: adds the card to the album when it qualifies; returns the new entry */
+  albumTouch(key: string, card: SrsCard, level: LevelProgress | null): (AlbumEntry & { key: string }) | null;
+  overrides: Overrides;
+  setOverride(topicId: string, levelId: string, qi: number, q: QuizQuestion | null): void;
+  setLevelHidden(topicId: string, levelId: string, hidden: boolean): void;
+  isLevelHidden(topicId: string, levelId: string): boolean;
+  tests: TestPlan[];
+  setTests(t: TestPlan[]): void;
+  history: Record<string, HistDay>;
+  histAdd(k: keyof HistDay, n?: number): void;
+  histMax(k: keyof HistDay, n: number): void;
+  daily: DailyPlan | null;
+  setDaily(d: DailyPlan | null): void;
+  reduceMotion: boolean;
+  setReduceMotion(v: boolean): void;
+  reminder: Reminder | null;
+  setReminder(r: Reminder | null): void;
+  exams: Record<string, ExamRec>;
+  setExam(topicId: string, rec: ExamRec): void;
+  resetProgress(): Promise<void>;
 }
 
 const Ctx = createContext<AppState | null>(null);
@@ -147,6 +190,7 @@ const clockNow = () => Math.floor(Date.now() / CLOCK_STEP) * CLOCK_STEP;
 const clockServer = () => 0;
 const EMPTY: SubjectProgress = { xp: 0, levels: {}, chests: [] };
 const NO_HEARTS: HeartsView = { hearts: 5, unlimited: false, nextInMs: null };
+const EMPTY_EXTRA = emptyExtra();
 
 export function AppProvider({ user, children }: { user: AppUser; children: ReactNode }) {
   const supabase = useMemo(() => getBrowserSupabase()!, []);
@@ -178,29 +222,35 @@ export function AppProvider({ user, children }: { user: AppUser; children: React
     return () => {
       alive = false;
       s.flushActivity();
+      s.flushMeta();
     };
   }, [supabase, user.id]);
 
-  // flush coalesced activity writes when the page is hidden / unloaded
   useEffect(() => {
-    const flush = () => store?.flushActivity();
+    const flush = () => {
+      store?.flushActivity();
+      store?.flushMeta();
+    };
     window.addEventListener("pagehide", flush);
     return () => window.removeEventListener("pagehide", flush);
   }, [store]);
 
-  // sound setting → sfx layer
+  // sound + reduce-motion settings
   useEffect(() => {
-    if (store) sfx.setEnabled(store.getMeta().soundOn);
+    if (!store) return;
+    sfx.setEnabled(store.getMeta().soundOn);
+    document.documentElement.classList.toggle("reduce-motion", store.getExtra().reduceMotion);
   }, [store, version, sfx]);
 
-  const toast = useCallback((text: string, kind?: Toast["kind"]) => {
+  const toast = useCallback((text: string, icon?: string, anim?: string) => {
     const id = Date.now() + Math.random();
-    setToasts((t) => [...t.slice(-2), { id, text, kind }]);
-    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 1900);
+    setToasts([{ id, text, icon, anim }]);
+    setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 1700);
   }, []);
 
   const value = useMemo<AppState>(() => {
     const meta = store?.getMeta() ?? { streak: 0, best: 0, lastDay: null, gems: 0, hearts: 5, heartsUpdatedAt: new Date(0).toISOString(), dailyGoal: 50 as DailyGoal, streakFreezes: 0, soundOn: true, stats: { cardsReviewed: 0, levelsDone: 0, perfectLevels: 0, examsPassed: 0, comboBest: 0, questsDone: 0, chestsOpened: 0, nightOwl: false, earlyBird: false } };
+    const extra = store?.getExtra() ?? EMPTY_EXTRA;
     const plan = store?.getPlan() ?? "free";
     const unlimited = plan === "pro";
     const hearts = store ? heartsNow(meta, now, unlimited) : NO_HEARTS;
@@ -212,7 +262,6 @@ export function AppProvider({ user, children }: { user: AppUser; children: React
 
     const emit = (e: AppEvent) => emitter.emit(e);
 
-    /** Re-evaluate achievements after any stats / xp / streak change. */
     const checkAchievements = (m: UserMeta) => {
       if (!store) return m;
       const fresh = evaluateAchievements({ meta: m, topicsCount: store.getTopicsCount(), totalXp: store.totalXp(), streak: streakDisplay(m) }, store.getAchievements());
@@ -231,6 +280,22 @@ export function AppProvider({ user, children }: { user: AppUser; children: React
       store.setMeta(evaluate ? checkAchievements(m) : m);
       bump();
     };
+    const patchExtra = (p: Partial<Extra>) => {
+      if (!store) return;
+      store.setExtra(p);
+      bump();
+    };
+    const histBump = (k: keyof HistDay, n: number, max = false) => {
+      if (!store) return;
+      const H = store.getExtra().history;
+      const d = H[today] ?? { levels: 0, reviews: 0, cards: 0, combo: 0, missions: 0 };
+      const v = max ? Math.max(d[k], n) : d[k] + n;
+      if (v === d[k]) return;
+      const next: Record<string, HistDay> = { ...H, [today]: { ...d, [k]: v } };
+      const ks = Object.keys(next).sort();
+      if (ks.length > 120) for (const old of ks.slice(0, ks.length - 120)) delete next[old];
+      store.setExtra({ history: next });
+    };
 
     const applyQuest = (ev: QuestEvent) => {
       if (!store) return;
@@ -239,32 +304,32 @@ export function AppProvider({ user, children }: { user: AppUser; children: React
       if (after.every((q, i) => q.progress === before[i]?.progress && q.done === before[i]?.done)) return;
       store.setQuests(after);
       after.forEach((q, i) => {
-        if (q.done && !before[i]?.done) setTimeout(() => toast(`Misja gotowa: ${q.title}`, "gem"), 400);
+        if (q.done && !before[i]?.done) setTimeout(() => toast("Misja gotowa — odbierz nagrodę", "star", "a-pop"), 1200);
       });
     };
 
-    const addXp = (topicId: string, n: number) => {
+    const addXp = (topicId: string, raw: number) => {
       if (!store) return;
+      const n = applyBoost(raw, store.getExtra().boostUntil);
       const prevTotal = store.totalXp();
       let m = store.getMeta();
-      if (n > 0) {
+      if (n !== 0) {
         const p = store.getProgress(topicId);
-        store.setProgress(topicId, { ...p, xp: p.xp + n });
+        store.setProgress(topicId, { ...p, xp: Math.max(0, p.xp + n) });
+      }
+      if (n > 0) {
         store.logActivity(n, 0);
         emit({ type: "xp", amount: n, topicId });
         applyQuest({ type: "xp", amount: n });
       }
-      // streak
       const t = touchStreak(m);
       m = t.meta;
       if (t.extended) {
         emit({ type: "streak", days: m.streak, usedFreeze: t.usedFreeze });
-        if (m.streak > 1) setTimeout(() => toast(t.usedFreeze ? `Seria uratowana: ${m.streak} dni (zużyto zamrożenie)` : `Seria ${m.streak} dni z rzędu!`, "info"), 900);
+        if (m.streak > 1) setTimeout(() => toast(t.usedFreeze ? `Zamrożenie uratowało serię: ${m.streak} dni` : `Seria: ${m.streak} dni z rzędu`, "flame"), 1600);
       }
-      // time-of-day badges
       const h = new Date().getHours();
       if (n > 0 && ((h >= 23 && !m.stats.nightOwl) || (h < 7 && !m.stats.earlyBird))) m = { ...m, stats: { ...m.stats, nightOwl: m.stats.nightOwl || h >= 23, earlyBird: m.stats.earlyBird || h < 7 } };
-      // daily goal bonus (once per day)
       const xpNow = todayXpOf(store.getActivity(), today);
       if (n > 0 && xpNow >= m.dailyGoal && m.stats.goalBonusDay !== today) {
         m = addGems({ ...m, stats: { ...m.stats, goalBonusDay: today } }, GEMS.dailyGoal);
@@ -273,11 +338,10 @@ export function AppProvider({ user, children }: { user: AppUser; children: React
         store.logActivity(XP.dailyGoalBonus, 0);
         emit({ type: "goal", xp: xpNow, goal: m.dailyGoal });
         emit({ type: "gem", delta: GEMS.dailyGoal, gems: m.gems });
-        setTimeout(() => toast(`Cel dzienny zrobiony! +${XP.dailyGoalBonus} XP, +${GEMS.dailyGoal} klejnotów`, "gem"), 600);
+        setTimeout(() => toast(`Cel dzienny zrobiony: +${XP.dailyGoalBonus} XP, +${GEMS.dailyGoal} gemów`, "bolt"), 600);
       }
       if (m !== store.getMeta()) writeMeta(m);
       else {
-        // xp alone can unlock xp_1000 etc.
         const checked = checkAchievements(m);
         if (checked !== m) store.setMeta(checked);
         bump();
@@ -358,6 +422,7 @@ export function AppProvider({ user, children }: { user: AppUser; children: React
         store.setQuests(r.quests);
         let m = addGems(store.getMeta(), r.gems);
         m = { ...m, stats: { ...m.stats, questsDone: m.stats.questsDone + 1 } };
+        histBump("missions", 1);
         writeMeta(m);
         emit({ type: "gem", delta: r.gems, gems: m.gems });
       },
@@ -454,9 +519,84 @@ export function AppProvider({ user, children }: { user: AppUser; children: React
       toasts,
       signOut: async () => {
         store?.flushActivity();
+        store?.flushMeta();
         await supabase.auth.signOut();
       },
       version,
+      /* ---- 2.0 ---- */
+      extra,
+      goal: extra.goal,
+      setGoal: (g) => patchExtra({ goal: g }),
+      themes: extra.themes,
+      setTheme: (id) => patchExtra({ themes: { ...extra.themes, active: id } }),
+      buyTheme: () => {
+        if (!store) return null;
+        const owned = store.getExtra().themes.owned;
+        const nx = THEMES.find((t) => !owned.includes(t.id));
+        if (!nx) return null;
+        if (!spend(GEM_COSTS.theme)) return null;
+        patchExtra({ themes: { owned: [...owned, nx.id], active: nx.id } });
+        return nx.name;
+      },
+      boostUntil: extra.boostUntil,
+      boostOn: boostActive(extra.boostUntil, now),
+      buyBoost: () => {
+        if (!store || boostActive(store.getExtra().boostUntil)) return false;
+        if (!spend(GEM_COSTS.xpBoost)) return false;
+        patchExtra({ boostUntil: boostUntilPure() });
+        return true;
+      },
+      album: extra.album,
+      albumTouch: (key, card, level) => {
+        if (!store) return null;
+        const r = albumCheck(store.getExtra().album, key, card, level, today);
+        if (!r.added) return null;
+        store.setExtra({ album: r.album });
+        histBump("cards", 1);
+        const m = store.getMeta();
+        writeMeta({ ...m, stats: { ...m.stats, albumCount: (m.stats.albumCount ?? 0) + 1 } });
+        return r.added;
+      },
+      overrides: extra.overrides,
+      setOverride: (topicId, levelId, qi, q) => {
+        if (!store) return;
+        const o = { ...store.getExtra().overrides };
+        const k = ovKey(topicId, levelId, qi);
+        if (q) o[k] = { ...q, at: today };
+        else delete o[k];
+        patchExtra({ overrides: o });
+      },
+      setLevelHidden: (topicId, levelId, hidden) => {
+        if (!store) return;
+        const o = { ...store.getExtra().overrides };
+        if (hidden) o[hideKey(topicId, levelId)] = true;
+        else delete o[hideKey(topicId, levelId)];
+        patchExtra({ overrides: o });
+      },
+      isLevelHidden: (topicId, levelId) => extra.overrides[hideKey(topicId, levelId)] === true,
+      tests: extra.tests,
+      setTests: (t) => patchExtra({ tests: t }),
+      history: extra.history,
+      histAdd: (k, n = 1) => {
+        histBump(k, n);
+        bump();
+      },
+      histMax: (k, n) => {
+        histBump(k, n, true);
+        bump();
+      },
+      daily: extra.daily,
+      setDaily: (d) => patchExtra({ daily: d }),
+      reduceMotion: extra.reduceMotion,
+      setReduceMotion: (v) => patchExtra({ reduceMotion: v }),
+      reminder: extra.reminder,
+      setReminder: (r) => patchExtra({ reminder: r }),
+      exams: extra.exams,
+      setExam: (topicId, rec) => patchExtra({ exams: { ...extra.exams, [topicId]: rec } }),
+      resetProgress: async () => {
+        await store?.resetProgress();
+        bump();
+      },
     };
   }, [user, session, supabase, store, toasts, version, now, bump, toast, emitter, sfx, unlockedQueue, levelUpQueue]);
 

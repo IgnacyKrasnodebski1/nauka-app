@@ -1,18 +1,22 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { getSessionUser, getSubject } from "@/lib/data";
-import { NewTopic } from "@/components/upload/new-topic";
+import { NewTopicFlow } from "@/components/flow/new-topic";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Nowy temat" };
-type Props = { params: Promise<{ subjectId: string }>; searchParams: Promise<{ mode?: string }> };
+type Props = { params: Promise<{ subjectId: string }> };
 
-export default async function NewTopicPage({ params, searchParams }: Props) {
+export default async function NewTopicPage({ params }: Props) {
   const { subjectId } = await params;
-  const { mode } = await searchParams;
   const ctx = await getSessionUser();
   if (!ctx) return null;
   const subject = await getSubject(ctx.sb, subjectId);
   if (!subject) notFound();
-  return <NewTopic subject={subject} mode={mode === "prompt" ? "prompt" : "materials"} />;
+  return (
+    <Suspense fallback={null}>
+      <NewTopicFlow subject={subject} />
+    </Suspense>
+  );
 }

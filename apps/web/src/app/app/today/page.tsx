@@ -1,14 +1,6 @@
-import type { Metadata } from "next";
-import { getSessionUser, listTopics } from "@/lib/data";
-import { slimTopic } from "@/lib/types";
-import { TodaySession } from "@/components/today/session";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Dzisiejsza sesja" };
-
-export default async function TodayPage() {
-  const ctx = await getSessionUser();
-  if (!ctx) return null;
-  const topics = await listTopics(ctx.sb, { userId: ctx.userId });
-  return <TodaySession topics={topics.map(slimTopic)} />;
+/** 1.x „Dzisiejsza sesja” → 2.0 Powtórka. */
+export default function TodayPage() {
+  redirect("/app/review");
 }

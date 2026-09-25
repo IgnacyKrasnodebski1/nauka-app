@@ -1,8 +1,6 @@
-import type { Metadata } from "next";
-import { Account } from "@/components/account/account";
+import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Konto" };
-
+/** 1.x „Konto” → 2.0 Ustawienia. */
 export default function AccountPage() {
-  return <Account />;
+  redirect("/app/settings");
 }

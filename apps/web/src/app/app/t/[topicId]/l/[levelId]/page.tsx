@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const ctx = await getSessionUser();
   const t = ctx ? await getTopic(ctx.sb, topicId) : null;
   const l = t?.levels.find((x) => x.id === levelId);
-  return { title: l ? `${l.emoji} ${l.title}` : "Lekcja" };
+  return { title: l ? l.title.replace(/[\p{Extended_Pictographic}️‍]/gu, "").trim() : "Lekcja" };
 }
 
 export default async function LessonPage({ params }: Params) {
@@ -22,5 +22,5 @@ export default async function LessonPage({ params }: Params) {
   if (!topic || !topic.levels.some((l) => l.id === levelId)) notFound();
   const subject = await getSubject(ctx.sb, topic.subjectId);
   if (!subject) notFound();
-  return <Lesson topic={topic} subject={subject} levelId={levelId} />;
+  return <Lesson key={`${topicId}:${levelId}`} topic={topic} subject={subject} levelId={levelId} />;
 }

@@ -1,324 +1,113 @@
 "use client";
 import { useState, type CSSProperties } from "react";
-import { ACHIEVEMENTS, layoutPath, MASCOT_LINES, rankFor, SUBJECT_HUES, chestIndexes, type LeaderboardRow, type MascotState, type Quest } from "@nauka/shared";
-import { cn } from "@/lib/utils";
-import { burst } from "@/lib/confetti";
-import { useSfx } from "@/lib/sfx";
-import { BadgesGrid } from "@/components/ui/badges-grid";
-import { Btn3d } from "@/components/ui/btn3d";
-import { Chest, Trophy } from "@/components/ui/chest";
-import { ComboBadge } from "@/components/ui/combo-badge";
-import { FeedbackSheet, type Feedback } from "@/components/ui/feedback-sheet";
-import { Icon } from "@/components/ui/icons";
-import { LeaderboardList, LeaderboardTeaser, Podium } from "@/components/ui/leaderboard";
+import { ACHIEVEMENTS, SUBJECT_HUES, TASK_META, TASK_TYPES } from "@nauka/shared";
+import { ICONS, Icon, StarRow } from "@/components/ui/icons";
+import { BossSvg, ChartSvg } from "@/components/tasks/common";
 import { Logo } from "@/components/ui/logo";
-import { AchievementToast, LevelUpModal, NoHeartsModal } from "@/components/ui/modals";
-import { Gems, Hearts, StreakPill, XpPill } from "@/components/ui/pills";
-import { QuestsCard } from "@/components/ui/quests-card";
-import { RankCard } from "@/components/ui/rank-card";
-import { DailyGoalRing, Ring } from "@/components/ui/ring";
-import { SegmentedProgress } from "@/components/ui/segmented-progress";
-import { StatCard } from "@/components/ui/stat-card";
-import { StreakCalendar, WeekStripView } from "@/components/ui/streak-calendar";
-import { StreakFlame } from "@/components/ui/streak-flame";
-import { SwipeDeck } from "@/components/ui/swipe-deck";
-import { Mascot } from "@/components/mascot/mascot";
-
-const STATES: MascotState[] = ["idle", "happy", "cheer", "sad", "think", "sleep"];
-const QUESTS: Quest[] = [
-  { id: "d:xp", kind: "xp", title: "Zdobądź 50 XP", target: 50, progress: 32, reward: 10, done: false, claimed: false },
-  { id: "d:combo", kind: "combo", title: "5 poprawnych z rzędu", target: 5, progress: 5, reward: 15, done: true, claimed: false },
-  { id: "d:review", kind: "review", title: "Powtórz 10 fiszek", target: 10, progress: 10, reward: 10, done: true, claimed: true },
-];
-const LB: LeaderboardRow[] = [
-  { rank: 1, displayName: "Ola K.", xp: 640, isMe: false },
-  { rank: 2, displayName: "Ty", xp: 520, isMe: true },
-  { rank: 3, displayName: "Michał", xp: 410, isMe: false },
-  { rank: 4, displayName: "Zuzia", xp: 380, isMe: false },
-  { rank: 5, displayName: "Kacper", xp: 220, isMe: false },
-];
-const WEEK = [
-  { day: "2026-09-14", label: "Pn", xp: 60, active: true, isToday: false, future: false },
-  { day: "2026-09-15", label: "Wt", xp: 35, active: true, isToday: false, future: false },
-  { day: "2026-09-16", label: "Śr", xp: 0, active: false, isToday: false, future: false },
-  { day: "2026-09-17", label: "Cz", xp: 90, active: true, isToday: false, future: false },
-  { day: "2026-09-18", label: "Pt", xp: 50, active: true, isToday: false, future: false },
-  { day: "2026-09-19", label: "So", xp: 20, active: true, isToday: true, future: false },
-  { day: "2026-09-20", label: "Nd", xp: 0, active: false, isToday: false, future: true },
-];
-const ACTIVITY = Object.fromEntries(WEEK.filter((d) => d.xp).map((d) => [d.day, { day: d.day, xp: d.xp, minutes: 5 }]));
-const CARDS = [
-  { t: "Fotosynteza", d: "Proces, w którym rośliny zamieniają CO₂ i wodę w glukozę i tlen, używając światła." },
-  { t: "Chloroplast", d: "Organellum z chlorofilem — tu zachodzi faza jasna i ciemna." },
-  { t: "Faza jasna", d: "W tylakoidach: światło → ATP i NADPH, uwalnia się tlen." },
-];
+import { themeStyle } from "@/components/ui/mono";
+import { cn } from "@/lib/utils";
 
 function Section({ title, children, style }: { title: string; children: React.ReactNode; style?: CSSProperties }) {
   return (
-    <section className="mb-8" style={style}>
-      <h2 className="eyebrow mb-3" style={{ fontFamily: "var(--font-body)" }}>{title}</h2>
+    <section style={{ marginBottom: 32, ...style }}>
+      <h2 className="eyebrow" style={{ marginBottom: 12 }}>{title}</h2>
       {children}
     </section>
   );
 }
 
-/** Mock winding path (7 levels: 3 done, 1 active, 3 locked) — same layoutPath() as the real screen. */
-function MockPath() {
-  const N = 7;
-  const lay = layoutPath(N, { width: 360 });
-  const chests = chestIndexes(N);
-  const activeIdx = 3;
-  const activeK = lay.nodes.findIndex((n) => n.kind === "level" && n.levelIndex === activeIdx);
-  const titles = ["Podstawy", "Chloroplast", "Faza jasna", "Faza ciemna", "Czynniki", "Doświadczenia", "Znaczenie"];
-  return (
-    <div className="wpath" style={{ width: 360, maxWidth: "100%", height: lay.height }}>
-      <svg className="track" viewBox={`0 0 ${lay.width} ${lay.height}`} preserveAspectRatio="none" aria-hidden="true">
-        <path d={lay.d} fill="none" stroke="var(--line-strong)" strokeWidth="6" strokeLinecap="round" strokeDasharray="1 14" />
-        <path d={lay.d} fill="none" stroke="var(--hue)" strokeWidth="8" strokeLinecap="round" pathLength={1} strokeDasharray={`${activeK / (lay.nodes.length - 1)} 1`} style={{ opacity: 0.9 }} />
-      </svg>
-      {lay.nodes.map((n) => {
-        if (n.kind === "level") {
-          const li = n.levelIndex!;
-          const st = li < activeIdx ? "done" : li === activeIdx ? "active" : "locked";
-          const left = n.x > lay.width / 2;
-          return (
-            <div key={n.i}>
-              {st === "active" && <div className="tooltip-start" style={{ left: n.x, top: n.y - 82 }}>Start</div>}
-              <button type="button" className={cn("node3d", st)} style={{ left: n.x, top: n.y }} aria-label={titles[li]}>
-                {st === "done" ? <Icon name="check" size={34} /> : st === "active" ? <Icon name="star" size={30} /> : <Icon name="lock" size={26} />}
-              </button>
-              {st === "done" && (
-                <div className="nodestars" style={{ left: n.x, top: n.y + 40 }}>
-                  {[0, 1, 2].map((s) => <Icon key={s} name="star" size={14} style={{ color: s < 3 - li ? "var(--play-yellow)" : "var(--faint)" }} />)}
-                </div>
-              )}
-              <div className={cn("nodelabel", left && "left", st === "locked" && "locked")} style={{ top: n.y, [left ? "right" : "left"]: left ? lay.width - n.x + 48 : n.x + 48 }}>
-                {titles[li]}<small>8 pytań · 10 fiszek</small>
-              </div>
-            </div>
-          );
-        }
-        if (n.kind === "chest") {
-          const idx = n.chestIndex!;
-          const st = chests.indexOf(idx) === 0 ? "openable" : "closed";
-          return (
-            <button key={n.i} type="button" className={cn("node3d chest", st)} style={{ left: n.x, top: n.y }} aria-label="Skrzynka" onClick={() => burst("chest")}>
-              <Chest state={st} size={40} />
-            </button>
-          );
-        }
-        return (
-          <button key={n.i} type="button" className="node3d trophy locked" style={{ left: n.x, top: n.y }} aria-label="Trofeum">
-            <Trophy state="locked" size={46} />
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
+/**
+ * Recall 2.0 component gallery for visual QA (no auth, no store): tokens, icons, pills, buttons, chips, cards,
+ * plan rows, subject tiles, path nodes, quiz options, task hub cards, badges, boss and chart art.
+ */
 export function Gallery() {
-  const sfx = useSfx();
-  const [fb, setFb] = useState<Feedback | null>(null);
-  const [levelUp, setLevelUp] = useState(false);
-  const [noHearts, setNoHearts] = useState(false);
-  const [toast, setToast] = useState(false);
-  const [deckIdx, setDeckIdx] = useState(0);
-  const [combo, setCombo] = useState(6);
-  const hue = SUBJECT_HUES[2 % SUBJECT_HUES.length]!;
-  const hueStyle = { "--hue": hue.color, "--hue-deep": hue.deep } as CSSProperties;
-
+  const [hue, setHue] = useState(0);
+  const [on, setOn] = useState(true);
+  const style = themeStyle(SUBJECT_HUES[hue]!.color);
+  const names = Object.keys(ICONS);
   return (
-    <div className="shell" style={{ maxWidth: 560, ...hueStyle }}>
-      <div className="topbar">
-        <Logo size={26} />
-        <div className="hud">
-          <StreakPill days={7} />
-          <Gems n={240} />
-          <Hearts view={{ hearts: 3, unlimited: false, nextInMs: 900000 }} compact />
+    <div id="app" style={{ maxWidth: 560, margin: "0 auto", padding: "24px 16px 80px", minHeight: "100dvh", position: "relative", overflow: "auto" }}>
+      <div className="topbar" style={{ padding: "0 0 20px" }}>
+        <Logo size={30} />
+        <div className="pills"><span className="streak"><Icon name="flame" size={16} className="ic-flame a-beat" /><span>7</span> <small>dni</small></span><span className="streak"><Icon name="bolt" size={16} className="ic-gold" /><span>1 240</span> <small>xp</small></span><span className="streak gems"><Icon name="gem" size={16} className="ic-cyan" /><span>240</span></span></div>
+      </div>
+      <Section title="Kolor przedmiotu (accentVars)">
+        <div className="chips">{SUBJECT_HUES.map((h, i) => <button key={h.name} type="button" className={cn("chip", i === hue && "active")} style={themeStyle(h.color)} onClick={() => setHue(i)}>{h.name}</button>)}</div>
+      </Section>
+      <div style={style}>
+        <Section title="Przyciski i pigułki">
+          <div style={{ display: "grid", gap: 10 }}>
+            <button type="button" className="pill a-glow">PRZYCISK GŁÓWNY</button>
+            <button type="button" className="pill ghost">Drugorzędny</button>
+            <div style={{ display: "flex", gap: 10 }}><button type="button" className="pill cyan">Cyjan</button><button type="button" className="pill violet">Fiolet</button><button type="button" className="pill amber">Bursztyn</button></div>
+            <button type="button" className="pill text">tekstowy</button>
+            <div style={{ display: "flex", gap: 10, alignItems: "center" }}><span className="hearts"><Icon name="heart" size={16} /><span className="n">4</span></span><span className="hearts zero"><Icon name="heart" size={16} /><span className="n">0</span></span><button type="button" className={cn("toggle", on && "on")} role="switch" aria-checked={on} aria-label="Przełącznik" onClick={() => setOn((v) => !v)}><i /></button><span className="mono solid">B</span><span className="mono xs solid">M</span><StarRow n={2} size={14} /></div>
+          </div>
+        </Section>
+        <Section title="Plan dnia">
+          <div className="planbar"><div className="bar"><i style={{ width: "33%" }} /></div><span>1 z 3</span></div>
+          <div className="plan">
+            <div className="plan-row done"><div className="plan-tile"><Icon name="check" size={19} stroke={3.4} /></div><div className="pt"><div className="t">Powtórka — 12 fiszek</div></div><span className="rw">+20</span></div>
+            <div className="plan-sep" />
+            <div className="plan-row cur themed"><div className="plan-tile a-pulse"><Icon name="book" size={19} stroke={3} /></div><div className="pt"><div className="t">Roladka — Fotosynteza</div><div className="s">6 dawek · 6 pytań · +15</div></div><Icon name="chevron-right" size={20} className="chev" /></div>
+            <div className="plan-sep" />
+            <div className="plan-row later"><div className="plan-tile"><Icon name="question" size={19} stroke={2.6} /></div><div className="pt"><div className="t">Quiz — Komórka</div><div className="s">10 pytań · 5 min · +25</div></div><Icon name="chevron-right" size={20} className="chev" /></div>
+          </div>
+          <div className="minitiles" style={{ marginTop: 12 }}><span className="minitile gold"><Icon name="star" size={17} stroke={2.6} className="ic-gold" /><span>Misje 1/3</span></span><span className="minitile amber"><Icon name="flame" size={17} className="ic-flame" /><span>Seria 7</span></span><span className="minitile cyan"><Icon name="cards" size={17} stroke={2.6} className="ic-cyan" /><span>Album 12</span></span></div>
+        </Section>
+        <Section title="Kafle przedmiotów">
+          <div className="grid2">
+            <div className="subjtile themed"><div className="mono solid">B</div><div className="name">Biologia</div><div className="bar"><i style={{ width: "64%" }} /></div><small>9/14 poziomów</small></div>
+            <div className="subjtile add"><div className="mono"><Icon name="plus" size={22} stroke={3} /></div><div className="name">Dodaj<br />materiał</div></div>
+          </div>
+        </Section>
+        <Section title="Ścieżka">
+          <div className="path" style={{ minHeight: 0 }}>
+            <div className="pathnode" style={{ "--x": "-104px" } as CSSProperties}><span className="nodebtn node-done"><Icon name="check" size={34} stroke={3.4} /><span className="stars"><StarRow n={3} size={12} /></span></span><div className="nodelabel">Podstawy</div></div>
+            <div className="pathnode cur" style={{ "--x": "8px" } as CSSProperties}><div className="bubble a-bob">ZACZNIJ</div><span className="nodebtn node-open a-pulse"><Icon name="bolt" size={40} /></span><div className="nodelabel cur">Fotosynteza</div></div>
+            <div className="pathnode" style={{ "--x": "96px" } as CSSProperties}><span className="nodebtn node-chest a-sway"><Icon name="chest" size={32} stroke={2.4} /></span><div className="nodelabel gold">Skrzynia</div></div>
+            <div className="pathnode" style={{ "--x": "-28px" } as CSSProperties}><span className="nodebtn node-lock"><Icon name="lock" size={28} /></span><div className="nodelabel lock">Komórka</div></div>
+            <div className="pathnode" style={{ "--x": "8px" } as CSSProperties}><span className="nodebtn node-boss open"><BossSvg size={52} /></span><div className="nodelabel cur">Boss rozdziału</div></div>
+          </div>
+        </Section>
+        <Section title="Quiz — kafle odpowiedzi">
+          <div className="quiz">
+            <div className="qchips"><span className="qn">Pytanie 3 z 6</span><span className="combo">3. poprawna z rzędu</span></div>
+            <div className="qq">Gdzie zachodzi faza jasna fotosyntezy?</div>
+            <div className="qopts">
+              <div className="qopt correct"><span className="k">A</span><span className="t">W tylakoidach chloroplastu</span></div>
+              <div className="qopt wrong"><span className="k">B</span><span className="t">W stromie</span></div>
+              <div className="qopt dim"><span className="k">C</span><span className="t">W mitochondrium</span></div>
+              <div className="qopt"><span className="k">D</span><span className="t">W cytoplazmie</span></div>
+            </div>
+          </div>
+        </Section>
+        <Section title="Zadania — karty hubu">
+          <div className="exhub">
+            {TASK_TYPES.slice(0, 4).map((t) => { const m = TASK_META[t]; return <div key={t} className="excard"><div className="eemoji"><Icon name={m.icon} size={26} stroke={2.4} /></div><div className="emeta"><h3>{m.label}</h3><p>{m.desc}</p></div></div>; })}
+          </div>
+        </Section>
+        <Section title="Chipy, paski, karty ustawień">
+          <div className="chips"><span className="chip active">Wszystko</span><span className="chip">Poziom 1</span><span className="chip">Poziom 2</span></div>
+          <div className="egchips" style={{ marginBottom: 12 }}><span className="egchip on">10</span><span className="egchip">20</span><span className="egchip">wszystkie</span></div>
+          <div className="setcard">
+            <div className="setrow"><Icon name="bolt" size={20} stroke={2.4} /><div className="grow"><div className="t">Cel dzienny</div><div className="s">plan dnia, pasek XP i misja XP</div></div><span className="v acid">50 XP</span><Icon name="chevron-right" size={18} className="chev" /></div>
+            <div className="setsep" />
+            <div className="setrow"><div className="grow"><div className="t">Dźwięk</div><div className="s">krótkie efekty</div></div><span className="toggle on"><i /></span></div>
+          </div>
+        </Section>
+        <Section title="Odznaki">
+          <div className="badgegrid">{ACHIEVEMENTS.slice(0, 8).map((b, i) => <div key={b.key} className={cn("badge", i < 4 ? ["acid", "gold", "amber", "cyan"][i] : "lock")}><Icon name={i < 4 ? b.icon : "lock"} size={26} stroke={2.4} /><span>{b.title}</span></div>)}</div>
+        </Section>
+        <Section title="Boss i wykres">
+          <div style={{ display: "flex", gap: 16, alignItems: "center" }}><BossSvg size={96} /><div style={{ flex: 1 }}><ChartSvg kind="bar" xs={["2019", "2020", "2021", "2022"]} ys={[3, 5, 4, 7]} /></div></div>
+        </Section>
+      </div>
+      <Section title={`Ikony (${names.length})`}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(72px, 1fr))", gap: 8 }}>
+          {names.map((n) => <div key={n} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, padding: "10px 4px", background: "var(--surface)", border: "2px solid var(--line)", borderRadius: 14 }}><Icon name={n} size={22} /><span style={{ fontSize: 10, fontWeight: 700, color: "var(--muted)" }}>{n}</span></div>)}
         </div>
-      </div>
-      <div className="px-4 pt-4 pb-10">
-        <h1 className="mb-1">UI gallery</h1>
-        <p className="text-muted mb-6 font-semibold">Każdy prymityw designu „Duolingo in dark”. Strona tylko do QA (bez logowania).</p>
-
-        <Section title="Przyciski 3D">
-          <div className="grid grid-cols-2 gap-2.5">
-            {(["green", "blue", "purple", "orange", "gold", "red", "ghost", "hue"] as const).map((v) => (
-              <Btn3d key={v} variant={v} onClick={() => sfx.play("tap")}>{v}</Btn3d>
-            ))}
-          </div>
-          <div className="flex gap-2 mt-3 items-center flex-wrap">
-            <Btn3d variant="green" size="sm">Mały</Btn3d>
-            <Btn3d variant="blue" size="lg" auto>Duży</Btn3d>
-            <Btn3d variant="gold" disabled auto>Wyłączony</Btn3d>
-            <button type="button" className="btn3d purple pressed wauto">Wciśnięty</button>
-          </div>
-        </Section>
-
-        <Section title="Pills / HUD">
-          <div className="flex flex-wrap gap-2 items-center">
-            <StreakPill days={0} /><StreakPill days={3} /><StreakPill days={12} size="lg" /><StreakPill days={45} size="lg" />
-            <Gems n={1240} /><XpPill n={860} />
-            <Hearts view={{ hearts: 5, unlimited: false, nextInMs: null }} />
-            <Hearts view={{ hearts: 2, unlimited: false, nextInMs: 600000 }} showTimer />
-            <Hearts view={{ hearts: 5, unlimited: true, nextInMs: null }} />
-          </div>
-          <div className="flex gap-4 mt-3 items-end">
-            {[0, 1, 7, 30].map((s) => <div key={s} className="flex flex-col items-center gap-1 text-[11px] font-bold text-muted"><StreakFlame streak={s} size={40} />{s} dni</div>)}
-          </div>
-        </Section>
-
-        <Section title="Ringi">
-          <div className="flex gap-4 items-center flex-wrap">
-            <DailyGoalRing xp={32} goal={50} />
-            <DailyGoalRing xp={60} goal={50} />
-            <Ring pct={75} size={64} color="var(--hue)"><span className="display text-[13px] font-extrabold text-txt">75%</span></Ring>
-            <Ring pct={40} size={48} stroke={6} color="var(--play-red)"><span className="display text-[11px] font-extrabold text-txt">40%</span></Ring>
-          </div>
-        </Section>
-
-        <Section title="Pasek segmentowy + combo">
-          <div className="flex items-center gap-3">
-            <SegmentedProgress total={12} done={5} />
-            <ComboBadge streak={combo} />
-            <Hearts view={{ hearts: 4, unlimited: false, nextInMs: null }} compact />
-          </div>
-          <div className="flex gap-2 mt-3 items-center">
-            {[2, 5, 10].map((n) => <button key={n} type="button" className="chip" onClick={() => { setCombo(n); if (n === 5 || n === 10) sfx.play("combo"); }}>combo {n}</button>)}
-            <SegmentedProgress total={60} done={30} />
-          </div>
-        </Section>
-
-        <Section title="Maskotka Rec — 6 stanów">
-          <div className="grid grid-cols-3 gap-3">
-            {STATES.map((s) => (
-              <div key={s} className="card3d flex flex-col items-center gap-2 !p-3 text-center">
-                <Mascot state={s} size={90} streak={s === "cheer" ? 30 : 7} />
-                <div className="eyebrow">{s}</div>
-                <div className="text-[12px] font-bold text-txt leading-tight">{MASCOT_LINES[s][0]}</div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex justify-between items-center">
-            <Mascot state="idle" size={110} streak={7} say="Gotowy na 10 minut?" />
-            <Mascot state="sleep" size={90} streak={3} say="Zzz… jeszcze dziś się uczymy?" bubbleSide="top" />
-          </div>
-        </Section>
-
-        <Section title="Kafle 3D">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="card3d hue subj-tile press"><span className="emo">🧬</span><h3>Biologia</h3><div className="meta">3 tematy · 6/9</div><div className="foot"><span className="tag badge danger !mb-0 !text-[11px]">kartkówka za 5 dni</span><Icon name="chevron" size={18} /></div></div>
-            <div className="card3d green press feature-tile !min-h-0"><span className="ic"><Icon name="play" size={22} /></span><h3 style={{ color: "#fff" }}>Zielony</h3><p>główne CTA</p></div>
-            <div className="card3d purple press feature-tile !min-h-0"><span className="ic"><Icon name="camera" size={22} /></span><h3 style={{ color: "#fff" }}>Fiolet</h3><p>AI / generowanie</p></div>
-            <div className="card3d soft-gold"><h3>Soft gold</h3><p>tło chipów i zajawek</p></div>
-          </div>
-        </Section>
-
-        <Section title="Karty statystyk (wynik)">
-          <div className="statgrid">
-            <StatCard icon="bolt" label="XP" value={86} tone="gold" delay={0} />
-            <StatCard icon="target" label="Celność" tone="green">
-              <div className="flex items-center gap-3 mt-auto"><Ring pct={88} size={54} stroke={7}><span className="display text-[13px] font-extrabold text-txt">88%</span></Ring><div className="text-[12px] font-bold text-muted leading-tight">7/8 w quizie<br />combo 6</div></div>
-            </StatCard>
-            <StatCard icon="clock" label="Czas" tone="blue"><div className="big">4:12</div></StatCard>
-            <StatCard icon="gem" label="Klejnoty" value={15} tone="gem" />
-          </div>
-        </Section>
-
-        <Section title="Odpowiedzi quizu (kafle 3D)">
-          <div className="opts">
-            <button type="button" className="opt"><span className="k">A</span><span>W stromie chloroplastu</span></button>
-            <button type="button" className="opt sel"><span className="k">B</span><span>Wybrana</span></button>
-            <button type="button" className="opt correct"><span className="k">C</span><span>W błonach tylakoidów</span></button>
-            <button type="button" className="opt wrong"><span className="k">D</span><span>W mitochondriach</span></button>
-          </div>
-        </Section>
-
-        <Section title="Arkusz feedbacku">
-          <div className="flex gap-2">
-            <Btn3d variant="green" onClick={() => setFb({ ok: true, text: <><b>Dlaczego:</b> Barwniki fotosyntetyczne siedzą w tylakoidach — tam światło zamienia się w ATP i NADPH.</>, xp: 10, mult: 2 })}>Dobrze</Btn3d>
-            <Btn3d variant="red" onClick={() => setFb({ ok: false, text: <><b>Dlaczego:</b> Mitochondria robią oddychanie, nie fotosyntezę.</>, heart: true })}>Źle</Btn3d>
-          </div>
-          <div className="mt-3 grid gap-3">
-            <div className="sheet ok" style={{ position: "relative", left: "auto", transform: "none", maxWidth: "none", borderRadius: 22 }}>
-              <div className="flex items-start gap-3"><Mascot state="happy" size={64} /><div className="flex-1"><div className="flex items-center justify-between"><div className="sh-title">Dobrze!</div><span className="xpchip"><Icon name="bolt" size={14} />+10 XP ×2</span></div><div className="sh-text"><b>Dlaczego:</b> Barwniki fotosyntetyczne siedzą w tylakoidach.</div></div></div>
-              <div className="btn3d green mt-4">Dalej</div>
-            </div>
-            <div className="sheet bad" style={{ position: "relative", left: "auto", transform: "none", maxWidth: "none", borderRadius: 22 }}>
-              <div className="flex items-start gap-3"><Mascot state="sad" size={64} /><div className="flex-1"><div className="flex items-center justify-between"><div className="sh-title">Nie tym razem</div><span className="xpchip heart"><Icon name="heart" size={14} />−1</span></div><div className="sh-text"><b>Dlaczego:</b> Mitochondria robią oddychanie, nie fotosyntezę.</div></div></div>
-              <div className="btn3d red mt-4">Dalej</div>
-            </div>
-          </div>
-        </Section>
-
-        <Section title="Ścieżka (mock, 7 poziomów)">
-          <div className="card3d hue mb-3"><div className="eyebrow" style={{ color: "var(--hue)" }}>Jednostka · 3/7 poziomów</div><h2 style={{ fontSize: 20 }}>Faza ciemna</h2><div className="bar mt-2.5" style={{ maxWidth: 240 }}><i style={{ width: "43%" }} /></div></div>
-          <MockPath />
-          <div className="flex gap-4 mt-2 items-center">
-            <Chest state="closed" /><Chest state="openable" /><Chest state="opened" /><Trophy state="locked" /><Trophy state="claimable" /><Trophy state="claimed" />
-          </div>
-        </Section>
-
-        <Section title="Fiszki — swipe deck">
-          <SwipeDeck
-            items={CARDS}
-            index={deckIdx}
-            keyOf={(c) => c.t}
-            allowUp
-            onSwipe={() => setDeckIdx((i) => (i + 1) % CARDS.length)}
-            render={(c, { flipped }) => (
-              <div className={`flip ${flipped ? "flipped" : ""}`}>
-                <div className="flipinner">
-                  <div className="face front"><span className="tag">Podstawy</span><div className="term">{c.t}</div><div className="tapomat">tapnij, żeby odwrócić</div></div>
-                  <div className="face back"><span className="tag hue">Odpowiedź</span><div className="deftxt">{c.d}</div></div>
-                </div>
-              </div>
-            )}
-            className="!h-[260px] !min-h-[260px]"
-          />
-        </Section>
-
-        <Section title="Misje dnia">
-          <QuestsCard quests={QUESTS} onClaim={() => sfx.play("gem")} />
-        </Section>
-
-        <Section title="Ranking">
-          <div className="card3d mb-3"><Podium rows={LB} /></div>
-          <div className="card3d mb-3"><LeaderboardList rows={LB} from={3} /></div>
-          <div className="card3d soft-gold"><LeaderboardTeaser rows={LB} me={{ rank: 2, xp: 520 }} /></div>
-        </Section>
-
-        <Section title="Ranga + odznaki">
-          <RankCard rank={rankFor(1840)} totalXp={1840} name="Ola Kowalska" email="ola@szkola.pl" avatar="🎓" />
-          <div className="card3d mt-3"><BadgesGrid unlocked={new Set(ACHIEVEMENTS.slice(0, 6).map((a) => a.key))} /></div>
-        </Section>
-
-        <Section title="Seria">
-          <div className="card3d soft-orange mb-3"><WeekStripView week={WEEK} /></div>
-          <div className="card3d soft-orange"><StreakCalendar activity={ACTIVITY} /></div>
-        </Section>
-
-        <Section title="Modale">
-          <div className="flex gap-2 flex-wrap">
-            <Btn3d variant="gold" auto onClick={() => setLevelUp(true)}>Level-up</Btn3d>
-            <Btn3d variant="red" auto onClick={() => setNoHearts(true)}>Brak serc</Btn3d>
-            <Btn3d variant="purple" auto onClick={() => setToast(true)}>Odznaka</Btn3d>
-            <Btn3d variant="blue" auto onClick={() => burst("level", hue.color)}>Confetti</Btn3d>
-          </div>
-        </Section>
-
-        <Section title="Dźwięki">
-          <div className="flex gap-2 flex-wrap">
-            {(["tap", "correct", "wrong", "combo", "levelup", "streak", "chest", "gem"] as const).map((n) => <button key={n} type="button" className="chip" onClick={() => sfx.play(n)}><Icon name="volume" size={14} />{n}</button>)}
-          </div>
-        </Section>
-      </div>
-
-      <FeedbackSheet fb={fb} onNext={() => setFb(null)} streak={7} />
-      <LevelUpModal rank={levelUp ? rankFor(800) : null} onClose={() => setLevelUp(false)} streak={7} />
-      <NoHeartsModal open={noHearts} hearts={{ hearts: 0, unlimited: false, nextInMs: 1500000 }} gems={120} onRefill={() => false} onClose={() => setNoHearts(false)} />
-      <AchievementToast achievement={toast ? ACHIEVEMENTS[3]! : null} onClose={() => setToast(false)} />
+      </Section>
     </div>
   );
 }

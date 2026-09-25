@@ -1,89 +1,111 @@
 "use client";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { allQuiz, shuffle, XP, type Topic } from "@nauka/shared";
+import { allQuiz, shuffle, type Subject, type Topic } from "@nauka/shared";
 import { useApp } from "@/lib/store/app-context";
+import { useDailyActions } from "@/lib/daily-plan";
+import { quizSrsKey, useSrsTouch } from "@/lib/review";
+import { qOf } from "@/lib/store/extra";
+import { noEmoji } from "@/lib/dates";
 import { useMounted } from "@/lib/use-mounted";
 import { useSfx } from "@/lib/sfx";
 import { cn } from "@/lib/utils";
-import { QuestionCard } from "@/components/topic/question";
-import { Btn3d } from "@/components/ui/btn3d";
-import { FeedbackSheet, type Feedback } from "@/components/ui/feedback-sheet";
-import { Ring } from "@/components/ui/ring";
-import { Mascot } from "@/components/mascot/mascot";
+import { Icon } from "@/components/ui/icons";
+import { Confetti } from "@/components/ui/confetti";
+import { QuizBlock } from "@/components/lesson/quiz-block";
+import { AnswerSheet, type AnswerFb } from "@/components/lesson/sheets";
+import { useKeys } from "@/components/tasks/common";
 
-/** Free practice quiz over chosen levels — no hearts, no combo, XP per correct answer. */
-export function QuizTab({ topic }: { topic: Topic }) {
-  const { addXp, questEvent, streak } = useApp();
+const QUIZ_TAB_XP = 3;
+
+/** Quiz.html (topic tab): whole topic or one level, 3D option tiles, ok/bad sheets; no hearts, no combo. */
+export function QuizTab({ topic, subject, levelId }: { topic: Topic; subject: Subject; levelId?: string | null }) {
+  const { addXp, overrides } = useApp();
+  const { completeDaily } = useDailyActions();
+  const touch = useSrsTouch();
   const sfx = useSfx();
+  const router = useRouter();
   const mounted = useMounted();
-  const [sel, setSel] = useState<Set<string>>(new Set(topic.levels.map((l) => l.id)));
+  const [lvl, setLvl] = useState(levelId && topic.levels.some((l) => l.id === levelId) ? levelId : "all");
   const [round, setRound] = useState(0);
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
-  const [picked, setPicked] = useState<number | null>(null);
-  const [fb, setFb] = useState<Feedback | null>(null);
-  // shuffled only after mount so server and client markup match (round bumps re-shuffle)
-  const list = useMemo(() => (mounted ? shuffle(allQuiz(topic).filter((q) => sel.has(q.levelId))) : []), [topic, sel, round, mounted]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const restart = () => {
-    setRound((r) => r + 1);
-    setIdx(0);
-    setScore(0);
-    setPicked(null);
-    setFb(null);
-  };
-  const toggle = (id: string) => {
-    const n = new Set(sel);
-    if (n.has(id)) n.delete(id);
-    else n.add(id);
-    if (!n.size) return;
-    setSel(n);
-    restart();
-  };
-  const allOn = sel.size === topic.levels.length;
+  const [pending, setPending] = useState<{ ok: boolean; fb: AnswerFb; qi: number; levelId: string } | null>(null);
+  const [burst, setBurst] = useState(0);
+  const list = useMemo(() => {
+    if (!mounted) return [];
+    const all = allQuiz(topic).map((q) => ({ ...q, ...qOf(overrides, topic.id, q.levelId, q.qi, q) }));
+    return shuffle(lvl === "all" ? all : all.filter((q) => q.levelId === lvl));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [topic, lvl, round, mounted]);
+  const restart = (l = lvl) => { setLvl(l); setRound((r) => r + 1); setIdx(0); setScore(0); setPending(null); };
+  const done = mounted && idx >= list.length;
+  useKeys((e) => { if (done && e.key === "Enter") restart(); });
   const q = list[idx];
-  const pick = (i: number) => {
-    if (picked !== null || !q) return;
-    setPicked(i);
-    const ok = i === q.c;
-    questEvent({ type: "answer", correct: ok, combo: 0 });
-    if (ok) {
-      setScore((s) => s + 1);
-      addXp(topic.id, XP.quizCorrect);
-      sfx.play("correct");
-    } else sfx.play("wrong");
-    setFb({ ok, text: <><b>Dlaczego:</b> {q.e}</>, xp: XP.quizCorrect, mult: 1, cta: idx + 1 >= list.length ? "Zobacz wynik" : undefined });
-  };
   const pct = list.length ? Math.round((score / list.length) * 100) : 0;
 
   return (
-    <div className="pb-6" style={{ paddingBottom: fb ? 260 : undefined }}>
-      <div className="chips mt-2" role="group" aria-label="Poziomy w quizie">
-        <button type="button" className={cn("chip", allOn && "active")} onClick={() => { setSel(new Set(topic.levels.map((l) => l.id))); restart(); }}>Wszystko</button>
+    <div className="scroll quizview">
+      <div className="chips" role="tablist" aria-label="Poziom">
+        <button type="button" className={cn("chip", lvl === "all" && "active")} onClick={() => restart("all")}>Wszystko</button>
         {topic.levels.map((l) => (
-          <button type="button" key={l.id} className={cn("chip", !allOn && sel.has(l.id) && "active")} onClick={() => toggle(l.id)} aria-pressed={sel.has(l.id)}>{l.title}</button>
+          <button key={l.id} type="button" className={cn("chip", lvl === l.id && "active")} onClick={() => restart(l.id)}>{noEmoji(l.title)}</button>
         ))}
       </div>
       <div className="progressrow">
-        <div className="bar green"><i style={{ width: `${list.length ? (idx / list.length) * 100 : 0}%` }} /></div>
+        <div className="bar"><i style={{ width: `${list.length ? (Math.min(idx, list.length) / list.length) * 100 : 0}%` }} /></div>
         <div className="counter">{Math.min(idx + 1, list.length)}/{list.length}</div>
       </div>
-      {!mounted ? (
-        <div className="qcard items-center"><span className="spinner" aria-label="losuję pytania…" /></div>
-      ) : !q ? (
-        <div className="result">
-          <Mascot state={pct >= 70 ? "cheer" : pct >= 50 ? "happy" : "think"} size={120} streak={streak} say={pct >= 70 ? "Solidnie!" : "Jeszcze raz?"} bubbleSide="top" />
-          <Ring pct={pct} size={110} stroke={12} color={pct >= 70 ? "var(--play-green)" : pct >= 50 ? "var(--play-orange)" : "var(--play-red)"}>
-            <span className="display text-[28px] font-extrabold text-txt">{pct}%</span>
-          </Ring>
-          <h2>Wynik</h2>
-          <p>Trafione <b>{score}/{list.length}</b>. {pct >= 70 ? "Solidnie ogarniasz ten temat." : pct >= 50 ? "Spoko, ale przejedź jeszcze fiszki." : "Wróć do fiszek i ścieżki, potem tu wróć."}</p>
-          <Btn3d variant="green" onClick={restart}>Jeszcze raz</Btn3d>
-        </div>
+      {done ? (
+        <QuizResult pct={pct} score={score} total={list.length} onAgain={() => restart()} onMount={() => list.length && completeDaily(topic.id, "quiz")} />
+      ) : q ? (
+        <QuizBlock
+          key={`${round}-${idx}`}
+          q={q}
+          sm
+          chips={<span className="qn">{lvl === "all" ? noEmoji(q.lvl) : `Pytanie ${idx + 1}`}</span>}
+          api={{ footEl: null, finish: () => {} }}
+          onAnswer={(_i, ok) => {
+            touch(topic, quizSrsKey(q.levelId, q.qi), ok);
+            if (ok) { setScore((s) => s + 1); addXp(topic.id, QUIZ_TAB_XP); setBurst((b) => b + 1); sfx.play("correct"); } else sfx.play("wrong");
+            setPending({ ok, fb: { e: q.e, q, src: q.src }, qi: q.qi, levelId: q.levelId });
+          }}
+        />
       ) : (
-        <QuestionCard q={q} tag={q.lvl} picked={picked} reveal={picked !== null} explain={false} onPick={pick} animKey={`${round}-${idx}`} />
+        <div className="result"><h2>Brak pytań</h2><p>Ten temat nie ma jeszcze pytań w tym zakresie.</p></div>
       )}
-      <FeedbackSheet fb={fb} onNext={() => { setFb(null); setPicked(null); setIdx((i) => i + 1); }} streak={streak} />
+      {burst > 0 && pending?.ok && <Confetti key={burst} n={4} />}
+      {pending && (
+        <AnswerSheet
+          ok={pending.ok}
+          fb={pending.fb}
+          xp={QUIZ_TAB_XP}
+          mult={1}
+          combo={0}
+          ctx={{ topic, levelId: pending.levelId, qi: pending.qi }}
+          onNext={() => { setPending(null); setIdx((i) => i + 1); }}
+          onCards={() => router.replace(`/app/t/${topic.id}?tab=fiszki&lvl=${pending.levelId}`)}
+        />
+      )}
+      <span hidden>{subject.name}</span>
+    </div>
+  );
+}
+
+/** Result card (legacy renderQuiz end): big tile, score, hint, "JESZCZE RAZ". */
+export function QuizResult({ pct, score, total, onAgain, onMount, label = "Trafione" }: { pct: number; score: number; total: number; onAgain: () => void; onMount?: () => void; label?: string }) {
+  const [fired, setFired] = useState(false);
+  if (!fired) { setFired(true); setTimeout(() => onMount?.(), 0); }
+  const kind = pct >= 70 ? "hot" : pct >= 50 ? "ok" : "fail";
+  return (
+    <div className="qcard">
+      <div className="result">
+        <div className={cn("big", kind)}><Icon name={kind === "hot" ? "flame" : kind === "ok" ? "check" : "refresh"} size={60} stroke={3.2} /></div>
+        <h2>Wynik</h2>
+        <div className="score">{label} <b>{score}/{total}</b> ({pct}%)</div>
+        <p>{pct >= 70 ? "Dobrze znasz ten materiał." : pct >= 50 ? "Nieźle. Przejrzyj jeszcze fiszki." : "Wróć do fiszek i ścieżki, a potem spróbuj ponownie."}</p>
+        <button type="button" className="pill" onClick={onAgain}>JESZCZE RAZ</button>
+      </div>
     </div>
   );
 }

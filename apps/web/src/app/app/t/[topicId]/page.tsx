@@ -11,7 +11,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { topicId } = await params;
   const ctx = await getSessionUser();
   const t = ctx ? await getTopic(ctx.sb, topicId) : null;
-  return { title: t ? `${t.emoji} ${t.name}` : "Temat" };
+  return { title: t ? t.name : "Temat" };
 }
 
 export default async function TopicPage({ params }: Params) {
