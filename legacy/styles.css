@@ -1215,3 +1215,266 @@ svg.chart{width:100%;height:auto;display:block;font-family:var(--font-body)}
 .swipehint3{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;padding:14px 6px 0;font-size:12px;font-weight:800}
 .swipehint3 span{display:inline-flex;align-items:center;gap:6px}
 .swipehint3 .l{color:var(--red-soft)}.swipehint3 .r{color:var(--acid)}
+
+/* ============================================================
+   KROK 7 — EGZAMIN I PLAN DO SPRAWDZIANU (DESIGN.md §4.3, §6 pkt 7): ExamStart.html, ExamRun.html, Exam.html, TestPlan.html,
+   wiersz „Mam sprawdzian” w QuickAdd.html, chip „Sprawdzian za N dni” w pasie przedmiotu, wiersz „Do sprawdzianu” na Dziś.
+   Tylko dopisane reguły; kolory przez tokeny i color-mix, ruch przez .a-* z tokens.css.
+   ============================================================ */
+/* ExamStart: trzy kafle liczb, karty zakresu / ustawień / siatki ocen, ramka warunków, ostatnie podejście, start */
+.exstart{display:flex;flex-direction:column;gap:13px;padding:14px 18px 150px}
+.exstart>*{flex:none}
+.egspecs{display:flex;gap:11px}
+.egspec{flex:1;min-width:0;background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:15px 8px;text-align:center;box-shadow:0 4px 0 var(--shadow)}
+.egspec b{display:block;font-family:var(--font-display);font-size:27px;font-weight:800;line-height:1.05;color:var(--txt)}
+.egspec b.acid{color:var(--acid)}
+.egspec span{display:block;font-size:11px;font-weight:700;color:var(--muted-2);margin-top:3px}
+.egcard{background:var(--surface);border:2px solid var(--line);border-radius:24px;padding:4px 15px 10px;box-shadow:0 5px 0 var(--shadow)}
+.eglbl{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted-2);padding:10px 0 6px}
+.egrow{display:flex;align-items:center;gap:12px;width:100%;min-height:44px;padding:8px 0;background:none;border:none;text-align:left;cursor:pointer;font-family:var(--font-body);color:var(--muted)}
+.egrow+.egrow{border-top:2px solid var(--line-2)}
+.egrow .box{width:24px;height:24px;border-radius:8px;border:2px solid var(--line-dash);display:inline-flex;align-items:center;justify-content:center;flex:none;color:var(--on-acid)}
+.egrow.on{color:var(--txt)}
+.egrow.on .box{background:var(--acid);border-color:var(--acid)}
+.egrow .t{flex:1;min-width:0;font-size:13.5px;font-weight:700}
+.egrow.all .t{font-weight:800}
+.egrow .n{font-size:12px;font-weight:800;color:var(--muted-3)}
+.egrow.on .n{color:var(--muted-2)}
+.egchips{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:4px}
+.egchip{min-height:40px;padding:0 14px;border-radius:var(--r-chip);background:var(--surface-2);border:2px solid var(--line);color:var(--muted);font-size:12.5px;font-weight:800;cursor:pointer;font-family:var(--font-body)}
+.egchip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.egscale{display:flex;flex-wrap:wrap;gap:6px;padding-bottom:4px}
+.egscale span{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:10px;background:var(--surface-2);font-size:12px;font-weight:700;color:var(--muted)}
+.egscale span b{color:var(--gold);font-weight:800}
+.egscale span b.fail{color:var(--red-soft)}
+.egwarn{background:var(--tint-red);border:2px solid var(--tint-red-line);border-radius:24px;padding:16px;box-shadow:0 5px 0 color-mix(in srgb,var(--tint-red) 60%,var(--bg))}
+.egwarn .eglbl{color:var(--red-soft);padding:0}
+.egwarn .r{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:700;color:color-mix(in srgb,var(--red) 20%,var(--txt));margin-top:10px}
+.egwarn .r .ic{color:var(--red-soft);flex:none}
+.egwarn .r .ic.ok{color:var(--acid)}
+.eglast{display:flex;align-items:center;gap:13px;background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:14px 16px;box-shadow:0 4px 0 var(--shadow)}
+.eglast .ico{width:44px;height:44px;border-radius:14px;background:var(--line-2);color:var(--muted);display:flex;align-items:center;justify-content:center;flex:none}
+.eglast .ico.gold{background:var(--tint-gold);color:var(--gold)}
+.eglast .grow{flex:1;min-width:0}
+.eglast .t{font-size:13.5px;font-weight:800}
+.eglast .s{font-size:12px;font-weight:600;color:var(--muted);margin-top:2px;line-height:1.35}
+.egfoot{position:absolute;left:0;right:0;bottom:0;z-index:5;padding:12px 18px calc(16px + env(safe-area-inset-bottom));background:var(--bg);border-top:2px solid var(--line-2)}
+.egfoot .pill{min-height:60px;border-radius:20px}
+.eglast.d6{cursor:pointer;transition:transform .08s}
+.eglast.d6:active{transform:translateY(2px)}
+.eglast .chev{color:var(--muted-3)}
+
+/* ExamRun (#lesson.egrun): nagłówek w --surface-2 z zamknięciem, „Pytanie N z M” + pasek (fiolet), timer (bursztyn, pod 2 min czerwień + .a-blink),
+   przycisk siatki, pasek opadającego czasu; pytanie z flagą; kafle jak w quizie, wybór = fiolet; stopka wstecz / DALEJ (fiolet) */
+.egrun .eghead{padding:14px 18px 12px;background:var(--surface-2);border-bottom:2px solid var(--line)}
+.egtop{display:flex;align-items:center;gap:10px}
+.egtop .x{width:44px;height:44px;border-radius:50%;background:var(--surface);border:2px solid var(--line);color:var(--txt);cursor:pointer;flex:none;display:inline-flex;align-items:center;justify-content:center}
+.egtop .grow{flex:1;min-width:0}
+.egn{font-size:13px;font-weight:800}
+.egtop .bar{height:8px;margin-top:5px}
+.egtop .bar i{background:var(--violet);transition:width .35s}
+.egtimer{display:inline-flex;align-items:center;gap:6px;background:var(--tint-amber);border:2px solid var(--tint-amber-line);border-radius:var(--r-chip);padding:0 12px;min-height:40px;color:var(--amber-soft);font-size:13.5px;font-weight:800;font-variant-numeric:tabular-nums;cursor:pointer;font-family:var(--font-body);flex:none}
+.egtimer .ic{color:var(--amber)}
+.egtimer.warn{background:var(--tint-red);border-color:var(--red);color:var(--red-soft)}
+.egtimer.warn .ic{color:var(--red)}
+.eggridbtn{width:44px;height:44px;border-radius:14px;background:var(--surface);border:2px solid var(--line);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex:none;transition:transform .08s}
+.eggridbtn:active{transform:translateY(2px)}
+.egdrain{height:5px;border-radius:999px;background:var(--line-2);overflow:hidden;margin-top:12px}
+.egdrain i{display:block;height:100%;border-radius:999px;background:var(--amber);transition:width 1s linear}
+.egdrain.warn i{background:var(--red)}
+.egqrow{display:flex;align-items:flex-start;gap:12px}
+.egqrow .qq{flex:1;min-width:0;font-size:23px;letter-spacing:-.7px;line-height:1.2;margin:0}
+.egflag{flex:none;width:44px;height:44px;border-radius:14px;background:var(--surface);border:2px solid var(--line);color:var(--muted);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:transform .08s}
+.egflag:active{transform:translateY(2px)}
+.egflag.on{background:var(--tint-gold);border-color:var(--tint-gold-line);color:var(--gold)}
+.egrun .qopt.sel{background:var(--tint-pink);border-color:var(--violet);box-shadow:0 4px 0 var(--violet);color:var(--txt)}
+.egrun .qopt.sel .k{background:var(--violet);color:var(--on-violet)}
+.egnav{display:flex;gap:11px}
+.egnav .pill{flex:1;min-height:56px}
+.egnav .egprev{flex:0 0 64px;padding:0}
+.egnav .pill.ghost[disabled]{opacity:.4}
+.pill.violet,.lesson .pill.violet:not([disabled]){background:var(--violet);color:var(--on-violet);box-shadow:0 var(--drop-btn) 0 var(--violet-dark)}
+.pill.violet:active,.lesson .pill.violet:not([disabled]):active{box-shadow:0 0 0 var(--violet-dark)}
+/* arkusze egzaminu: siatka pytań (7 kolumn ≥ 44 px), legenda, podsumowanie przed zakończeniem */
+.sheet.eggrid,.sheet.egconfirm,.sheet.testplan{border-radius:32px 32px 0 0;border-top-color:var(--violet);padding:14px 18px calc(26px + env(safe-area-inset-bottom));overflow-y:auto;max-height:86dvh}
+.sheet.eggrid>*,.sheet.egconfirm>*,.sheet.testplan>*{flex:none}
+.egsquares{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:7px}
+.egsq{aspect-ratio:1;min-height:40px;border-radius:10px;background:var(--line-2);border:none;color:var(--muted-2);font-size:13px;font-weight:800;cursor:pointer;font-family:var(--font-body);transition:transform .08s}
+.egsq:active{transform:translateY(2px)}
+.egsq.ans{background:var(--tint-acid-line);color:var(--txt)}
+.egsq.flag{background:var(--tint-gold-line);color:var(--txt)}
+.egsq.cur{background:var(--violet);color:var(--on-violet)}
+.eglegend{display:flex;gap:12px;flex-wrap:wrap}
+.eglegend span{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;color:var(--muted-2)}
+.eglegend i{width:9px;height:9px;border-radius:3px;background:var(--line-2);display:block}
+.eglegend i.ans{background:var(--tint-acid-line)}
+.eglegend i.flag{background:var(--tint-gold-line)}
+.eglegend i.cur{background:var(--violet)}
+.egsum{display:flex;gap:10px}
+.egsumtile{flex:1;min-width:0;border-radius:18px;padding:12px 6px;text-align:center;background:var(--surface);border:2px solid var(--line)}
+.egsumtile b{display:block;font-family:var(--font-display);font-size:24px;font-weight:800;line-height:1.05}
+.egsumtile span{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-top:3px}
+.egsumtile.red{background:var(--tint-red);border-color:var(--tint-red-line)}
+.egsumtile.red b{color:var(--red-soft)}
+.egsumtile.gold{background:var(--tint-gold);border-color:var(--tint-gold-line)}
+.egsumtile.gold b{color:var(--gold)}
+.egsumtile.acid{background:var(--tint-acid);border-color:var(--tint-acid-line)}
+.egsumtile.acid b{color:var(--acid)}
+
+/* Wynik (Exam.html, #lesson.egres): karta z pierścieniem i oceną (limonka = zdane, czerwień = nie), kafle, siatka ocen z podświetlonym wierszem,
+   karta talii błędów, przegląd pytań (złe najpierw, źródło src) */
+.egres .lessonbody.done{padding:0 18px}
+.egl{padding:14px 0 12px;gap:14px;align-items:stretch}
+.eghero{display:flex;align-items:center;gap:18px;border-radius:28px;padding:20px;border:2px solid var(--line)}
+.eghero.ok{background:var(--tint-acid);border-color:var(--tint-acid-line);box-shadow:0 6px 0 color-mix(in srgb,var(--tint-acid) 60%,var(--bg))}
+.eghero.bad{background:var(--tint-red);border-color:var(--tint-red-line);box-shadow:0 6px 0 color-mix(in srgb,var(--tint-red) 60%,var(--bg))}
+.eghero .rvring{width:108px;height:108px;flex:none}
+.eghero .rvring svg{width:108px;height:108px}
+.eghero .rvpct b{font-size:28px}
+.eghero.ok .ring-fg{stroke:var(--acid)}
+.eghero.ok .rvpct b{color:var(--acid)}
+.eghero.ok .rvpct span{color:var(--acid-soft)}
+.eghero.bad .ring-fg{stroke:var(--red)}
+.eghero.bad .rvpct b{color:var(--red-soft)}
+.eghero.bad .rvpct span{color:color-mix(in srgb,var(--red) 40%,var(--muted))}
+.eghero .grow{flex:1;min-width:0}
+.eghero .eglbl{padding:0;color:var(--acid-soft)}
+.eghero.bad .eglbl{color:color-mix(in srgb,var(--red) 40%,var(--muted))}
+.eggrade{font-family:var(--font-display);font-size:54px;font-weight:800;letter-spacing:-2px;line-height:1;margin-top:4px;color:color-mix(in srgb,var(--acid) 30%,var(--txt))}
+.eghero.bad .eggrade{color:color-mix(in srgb,var(--red) 20%,var(--txt))}
+.eggrade small{font-size:18px;letter-spacing:-.4px;margin-left:6px;color:var(--acid-soft)}
+.eghero.bad .eggrade small{color:var(--red-soft)}
+.egnote{font-size:12.5px;font-weight:700;margin-top:6px;color:var(--acid-soft);line-height:1.4}
+.eghero.bad .egnote{color:color-mix(in srgb,var(--red) 40%,var(--muted))}
+.egstats{display:flex;gap:10px}
+.egstat{flex:1;min-width:0;background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:12px 4px;text-align:center;box-shadow:0 4px 0 var(--shadow)}
+.egstat b{display:block;font-family:var(--font-display);font-size:22px;font-weight:800;line-height:1.05;font-variant-numeric:tabular-nums}
+.egstat span{display:block;font-size:10.5px;font-weight:700;color:var(--muted-2);margin-top:3px}
+.egstat.acid b{color:var(--acid)}
+.egstat.red b{color:var(--red-soft)}
+.egstat.gold b{color:var(--gold)}
+.egstat.cyan b{color:var(--cyan)}
+.eglv{display:flex;flex-direction:column;gap:11px;padding:4px 0 8px}
+.eglvrow{display:flex;align-items:center;gap:12px}
+.eglvrow .lb{flex:none;width:118px;font-size:12px;font-weight:700;color:var(--txt-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.eglvrow .bar{flex:1;height:12px}
+.eglvrow .p{flex:none;width:36px;text-align:right;font-size:12px;font-weight:800}
+.eglvrow.red .bar i{background:var(--red)}
+.eglvrow.red .p{color:var(--red-soft)}
+.eglvrow.gold .bar i{background:var(--gold)}
+.eglvrow.gold .p{color:color-mix(in srgb,var(--gold) 55%,var(--txt))}
+.eglvrow.acid .bar i{background:var(--acid)}
+.eglvrow.acid .p{color:var(--acid-soft)}
+.egscalelist{display:flex;flex-direction:column;padding-bottom:2px}
+.egsrow{display:flex;align-items:center;gap:12px;padding:9px 8px;margin:0 -8px;border-radius:14px;font-size:13px;font-weight:700;color:var(--muted)}
+.egsrow+.egsrow{margin-top:2px}
+.egsrow .g{flex:none;width:50px;font-family:var(--font-display);font-size:17px;font-weight:800;color:var(--txt-2)}
+.egsrow .bar{flex:1;height:8px}
+.egsrow .bar i{background:var(--line-dash)}
+.egsrow .p{flex:none;width:66px;text-align:right;font-weight:800;white-space:nowrap}
+.egsrow.on{background:var(--tint-acid);color:color-mix(in srgb,var(--acid) 30%,var(--txt));animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.egsrow.on .g{color:var(--acid)}
+.egsrow.on .bar i{background:var(--acid)}
+.egsrow.fail .g{color:var(--red-soft)}
+.egsrow.fail.on{background:var(--tint-red);color:color-mix(in srgb,var(--red) 20%,var(--txt))}
+.egsrow.fail.on .bar i{background:var(--red)}
+.egdeck{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-body);background:var(--tint-red);border:2px solid var(--tint-red-line);border-radius:22px;padding:14px 16px;box-shadow:0 4px 0 color-mix(in srgb,var(--tint-red) 60%,var(--bg));color:var(--txt);transition:transform .08s,box-shadow .08s}
+.egdeck:active{transform:translateY(4px);box-shadow:0 0 0 var(--bg)}
+.egdeck .ico{width:44px;height:44px;border-radius:14px;background:var(--red);color:var(--on-red);display:flex;align-items:center;justify-content:center;flex:none}
+.egdeck .grow{flex:1;min-width:0}
+.egdeck .t{font-size:14.5px;font-weight:800;color:color-mix(in srgb,var(--red) 20%,var(--txt))}
+.egdeck .s{font-size:12.5px;font-weight:600;color:color-mix(in srgb,var(--red) 40%,var(--muted));margin-top:2px}
+.egdeck>svg:last-child{color:color-mix(in srgb,var(--red) 40%,var(--muted))}
+.egdeck.ok{background:var(--tint-acid);border-color:var(--tint-acid-line);box-shadow:0 4px 0 color-mix(in srgb,var(--tint-acid) 60%,var(--bg));cursor:default}
+.egdeck.ok .ico{background:var(--acid);color:var(--on-acid)}
+.egdeck.ok .t{color:color-mix(in srgb,var(--acid) 25%,var(--txt))}
+.egdeck.ok .s{color:var(--acid-soft)}
+.egrev{display:flex;flex-direction:column;gap:9px;width:100%}
+.egrev .eyebrow{padding:4px 0 0}
+.egitem{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:13px 15px;font-size:13.5px;line-height:1.45;display:flex;flex-direction:column;gap:5px;text-align:left}
+.egitem .qh{display:flex;gap:10px;align-items:flex-start;font-weight:800;color:var(--txt)}
+.egitem .num{flex:none;width:26px;height:26px;border-radius:9px;background:var(--line-2);color:var(--muted);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+.egitem.bad{border-color:var(--tint-red-line)}
+.egitem.bad .num{background:var(--red);color:var(--on-red)}
+.egitem.ok{opacity:.8}
+.egitem.ok .num{background:var(--tint-acid-line);color:var(--txt)}
+.egitem .rbad{color:var(--red-soft);font-weight:700}
+.egitem .rgood{color:var(--acid);font-weight:700}
+.egitem .re{color:var(--txt-2);font-weight:600;font-size:13px}
+.egitem .rsrc{display:flex;align-items:flex-start;gap:6px;color:var(--muted-2);font-size:12px;font-weight:600;line-height:1.35}
+.egitem .rsrc .ic{flex:none;margin-top:2px}
+.egitem .rsrc b{color:var(--muted);font-weight:800}
+
+/* Plan do sprawdzianu (TestPlan.html): karta gotowości z pierścieniem (złoto), data i „za N dni”, wiersze dni (dziś = limonka, zrobione, pominięte,
+   wolne = kreskowane, dzień sprawdzianu = czerwień), stopka */
+.tplan{display:flex;flex-direction:column;gap:12px;padding-top:8px}
+.tplan>*{flex:none}
+.tphero{display:flex;align-items:center;gap:16px;background:var(--surface);border:2px solid var(--line);border-radius:24px;padding:16px;box-shadow:0 5px 0 var(--shadow)}
+.tphero .rvring{width:88px;height:88px;flex:none}
+.tphero .rvring svg{width:88px;height:88px}
+.tphero .ring-bg,.tphero .ring-fg{stroke-width:9}
+.tphero .ring-fg{stroke:var(--gold)}
+.tphero .rvpct b{font-size:22px;color:var(--gold)}
+.tphero .rvpct span{font-size:8.5px;color:var(--muted);letter-spacing:.3px}
+.tphero .grow{flex:1;min-width:0}
+.tphero .s{font-size:12px;font-weight:800;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tphero .d{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.6px;margin-top:4px;line-height:1.1}
+.tphero .in{font-size:13px;font-weight:800;color:var(--red-soft);margin-top:3px}
+.tprows{display:flex;flex-direction:column;gap:8px}
+.tprow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-body);background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:11px 13px;min-height:60px;color:var(--txt);transition:transform .08s,box-shadow .08s}
+.tprow .dy{width:40px;flex:none;text-align:center}
+.tprow .dy small{display:block;font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase}
+.tprow .dy b{display:block;font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--txt)}
+.tprow .ico{width:34px;height:34px;border-radius:11px;background:var(--line-2);color:var(--muted);display:flex;align-items:center;justify-content:center;flex:none}
+.tprow .grow{flex:1;min-width:0}
+.tprow .t{font-size:13.5px;font-weight:800}
+.tprow .s{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:2px}
+.badge2{flex:none;padding:4px 9px;border-radius:var(--r-chip);font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;background:var(--line-2);color:var(--muted)}
+.tprow.tp-now{background:var(--tint-acid);border-color:var(--acid);box-shadow:0 4px 0 var(--acid-dark)}
+.tprow.tp-now:active{transform:translateY(4px);box-shadow:0 0 0 var(--acid-dark)}
+.tprow.tp-now .dy small{color:var(--acid)}
+.tprow.tp-now .dy b,.tprow.tp-now .t{color:color-mix(in srgb,var(--acid) 25%,var(--txt))}
+.tprow.tp-now .s{color:var(--acid-soft)}
+.tprow.tp-now .ico,.tprow.tp-now .badge2{background:var(--acid);color:var(--on-acid)}
+.tprow.tp-done{opacity:.72}
+.tprow.tp-done .ico{background:var(--acid);color:var(--on-acid)}
+.tprow.tp-done .t{text-decoration:line-through;color:var(--muted)}
+.tprow.tp-missed .ico{background:var(--tint-red);color:var(--red-soft)}
+.tprow.tp-missed .t{color:var(--muted)}
+.tprow.tp-missed .s{color:var(--red-soft)}
+.tprow.tp-rest{background:var(--surface-2);border-style:dashed;cursor:default}
+.tprow.tp-rest .dy small{color:var(--muted-3)}
+.tprow.tp-rest .dy b,.tprow.tp-rest .t{color:var(--muted)}
+.tprow.tp-rest .s,.tprow.tp-rest .ico{color:var(--muted-3)}
+.tprow.tp-rest.tp-now{background:var(--tint-acid);border-style:solid}
+.tprow.tp-exam{background:var(--tint-red);border-color:var(--red);box-shadow:0 4px 0 var(--red-dark);cursor:default}
+.tprow.tp-exam .dy small{color:var(--red)}
+.tprow.tp-exam .dy b,.tprow.tp-exam .t{color:color-mix(in srgb,var(--red) 20%,var(--txt))}
+.tprow.tp-exam .s{color:color-mix(in srgb,var(--red) 40%,var(--muted))}
+.tprow.tp-exam .ico,.tprow.tp-exam .badge2{background:var(--red);color:var(--on-red)}
+.tpnote{font-size:12px;font-weight:600;color:var(--muted-2);text-align:center;line-height:1.4;padding:2px 0}
+.tpfoot{display:flex;flex-direction:column;gap:6px;padding-top:4px}
+.tpfoot .pill{min-height:58px}
+/* arkusz „Mam sprawdzian”: chipy przedmiotu (monogram) i zakresu, natywne pole daty, podsumowanie */
+.sheet.testplan{border-top-color:var(--red)}
+.tpchips{display:flex;gap:8px;flex-wrap:wrap}
+.tpchip{min-height:40px;padding:0 13px;border-radius:var(--r-chip);background:var(--surface);border:2px solid var(--line);color:var(--muted);font-size:12.5px;font-weight:800;cursor:pointer;font-family:var(--font-body);display:inline-flex;align-items:center;gap:7px}
+.tpchip.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.tpchip .mono{width:22px;height:22px;border-radius:7px;font-size:11px;margin-left:-4px}
+.tpchip.on .mono{background:var(--on-accent);border-color:var(--on-accent);color:var(--accent)}
+.tpdate{display:flex;align-items:center;gap:10px;background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:0 14px;min-height:54px;color:var(--muted)}
+.tpdate input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--txt);font-family:var(--font-body);font-size:15px;font-weight:800;color-scheme:dark;min-height:44px}
+.tpdate span{flex:none;font-size:12px;font-weight:800;color:var(--acid)}
+.tpsum{display:flex;align-items:center;gap:10px;background:var(--tint-gold);border:2px solid var(--tint-gold-line);border-radius:16px;padding:12px 14px;font-size:12.5px;font-weight:700;line-height:1.4;color:color-mix(in srgb,var(--gold) 55%,var(--txt))}
+.tpsum .ic{color:var(--gold);flex:none}
+.sheet.testplan .eyebrow.sec{margin-top:0}
+/* QuickAdd: wiersz „Mam sprawdzian — ułóż mi plan” (czerwony tint); pas przedmiotu: chip „Sprawdzian za N dni” */
+.qatest{display:flex;align-items:center;gap:12px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-body);background:var(--tint-red);border:2px solid var(--tint-red-line);border-radius:18px;padding:13px 15px;min-height:52px;color:color-mix(in srgb,var(--red) 20%,var(--txt));font-size:14px;font-weight:800;transition:transform .08s}
+.qatest:active{transform:translateY(2px)}
+.qatest .ic{color:var(--red-soft);flex:none}
+.qatest span{flex:1;min-width:0}
+.qatest .chev{color:color-mix(in srgb,var(--red) 40%,var(--muted))}
+.bandtest{display:flex;align-items:center;gap:8px;width:100%;margin-top:10px;min-height:40px;padding:6px 12px;border-radius:14px;background:var(--tint-red);border:2px solid var(--tint-red-line);color:color-mix(in srgb,var(--red) 20%,var(--txt));font-family:var(--font-body);font-size:12.5px;font-weight:800;cursor:pointer;text-align:left}
+.bandtest .ic{color:var(--red-soft);flex:none}
+.bandtest small{flex:1;min-width:0;font-size:11.5px;font-weight:600;color:color-mix(in srgb,var(--red) 40%,var(--muted));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bandtest .chev{color:color-mix(in srgb,var(--red) 40%,var(--muted))}

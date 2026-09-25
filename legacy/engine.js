@@ -5,6 +5,7 @@
    Widoki główne (krok 3): Dziś (plan dnia) · Przedmioty · Profil · Ustawienia · Seria
    Krok 6 (handoff 2.0): nawigacja Dziś · Powtórka · [+] · Fiszki · Profil, arkusz „Dodaj materiał”, „Wyjaśnij inaczej”,
    powtórka SRS (PROGRESS.srs, pudełka 0…4 → 0/1/3/7/21 dni), Review + FlashcardsDone, ton bez slangu.
+   Krok 7: egzamin (ExamStart → ExamRun z siatką i flagami → wynik z oceną i talią błędów) i plan do sprawdzianu (PROGRESS.tests, TestPlan).
    ============================================================ */
 (function(){
 "use strict";
@@ -151,13 +152,13 @@ function applyTheme(s){
 /* ============================================================ KROK 3: „Dziś”, plan dnia, kafle, dolna nawigacja
    Router widoków głównych: today (start) · subjects · profile · settings · streak.
    Widok przedmiotu (renderSubject) zostaje bez nawigacji — ma własne zakładki i przycisk wstecz. */
-const VIEWS={today:renderToday,review:renderReview,cards:renderCardsHub,subjects:renderSubjects,profile:renderProfile,settings:renderSettings,streak:renderStreak};
+const VIEWS={today:renderToday,review:renderReview,cards:renderCardsHub,subjects:renderSubjects,profile:renderProfile,settings:renderSettings,streak:renderStreak,testplan:renderTestPlan};
 let view='today';
 function go(v){
   view=VIEWS[v]?v:'today';
   current=null;applyTheme(null);
   try{clearInterval(cwInt);clearInterval(exInt);clearInterval(nhInt);}catch(e){}
-  keyFn=null;lessonState=null;rvState=null;taskCleanup();
+  keyFn=null;lessonState=null;rvState=null;exState=null;taskCleanup();
   VIEWS[view]();
 }
 const renderHome=()=>go('today'); // stary punkt wejścia
@@ -165,6 +166,7 @@ const renderHome=()=>go('today'); // stary punkt wejścia
 /* --- polskie daty i liczebniki --- */
 const DAYS=['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'],DAYS_S=['Nd','Pn','Wt','Śr','Cz','Pt','Sb'];
 const MONTHS=['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
+const MONTHS_S=['sty','lut','mar','kwi','maj','cze','lip','sie','wrz','paź','lis','gru']; // krok 7: nagłówek planu do sprawdzianu
 function dateHeader(){const d=new Date();return DAYS[d.getDay()]+', '+d.getDate()+' '+MONTHS[d.getMonth()];}
 function pl(n,one,few,many){n=Math.abs(n);if(n===1)return one;const m10=n%10,m100=n%100;return (m10>=2&&m10<=4&&(m100<12||m100>14))?few:many;}
 function fmtNum(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ');}
@@ -173,10 +175,10 @@ function hasProgress(s){const st=PROGRESS[s.id];return !!st&&(((st.xp||0)>0)||Ob
 function applyMotion(){document.documentElement.classList.toggle('reduce-motion',!!META.reduceMotion);}
 
 /* --- plan dnia: PROGRESS.daily = {date, goal, xp, tasks:[{id, done, need?, prog?}]} (DESIGN.md §4.3, ten sam klucz) --- */
-const REWARD={lesson:15,review:20,quiz:25,exam:40};
+const REWARD={lesson:15,review:20,quiz:25,exam:40,weak:20};
 function daily(){
   const t=todayStr();let d=PROGRESS.daily;
-  if(!d||d.date!==t||!Array.isArray(d.tasks)){d=PROGRESS.daily={date:t,goal:100,xp:0,tasks:buildDailyTasks()};saveProgress();}
+  if(!d||d.date!==t||!Array.isArray(d.tasks)){syncTests();d=PROGRESS.daily={date:t,goal:100,xp:0,tasks:buildDailyTasks()};saveProgress();} // krok 7: nowy dzień = przeliczenie planów do sprawdzianu
   return d;
 }
 function buildDailyTasks(){
@@ -193,6 +195,7 @@ function buildDailyTasks(){
     const doneLv=[...s.levels].reverse().find(l=>(st.levels[l.id]||{}).done)||s.levels[0];
     if(doneLv&&(doneLv.quiz||[]).length)tasks.push({id:s.id+':quiz:'+doneLv.id,done:false});
     if(allQuiz(s).length>=5)tasks.push({id:s.id+':exam',done:false});
+    if(hasDeck(s.id))tasks.push({id:s.id+':weak',done:false}); // krok 7: talia błędów z ostatniego egzaminu
   });
   return tasks;
 }
@@ -212,6 +215,8 @@ function taskInfo(t){
       go:openAt('quiz',()=>{qState={subj:sid,lvl:lv.id,list:null,idx:0,score:0,answered:false};})};}
   if(kind==='exam'){const N=Math.min(20,allQuiz(s).length);
     return {...base,icon:'file',title:'Egzamin próbny',sub:`${N} ${pl(N,'pytanie','pytania','pytań')} · opcjonalnie · +40`,go:openAt('egzamin')};}
+  if(kind==='weak'){const n=deckKeys(sid).filter(k=>srsResolve(k)).length;if(!n&&!t.done)return null; // krok 7: talia błędów z egzaminu
+    return {...base,icon:'alert',title:'Powtórz błędy z egzaminu',sub:`${n} ${pl(n,'pytanie','pytania','pytań')} · ${short} · +20`,go:()=>startExamDeck(sid)};}
   return null;
 }
 /* zaliczenie zadania: lesson (z id poziomu), quiz / exam / review (po przedmiocie); nagroda idzie przez addXP */
@@ -272,9 +277,11 @@ function openQuickAdd(){
       <button class="qatile pink a-up d1" id="qa-file">${icon('upload',{size:24,stroke:2.6})}<div><div class="t">Wgraj plik</div><div class="s">PDF, prezentacja, Word</div></div></button>
       <button class="qatile cyan a-up d2" id="qa-text">${icon('list',{size:24,stroke:2.6})}<div><div class="t">Wklej tekst</div><div class="s">notatki, konspekt, zagadnienia</div></div></button>
     </div>
-    <button class="qalink a-up d3" id="qa-catalog" data-primary>albo weź gotowy przedmiot z katalogu</button>`);
+    <button class="qatest a-up d3" id="qa-test">${icon('calendar',{size:20,stroke:2.4})}<span>Mam sprawdzian — ułóż mi plan</span>${icon('chevron-right',{size:18,stroke:2.6,cls:'chev'})}</button>
+    <button class="qalink a-up d4" id="qa-catalog" data-primary>albo weź gotowy przedmiot z katalogu</button>`);
   sheetBack();
   s.querySelector('#qaclose').onclick=closeSheet;
+  s.querySelector('#qa-test').onclick=()=>{if(!SUBJECTS.length){openAddInfo('any');return;}openTestSheet(current?current.id:null);}; // krok 7
   s.querySelector('#qa-photo').onclick=()=>openAddInfo('photo');
   s.querySelector('#qa-file').onclick=()=>openAddInfo('file');
   s.querySelector('#qa-text').onclick=()=>openAddInfo('text');
@@ -334,7 +341,7 @@ function renderPlan(items){
     row.dataset.task=x.t.id;
     row.innerHTML=`<div class="plan-tile${state==='cur'?' a-pulse':''}">${state==='done'?icon('check',{size:19,stroke:3.4}):icon(x.icon,{size:19,stroke:state==='cur'?3:2.6})}</div>
       <div class="pt"><div class="t">${x.title}</div>${state==='done'?'':`<div class="s">${x.sub}</div>`}</div>
-      ${state==='done'?`<span class="rw">+${x.reward}</span>`:icon('chevron-right',{size:20,cls:'chev'})}`;
+      ${state==='done'?(x.reward?`<span class="rw">+${x.reward}</span>`:''):icon('chevron-right',{size:20,cls:'chev'})}`;
     row.setAttribute('aria-label',(state==='done'?'Zrobione: ':'')+x.title);
     row.onclick=x.go;
     card.appendChild(row);
@@ -345,7 +352,8 @@ function renderPlan(items){
 /* ============================================================ DZIŚ (ekran startowy, Main.html) */
 function renderToday(){
   const scroll=shell('today',{blob:true,cls:'today'});
-  const d=daily();const items=d.tasks.map(taskInfo).filter(Boolean);
+  syncTests();
+  const d=daily();const items=tests().map(testTodayItem).filter(Boolean).concat(d.tasks.map(taskInfo).filter(Boolean)); // krok 7: wiersz „Do sprawdzianu” na górze
   const done=items.filter(x=>x.t.done).length,total=items.length;
   scroll.appendChild(el('div','',`<div class="eyebrow">${dateHeader()}</div><h1>Plan na dziś</h1>`));
   scroll.appendChild(el('div','planbar',`<div class="bar"><i class="a-grow" style="width:${total?done/total*100:0}%"></i></div><span>${done} z ${total}</span>`));
@@ -398,7 +406,8 @@ function renderProfile(){
   scroll.appendChild(heatmap());
   sec('Odznaki','Wszystkie',()=>toast('Pełna lista odznak dojdzie w kroku 8','lock'));
   const badges=el('div','badges a-up d3');
-  [['star','gold','100 pojęć',all.length>=100],['flame','amber','7 dni',best>=7],['trophy','','Egzamin 90%',false]].forEach(([ic,tone,lab,on])=>{
+  const ex90=SUBJECTS.some(s=>{const e=(PROGRESS[s.id]||{}).exam;return !!(e&&e.best&&e.best.pct>=90);}); // krok 7: najlepszy wynik egzaminu
+  [['star','gold','100 pojęć',all.length>=100],['flame','amber','7 dni',best>=7],['trophy','gold','Egzamin 90%',ex90]].forEach(([ic,tone,lab,on])=>{
     badges.appendChild(el('div','badge '+(on?tone:'lock'),icon(on?ic:'lock',{size:28,stroke:2.4,fill:on&&ic!=='trophy'})+lab));
   });
   scroll.appendChild(badges);
@@ -459,12 +468,12 @@ function renderSettings(){
   scroll.appendChild(el('div','eyebrow sec','Dane'));
   const reset=el('button','pill danger a-up d3',icon('refresh',{size:18,stroke:2.8})+' wyzeruj postępy');
   reset.onclick=()=>{
-    if(!confirm('Na pewno? Skasuje XP, gwiazdki i plan dnia. Seria zostaje.'))return;
-    PROGRESS={};saveProgress();qState=null;fState=null;
+    if(!confirm('Na pewno? Skasuje XP, gwiazdki, plan dnia, wyniki egzaminów i plany do sprawdzianów. Seria zostaje.'))return;
+    PROGRESS={};saveProgress();qState=null;fState=null;exCfg=null;tpId=null;
     renderSettings();toast('Postępy wyzerowane','refresh');
   };
   scroll.appendChild(reset);
-  scroll.appendChild(el('div','version','Nauka 2.0 · legacy · krok 6'));
+  scroll.appendChild(el('div','version','Nauka 2.0 · legacy · krok 7'));
 }
 
 /* ============================================================ SERIA (Streak.html: płomień, licznik, kropki tygodnia z nauka_meta_v1) */
@@ -1263,8 +1272,16 @@ function finishReview(L){
   const rv=rvState;closeSheet();keyFn=null;
   const total=rv.ok+rv.bad;const pct=total?Math.round(rv.ok/total*100):0;
   // plan dnia: „Powtórka” to jedna czynność — zalicz wiersze przedmiotów z sesji, a gdy żaden nie pasuje, pierwszy oczekujący wiersz Powtórki
-  let doneAny=false;rv.subs.forEach(sid=>{if(completeDaily(sid,'review'))doneAny=true;});
-  if(!doneAny&&total){const t=daily().tasks.find(x=>!x.done&&/:review$/.test(x.id));if(t)completeDaily(t.id.split(':')[0],'review');}
+  const deck=rv.deck||null;
+  if(deck){ // krok 7: talia błędów z egzaminu — trafione wypadają z PROGRESS.examDeck; wiersz „Powtórz błędy” i dzień „słabe punkty” zaliczone
+    const okKeys=new Set(rv.items.slice(0,rv.idx).filter((it,i)=>rv.marks[i]==='on').map(it=>it.key));
+    const left=(PROGRESS.examDeck||[]).filter(k=>!okKeys.has(k));if(left.length)PROGRESS.examDeck=left;else delete PROGRESS.examDeck;saveProgress();
+    if(total){completeDaily(deck,'weak');testDone(deck,'weak');}
+  }else{
+    let doneAny=false;rv.subs.forEach(sid=>{if(completeDaily(sid,'review'))doneAny=true;});
+    if(!doneAny&&total){const t=daily().tasks.find(x=>!x.done&&/:review$/.test(x.id));if(t)completeDaily(t.id.split(':')[0],'review');}
+    if(total)rv.subs.forEach(sid=>testDone(sid,'review'));
+  }
   if(!L){app.innerHTML='';L=el('div','lesson open rvrun');app.appendChild(L);app.appendChild(el('div','toast',''));app.lastChild.id='toast';}else L.innerHTML='';
   const body=el('div','lessonbody done');body.appendChild(el('div','blob a-float cyan'));if(pct>=50)body.appendChild(confetti(6));
   const done=rv.items.slice(0,rv.idx);const cards=done.filter(x=>x.kind==='card').length,qs=done.length-cards; // tylko to, co przejrzane (sesję można przerwać)
@@ -1286,7 +1303,7 @@ function finishReview(L){
   body.appendChild(lc);L.appendChild(body);
   const foot=el('div','lessonfoot col');
   const main=el('button','pill cyan a-glow',rv.wrong.length?`POWTÓRZ TE ${rv.wrong.length}`:'GOTOWE');main.id='rvmain';
-  const wrong=rv.wrong.slice();main.onclick=wrong.length?()=>startReview(wrong):()=>go('review');
+  const wrong=rv.wrong.slice();main.onclick=wrong.length?()=>{startReview(wrong);if(deck)rvState.deck=deck;}:()=>go('review');
   const alt=el('button','pill text','NA DZIŚ WYSTARCZY');alt.id='rvdone';alt.onclick=()=>go('review');
   foot.appendChild(main);foot.appendChild(alt);L.appendChild(foot);
   rvState=null;
@@ -1332,6 +1349,11 @@ function renderSubject(){
   const info=el('button','infobtn'+(curTab==='info'?' active':''),icon('info',{size:19}));info.setAttribute('aria-label','Zasady zaliczenia');info.onclick=()=>{curTab='info';renderSubject();};row.appendChild(info);
   row.appendChild(heartsPill({iconBeat:true}));
   band.appendChild(row);
+  // krok 7: chip „Sprawdzian za N dni” z dzisiejszym punktem planu → ekran planu
+  const tst=testFor(s.id);
+  if(tst){syncTests();const N=dayDiff(todayStr(),tst.date);const r=(tst.plan||[]).find(x=>x.date===todayStr());
+    const chip=el('button','bandtest',icon('calendar',{size:15,stroke:2.6})+`<span>Sprawdzian ${inDays(N)}</span>`+(N>0&&r?`<small>· dziś: ${tpTitle(tst,r).toLowerCase()}${r.done?' (zrobione)':''}</small>`:'<small></small>')+icon('chevron-right',{size:16,cls:'chev'}));
+    chip.onclick=()=>openTestPlan(tst.id,'subject');band.appendChild(chip);}
   const tabs=el('div','subtabs');
   [['path','map','Ścieżka'],['fiszki','cards','Fiszki'],['quiz','brain','Quiz'],['cwicz','edit','Ćwiczenia'],['egzamin','target','Egzamin']].forEach(([k,ic,lab])=>{
     const b=el('button','subtab'+(curTab===k?' active':''),icon(ic,{size:15})+'<span>'+lab+'</span>');
@@ -1497,6 +1519,7 @@ function finishLesson(){
     if(!prev.done){bonus=15;addXP(s.id,15);}
     saveProgress();
     completeDaily(s.id,'lesson',lv.id);
+    testDone(s.id,'learn',lv.id); // krok 7: dzień „nauka” w planie do sprawdzianu
   }
   const L=document.getElementById('lesson');closeSheet();
   const d=daily();const dd=d.tasks.filter(t=>t.done).length;const n=streakDisplay();
@@ -1595,78 +1618,385 @@ function renderQuiz(sc){
   sc.innerHTML='';sc.appendChild(wrap);
 }
 
-/* ---------- EGZAMIN ---------- */
-let exState=null,exInt=null;
+/* ============================================================ KROK 7: EGZAMIN (ExamStart.html → ExamRun.html → Exam.html)
+   ExamStart w zakładce „Egzamin”: zakres (poziomy), liczba pytań, limit czasu z grading.examMin, próg i siatka ocen, ostatnie/najlepsze podejście.
+   ExamRun na pełnym ekranie (#lesson.egrun): timer (.a-blink pod 2 min, pasek opadający), siatka pytań w arkuszu (skok), flaga, kafle bez oceny w trakcie,
+   wstecz/dalej, „Zakończ” z podsumowaniem; koniec czasu = automatyczne zakończenie. Egzamin = tylko pytania quizu (bez zadań), bez serc i SRS.
+   Wynik: pierścień, ocena z siatki (podświetlony wiersz), zdane/nie, kafle, przegląd pytań (złe najpierw, z wyjaśnieniem i źródłem src),
+   „Talia błędów” → sesja powtórki tylko z błędów + PROGRESS.examDeck (Dziś: „Powtórz błędy z egzaminu”).
+   Zapis w subjState(id).exam = {n, passed, best:{pct,grade,correct,total,date}, last:{…}} i PROGRESS.examsPassed (odznaki w kroku 8). */
+let exState=null,exInt=null,exCfg=null;
 function fmt(s){const m=Math.floor(s/60),x=s%60;return m+':'+String(x).padStart(2,'0');}
-function exGrade(s,pct){
-  const sc=s.grading&&s.grading.scale; // [[min,label],...] malejąco
-  if(sc){for(const[min,lab]of sc){if(pct>=min)return lab;}return s.grading.failLabel||'2 — niezaliczone';}
-  if(pct>=90)return'5';if(pct>=70)return'4';if(pct>=50)return'3';return'2 — niezaliczone';
+function exScale(s){return (s.grading&&s.grading.scale)||[[90,'5'],[70,'4'],[50,'3']];} // [[min,label],...] malejąco
+function exPass(s){return (s.grading&&s.grading.pass)||50;}
+function exFailLabel(s){return (s.grading&&s.grading.failLabel)||'2 — niezaliczone';}
+function exGrade(s,pct){for(const[min,lab]of exScale(s)){if(pct>=min)return lab;}return exFailLabel(s);}
+function examMin(s){return (s.grading&&s.grading.examMin)||20;}
+function examRec(sid){const st=subjState(sid);if(!st.exam||typeof st.exam!=='object')st.exam={n:0,passed:0};return st.exam;}
+function exQuizFor(s,levels){return allQuiz(s).filter(q=>!levels||levels.indexOf(q.lid)>=0);}
+/* etykieta oceny: „5 / bdb” → [„5”, „bdb”], „2 — niezaliczone” → [„2”, „niezaliczone”] */
+function gradeParts(g){const m=String(g).split(/\s*[—–\/]\s*/);return [m[0],m.slice(1).join(' ')];}
+function dateOf(ds){const p=ds.split('-').map(Number);return new Date(p[0],p[1]-1,p[2]);}
+function fmtDate(ds){const d=dateOf(ds);return d.getDate()+' '+MONTHS[d.getMonth()];}
+function inDays(n){return n===0?'dziś':n===1?'jutro':`za ${n} ${pl(n,'dzień','dni','dni')}`;}
+/* ustawienia egzaminu (na czas sesji, per przedmiot): levels = id poziomów w zakresie, n = 10 | 20 | 'all', lim = minuty (0 = bez limitu) */
+function examConfig(s,o){
+  if(!exCfg||exCfg.subj!==s.id)exCfg={subj:s.id,levels:s.levels.map(l=>l.id),n:20,lim:examMin(s)};
+  if(o){if(o.levels)exCfg.levels=o.levels.slice();if(o.n!=null)exCfg.n=o.n;if(o.lim!=null)exCfg.lim=o.lim;}
+  return exCfg;
 }
 function renderEgzamin(sc){
   const s=current;clearInterval(exInt);exState=null;
-  const wrap=el('div','scroll');
-  const ALL=allQuiz(s).length;
-  const N=Math.min(20,ALL);
-  const lim=(s.grading&&s.grading.examMin)||20;
-  const fullLim=Math.max(lim,Math.ceil(ALL*0.75)); // ~45s na pytanie
-  wrap.innerHTML=`<div class="result">${bigTile('','target')}<h2>Egzamin</h2>
-    <div class="specs"><div class="spec">${N}<small>losowych</small></div><div class="spec">${lim}:00<small>na czas</small></div><div class="spec">${(s.grading&&s.grading.pass)||50}%<small>zalicza</small></div></div>
-    <p>Bez podpowiedzi w trakcie. Na końcu % i ocena wg siatki + przegląd błędów.</p>
-    <button class="pill" id="exstart">${icon('bolt',{size:18})} Symulacja — ${N} losowych pytań</button>
-    <button class="pill" id="exfull" style="margin-top:10px">${icon('list',{size:18})} Test końcowy — wszystkie ${ALL} pytań</button>
-    <p style="font-size:13px;margin-top:6px">Test końcowy = każde pytanie z przedmiotu, w losowej kolejności (${fullLim}:00).</p></div>`;
-  sc.innerHTML='';sc.appendChild(wrap);
-  document.getElementById('exstart').onclick=()=>beginExam(sc,N,lim*60);
-  document.getElementById('exfull').onclick=()=>beginExam(sc,ALL,fullLim*60);
+  const cfg=examConfig(s);const lim0=examMin(s);
+  const pool=exQuizFor(s,cfg.levels);const ALL=pool.length;const TOTAL=allQuiz(s).length;
+  const N=cfg.n==='all'?ALL:Math.min(cfg.n,ALL);
+  const allOn=cfg.levels.length===s.levels.length;
+  const rec=examRec(s.id);const scale=exScale(s);const pass=exPass(s);
+  const nOpts=[[10,'10'],[20,'20'],['all','wszystkie · '+ALL]].filter(([v])=>v==='all'||v<ALL);
+  const lims=[...new Set([Math.max(5,Math.round(lim0/2)),lim0,lim0*2])].sort((a,b)=>a-b).map(m=>[m,m+' min']).concat([[0,'bez limitu']]);
+  const t=testFor(s.id);
+  const wrap=el('div','scroll exstart');
+  wrap.innerHTML=`<div class="egspecs a-up">
+      <div class="egspec a-pop d1"><b>${N}</b><span>${pl(N,'pytanie','pytania','pytań')}</span></div>
+      <div class="egspec a-pop d2"><b>${cfg.lim||'∞'}</b><span>${cfg.lim?pl(cfg.lim,'minuta','minuty','minut'):'bez limitu'}</span></div>
+      <div class="egspec a-pop d3"><b class="acid">${pass}%</b><span>próg</span></div></div>
+    <div class="egcard a-up d2"><div class="eglbl">Zakres</div>
+      <button class="egrow all${allOn?' on':''}" data-lv="all"><span class="box">${allOn?icon('check',{size:14,stroke:4}):''}</span><span class="t">Wszystkie poziomy</span><span class="n">${TOTAL}</span></button>
+      ${s.levels.map(l=>{const on=cfg.levels.indexOf(l.id)>=0,n=(l.quiz||[]).length;return `<button class="egrow${on?' on':''}" data-lv="${l.id}" aria-pressed="${on}"><span class="box">${on?icon('check',{size:14,stroke:4}):''}</span><span class="t">${noEmoji(l.title)}</span><span class="n">${n}</span></button>`;}).join('')}</div>
+    <div class="egcard a-up d3"><div class="eglbl">Liczba pytań</div><div class="egchips" id="egn">${nOpts.map(([v,l])=>`<button class="egchip${String(cfg.n)===String(v)?' on':''}" data-n="${v}">${l}</button>`).join('')}</div>
+      <div class="eglbl">Limit czasu</div><div class="egchips" id="eglim">${lims.map(([v,l])=>`<button class="egchip${cfg.lim===v?' on':''}" data-lim="${v}">${l}</button>`).join('')}</div>
+      <div class="eglbl">Siatka ocen</div><div class="egscale">${scale.map(([min,lab])=>`<span><b>${gradeParts(lab)[0]}</b> od ${min}%</span>`).join('')}<span><b class="fail">${gradeParts(exFailLabel(s))[0]}</b> pod ${pass}%</span></div></div>
+    <div class="egwarn a-up d4"><div class="eglbl">Warunki jak na prawdziwym</div>
+      <div class="r">${icon('close',{size:16,stroke:3})}<span>Brak żyć i podpowiedzi</span></div>
+      <div class="r">${icon('close',{size:16,stroke:3})}<span>Wyjaśnienia dopiero na końcu</span></div>
+      <div class="r">${icon('check',{size:16,stroke:3.4,cls:'ok'})}<span>Możesz oznaczać pytania i do nich wracać</span></div></div>
+    <div class="eglast a-up d5"><div class="ico${rec.best?' gold':''}">${icon(rec.best?'trophy':'chart',{size:22,stroke:2.4})}</div><div class="grow">
+      <div class="t">${rec.last?'Ostatnie podejście':'Jeszcze bez podejścia'}</div>
+      <div class="s">${rec.last?`${fmtDate(rec.last.date)} · ${rec.last.pct}% · ocena ${gradeParts(rec.last.grade)[0]}${rec.best&&rec.best.pct>rec.last.pct?` · najlepiej ${rec.best.pct}%`:''}`:'Pierwsze zawsze jest próbne. Wynik zapisuje się tutaj.'}</div></div></div>
+    <div class="eglast a-up d6"><div class="ico">${icon('calendar',{size:22,stroke:2.4})}</div><div class="grow"><div class="t">${t?`Sprawdzian ${inDays(dayDiff(todayStr(),t.date))}`:'Mam sprawdzian'}</div><div class="s">${t?'plan dzień po dniu jest gotowy':'ułożę plan dzień po dniu do daty sprawdzianu'}</div></div>${icon('chevron-right',{size:20,cls:'chev'})}</div>`;
+  // przypięta stopka ze startem (ExamStart.html): lista poziomów bywa długa, przycisk ma być zawsze pod ręką
+  const foot=el('div','egfoot');
+  foot.innerHTML=`<button class="pill a-glow" id="exstart"${N?'':' disabled'}>ZACZYNAM · ${N} ${pl(N,'PYTANIE','PYTANIA','PYTAŃ')}</button>`;
+  sc.innerHTML='';sc.appendChild(wrap);sc.appendChild(foot);
+  const tb=wrap.querySelector('.eglast.d6');tb.id='extest';tb.setAttribute('role','button');tb.tabIndex=0;
+  wrap.querySelectorAll('.egrow').forEach(b=>b.onclick=()=>{
+    const id=b.dataset.lv;
+    if(id==='all')examConfig(s,{levels:allOn?[s.levels[0].id]:s.levels.map(l=>l.id)});
+    else{const set=cfg.levels.indexOf(id)>=0?cfg.levels.filter(x=>x!==id):s.levels.map(l=>l.id).filter(x=>x===id||cfg.levels.indexOf(x)>=0);examConfig(s,{levels:set.length?set:[id]});}
+    renderEgzamin(sc);});
+  wrap.querySelectorAll('#egn .egchip').forEach(b=>b.onclick=()=>{examConfig(s,{n:b.dataset.n==='all'?'all':+b.dataset.n});renderEgzamin(sc);});
+  wrap.querySelectorAll('#eglim .egchip').forEach(b=>b.onclick=()=>{examConfig(s,{lim:+b.dataset.lim});renderEgzamin(sc);});
+  foot.querySelector('#exstart').onclick=()=>beginExam();
+  tb.onclick=()=>{if(t)openTestPlan(t.id,'subject');else openTestSheet(s.id);};
 }
-function beginExam(sc,N,limit){
-  const s=current;
-  exState={pool:shuffle(allQuiz(s)).slice(0,N),idx:0,pick:[],left:limit};
-  exState.pick=new Array(exState.pool.length).fill(null);
+function beginExam(){
+  const s=current;const cfg=examConfig(s);
+  const pool=shuffle(exQuizFor(s,cfg.levels));const N=cfg.n==='all'?pool.length:Math.min(cfg.n,pool.length);
+  if(!N){toast('Brak pytań w tym zakresie','alert');return;}
+  const lim=cfg.lim*60;
+  exState={pool:pool.slice(0,N),idx:0,pick:new Array(N).fill(null),flags:new Array(N).fill(false),limit:lim,left:lim,started:Date.now(),levels:cfg.levels.slice()};
   clearInterval(exInt);
-  exInt=setInterval(()=>{exState.left--;const t=document.getElementById('extimer');if(t){t.lastChild.textContent=fmt(exState.left);t.classList.toggle('warn',exState.left<=60);}if(exState.left<=0){clearInterval(exInt);examFinish(sc);}},1000);
-  renderExamQ(sc);
+  if(lim)exInt=setInterval(()=>{const ex=exState;if(!ex)return clearInterval(exInt);ex.left--;exTick();if(ex.left<=0){clearInterval(exInt);examFinish(true);}},1000);
+  renderExamQ();
 }
-function renderExamQ(sc){
-  const s=current;const ex=exState;
-  if(ex.idx>=ex.pool.length)return examFinish(sc);
-  const q=ex.pool[ex.idx];const sel=ex.pick[ex.idx];const last=ex.idx+1>=ex.pool.length;
-  const wrap=el('div','scroll');
-  wrap.innerHTML=`<div class="examhead"><div class="counter">Pytanie ${ex.idx+1}/${ex.pool.length}</div><div class="timer" id="extimer">${icon('clock',{size:16})}<span>${fmt(ex.left)}</span></div></div>
-    <div class="progressrow"><div class="bar"><i style="width:${ex.idx/ex.pool.length*100}%"></i></div></div>
-    <div class="qcard"><span class="tag">${q.lvl||''}</span><div class="qq">${q.q}</div>
-      <div class="opts">${q.a.map((o,i)=>`<button class="opt${sel===i?' sel':''}" data-i="${i}"><span class="k">${keys[i]}</span><span>${o}</span></button>`).join('')}</div>
-      <div style="display:flex;gap:10px;margin-top:16px">
-        ${ex.idx>0?'<button class="pill ghost" style="flex:1" id="exprev">'+LBL.back+'Wstecz</button>':''}
-        <button class="pill" style="flex:2" id="exnext">${last?'Zakończ i sprawdź '+icon('flag',{size:18}):LBL.next}</button></div></div>`;
-  sc.innerHTML='';sc.appendChild(wrap);
-  wrap.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{ex.pick[ex.idx]=+o.dataset.i;wrap.querySelectorAll('.opt').forEach(x=>x.classList.toggle('sel',+x.dataset.i===ex.pick[ex.idx]));});
-  const nx=document.getElementById('exnext');nx.onclick=()=>{if(last)examFinish(sc);else{ex.idx++;renderExamQ(sc);}};
-  const pv=document.getElementById('exprev');if(pv)pv.onclick=()=>{ex.idx--;renderExamQ(sc);};
+function exTick(){
+  const ex=exState;if(!ex)return;const warn=ex.left<=120;
+  const t=document.getElementById('egtime');if(t){t.textContent=fmt(Math.max(0,ex.left));t.classList.toggle('a-blink',warn);}
+  const p=document.getElementById('egtimer');if(p)p.classList.toggle('warn',warn);
+  const d=document.getElementById('egdrain');if(d){d.classList.toggle('warn',warn);d.firstChild.style.width=(ex.limit?Math.max(0,ex.left)/ex.limit*100:100)+'%';}
 }
-function examFinish(sc){
-  clearInterval(exInt);const s=current;const ex=exState;
-  let correct=0;const wrong=[];
-  ex.pool.forEach((q,i)=>{if(ex.pick[i]===q.c)correct++;else wrong.push({q,sel:ex.pick[i]});});
-  const pct=Math.round(correct/ex.pool.length*100);
-  const grade=exGrade(s,pct);const pass=(s.grading&&s.grading.pass)||50;
-  const kind=pct>=90?'gold':pct>=70?'hot':pct>=pass?'ok':'fail';
-  addXP(s.id,correct*3);
-  completeDaily(s.id,'exam');
-  const rev = wrong.length? wrong.map(w=>`<div class="ritem"><div class="rq">${w.q.q}</div>
-      <div class="rbad">Twoja: ${w.sel==null?'— (brak)':keys[w.sel]+'. '+w.q.a[w.sel]}</div>
-      <div class="rgood">Dobra: ${keys[w.q.c]}. ${w.q.a[w.q.c]}</div>
-      <div class="rsrc">${w.q.lvl||''} · ${w.q.e||''}</div></div>`).join('') : '<div class="ritem rgood">'+icon('check',{size:16,stroke:3.4})+' Bez błędów.</div>';
-  const wrap=el('div','scroll');
-  wrap.innerHTML=`<div class="result">${bigTile(kind)}<h2>Ocena: ${grade}</h2>
-    <div class="score">Trafione <b>${correct}/${ex.pool.length}</b> (${pct}%)</div>
-    <p>${pct>=pass?'Zdane.':'Poniżej progu — wróć do ścieżki i fiszek.'}</p>
-    <button class="pill" id="exagain">${LBL.again}</button></div>
-    <div class="review"><h3>Przegląd błędów (${wrong.length})</h3>${rev}</div>`;
-  sc.innerHTML='';sc.appendChild(wrap);
-  document.getElementById('exagain').onclick=()=>renderEgzamin(sc);
-  if(pct>=pass)toast('Zdane, ocena '+grade,'trophy');else toast('Niezaliczone','x-circle');
+function renderExamQ(){
+  const L=document.getElementById('lesson');const ex=exState;if(!L||!ex)return;
+  closeSheet();keyFn=null;
+  const M=ex.pool.length,q=ex.pool[ex.idx],sel=ex.pick[ex.idx],flag=ex.flags[ex.idx],last=ex.idx+1>=M,warn=ex.left<=120&&ex.limit;
+  L.className='lesson open egrun';L.innerHTML='';
+  const head=el('div','eghead');
+  head.innerHTML=`<div class="egtop"><button class="x" id="egclose" aria-label="Zakończ egzamin">${icon('close',{size:18,stroke:3})}</button>
+      <div class="grow"><div class="egn">Pytanie ${ex.idx+1} z ${M}</div><div class="bar"><i style="width:${Math.round(ex.idx/M*100)}%"></i></div></div>
+      <button class="egtimer${warn?' warn':''}" id="egtimer" aria-label="Pozostały czas">${icon('clock',{size:15})}<span id="egtime"${warn?' class="a-blink"':''}>${ex.limit?fmt(Math.max(0,ex.left)):'—'}</span></button>
+      <button class="eggridbtn" id="eggrid" aria-label="Siatka pytań">${icon('grid',{size:20,stroke:2.4})}</button></div>
+    <div class="egdrain${warn?' warn':''}" id="egdrain"><i style="width:${ex.limit?Math.max(0,ex.left)/ex.limit*100:100}%"></i></div>`;
+  L.appendChild(head);
+  const body=el('div','lessonbody');const quiz=el('div','quiz');
+  quiz.innerHTML=`<div class="qchips"><span class="qn">${q.lvl||''}</span>${flag?'<span class="combo">Do wrócenia</span>':''}</div>
+    <div class="egqrow a-up"><div class="qq">${q.q}</div><button class="egflag${flag?' on':''}" id="egflag" aria-pressed="${flag}" aria-label="Oznacz do wrócenia">${icon('bookmark',{size:18,fill:flag})}</button></div>
+    <div class="qopts">${q.a.map((a,i)=>`<button class="qopt a-up d${Math.min(6,i+1)}${sel===i?' sel':''}" data-i="${i}"><span class="k">${keys[i]}</span><span class="t">${a}</span></button>`).join('')}</div>`;
+  body.appendChild(quiz);L.appendChild(body);
+  const foot=el('div','lessonfoot egnav');
+  const prev=el('button','pill ghost egprev',icon('back',{size:20,stroke:3}));prev.id='egprev';prev.setAttribute('aria-label','Poprzednie pytanie');prev.disabled=ex.idx===0;
+  const next=el('button','pill violet a-glow',last?'ZAKOŃCZ':'DALEJ');next.id='egnext';
+  foot.appendChild(prev);foot.appendChild(next);L.appendChild(foot);
+  const opts=[...quiz.querySelectorAll('.qopt')];
+  const select=i=>{if(!opts[i])return;ex.pick[ex.idx]=ex.pick[ex.idx]===i?null:i;opts.forEach(x=>x.classList.toggle('sel',+x.dataset.i===ex.pick[ex.idx]));};
+  const goTo=i=>{ex.idx=Math.max(0,Math.min(M-1,i));renderExamQ();};
+  opts.forEach(x=>x.onclick=()=>select(+x.dataset.i));
+  prev.onclick=()=>{if(ex.idx>0&&advOk())goTo(ex.idx-1);};
+  next.onclick=()=>{if(!advOk())return;if(last)confirmExamFinish();else goTo(ex.idx+1);};
+  quiz.querySelector('#egflag').onclick=()=>{ex.flags[ex.idx]=!ex.flags[ex.idx];renderExamQ();};
+  head.querySelector('#egclose').onclick=confirmExamFinish;
+  head.querySelector('#eggrid').onclick=openExamGrid;
+  head.querySelector('#egtimer').onclick=()=>toast(ex.limit?'Zostało '+fmt(Math.max(0,ex.left)):'Egzamin bez limitu czasu','clock');
+  keyFn=e=>{const k=(e.key||'').toLowerCase();const m=/^[1-5]$/.test(k)?+k-1:'abcde'.indexOf(k);
+    if(k.length===1&&m>=0&&m<opts.length)select(m);else if(k==='f')quiz.querySelector('#egflag').click();
+    else if(e.key==='ArrowLeft')prev.click();else if(e.key==='ArrowRight'||e.key==='Enter'){e.preventDefault();next.click();}};
+}
+/* arkusz z siatką pytań: z odpowiedzią / do wrócenia / bieżące; tap = skok */
+function openExamGrid(){
+  const ex=exState;if(!ex)return;
+  const s=openSheet('eggrid',`<div class="shandle"></div><div class="shead"><div class="st2">Pytania</div><button class="backbtn sclose" id="eggclose" aria-label="Zamknij">${icon('close',{size:18,stroke:3})}</button></div>
+    <div class="egsquares">${ex.pool.map((q,i)=>{const st=i===ex.idx?'cur a-pulse':ex.flags[i]?'flag':ex.pick[i]!=null?'ans':'';
+      return `<button class="egsq ${st}" data-i="${i}" aria-label="Pytanie ${i+1}${ex.flags[i]?', do wrócenia':ex.pick[i]!=null?', z odpowiedzią':', bez odpowiedzi'}${i===ex.idx?', bieżące':''}">${i+1}</button>`;}).join('')}</div>
+    <div class="eglegend"><span><i class="ans"></i>z odpowiedzią</span><span><i class="flag"></i>do wrócenia</span><span><i class="cur"></i>bieżące</span><span><i></i>puste</span></div>`);
+  sheetBack();
+  s.querySelector('#eggclose').onclick=()=>renderExamQ();
+  s.querySelectorAll('.egsq').forEach(b=>b.onclick=()=>{ex.idx=+b.dataset.i;renderExamQ();});
+  document.getElementById('sheetback').onclick=()=>renderExamQ();
+  keyFn=e=>{if(e.key==='Escape'||e.key==='Enter')renderExamQ();};
+}
+/* „Zakończ”: ile bez odpowiedzi / oznaczonych / z odpowiedzią; wróć do pytań, zakończ i sprawdź, przerwij bez wyniku */
+function confirmExamFinish(){
+  const ex=exState;if(!ex)return;
+  const M=ex.pool.length,un=ex.pick.filter(p=>p==null).length,fl=ex.flags.filter(Boolean).length;
+  const firstUn=ex.pick.findIndex(p=>p==null);
+  const s=openSheet('egconfirm',`<div class="shandle"></div><div class="shead"><div class="st2">Zakończyć egzamin?</div></div>
+    <div class="egsum"><div class="egsumtile red a-pop d1"><b>${un}</b><span>bez odpowiedzi</span></div><div class="egsumtile gold a-pop d2"><b>${fl}</b><span>do wrócenia</span></div><div class="egsumtile acid a-pop d3"><b>${M-un}</b><span>z odpowiedzią</span></div></div>
+    <p class="sp">${un?'Pytania bez odpowiedzi liczą się jako błędne.':'Każde pytanie ma odpowiedź.'}${fl?' Oznaczone możesz jeszcze sprawdzić.':''}</p>
+    <div class="sbtns"><button class="pill ghost" id="egback">${un>0?'DO PUSTYCH':'WRÓĆ'}</button><button class="pill" id="egfin" data-primary>ZAKOŃCZ I SPRAWDŹ</button></div>
+    <button class="pill text" id="egabort">Przerwij bez wyniku</button>`);
+  sheetBack();
+  s.querySelector('#egback').onclick=()=>{if(un>0&&firstUn>=0)ex.idx=firstUn;renderExamQ();};
+  s.querySelector('#egfin').onclick=()=>examFinish(false);
+  s.querySelector('#egabort').onclick=()=>{exitExam();toast('Egzamin przerwany','close');};
+  document.getElementById('sheetback').onclick=()=>renderExamQ();
+}
+function exitExam(){clearInterval(exInt);exState=null;closeSheet();keyFn=null;renderSubject();}
+function examFinish(auto){
+  clearInterval(exInt);closeSheet();keyFn=null;const s=current;const ex=exState;if(!ex)return;
+  const M=ex.pool.length;let correct=0,blank=0;const wrong=[];
+  ex.pool.forEach((q,i)=>{const p=ex.pick[i];if(p===q.c)correct++;else{if(p==null)blank++;wrong.push({q,sel:p,i});}});
+  const pct=Math.round(correct/M*100);const grade=exGrade(s,pct),pass=exPass(s),passed=pct>=pass;
+  const used=ex.limit?ex.limit-Math.max(0,ex.left):Math.round((Date.now()-ex.started)/1000);
+  // XP jak dotąd (3 za poprawne), plan dnia, plan do sprawdzianu (dzień „próbny”), rekord i liczniki (odznaki w kroku 8)
+  addXP(s.id,correct*3);completeDaily(s.id,'exam');testDone(s.id,'mock');
+  const rec=examRec(s.id);rec.n=(rec.n|0)+1;if(passed)rec.passed=(rec.passed|0)+1;
+  const entry={pct,grade,correct,total:M,date:todayStr()};const newBest=!rec.best||pct>rec.best.pct;rec.last=entry;if(newBest)rec.best=entry;
+  if(passed)PROGRESS.examsPassed=(PROGRESS.examsPassed|0)+1;
+  // talia błędów: klucze SRS złych odpowiedzi w PROGRESS.examDeck (jedna talia, ostatni egzamin zastępuje); Dziś dostaje wiersz „Powtórz błędy z egzaminu”
+  const deck=wrong.map(w=>s.id+':'+w.q.lid+':q'+w.q.qi);
+  PROGRESS.examDeck=((PROGRESS.examDeck||[]).filter(k=>k.indexOf(s.id+':')!==0)).concat(deck);if(!PROGRESS.examDeck.length)delete PROGRESS.examDeck;
+  const d=daily();if(deck.length&&!d.tasks.some(x=>x.id===s.id+':weak'))d.tasks.push({id:s.id+':weak',done:false});
+  saveProgress();
+  exState=null;
+  renderExamResult({s,pool:ex.pool,correct,blank,wrong,pct,grade,pass,passed,used,M,auto,newBest,deck});
+  if(auto)setTimeout(()=>toast('Czas minął — egzamin zakończony','clock'),400);
+}
+function ringSvg(pct,R){const C=Math.round(2*Math.PI*R*10)/10;return `<svg viewBox="0 0 124 124" aria-hidden="true"><circle class="ring-bg" cx="62" cy="62" r="${R}"/><circle class="ring-fg" cx="62" cy="62" r="${R}" style="stroke-dasharray:${C};stroke-dashoffset:${Math.round(C*(1-Math.max(0,Math.min(100,pct))/100)*10)/10}"/></svg>`;}
+function srcLine(q){const src=q.src;if(!src)return '';const parts=[src.material?'materiał '+src.material:'',src.page?'s. '+src.page:''].filter(Boolean).join(' · ');return `<div class="rsrc">${icon('file',{size:14})}<span>${parts?'<b>Źródło:</b> '+parts:'<b>Źródło</b>'}${src.quote?' — „'+src.quote+'”':''}</span></div>`;}
+function renderExamResult(r){
+  const s=r.s;const L=document.getElementById('lesson');if(!L)return;
+  L.className='lesson open egres';L.innerHTML='';
+  const body=el('div','lessonbody done');body.appendChild(el('div','blob a-float '+(r.passed?'acid':'red')));if(r.passed)body.appendChild(confetti(6));
+  const scale=exScale(s);const [gMain,gRest]=gradeParts(r.grade);
+  const nextG=scale.slice().reverse().find(([min])=>min>r.pct);
+  const need=nextG?Math.max(1,Math.ceil(nextG[0]/100*r.M)-r.correct):0;
+  const needPass=Math.max(1,Math.ceil(r.pass/100*r.M)-r.correct);
+  const note=(r.auto?'Czas minął. ':'')+(r.passed?(nextG?`Do ${gradeParts(nextG[1])[0]} brakuje ${need} ${pl(need,'pytania','pytań','pytań')}.`:'Najwyższa ocena w siatce.'):`Do progu ${r.pass}% brakuje ${needPass} ${pl(needPass,'pytania','pytań','pytań')}.`)+(r.newBest&&r.correct?' Nowy rekord.':'');
+  const nw=r.wrong.length;
+  // „Gdzie tracisz punkty” (Exam.html): celność per poziom, od najsłabszego; tylko gdy zakres ma więcej niż jeden poziom
+  const byLv={};r.pool.forEach((q,i)=>{const k=q.lid;if(!byLv[k])byLv[k]={t:q.lvl||k,n:0,ok:0};byLv[k].n++;if(!r.wrong.some(w=>w.i===i))byLv[k].ok++;});
+  const lvRows=Object.values(byLv).map(x=>({...x,pct:Math.round(x.ok/x.n*100)})).sort((a,b)=>a.pct-b.pct);
+  const lvCard=lvRows.length>1?`<div class="egcard a-up d3"><div class="eglbl">Gdzie tracisz punkty</div><div class="eglv">${lvRows.map((x,i)=>`<div class="eglvrow ${x.pct<50?'red':x.pct<75?'gold':'acid'}"><span class="lb">${x.t}</span><div class="bar"><i class="a-grow d${Math.min(6,i+1)}" style="width:${x.pct}%"></i></div><span class="p">${x.pct}%</span></div>`).join('')}</div></div>`:'';
+  const items=r.wrong.map(w=>`<div class="egitem bad a-up"><div class="qh"><span class="num">${w.i+1}</span><span>${w.q.q}</span></div>
+      <div class="rbad">Twoja: ${w.sel==null?'bez odpowiedzi':keys[w.sel]+'. '+w.q.a[w.sel]}</div><div class="rgood">Dobra: ${keys[w.q.c]}. ${w.q.a[w.q.c]}</div>
+      ${w.q.e?`<div class="re">${w.q.e}</div>`:''}${srcLine(w.q)}</div>`)
+    .concat(r.pool.map((q,i)=>r.wrong.some(w=>w.i===i)?'':`<div class="egitem ok"><div class="qh"><span class="num">${i+1}</span><span>${q.q}</span></div><div class="rgood">${keys[q.c]}. ${q.a[q.c]}</div>${srcLine(q)}</div>`)).join('');
+  const lc=el('div','lc egl');
+  lc.innerHTML=`<div class="eghero ${r.passed?'ok':'bad'} a-up"><div class="rvring a-pop">${ringSvg(r.pct,48)}<div class="rvpct"><b>${r.pct}%</b><span>${r.correct}/${r.M}</span></div></div>
+      <div class="grow"><div class="eglbl">${r.passed?'Twoja ocena':'Poniżej progu'}</div><div class="eggrade">${gMain}${gRest?`<small>${gRest}</small>`:''}</div><div class="egnote">${note}</div></div></div>
+    <div class="egstats a-up d2"><div class="egstat acid"><b>${r.correct}</b><span>poprawne</span></div><div class="egstat red"><b>${nw-r.blank}</b><span>błędne</span></div><div class="egstat gold"><b>${r.blank}</b><span>puste</span></div><div class="egstat cyan"><b>${fmt(r.used)}</b><span>czas</span></div></div>
+    ${lvCard}
+    <div class="egcard a-up d3"><div class="eglbl">Siatka ocen</div><div class="egscalelist">${scale.map(([min,lab])=>`<div class="egsrow${r.passed&&lab===r.grade?' on':''}"><span class="g">${gradeParts(lab)[0]}</span><div class="bar"><i style="width:${min}%"></i></div><span class="p">od ${min}%</span></div>`).join('')}
+      <div class="egsrow fail${r.passed?'':' on'}"><span class="g">${gradeParts(exFailLabel(s))[0]}</span><div class="bar"><i style="width:${Math.max(0,r.pass-1)}%"></i></div><span class="p">pod ${r.pass}%</span></div></div></div>
+    ${nw?`<button class="egdeck a-up d4" id="egdeck2"><div class="ico">${icon('alert',{size:24,stroke:2.8})}</div><div class="grow"><div class="t">${nw} ${pl(nw,'błąd do powtórki','błędy do powtórki','błędów do powtórki')}</div><div class="s">W osobnej talii — wraca też na ekranie Dziś</div></div>${icon('chevron-right',{size:20})}</button>`
+        :`<div class="egdeck ok a-up d4"><div class="ico">${icon('check',{size:24,stroke:3.4})}</div><div class="grow"><div class="t">Bez błędów</div><div class="s">Cały zakres opanowany</div></div></div>`}
+    <div class="egrev a-up d5"><div class="eyebrow sec">Przegląd pytań${nw?' — błędy najpierw':''}</div>${items}</div>`;
+  body.appendChild(lc);L.appendChild(body);
+  const foot=el('div','lessonfoot col');
+  const main=el('button','pill a-glow',nw?`TALIA BŁĘDÓW · ${nw}`:'GOTOWE');main.id='egmain';
+  main.onclick=nw?()=>startExamDeck(s.id):()=>exitExam();
+  const alt=el('button','pill ghost',nw?'WRÓĆ DO EGZAMINU':'JESZCZE RAZ');alt.id='egalt';alt.onclick=()=>exitExam();
+  foot.appendChild(main);foot.appendChild(alt);L.appendChild(foot);
+  const d2=lc.querySelector('#egdeck2');if(d2)d2.onclick=()=>startExamDeck(s.id);
+  keyFn=e=>{if(e.key==='Enter')main.click();};
+  if(r.passed)toast('Zdane, ocena '+gMain,'trophy');else toast('Niezaliczone','x-circle');
+}
+/* talia błędów: sesja powtórki tylko z pytań z PROGRESS.examDeck danego przedmiotu; trafione wypadają z talii (finishReview) */
+function deckKeys(sid){return (PROGRESS.examDeck||[]).filter(k=>k.indexOf(sid+':')===0);}
+function hasDeck(sid){return deckKeys(sid).some(k=>srsResolve(k));}
+function startExamDeck(sid){
+  const items=deckKeys(sid).map(srsResolve).filter(Boolean);
+  if(!items.length){toast('Talia błędów jest pusta','check');return;}
+  clearInterval(exInt);exState=null;closeSheet();keyFn=null;current=null;applyTheme(null);
+  startReview(shuffle(items));rvState.deck=sid;
+}
+
+/* ============================================================ KROK 7: PLAN DO SPRAWDZIANU (DESIGN.md §4.3, TestPlan.html)
+   PROGRESS.tests = [{id, subjectId, levels:[id…], date:"yyyy-mm-dd", plan:[{date, kind:"learn"|"review"|"mock"|"weak"|"rest", minutes, lv?, n?, short?, done?}], built}]
+   Układ: dni przed końcówką = nauka niezaliczonych poziomów (learn) i powtórka (co trzeci wolny dzień odpoczynek); końcówka: próbny sprawdzian (−3),
+   słabe punkty (−2, gdy jest talia błędów albo próbny przed nim), krótka powtórka (−1). Przeliczenie: raz dziennie (syncTests) od dziś — pominięty dzień
+   zostaje w historii jako „pominięte”, a niezaliczone poziomy rozkładają się na nowo. Jeden plan na przedmiot. */
+const TP_LABEL={learn:'Nauka',review:'Powtórka + zadania',mock:'Próbny sprawdzian',weak:'Tylko słabe punkty',rest:'Wolne'};
+const TP_ICON={learn:'book',review:'refresh',mock:'target',weak:'alert',rest:'clock'};
+let tpId=null,tpFrom=null;
+function tests(){if(!Array.isArray(PROGRESS.tests))PROGRESS.tests=[];return PROGRESS.tests;}
+function testFor(sid){return tests().find(t=>t.subjectId===sid)||null;}
+function testSubject(t){return SUBJECTS.find(s=>s.id===t.subjectId)||null;}
+function unfinishedLevels(s,levels){const st=subjState(s.id);return levels.filter(id=>s.levels.some(l=>l.id===id)&&!(st.levels[id]||{}).done);}
+function buildTestPlan(t){
+  const s=testSubject(t);if(!s)return [];
+  const today=todayStr();const N=dayDiff(today,t.date);
+  const past=(t.plan||[]).filter(r=>r.date<today);
+  if(N<=0)return past;
+  const left=unfinishedLevels(s,t.levels);const nq=exQuizFor(s,t.levels).length;
+  const tail=[];
+  tail.unshift({date:addDays(t.date,-1),kind:'review',minutes:5,short:true});
+  if(N>=2)tail.unshift({date:addDays(t.date,-2),kind:(N>=3||hasDeck(s.id))?'weak':'review',minutes:8});
+  if(N>=3)tail.unshift({date:addDays(t.date,-3),kind:'mock',minutes:Math.max(8,Math.min(20,nq)),n:Math.min(20,nq)});
+  const D=N-tail.length,L=left.length;const head=[];
+  if(D>0){
+    if(L>=D){const per=Math.ceil(L/D);for(let i=0;i<D;i++){const lv=left.slice(i*per,(i+1)*per);head.push(lv.length?{date:addDays(today,i),kind:'learn',lv,minutes:4+6*lv.length}:{date:addDays(today,i),kind:'review',minutes:10});}}
+    else{const learnDays=[];for(let i=0;i<L;i++)learnDays.push(Math.floor(i*D/L));let free=0;
+      for(let i=0;i<D;i++){const date=addDays(today,i);const k=learnDays.indexOf(i);
+        if(k>=0){head.push({date,kind:'learn',lv:[left[k]],minutes:10});free=0;}
+        else{free++;if(free===3){head.push({date,kind:'rest',minutes:0});free=0;}else head.push({date,kind:'review',minutes:10});}}}
+  }
+  const rows=head.concat(tail);
+  const prev=(t.plan||[]).find(r=>r.date===today);if(prev&&prev.done&&rows[0]&&rows[0].kind===prev.kind)rows[0].done=true;
+  return past.concat(rows);
+}
+/* raz dziennie: usuń plany po terminie, przelicz dni od dziś (pominięte dni zostają w historii) */
+function syncTests(){
+  const today=todayStr();const list=tests();let ch=false;
+  for(let i=list.length-1;i>=0;i--){const t=list[i];
+    if(!t||!testSubject(t)||t.date<today){list.splice(i,1);ch=true;continue;}
+    if(t.built!==today){t.plan=buildTestPlan(t);t.built=today;ch=true;}}
+  if(ch)saveProgress();
+}
+function createTest(sid,date,levels){
+  const list=tests();const i=list.findIndex(t=>t.subjectId===sid);
+  const t={id:'t'+Date.now().toString(36),subjectId:sid,levels:levels.slice(),date,plan:[],built:null};
+  if(i>=0)list.splice(i,1,t);else list.push(t);
+  t.plan=buildTestPlan(t);t.built=todayStr();saveProgress();return t;
+}
+function removeTest(id){const list=tests();const i=list.findIndex(t=>t.id===id);if(i>=0){list.splice(i,1);saveProgress();}}
+/* zaliczenie dzisiejszego wiersza planu: learn (wszystkie poziomy wiersza zaliczone), review, mock, weak */
+function testDone(sid,kind,lvId){
+  const t=testFor(sid);if(!t)return false;const r=(t.plan||[]).find(x=>x.date===todayStr());
+  if(!r||r.done||r.kind!==kind)return false;
+  if(kind==='learn'&&r.lv){const st=subjState(sid);if(!r.lv.every(id=>(st.levels[id]||{}).done))return false;}
+  r.done=true;saveProgress();setTimeout(()=>toast('Plan do sprawdzianu: dzień zaliczony','calendar'),4400);return true;
+}
+function tpTitle(t,r){
+  const s=testSubject(t);
+  if(r.kind==='learn'){const n=(r.lv||[]).length;if(n===1&&s){const lv=s.levels.find(l=>l.id===r.lv[0]);if(lv)return 'Nauka: '+noEmoji(lv.title);}return `Nauka: ${n} ${pl(n,'poziom','poziomy','poziomów')}`;}
+  if(r.kind==='review')return r.short?'Szybka powtórka wieczorem':TP_LABEL.review;
+  return TP_LABEL[r.kind]||r.kind;
+}
+function tpSub(r){
+  if(r.kind==='learn')return `${r.minutes} min · nowe pojęcia`;
+  if(r.kind==='review')return r.short?'5 min · bez nowych rzeczy':`${r.minutes} min`;
+  if(r.kind==='mock')return `${r.minutes} min · ${r.n} ${pl(r.n,'pytanie','pytania','pytań')}`;
+  if(r.kind==='weak')return `${r.minutes} min · błędy z próbnego`;
+  return 'odpoczynek też się liczy';
+}
+/* pojęcia do powtórki z zakresu: najpierw zaległe SRS, potem wszystkie wpisy SRS, na końcu fiszki z poziomów (max 15) */
+function reviewItemsFor(s,levels){
+  const inScope=x=>levels.indexOf(x.lv.id)>=0;
+  const due=srsDue().filter(x=>x.s.id===s.id&&inScope(x));if(due.length)return due;
+  const all=srsEntries().filter(x=>x.s.id===s.id&&inScope(x));if(all.length)return shuffle(all).slice(0,15);
+  const cards=allCards(s).filter(c=>levels.indexOf(c.lid)>=0).map(c=>({s,lv:s.levels.find(l=>l.id===c.lid),kind:'card',c,idx:c.i,key:s.id+':'+c.lid+':'+c.i}));
+  return shuffle(cards).slice(0,15);
+}
+function testAction(t,r){
+  const s=testSubject(t);if(!s)return;
+  if(r.kind==='rest'){toast('Dziś wolne. Odpoczynek też się liczy','check');return;}
+  if(r.kind==='learn'){const st=subjState(s.id);const id=(r.lv||[]).find(x=>!(st.levels[x]||{}).done)||(r.lv||[])[0];const lv=s.levels.find(l=>l.id===id);
+    openSubject(s.id,'path');if(lv){if(levelUnlocked(s,s.levels.indexOf(lv)))startLesson(lv);else toast('Najpierw zalicz poprzedni poziom','lock');}return;}
+  if(r.kind==='review'){const items=reviewItemsFor(s,t.levels);if(!items.length){toast('Brak fiszek w tym zakresie','alert');return;}current=null;applyTheme(null);startReview(items);return;}
+  if(r.kind==='weak'&&hasDeck(s.id)){startExamDeck(s.id);return;}
+  openSubject(s.id,'egzamin',()=>examConfig(s,{levels:t.levels,n:r.n||20})); // mock (i weak bez talii = próbny)
+}
+/* wiersz planu na Dziś: „Do sprawdzianu: …” (dzień sprawdzianu = powodzenia) */
+function testTodayItem(t){
+  const s=testSubject(t);if(!s)return null;const today=todayStr();const N=dayDiff(today,t.date);if(N<0)return null;
+  const short=s.short||s.name;
+  if(N===0)return {t:{id:'test:'+t.id,done:false},s,kind:'test',reward:0,icon:'calendar',title:'Sprawdzian dziś — powodzenia',sub:short+' · plan zrobiony, teraz spokojnie',go:()=>openTestPlan(t.id)};
+  const r=(t.plan||[]).find(x=>x.date===today);if(!r)return null;
+  return {t:{id:'test:'+t.id,done:!!r.done},s,kind:'test',reward:0,icon:TP_ICON[r.kind],title:'Do sprawdzianu — '+tpTitle(t,r),sub:`${short} · ${inDays(N)} · ${tpSub(r)}`,go:()=>r.done?openTestPlan(t.id):testAction(t,r)};
+}
+/* arkusz „Mam sprawdzian” (z QuickAdd, zakładki Egzamin): przedmiot, data (natywne pole, min jutro), zakres poziomów → createTest → ekran planu */
+function openTestSheet(sid){
+  if(!SUBJECTS.length)return;
+  let sel=sid||(SUBJECTS.find(hasProgress)||SUBJECTS[0]).id;let date=addDays(todayStr(),7);let levels=null; // null = wszystkie
+  const s=openSheet('testplan',`<div class="shandle"></div>
+    <div class="shead"><div class="st2">Mam sprawdzian</div><button class="backbtn sclose" id="tpclose" aria-label="Zamknij">${icon('close',{size:18,stroke:3})}</button></div>
+    <div class="eyebrow sec">Przedmiot</div><div class="tpchips" id="tpsub"></div>
+    <div class="eyebrow sec">Kiedy</div><label class="tpdate">${icon('calendar',{size:18,stroke:2.4})}<input type="date" id="tpdate" min="${addDays(todayStr(),1)}" value="${date}" aria-label="Data sprawdzianu"><span id="tpin"></span></label>
+    <div class="eyebrow sec">Zakres</div><div class="tpchips" id="tplv"></div>
+    <div class="tpsum" id="tpsum"></div>
+    <button class="pill a-glow" id="tpgo" data-primary>UŁÓŻ PLAN</button>`);
+  sheetBack();
+  const subBox=s.querySelector('#tpsub'),lvBox=s.querySelector('#tplv'),sum=s.querySelector('#tpsum'),inp=s.querySelector('#tpdate'),inEl=s.querySelector('#tpin');
+  const draw=()=>{
+    const subj=SUBJECTS.find(x=>x.id===sel);const all=subj.levels.map(l=>l.id);const lv=levels||all;
+    subBox.innerHTML='';SUBJECTS.forEach(x=>{const c=el('button','tpchip themed'+(x.id===sel?' on':''),mono(initial(x.short||x.name),'solid')+(x.short||x.name));c.style.setProperty('--accent',x.accent);if(x.onAccent)c.style.setProperty('--on-accent',x.onAccent);c.onclick=()=>{sel=x.id;levels=null;draw();};subBox.appendChild(c);});
+    lvBox.innerHTML='';
+    const allC=el('button','tpchip'+(lv.length===all.length?' on':''),'wszystkie');allC.onclick=()=>{levels=null;draw();};lvBox.appendChild(allC);
+    subj.levels.forEach(l=>{const on=lv.indexOf(l.id)>=0;const c=el('button','tpchip'+(on?' on':''),noEmoji(l.title));c.setAttribute('aria-pressed',String(on));
+      c.onclick=()=>{const next=on?lv.filter(x=>x!==l.id):all.filter(x=>x===l.id||lv.indexOf(x)>=0);levels=next.length?next:[l.id];if(levels.length===all.length)levels=null;draw();};lvBox.appendChild(c);});
+    const N=dayDiff(todayStr(),date);const left=unfinishedLevels(subj,lv).length;const nq=exQuizFor(subj,lv).length;const ex=testFor(sel);
+    inEl.textContent=inDays(N);
+    sum.innerHTML=icon('bulb',{size:16})+`<span>${N} ${pl(N,'dzień','dni','dni')} · ${left?`${left} ${pl(left,'poziom','poziomy','poziomów')} do nauki`:'wszystko zaliczone, zostają powtórki'} · ${nq} ${pl(nq,'pytanie','pytania','pytań')} na próbny${ex?' · zastąpi obecny plan':''}</span>`;
+  };
+  inp.onchange=inp.oninput=()=>{const v=inp.value;if(v&&dayDiff(todayStr(),v)>=1)date=v;else{date=addDays(todayStr(),1);inp.value=date;}draw();};
+  s.querySelector('#tpclose').onclick=closeSheet;
+  s.querySelector('#tpgo').onclick=()=>{const subj=SUBJECTS.find(x=>x.id===sel);const t=createTest(sel,date,levels||subj.levels.map(l=>l.id));closeSheet();openTestPlan(t.id);toast('Plan gotowy','calendar');};
+  draw();
+  return s;
+}
+function openTestPlan(id,from){tpId=id;tpFrom=from||null;go('testplan');}
+function renderTestPlan(){
+  syncTests();const t=tests().find(x=>x.id===tpId)||tests()[0];const s=t&&testSubject(t);
+  if(!t||!s)return go('today');
+  applyTheme(s);
+  const back=()=>{if(tpFrom==='subject')openSubject(s.id,'egzamin');else go('today');};
+  const scroll=shell(null,{cls:'tplan',title:'Plan do sprawdzianu',pills:false,back});
+  const today=todayStr(),N=dayDiff(today,t.date);const st=subjState(s.id);
+  const total=t.levels.length,done=t.levels.filter(id=>(st.levels[id]||{}).done).length;const rec=examRec(s.id);
+  const ready=Math.round(((total?done/total:0)*0.6+((rec.best?rec.best.pct:0)/100)*0.4)*100);
+  const d=dateOf(t.date);const scope=total===s.levels.length?'cały przedmiot':t.levels.map(id=>{const l=s.levels.find(x=>x.id===id);return l?noEmoji(l.title):'';}).filter(Boolean).join(', ');
+  scroll.appendChild(el('div','tphero a-up',`<div class="rvring a-pop">${ringSvg(ready,48)}<div class="rvpct"><b>${ready}%</b><span>gotowość</span></div></div>
+    <div class="grow"><div class="s">${s.short||s.name} · ${scope}</div><div class="d">${DAYS[d.getDay()].toLowerCase()}, ${d.getDate()} ${MONTHS_S[d.getMonth()]}</div><div class="in a-blink">${inDays(N)}</div></div>`));
+  const rows=el('div','tprows');
+  const todayRow=(t.plan||[]).find(r=>r.date===today);
+  (t.plan||[]).forEach((r,i)=>{
+    const dd=dateOf(r.date);let state=r.date<today?(r.done?'tp-done':'tp-missed'):r.date===today?(r.done?'tp-now tp-done':'tp-now'):'tp-future';if(r.kind==='rest')state+=' tp-rest';
+    const row=el('button','tprow '+state+(r.date===today?' a-pop':' a-up d'+Math.min(6,i+1)));
+    row.innerHTML=`<div class="dy"><small>${DAYS_S[dd.getDay()]}</small><b>${dd.getDate()}</b></div><div class="ico">${icon(r.done?'check':TP_ICON[r.kind],{size:18,stroke:r.done?3.4:2.4})}</div>
+      <div class="grow"><div class="t">${tpTitle(t,r)}</div><div class="s">${r.date<today&&!r.done?'pominięte — plan przeliczony':tpSub(r)}</div></div>${r.date===today?'<span class="badge2'+(r.done?'':' a-blink')+'">'+(r.done?'zrobione':'dziś')+'</span>':''}`;
+    row.setAttribute('aria-label',`${fmtDate(r.date)}: ${tpTitle(t,r)}`);
+    row.onclick=()=>{if(r.date<today)return toast(r.done?'Zrobione':'Ten dzień minął — plan przeliczony','calendar');testAction(t,r);};
+    rows.appendChild(row);
+  });
+  const ed=dateOf(t.date);
+  rows.appendChild(el('div','tprow tp-exam a-up d6',`<div class="dy"><small>${DAYS_S[ed.getDay()]}</small><b>${ed.getDate()}</b></div><div class="ico">${icon('flag',{size:18})}</div><div class="grow"><div class="t">Sprawdzian</div><div class="s">powodzenia</div></div>${N===0?'<span class="badge2">dziś</span>':''}`));
+  scroll.appendChild(rows);
+  scroll.appendChild(el('div','tpnote','Opuścisz dzień? Plan sam się przeliczy. Nauka i powtórki z planu liczą się też do planu dnia.'));
+  const foot=el('div','tpfoot');
+  if(todayRow&&!todayRow.done&&todayRow.kind!=='rest'){const b=el('button','pill a-glow','ZACZNIJ DZISIEJSZE');b.id='tpstart';b.onclick=()=>testAction(t,todayRow);foot.appendChild(b);}
+  else{const b=el('button','pill ghost',N===0?'POWODZENIA':'NA DZIŚ WSZYSTKO');b.id='tpstart';b.onclick=back;foot.appendChild(b);}
+  const del=el('button','pill text','Usuń plan');del.id='tpdel';del.onclick=()=>{if(!confirm('Usunąć plan do sprawdzianu?'))return;removeTest(t.id);toast('Plan usunięty','close');go('today');};
+  foot.appendChild(del);scroll.appendChild(foot);
 }
 
 /* ---------- INFO ---------- */
@@ -1855,6 +2185,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   // klawiatura (lekcja, quiz, panele): jeden nasłuch, widok podstawia keyFn; pola tekstowe (ćwiczenia) pomijane
   document.addEventListener('keydown',e=>{if(!keyFn)return;const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'))return;keyFn(e);});
   if(!SUBJECTS.length)return renderEmpty();
+  syncTests(); // krok 7: plany do sprawdzianu — usuń po terminie, przelicz od dziś
   go('today');
 });
 })();

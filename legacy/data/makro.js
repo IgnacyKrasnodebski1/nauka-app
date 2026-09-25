@@ -45,12 +45,12 @@ window.SUBJECTS.push({
       {t:"Status quo bias",d:"Skłonność do trzymania się obecnego stanu — 'zawsze tak robiliśmy'. Opór przed zmianą."}
      ],
      quiz:[
-      {q:"Czym różni się polityka makroekonomiczna od społecznej?",a:["Makro = zarządzanie całą gospodarką; społeczna = warunki życia i nierówności","Makro = tylko podatki; społeczna = tylko emerytury","To dokładnie to samo","Makro dotyczy gmin, społeczna państwa"],c:0,e:"Makro = gospodarka jako całość (dług, stopy). Społeczna = warunki życia i nierówności."},
-      {q:"Ile rodzajów instrumentów ma polityka społeczna?",a:["3: prawne, kadrowe, militarne","4: ekonomiczne, prawne, informacyjne, kadrowe","2: podatki i zasiłki","5: w tym cyfrowe"],c:1,e:"Cztery: KASA, PRAWO, GADANIE, LUDZIE."},
+      {q:"Czym różni się polityka makroekonomiczna od społecznej?",a:["Makro = zarządzanie całą gospodarką; społeczna = warunki życia i nierówności","Makro = tylko podatki; społeczna = tylko emerytury","To dokładnie to samo","Makro dotyczy gmin, społeczna państwa"],c:0,e:"Makro = gospodarka jako całość (dług, stopy). Społeczna = warunki życia i nierówności.",src:{material:"cz1",page:3,quote:"Polityka makroekonomiczna to zarządzanie gospodarką państwa jako całością; polityka społeczna kształtuje warunki życia."}},
+      {q:"Ile rodzajów instrumentów ma polityka społeczna?",a:["3: prawne, kadrowe, militarne","4: ekonomiczne, prawne, informacyjne, kadrowe","2: podatki i zasiłki","5: w tym cyfrowe"],c:1,e:"Cztery: KASA, PRAWO, GADANIE, LUDZIE.",src:{material:"cz1",page:12,quote:"Instrumenty polityki społecznej: ekonomiczne, prawne, informacyjne, kadrowe."}},
       {q:"Co znaczy, że człowiek nie jest 'homo economicus'?",a:["Że nie zna ekonomii","Że działa na heurystykach i biasach, nie jak idealny kalkulator","Że zawsze decyduje racjonalnie","Że nie płaci podatków"],c:1,e:"Racjonalność ograniczona, heurystyki, status quo bias, normy."},
       {q:"Trzy sfery zrównoważonego rozwoju to:",a:["polityczna, militarna, kulturowa","ekonomiczna, społeczna, ekologiczna","lokalna, krajowa, globalna","prawna, fiskalna, monetarna"],c:1,e:"Równowaga 3 sfer — rozwój niezagrażający przyszłym pokoleniom."}
      ],
-     /* krok 5: zadania (opcjonalne) — mieszane z pytaniami quizu w sesji poziomu; src = źródło (na razie tylko przepuszczane) */
+     /* krok 5: zadania (opcjonalne) — mieszane z pytaniami quizu w sesji poziomu; src = źródło (krok 7: pokazywane w przeglądzie po egzaminie) */
      tasks:[
       {type:"fill",text:"Polityka społeczna ma cztery instrumenty: ekonomiczne, {0}, informacyjne oraz {1}.",blanks:["prawne","kadrowe"],bank:["militarne","cyfrowe","fiskalne","medialne"],hint:"KASA · PRAWO · GADANIE · LUDZIE",e:"Cztery dźwignie państwa: ekonomiczne (kasa), prawne, informacyjne (gadanie) i kadrowe (ludzie).",src:{material:"cz1",page:12,quote:"Instrumenty polityki społecznej: ekonomiczne, prawne, informacyjne, kadrowe."}},
       {type:"order",title:"Etapy polityki społecznej",items:["Diagnoza","Analiza przyczyn","Propozycje","Decyzja","Legislacja","Wdrożenie","Ewaluacja"],e:"Od rozpoznania problemu do sprawdzenia, czy rozwiązanie zadziałało — ewaluacja zamyka cykl."},
