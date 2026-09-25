@@ -1080,3 +1080,138 @@ svg.chart{width:100%;height:auto;display:block;font-family:var(--font-body)}
 .task{-webkit-user-select:none;user-select:none}
 .terminput{-webkit-user-select:text;user-select:text}
 .hottag{white-space:normal;max-width:170px;width:max-content;text-align:center;line-height:1.3}
+
+/* ============================================================
+   KROK 6 — HANDOFF 2.0 + POWTÓRKA SRS: plus w nawigacji (Main.html), arkusze „Dodaj materiał” (QuickAdd/AddSubject.html)
+   i „Wyjaśnijmy inaczej” (Explain.html), Review.html, FlashcardsDone.html, Profil (aktywność, odznaki), hub Fiszki.
+   Tylko dopisane reguły; kolory przez tokeny i color-mix, ruch przez .a-* z tokens.css.
+   ============================================================ */
+/* dolna nawigacja: Dziś · Powtórka · [+] · Fiszki · Profil; plus 62 px uniesiony o 34 px nad pasek */
+.nav{overflow:visible}
+.nav button.navplus{flex:0 0 62px;width:62px;height:62px;min-height:62px;margin-top:-34px;padding:0;gap:0;justify-content:center;border-radius:22px;background:var(--acid);color:var(--on-acid);box-shadow:0 5px 0 var(--acid-dark);transition:box-shadow .08s}
+.nav button.navplus:active{box-shadow:0 0 0 var(--acid-dark)}
+.nav button.navplus .ic{transition:none}
+.nav button.navplus:active .ic{transform:none}
+
+/* arkusze pełnej treści: uchwyt, nagłówek z tytułem i zamknięciem */
+.shandle{width:44px;height:5px;border-radius:3px;background:var(--line-dash);margin:-6px auto 0;flex:none}
+.shead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.shead .st2,.exhead .st2{font-family:var(--font-display);font-size:25px;font-weight:800;letter-spacing:-.8px;line-height:1.1}
+.shead .sclose{width:40px;height:40px;box-shadow:none;color:var(--muted)}
+.sheet.quickadd,.sheet.addinfo{border-radius:32px 32px 0 0;border-top-color:var(--acid);padding:14px 18px calc(26px + env(safe-area-inset-bottom));overflow-y:auto}
+.sheet.quickadd>*,.sheet.addinfo>*{flex:none}
+/* „Dodaj materiał”: duża limonkowa karta zdjęcia, siatka plik / tekst, link do katalogu */
+.qabig{display:flex;align-items:center;gap:16px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-body);background:var(--acid);color:var(--on-acid);border:none;border-radius:26px;padding:20px;box-shadow:0 6px 0 var(--acid-dark);transition:transform .08s,box-shadow .08s}
+.qabig:active{transform:translateY(6px);box-shadow:0 0 0 var(--acid-dark)}
+.qabig .ico{width:62px;height:62px;border-radius:20px;background:var(--on-acid);color:var(--acid);display:flex;align-items:center;justify-content:center;flex:none}
+.qabig .grow{flex:1;min-width:0}
+.qabig .t{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.5px}
+.qabig .s{font-size:13px;font-weight:700;color:color-mix(in srgb,var(--on-acid) 75%,var(--acid));margin-top:3px}
+.qagrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.qatile{display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:left;cursor:pointer;font-family:var(--font-body);border-radius:22px;padding:15px 14px;min-height:44px;box-shadow:0 4px 0 var(--shadow);color:var(--txt);background:var(--surface);border:2px solid var(--line);transition:transform .08s,box-shadow .08s}
+.qatile:active{transform:translateY(4px);box-shadow:0 0 0 var(--shadow)}
+.qatile.pink{background:var(--tint-pink);border-color:var(--tint-pink-line)}.qatile.pink .ic{color:color-mix(in srgb,var(--pink) 60%,var(--txt))}
+.qatile.cyan{background:var(--tint-cyan);border-color:var(--tint-cyan-line)}.qatile.cyan .ic{color:var(--cyan)}
+.qatile .t{font-size:14px;font-weight:800}
+.qatile .s{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:3px;line-height:1.35}
+.qalink{background:none;border:none;cursor:pointer;font-family:var(--font-body);text-align:center;font-size:13px;font-weight:800;color:var(--muted);padding:6px;min-height:44px}
+/* „Skąd wziąć materiał?” jako arkusz informacyjny: opis, ramka offline, 3 kroki z README */
+.sp{font-size:13.5px;font-weight:600;color:var(--muted);line-height:1.45}
+.infobox{display:flex;align-items:flex-start;gap:10px;background:var(--tint-acid);border:2px solid var(--tint-acid-line);border-radius:18px;padding:13px 15px;font-size:13.5px;font-weight:700;line-height:1.4;color:color-mix(in srgb,var(--acid) 30%,var(--txt))}
+.infobox .ic{color:var(--acid);flex:none;margin-top:2px}
+.sheet .steps{gap:10px}
+.sheet .step .num{width:34px;height:34px;border-radius:11px;font-size:15px}
+.sheet .step .t{font-size:13.5px;line-height:1.3}
+.sheet .step .s{font-size:12px}
+.sheet code{font-family:inherit;font-weight:800;color:var(--acid)}
+.sbtns .pill.ghost{color:var(--txt-2)}
+
+/* „Wyjaśnijmy inaczej” (Explain.html): cyjanowa górna krawędź, ikona, plakietki źródeł, ramka z wyjaśnieniami, notka o AI */
+.sheet.explain{border-top-color:var(--cyan);border-radius:32px 32px 0 0;max-height:86dvh}
+.exhead{display:flex;align-items:center;gap:10px}
+.exhead .ico{width:44px;height:44px;border-radius:14px;background:var(--cyan);color:var(--on-cyan);display:flex;align-items:center;justify-content:center;flex:none}
+.exhead .grow{flex:1;min-width:0}
+.exhead .st2{font-size:22px;letter-spacing:-.6px}
+.exchips{display:flex;gap:7px;flex-wrap:wrap}
+.exchip{padding:8px 14px;border-radius:var(--r-chip);background:var(--surface);border:2px solid var(--line);color:var(--muted);font-size:12.5px;font-weight:800}
+.exchip.on{background:var(--cyan);border-color:var(--cyan);color:var(--on-cyan)}
+.exbox{background:var(--tint-cyan);border:2px solid var(--tint-cyan-line);border-radius:22px;padding:17px;font-size:15px;font-weight:700;line-height:1.55;color:color-mix(in srgb,var(--cyan) 20%,var(--txt));overflow-y:auto;min-height:0;flex:0 1 auto}
+.exbox b{color:var(--txt)}
+.exbox .lbl{display:block;font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--cyan);margin-bottom:4px}
+.exsep{height:2px;background:var(--tint-cyan-line);margin:14px 0}
+.exnote{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:var(--muted-2);line-height:1.35}
+.exnote .ic{flex:none}
+.pill.cyan,.lesson .pill.cyan:not([disabled]){background:var(--cyan);color:var(--on-cyan);box-shadow:0 var(--drop-btn) 0 var(--cyan-dark)}
+.pill.cyan:active,.lesson .pill.cyan:not([disabled]):active{box-shadow:0 0 0 var(--cyan-dark)}
+.sheet.explain .sbtns .pill.ghost{flex:0 0 140px}
+
+/* Powtórka (Review.html): karta licznika w cyjanie, wiersze przedmiotów, stan pamięci */
+.review,.cards{display:flex;flex-direction:column;gap:14px;padding-top:8px}
+.review>*,.cards>*{flex:none}
+.rvhero{display:flex;align-items:center;gap:18px;background:var(--tint-cyan);border:2px solid var(--tint-cyan-line);border-radius:26px;padding:20px;box-shadow:0 6px 0 color-mix(in srgb,var(--tint-cyan) 60%,var(--bg));color:var(--cyan)}
+.rvhero .grow{flex:1;min-width:0}
+.rvn{font-family:var(--font-display);font-size:44px;font-weight:800;letter-spacing:-1.6px;line-height:1;color:var(--cyan)}
+.rvt{font-size:14px;font-weight:800;color:color-mix(in srgb,var(--cyan) 25%,var(--txt));margin-top:6px}
+.rvs{font-size:12.5px;font-weight:600;color:color-mix(in srgb,var(--cyan) 45%,var(--muted));margin-top:4px;line-height:1.4}
+.rvrows{display:flex;flex-direction:column;gap:10px}
+.rvrow{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-body);background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:13px 15px;min-height:44px;box-shadow:0 4px 0 var(--shadow);color:var(--txt);transition:transform .08s,box-shadow .08s}
+.rvrow:active{transform:translateY(4px);box-shadow:0 0 0 var(--shadow)}
+.rvrow .mono{width:40px;height:40px;border-radius:14px;font-size:19px}
+.rvrow .grow{flex:1;min-width:0}
+.rvrow .t{font-size:14px;font-weight:800}
+.rvrow .s{font-size:12px;font-weight:600;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rvrow .n{font-size:16px;font-weight:800;color:color-mix(in srgb,var(--accent) 60%,var(--txt));flex:none}
+.memcard{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:16px;box-shadow:0 4px 0 var(--shadow);display:flex;flex-direction:column;gap:12px}
+.memrow{display:flex;align-items:center;gap:12px}
+.memrow .lb{flex:none;width:78px;font-size:12.5px;font-weight:700}
+.memrow .bar{flex:1;height:12px}
+.memrow .n{flex:none;width:26px;text-align:right;font-size:12px;font-weight:800;color:var(--muted)}
+.memrow.red .lb{color:var(--red-soft)}.memrow.red .bar i{background:var(--red)}
+.memrow.gold .lb{color:color-mix(in srgb,var(--gold) 55%,var(--txt))}.memrow.gold .bar i{background:var(--gold)}
+.memrow.acid .lb{color:var(--acid-soft)}.memrow.acid .bar i{background:var(--acid)}
+.memnote{font-size:12.5px;font-weight:600;color:var(--muted-2);line-height:1.4}
+.rvfoot{padding-top:2px;display:flex;flex-direction:column;gap:10px}
+.rvfoot .pill{min-height:60px;border-radius:20px}
+/* sesja powtórki: nagłówek jak w lekcji, licznik zamiast serc; fiszka wypełnia ekran, przyciski 62 px */
+.rvcount{flex:none;font-size:12.5px;font-weight:800;color:var(--muted);background:var(--surface);border:2px solid var(--line);border-radius:var(--r-chip);padding:8px 12px;min-height:40px;display:inline-flex;align-items:center;white-space:nowrap}
+.rvrun .flip{position:relative;z-index:1;margin:0 0 4px}
+.rvrun .fbtns{width:100%}
+.rvrun .fbtn{min-height:62px;border-radius:20px}
+/* koniec powtórki (FlashcardsDone.html): pierścień celności jako SVG (kolor przez klasę), kafle w tintach, lista „wracają dziś” */
+.rvring{position:relative;width:124px;height:124px}
+.rvring svg{width:124px;height:124px;transform:rotate(-90deg);display:block}
+.ring-bg{fill:none;stroke:var(--line-2);stroke-width:11}
+.ring-fg{fill:none;stroke:var(--cyan);stroke-width:11;stroke-linecap:round}
+.rvpct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.rvpct b{font-family:var(--font-display);font-size:34px;font-weight:800;color:var(--cyan);line-height:1}
+.rvpct span{font-size:10.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:color-mix(in srgb,var(--cyan) 45%,var(--muted));margin-top:3px}
+.lcstat .k.under{margin-top:3px;text-transform:none;letter-spacing:0;font-size:11.5px;font-weight:700}
+.lcstat.acid{background:var(--tint-acid);border-color:var(--tint-acid-line);box-shadow:0 4px 0 color-mix(in srgb,var(--tint-acid) 60%,var(--bg))}.lcstat.acid .v{color:var(--acid)}.lcstat.acid .k{color:var(--acid-soft)}
+.lcstat.red{background:var(--tint-red);border-color:var(--tint-red-line);box-shadow:0 4px 0 color-mix(in srgb,var(--tint-red) 60%,var(--bg))}.lcstat.red .v{color:var(--red-soft)}.lcstat.red .k{color:color-mix(in srgb,var(--red) 40%,var(--muted))}
+.lcstat.gold{background:var(--tint-gold);border-color:var(--tint-gold-line);box-shadow:0 4px 0 color-mix(in srgb,var(--tint-gold) 60%,var(--bg))}.lcstat.gold .v{color:var(--gold)}.lcstat.gold .k{color:color-mix(in srgb,var(--gold) 55%,var(--muted))}
+.rvlist{width:100%;text-align:left;box-shadow:0 5px 0 var(--shadow)}
+.rvlist .eyebrow{padding:10px 0 2px}
+.rvlist .setrow{min-height:44px;padding:9px 0}
+.rvlist .setrow .t{font-size:13.5px}
+.rdot{width:8px;height:8px;border-radius:50%;background:var(--line-2);flex:none;display:block}
+.rdot.red{background:var(--red)}.rdot.gold{background:var(--gold)}
+/* Profil: aktywność 8 tygodni (kolumna = tydzień, kostka = dzień), odznaki (zdobyte w tintach, zablokowane kreskowane) */
+.heat{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:16px;box-shadow:0 4px 0 var(--shadow);display:flex;gap:6px;justify-content:space-between}
+.heat .col{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.heat i{display:block;height:12px;border-radius:4px;background:var(--line-2)}
+.heat i.on{background:var(--acid)}
+.heat i.future{background:color-mix(in srgb,var(--line-2) 55%,var(--surface))}
+.heat i.today{box-shadow:inset 0 0 0 2px var(--muted)}
+.heat i.today.on{box-shadow:inset 0 0 0 2px var(--on-acid)}
+.badges{display:flex;gap:11px}
+.badge{flex:1;min-width:0;border-radius:20px;padding:12px 8px;text-align:center;background:var(--surface);border:2px solid var(--line);font-size:11px;font-weight:800;color:var(--muted);line-height:1.2}
+.badge .ic{display:block;margin:0 auto 6px}
+.badge.gold{background:var(--tint-gold);border-color:var(--tint-gold-line);color:color-mix(in srgb,var(--gold) 55%,var(--txt))}.badge.gold .ic{color:var(--gold)}
+.badge.amber{background:var(--tint-amber);border-color:var(--tint-amber-line);color:color-mix(in srgb,var(--amber) 55%,var(--txt))}.badge.amber .ic{color:var(--flame)}
+.badge.lock{background:var(--surface-2);border:2px dashed var(--line-dash);color:var(--muted-3)}.badge.lock .ic{color:var(--muted-3)}
+.profile .sechdr{min-height:40px}
+.rvrun .blob{background:color-mix(in srgb,var(--cyan) 12%,var(--bg))}
+.rvrun .flip{touch-action:pan-y}
+.swipehint3{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;padding:14px 6px 0;font-size:12px;font-weight:800}
+.swipehint3 span{display:inline-flex;align-items:center;gap:6px}
+.swipehint3 .l{color:var(--red-soft)}.swipehint3 .r{color:var(--acid)}

@@ -1088,6 +1088,141 @@ svg.chart{width:100%;height:auto;display:block;font-family:var(--font-body)}
 .terminput{-webkit-user-select:text;user-select:text}
 .hottag{white-space:normal;max-width:170px;width:max-content;text-align:center;line-height:1.3}
 
+/* ============================================================
+   KROK 6 — HANDOFF 2.0 + POWTÓRKA SRS: plus w nawigacji (Main.html), arkusze „Dodaj materiał” (QuickAdd/AddSubject.html)
+   i „Wyjaśnijmy inaczej” (Explain.html), Review.html, FlashcardsDone.html, Profil (aktywność, odznaki), hub Fiszki.
+   Tylko dopisane reguły; kolory przez tokeny i color-mix, ruch przez .a-* z tokens.css.
+   ============================================================ */
+/* dolna nawigacja: Dziś · Powtórka · [+] · Fiszki · Profil; plus 62 px uniesiony o 34 px nad pasek */
+.nav{overflow:visible}
+.nav button.navplus{flex:0 0 62px;width:62px;height:62px;min-height:62px;margin-top:-34px;padding:0;gap:0;justify-content:center;border-radius:22px;background:var(--acid);color:var(--on-acid);box-shadow:0 5px 0 var(--acid-dark);transition:box-shadow .08s}
+.nav button.navplus:active{box-shadow:0 0 0 var(--acid-dark)}
+.nav button.navplus .ic{transition:none}
+.nav button.navplus:active .ic{transform:none}
+
+/* arkusze pełnej treści: uchwyt, nagłówek z tytułem i zamknięciem */
+.shandle{width:44px;height:5px;border-radius:3px;background:var(--line-dash);margin:-6px auto 0;flex:none}
+.shead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.shead .st2,.exhead .st2{font-family:var(--font-display);font-size:25px;font-weight:800;letter-spacing:-.8px;line-height:1.1}
+.shead .sclose{width:40px;height:40px;box-shadow:none;color:var(--muted)}
+.sheet.quickadd,.sheet.addinfo{border-radius:32px 32px 0 0;border-top-color:var(--acid);padding:14px 18px calc(26px + env(safe-area-inset-bottom));overflow-y:auto}
+.sheet.quickadd>*,.sheet.addinfo>*{flex:none}
+/* „Dodaj materiał”: duża limonkowa karta zdjęcia, siatka plik / tekst, link do katalogu */
+.qabig{display:flex;align-items:center;gap:16px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-body);background:var(--acid);color:var(--on-acid);border:none;border-radius:26px;padding:20px;box-shadow:0 6px 0 var(--acid-dark);transition:transform .08s,box-shadow .08s}
+.qabig:active{transform:translateY(6px);box-shadow:0 0 0 var(--acid-dark)}
+.qabig .ico{width:62px;height:62px;border-radius:20px;background:var(--on-acid);color:var(--acid);display:flex;align-items:center;justify-content:center;flex:none}
+.qabig .grow{flex:1;min-width:0}
+.qabig .t{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.5px}
+.qabig .s{font-size:13px;font-weight:700;color:color-mix(in srgb,var(--on-acid) 75%,var(--acid));margin-top:3px}
+.qagrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.qatile{display:flex;flex-direction:column;align-items:flex-start;gap:10px;text-align:left;cursor:pointer;font-family:var(--font-body);border-radius:22px;padding:15px 14px;min-height:44px;box-shadow:0 4px 0 var(--shadow);color:var(--txt);background:var(--surface);border:2px solid var(--line);transition:transform .08s,box-shadow .08s}
+.qatile:active{transform:translateY(4px);box-shadow:0 0 0 var(--shadow)}
+.qatile.pink{background:var(--tint-pink);border-color:var(--tint-pink-line)}.qatile.pink .ic{color:color-mix(in srgb,var(--pink) 60%,var(--txt))}
+.qatile.cyan{background:var(--tint-cyan);border-color:var(--tint-cyan-line)}.qatile.cyan .ic{color:var(--cyan)}
+.qatile .t{font-size:14px;font-weight:800}
+.qatile .s{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:3px;line-height:1.35}
+.qalink{background:none;border:none;cursor:pointer;font-family:var(--font-body);text-align:center;font-size:13px;font-weight:800;color:var(--muted);padding:6px;min-height:44px}
+/* „Skąd wziąć materiał?” jako arkusz informacyjny: opis, ramka offline, 3 kroki z README */
+.sp{font-size:13.5px;font-weight:600;color:var(--muted);line-height:1.45}
+.infobox{display:flex;align-items:flex-start;gap:10px;background:var(--tint-acid);border:2px solid var(--tint-acid-line);border-radius:18px;padding:13px 15px;font-size:13.5px;font-weight:700;line-height:1.4;color:color-mix(in srgb,var(--acid) 30%,var(--txt))}
+.infobox .ic{color:var(--acid);flex:none;margin-top:2px}
+.sheet .steps{gap:10px}
+.sheet .step .num{width:34px;height:34px;border-radius:11px;font-size:15px}
+.sheet .step .t{font-size:13.5px;line-height:1.3}
+.sheet .step .s{font-size:12px}
+.sheet code{font-family:inherit;font-weight:800;color:var(--acid)}
+.sbtns .pill.ghost{color:var(--txt-2)}
+
+/* „Wyjaśnijmy inaczej” (Explain.html): cyjanowa górna krawędź, ikona, plakietki źródeł, ramka z wyjaśnieniami, notka o AI */
+.sheet.explain{border-top-color:var(--cyan);border-radius:32px 32px 0 0;max-height:86dvh}
+.exhead{display:flex;align-items:center;gap:10px}
+.exhead .ico{width:44px;height:44px;border-radius:14px;background:var(--cyan);color:var(--on-cyan);display:flex;align-items:center;justify-content:center;flex:none}
+.exhead .grow{flex:1;min-width:0}
+.exhead .st2{font-size:22px;letter-spacing:-.6px}
+.exchips{display:flex;gap:7px;flex-wrap:wrap}
+.exchip{padding:8px 14px;border-radius:var(--r-chip);background:var(--surface);border:2px solid var(--line);color:var(--muted);font-size:12.5px;font-weight:800}
+.exchip.on{background:var(--cyan);border-color:var(--cyan);color:var(--on-cyan)}
+.exbox{background:var(--tint-cyan);border:2px solid var(--tint-cyan-line);border-radius:22px;padding:17px;font-size:15px;font-weight:700;line-height:1.55;color:color-mix(in srgb,var(--cyan) 20%,var(--txt));overflow-y:auto;min-height:0;flex:0 1 auto}
+.exbox b{color:var(--txt)}
+.exbox .lbl{display:block;font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--cyan);margin-bottom:4px}
+.exsep{height:2px;background:var(--tint-cyan-line);margin:14px 0}
+.exnote{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:var(--muted-2);line-height:1.35}
+.exnote .ic{flex:none}
+.pill.cyan,.lesson .pill.cyan:not([disabled]){background:var(--cyan);color:var(--on-cyan);box-shadow:0 var(--drop-btn) 0 var(--cyan-dark)}
+.pill.cyan:active,.lesson .pill.cyan:not([disabled]):active{box-shadow:0 0 0 var(--cyan-dark)}
+.sheet.explain .sbtns .pill.ghost{flex:0 0 140px}
+
+/* Powtórka (Review.html): karta licznika w cyjanie, wiersze przedmiotów, stan pamięci */
+.review,.cards{display:flex;flex-direction:column;gap:14px;padding-top:8px}
+.review>*,.cards>*{flex:none}
+.rvhero{display:flex;align-items:center;gap:18px;background:var(--tint-cyan);border:2px solid var(--tint-cyan-line);border-radius:26px;padding:20px;box-shadow:0 6px 0 color-mix(in srgb,var(--tint-cyan) 60%,var(--bg));color:var(--cyan)}
+.rvhero .grow{flex:1;min-width:0}
+.rvn{font-family:var(--font-display);font-size:44px;font-weight:800;letter-spacing:-1.6px;line-height:1;color:var(--cyan)}
+.rvt{font-size:14px;font-weight:800;color:color-mix(in srgb,var(--cyan) 25%,var(--txt));margin-top:6px}
+.rvs{font-size:12.5px;font-weight:600;color:color-mix(in srgb,var(--cyan) 45%,var(--muted));margin-top:4px;line-height:1.4}
+.rvrows{display:flex;flex-direction:column;gap:10px}
+.rvrow{display:flex;align-items:center;gap:13px;width:100%;text-align:left;cursor:pointer;font-family:var(--font-body);background:var(--surface);border:2px solid var(--line);border-radius:20px;padding:13px 15px;min-height:44px;box-shadow:0 4px 0 var(--shadow);color:var(--txt);transition:transform .08s,box-shadow .08s}
+.rvrow:active{transform:translateY(4px);box-shadow:0 0 0 var(--shadow)}
+.rvrow .mono{width:40px;height:40px;border-radius:14px;font-size:19px}
+.rvrow .grow{flex:1;min-width:0}
+.rvrow .t{font-size:14px;font-weight:800}
+.rvrow .s{font-size:12px;font-weight:600;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rvrow .n{font-size:16px;font-weight:800;color:color-mix(in srgb,var(--accent) 60%,var(--txt));flex:none}
+.memcard{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:16px;box-shadow:0 4px 0 var(--shadow);display:flex;flex-direction:column;gap:12px}
+.memrow{display:flex;align-items:center;gap:12px}
+.memrow .lb{flex:none;width:78px;font-size:12.5px;font-weight:700}
+.memrow .bar{flex:1;height:12px}
+.memrow .n{flex:none;width:26px;text-align:right;font-size:12px;font-weight:800;color:var(--muted)}
+.memrow.red .lb{color:var(--red-soft)}.memrow.red .bar i{background:var(--red)}
+.memrow.gold .lb{color:color-mix(in srgb,var(--gold) 55%,var(--txt))}.memrow.gold .bar i{background:var(--gold)}
+.memrow.acid .lb{color:var(--acid-soft)}.memrow.acid .bar i{background:var(--acid)}
+.memnote{font-size:12.5px;font-weight:600;color:var(--muted-2);line-height:1.4}
+.rvfoot{padding-top:2px;display:flex;flex-direction:column;gap:10px}
+.rvfoot .pill{min-height:60px;border-radius:20px}
+/* sesja powtórki: nagłówek jak w lekcji, licznik zamiast serc; fiszka wypełnia ekran, przyciski 62 px */
+.rvcount{flex:none;font-size:12.5px;font-weight:800;color:var(--muted);background:var(--surface);border:2px solid var(--line);border-radius:var(--r-chip);padding:8px 12px;min-height:40px;display:inline-flex;align-items:center;white-space:nowrap}
+.rvrun .flip{position:relative;z-index:1;margin:0 0 4px}
+.rvrun .fbtns{width:100%}
+.rvrun .fbtn{min-height:62px;border-radius:20px}
+/* koniec powtórki (FlashcardsDone.html): pierścień celności jako SVG (kolor przez klasę), kafle w tintach, lista „wracają dziś” */
+.rvring{position:relative;width:124px;height:124px}
+.rvring svg{width:124px;height:124px;transform:rotate(-90deg);display:block}
+.ring-bg{fill:none;stroke:var(--line-2);stroke-width:11}
+.ring-fg{fill:none;stroke:var(--cyan);stroke-width:11;stroke-linecap:round}
+.rvpct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.rvpct b{font-family:var(--font-display);font-size:34px;font-weight:800;color:var(--cyan);line-height:1}
+.rvpct span{font-size:10.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:color-mix(in srgb,var(--cyan) 45%,var(--muted));margin-top:3px}
+.lcstat .k.under{margin-top:3px;text-transform:none;letter-spacing:0;font-size:11.5px;font-weight:700}
+.lcstat.acid{background:var(--tint-acid);border-color:var(--tint-acid-line);box-shadow:0 4px 0 color-mix(in srgb,var(--tint-acid) 60%,var(--bg))}.lcstat.acid .v{color:var(--acid)}.lcstat.acid .k{color:var(--acid-soft)}
+.lcstat.red{background:var(--tint-red);border-color:var(--tint-red-line);box-shadow:0 4px 0 color-mix(in srgb,var(--tint-red) 60%,var(--bg))}.lcstat.red .v{color:var(--red-soft)}.lcstat.red .k{color:color-mix(in srgb,var(--red) 40%,var(--muted))}
+.lcstat.gold{background:var(--tint-gold);border-color:var(--tint-gold-line);box-shadow:0 4px 0 color-mix(in srgb,var(--tint-gold) 60%,var(--bg))}.lcstat.gold .v{color:var(--gold)}.lcstat.gold .k{color:color-mix(in srgb,var(--gold) 55%,var(--muted))}
+.rvlist{width:100%;text-align:left;box-shadow:0 5px 0 var(--shadow)}
+.rvlist .eyebrow{padding:10px 0 2px}
+.rvlist .setrow{min-height:44px;padding:9px 0}
+.rvlist .setrow .t{font-size:13.5px}
+.rdot{width:8px;height:8px;border-radius:50%;background:var(--line-2);flex:none;display:block}
+.rdot.red{background:var(--red)}.rdot.gold{background:var(--gold)}
+/* Profil: aktywność 8 tygodni (kolumna = tydzień, kostka = dzień), odznaki (zdobyte w tintach, zablokowane kreskowane) */
+.heat{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:16px;box-shadow:0 4px 0 var(--shadow);display:flex;gap:6px;justify-content:space-between}
+.heat .col{display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
+.heat i{display:block;height:12px;border-radius:4px;background:var(--line-2)}
+.heat i.on{background:var(--acid)}
+.heat i.future{background:color-mix(in srgb,var(--line-2) 55%,var(--surface))}
+.heat i.today{box-shadow:inset 0 0 0 2px var(--muted)}
+.heat i.today.on{box-shadow:inset 0 0 0 2px var(--on-acid)}
+.badges{display:flex;gap:11px}
+.badge{flex:1;min-width:0;border-radius:20px;padding:12px 8px;text-align:center;background:var(--surface);border:2px solid var(--line);font-size:11px;font-weight:800;color:var(--muted);line-height:1.2}
+.badge .ic{display:block;margin:0 auto 6px}
+.badge.gold{background:var(--tint-gold);border-color:var(--tint-gold-line);color:color-mix(in srgb,var(--gold) 55%,var(--txt))}.badge.gold .ic{color:var(--gold)}
+.badge.amber{background:var(--tint-amber);border-color:var(--tint-amber-line);color:color-mix(in srgb,var(--amber) 55%,var(--txt))}.badge.amber .ic{color:var(--flame)}
+.badge.lock{background:var(--surface-2);border:2px dashed var(--line-dash);color:var(--muted-3)}.badge.lock .ic{color:var(--muted-3)}
+.profile .sechdr{min-height:40px}
+.rvrun .blob{background:color-mix(in srgb,var(--cyan) 12%,var(--bg))}
+.rvrun .flip{touch-action:pan-y}
+.swipehint3{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;padding:14px 6px 0;font-size:12px;font-weight:800}
+.swipehint3 span{display:inline-flex;align-items:center;gap:6px}
+.swipehint3 .l{color:var(--red-soft)}.swipehint3 .r{color:var(--acid)}
+
 </style>
 </head>
 <body>
@@ -1427,6 +1562,8 @@ window.SUBJECTS.push({
    Dane przedmiotów rejestrują się w window.SUBJECTS (patrz data/*.js)
    Tryby: Ścieżka (Duolingo) + Fiszki + Quiz + Egzamin + Info
    Widoki główne (krok 3): Dziś (plan dnia) · Przedmioty · Profil · Ustawienia · Seria
+   Krok 6 (handoff 2.0): nawigacja Dziś · Powtórka · [+] · Fiszki · Profil, arkusz „Dodaj materiał”, „Wyjaśnij inaczej”,
+   powtórka SRS (PROGRESS.srs, pudełka 0…4 → 0/1/3/7/21 dni), Review + FlashcardsDone, ton bez slangu.
    ============================================================ */
 (function(){
 "use strict";
@@ -1517,7 +1654,10 @@ const ICONS={
   calc:{d:'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 7.5h6M9 12h.5M12 12h.5M15 12h.5M9 16h.5M12 16h.5M15 16h.5"/>',w:2.4},
   keyboard:{d:'<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 10h.5M11 10h.5M15 10h.5M8 14h8"/>',w:2.4},
   swipe:{d:'M3 12h18M8 7l-5 5 5 5M16 7l5 5-5 5',w:2.8},
-  pointer:{d:'M9 11V5.5a1.5 1.5 0 0 1 3 0V11l4 .8a3 3 0 0 1 2.4 3l-.5 3.3A3.5 3.5 0 0 1 14.4 21H12a4 4 0 0 1-3-1.4L5.4 15a1.6 1.6 0 0 1 2.4-2.1L9 14',w:2.4}
+  pointer:{d:'M9 11V5.5a1.5 1.5 0 0 1 3 0V11l4 .8a3 3 0 0 1 2.4 3l-.5 3.3A3.5 3.5 0 0 1 14.4 21H12a4 4 0 0 1-3-1.4L5.4 15a1.6 1.6 0 0 1 2.4-2.1L9 14',w:2.4},
+  /* krok 6: arkusz „Dodaj materiał”, notka o AI w „Wyjaśnij inaczej” */
+  camera:{d:'<rect x="3" y="7" width="18" height="13" rx="3"/><circle cx="12" cy="13.5" r="3.5"/><path d="M9 7l1.5-3h3L15 7"/>',w:2.4},
+  wifi:{d:'M2 8.5a16 16 0 0 1 20 0M5.5 12.5a11 11 0 0 1 13 0M9 16.5a6 6 0 0 1 6 0M12 20v.5'}
 };
 function icon(name,o){
   o=o||{};const ic=ICONS[name]||ICONS.alert;
@@ -1539,22 +1679,23 @@ const BIG_IC={gold:'trophy',hot:'flame',ok:'check',fail:'x-circle'};
 function bigTile(kind,ic){return '<div class="big'+(kind?' '+kind:'')+'">'+icon(ic||BIG_IC[kind]||'check',{size:60,stroke:3.2})+'</div>';}
 /* etykiety przycisków z ikoną (spacja: w block-layout zostaje odstęp, flex ją ignoruje) */
 const LBL={
-  next:'dalej '+icon('chevron-right',{size:18,stroke:3}),
-  result:'wynik '+icon('flag',{size:18}),
-  check:'sprawdź '+icon('check',{size:18,stroke:3.4}),
-  again:'jeszcze raz '+icon('refresh',{size:18,stroke:2.8}),
+  next:'Dalej '+icon('chevron-right',{size:18,stroke:3}),
+  result:'Wynik '+icon('flag',{size:18}),
+  check:'Sprawdź '+icon('check',{size:18,stroke:3.4}),
+  again:'Jeszcze raz '+icon('refresh',{size:18,stroke:2.8}),
   back:icon('back',{size:18,stroke:3})+' '
 };
 const TOAST_TONE={check:'acid',flame:'flame',close:'red','x-circle':'red',lock:'muted',info:'cyan',trophy:'gold',bolt:'gold',heart:'red',gem:'cyan'};
 
 function toast(t,ic){const box=document.getElementById('toast');if(!box)return;box.innerHTML=ic?icon(ic,{size:16,cls:'ic-'+(TOAST_TONE[ic]||'acid')}):'';const s=document.createElement('span');s.textContent=t;box.appendChild(s);box.classList.add('show');clearTimeout(box._t);box._t=setTimeout(()=>box.classList.remove('show'),1500);}
-function addXP(id,n){const s=subjState(id);s.xp+=n;const d=daily();d.xp+=n;saveProgress();const ext=touchStreak();updateXP();updateStreakUI();if(ext&&META.streak>1)setTimeout(()=>toast('seria '+META.streak+' dni z rzędu!','flame'),1600);}
+function addXP(id,n){const s=subjState(id);s.xp+=n;const d=daily();d.xp+=n;saveProgress();const ext=touchStreak();updateXP();updateStreakUI();if(ext&&META.streak>1)setTimeout(()=>toast('Seria: '+META.streak+' dni z rzędu','flame'),1600);}
 function updateXP(){const x=document.getElementById('xpNum');if(x&&current)x.textContent=subjState(current.id).xp;}
 function updateStreakUI(){const n=streakDisplay();document.querySelectorAll('[id="streakNum"]').forEach(e=>e.textContent=n);}
 
 /* pula wszystkich elementów danego przedmiotu (ze wszystkich poziomów) */
-function allCards(s){return s.levels.flatMap(l=>(l.flashcards||[]).map(c=>({...c,lvl:noEmoji(l.title)})));}
-function allQuiz(s){return s.levels.flatMap(l=>(l.quiz||[]).map(q=>({...q,lvl:noEmoji(l.title)})));}
+/* krok 6: każdy element niesie id poziomu i swój indeks (klucz SRS "<subjectId>:<levelId>:<itemId>", pytania z prefiksem q) */
+function allCards(s){return s.levels.flatMap(l=>(l.flashcards||[]).map((c,i)=>({...c,lvl:noEmoji(l.title),lid:l.id,i})));}
+function allQuiz(s){return s.levels.flatMap(l=>(l.quiz||[]).map((q,i)=>({...q,lvl:noEmoji(l.title),lid:l.id,qi:i})));}
 function allFeed(s){return s.levels.flatMap(l=>(l.feed||[]).map(f=>({...f,lvl:noEmoji(l.title)})));}
 
 function applyTheme(s){
@@ -1569,13 +1710,13 @@ function applyTheme(s){
 /* ============================================================ KROK 3: „Dziś”, plan dnia, kafle, dolna nawigacja
    Router widoków głównych: today (start) · subjects · profile · settings · streak.
    Widok przedmiotu (renderSubject) zostaje bez nawigacji — ma własne zakładki i przycisk wstecz. */
-const VIEWS={today:renderToday,subjects:renderSubjects,profile:renderProfile,settings:renderSettings,streak:renderStreak};
+const VIEWS={today:renderToday,review:renderReview,cards:renderCardsHub,subjects:renderSubjects,profile:renderProfile,settings:renderSettings,streak:renderStreak};
 let view='today';
 function go(v){
   view=VIEWS[v]?v:'today';
   current=null;applyTheme(null);
   try{clearInterval(cwInt);clearInterval(exInt);clearInterval(nhInt);}catch(e){}
-  keyFn=null;lessonState=null;taskCleanup();
+  keyFn=null;lessonState=null;rvState=null;taskCleanup();
   VIEWS[view]();
 }
 const renderHome=()=>go('today'); // stary punkt wejścia
@@ -1623,8 +1764,8 @@ function taskInfo(t){
   const openAt=(tab,setup)=>()=>openSubject(sid,tab,setup);
   if(kind==='lesson'){if(!lv)return null;const nf=(lv.feed||[]).length,nq=(lv.quiz||[]).length,nt=(lv.tasks||[]).length;
     return {...base,icon:'book',title:'Roladka — '+noEmoji(lv.title),sub:`${nf} ${pl(nf,'dawka','dawki','dawek')} · ${nq} ${pl(nq,'pytanie','pytania','pytań')}${nt?` · ${nt} ${pl(nt,'zadanie','zadania','zadań')}`:''} · +15`,go:openAt('path')};}
-  if(kind==='review'){const n=t.need||12,p=t.prog||0;
-    return {...base,icon:'cards',title:`Powtórka — ${n} ${pl(n,'fiszka','fiszki','fiszek')}`,sub:p?`${p} z ${n} przejrzane · +20`:`${short} · ${Math.max(1,Math.round(n/4))} min · +20`,go:openAt('fiszki')};}
+  if(kind==='review'){const n=t.need||12,p=t.prog||0;const due=srsDue().filter(x=>x.s.id===sid).length;
+    return {...base,icon:'refresh',title:`Powtórka — ${n} ${pl(n,'fiszka','fiszki','fiszek')}`,sub:p?`${p} z ${n} przejrzane · +20`:`${short} · ${due?due+' do powtórki dziś':Math.max(1,Math.round(n/4))+' min'} · +20`,go:()=>go('review')};}
   if(kind==='quiz'){if(!lv)return null;const n=(lv.quiz||[]).length,m=Math.max(1,Math.round(n*0.5));
     return {...base,icon:'question',title:'Quiz — '+noEmoji(lv.title),sub:`${n} ${pl(n,'pytanie','pytania','pytań')} · ${short} · ${m} min · +25`,
       go:openAt('quiz',()=>{qState={subj:sid,lvl:lv.id,list:null,idx:0,score:0,answered:false};})};}
@@ -1639,7 +1780,7 @@ function completeDaily(sid,kind,lvId){
   if(!t)return false;
   t.done=true;saveProgress();
   const r=REWARD[kind]||0;if(r)addXP(sid,r);
-  setTimeout(()=>toast('plan dnia: +'+r+'xp','bolt'),3200);
+  setTimeout(()=>toast('Plan dnia: +'+r+' XP','bolt'),3200);
   return true;
 }
 function tickDaily(sid,kind,n){
@@ -1651,11 +1792,11 @@ function tickDaily(sid,kind,n){
 /* --- wspólna skorupa widoków głównych: topbar + ekran + dolna nawigacja + toast --- */
 function renderNav(active){
   const nav=el('nav','nav');nav.setAttribute('aria-label','Nawigacja');
-  [['today','home','Dziś'],['subjects','grid','Przedmioty'],['profile','user','Profil'],['settings','settings','Ustawienia']].forEach(([k,ic,lab])=>{
-    const b=el('button',k===active?'active':'',icon(ic,{size:24,stroke:2.4})+'<span>'+lab+'</span>');
-    if(k===active)b.setAttribute('aria-current','page');
-    b.onclick=()=>go(k);nav.appendChild(b);
-  });
+  const tab=(k,ic,lab)=>{const b=el('button',k===active?'active':'',icon(ic,{size:24,stroke:2.4})+'<span>'+lab+'</span>');if(k===active)b.setAttribute('aria-current','page');b.onclick=()=>go(k);return b;};
+  nav.appendChild(tab('today','home','Dziś'));nav.appendChild(tab('review','refresh','Powtórka'));
+  // krok 6: uniesiony plus 62 px na środku — „Dodaj materiał” z każdego ekranu (DESIGN.md §0)
+  const plus=el('button','navplus a-pulse',icon('plus',{size:30,stroke:3.2}));plus.setAttribute('aria-label','Dodaj materiał');plus.onclick=()=>openQuickAdd();nav.appendChild(plus);
+  nav.appendChild(tab('cards','cards','Fiszki'));nav.appendChild(tab('profile','user','Profil'));
   return nav;
 }
 function shell(active,o){
@@ -1680,13 +1821,44 @@ function shell(active,o){
   app.appendChild(el('div','toast',''));app.lastChild.id='toast';
   return scroll;
 }
-function addHint(){return '<div class="subjemoji">'+icon('plus',{size:26,stroke:3})+'</div><div>Kolejny przedmiot?<br><span class="hint">Dodaj plik w <b>data/</b> (patrz README) — pojawi się tutaj. Kreator przedmiotów dojdzie w kolejnym kroku.</span></div>';}
-function toggleAddHint(after){
-  const n=after.nextElementSibling;
-  if(n&&n.classList.contains('addcard')){n.remove();return;}
-  const h=el('div','addcard a-up',addHint());
-  after.insertAdjacentElement('afterend',h);
-  try{h.scrollIntoView({block:'nearest',behavior:'smooth'});}catch(e){}
+/* arkusz „Dodaj materiał” (QuickAdd.html): zdjęcie strony / plik / tekst / gotowy przedmiot. Ta wersja działa offline, bez AI (DESIGN.md §5),
+   więc trzy pierwsze opcje prowadzą do uczciwego arkusza informacyjnego (openAddInfo), a „gotowy przedmiot” do siatki przedmiotów. */
+function openQuickAdd(){
+  const s=openSheet('quickadd',`<div class="shandle"></div>
+    <div class="shead"><div class="st2">Dodaj materiał</div><button class="backbtn sclose" id="qaclose" aria-label="Zamknij">${icon('close',{size:18,stroke:3})}</button></div>
+    <button class="qabig a-pop" id="qa-photo"><div class="ico a-bob">${icon('camera',{size:32,stroke:2.4})}</div><div class="grow"><div class="t">Zrób zdjęcie</div><div class="s">strona z podręcznika, zeszyt, tablica</div></div></button>
+    <div class="qagrid">
+      <button class="qatile pink a-up d1" id="qa-file">${icon('upload',{size:24,stroke:2.6})}<div><div class="t">Wgraj plik</div><div class="s">PDF, prezentacja, Word</div></div></button>
+      <button class="qatile cyan a-up d2" id="qa-text">${icon('list',{size:24,stroke:2.6})}<div><div class="t">Wklej tekst</div><div class="s">notatki, konspekt, zagadnienia</div></div></button>
+    </div>
+    <button class="qalink a-up d3" id="qa-catalog" data-primary>albo weź gotowy przedmiot z katalogu</button>`);
+  sheetBack();
+  s.querySelector('#qaclose').onclick=closeSheet;
+  s.querySelector('#qa-photo').onclick=()=>openAddInfo('photo');
+  s.querySelector('#qa-file').onclick=()=>openAddInfo('file');
+  s.querySelector('#qa-text').onclick=()=>openAddInfo('text');
+  s.querySelector('#qa-catalog').onclick=()=>{closeSheet();go('subjects');};
+  return s;
+}
+const ADD_KIND={photo:['zdjęcia','Zdjęcie strony'],file:['pliku','Plik'],text:['wklejonego tekstu','Wklejony tekst'],any:['materiałów','Materiał']};
+function openAddInfo(kind){
+  const k=ADD_KIND[kind]||ADD_KIND.any;const fromSheet=kind!=='any';
+  const s=openSheet('addinfo',`<div class="shandle"></div>
+    <div class="shead"><div class="st2">Skąd wziąć materiał?</div><button class="backbtn sclose" id="aiclose" aria-label="Zamknij">${icon('close',{size:18,stroke:3})}</button></div>
+    <p class="sp">${k[1]} zamienia się w poziomy, fiszki i pytania — w wersji online, z pomocą AI. Każde pytanie wskazuje wtedy fragment źródła i da się je poprawić.</p>
+    <div class="infobox a-up d1">${icon('wifi',{size:18})}<span>Ta wersja działa offline, bez połączenia z AI, więc nie przetworzy jeszcze ${k[0]}. Gotowe przedmioty działają w całości.</span></div>
+    <div class="eyebrow sec">Jak dodać przedmiot w tej wersji</div>
+    <div class="steps">
+      <div class="step a-up d2"><div class="num">1</div><div><div class="t">Skopiuj <code>data/makro.js</code> pod nową nazwą</div><div class="s">np. <code>data/historia.js</code></div></div></div>
+      <div class="step a-up d3"><div class="num">2</div><div><div class="t">Wpisz poziomy, fiszki i pytania</div><div class="s">schemat danych jest w README</div></div></div>
+      <div class="step a-up d4"><div class="num">3</div><div><div class="t">Dodaj plik w <code>index.html</code> i uruchom <code>node build.js</code></div><div class="s">przedmiot pojawi się na liście</div></div></div>
+    </div>
+    <div class="sbtns">${fromSheet?'<button class="pill ghost" id="aiback">Wróć</button>':''}<button class="pill" id="aicat" data-primary>Gotowe przedmioty</button></div>`);
+  sheetBack();
+  s.querySelector('#aiclose').onclick=closeSheet;
+  const b=s.querySelector('#aiback');if(b)b.onclick=()=>openQuickAdd();
+  s.querySelector('#aicat').onclick=()=>{closeSheet();if(SUBJECTS.length)go('subjects');};
+  return s;
 }
 /* siatka kafli przedmiotów (Main.html): tint przedmiotu, monogram na pełnym akcencie, pasek poziomów */
 function subjectGrid(list,withAdd){
@@ -1703,15 +1875,15 @@ function subjectGrid(list,withAdd){
     grid.appendChild(t);
   });
   if(withAdd){
-    const a=el('button','subjtile add',`<div class="mono">${icon('plus',{size:22,stroke:3,cls:'a-bob'})}</div><div class="name">Dodaj<br>przedmiot</div>`);
-    a.setAttribute('aria-label','Dodaj przedmiot');a.onclick=()=>toggleAddHint(grid);grid.appendChild(a);
+    const a=el('button','subjtile add',`<div class="mono">${icon('plus',{size:22,stroke:3,cls:'a-bob'})}</div><div class="name">Dodaj<br>materiał</div>`);
+    a.setAttribute('aria-label','Dodaj materiał');a.onclick=()=>openQuickAdd();grid.appendChild(a);
   }
   return grid;
 }
 /* karta „Plan na dziś”: zrobione (przekreślone, check), bieżące (tint przedmiotu, pulsujący kafel), późniejsze (wyciszone) */
 function renderPlan(items){
   const card=el('div','plan a-up d2');
-  if(!items.length){card.innerHTML=`<div class="plan-row later"><div class="plan-tile">${icon('bulb',{size:18})}</div><div class="pt"><div class="t">Brak zadań na dziś</div><div class="s">dodaj przedmiot, a plan ułoży się sam</div></div></div>`;return card;}
+  if(!items.length){card.innerHTML=`<div class="plan-row later"><div class="plan-tile">${icon('bulb',{size:18})}</div><div class="pt"><div class="t">Brak zadań na dziś</div><div class="s">dodaj materiał, a plan ułoży się sam</div></div></div>`;return card;}
   let cur=false;
   items.forEach((x,i)=>{
     if(i)card.appendChild(el('div','plan-sep'));
@@ -1768,6 +1940,7 @@ function renderProfile(){
   const started=SUBJECTS.filter(hasProgress);
   const n=streakDisplay(),best=Math.max(META.best||0,n);
   const lvlNum=Math.floor(tot/100)+1,lvlPct=tot%100;
+  const all=srsEntries(),mem=srsStats(all);
   scroll.appendChild(el('div','prof',`<div class="avatar a-pop">${icon('user',{size:34,stroke:2.6})}</div>
     <div class="pmeta"><h2>Twój profil</h2><div class="s">lokalnie, bez konta</div>
     <div class="planbar"><div class="bar"><i class="a-grow d2" style="width:${lvlPct}%"></i></div><span>lvl ${lvlNum}</span></div></div>`));
@@ -1775,10 +1948,20 @@ function renderProfile(){
   const stat=(cls,ic,k,v,s,onclick)=>{const d=el(onclick?'button':'div','stat a-up '+cls,`<div class="k">${ic}<span>${k}</span></div><div class="v">${v}</div><div class="s">${s}</div>`);if(onclick)d.onclick=onclick;stats.appendChild(d);};
   stat('d1',icon('flame',{size:16,cls:'ic-flame a-beat'}),'Seria',`${n} ${pl(n,'dzień','dni','dni')}`,'rekord '+best,()=>go('streak'));
   stat('d2',icon('bolt',{size:16,cls:'ic-gold'}),'XP łącznie',fmtNum(tot),'+'+daily().xp+' dzisiaj');
-  stat('d3',icon('check',{size:16,stroke:2.8,cls:'ic-acid'}),'Poziomy',lvls,'z '+lvTotal+' zaliczone');
-  stat('d4',icon('grid',{size:16,cls:'ic-cyan'}),'Przedmioty',started.length,'z '+SUBJECTS.length+' zaczęte');
+  stat('d3',icon('refresh',{size:16,stroke:2.8,cls:'ic-cyan'}),'Utrwalone',mem.firm,all.length?`z ${all.length} ${pl(all.length,'pojęcia','pojęć','pojęć')} w powtórce`:'pojęć w powtórce',()=>go('review'));
+  stat('d4',icon('check',{size:16,stroke:2.8,cls:'ic-acid'}),'Poziomy',lvls,'z '+lvTotal+' zaliczone');
   scroll.appendChild(stats);
-  scroll.appendChild(el('div','eyebrow sec','XP w przedmiotach'));
+  // nagłówek sekcji z linkiem „Wszystkie ›” (Profile.html)
+  const sec=(t,lab,go_)=>{const h=el('div','sechdr','<span class="eyebrow sec">'+t+'</span>');const a=el('button','link',lab+' '+icon('chevron-right',{size:14,stroke:3}));a.onclick=go_;h.appendChild(a);scroll.appendChild(h);};
+  sec('Aktywność — 8 tygodni','Wszystkie',()=>go('streak'));
+  scroll.appendChild(heatmap());
+  sec('Odznaki','Wszystkie',()=>toast('Pełna lista odznak dojdzie w kroku 8','lock'));
+  const badges=el('div','badges a-up d3');
+  [['star','gold','100 pojęć',all.length>=100],['flame','amber','7 dni',best>=7],['trophy','','Egzamin 90%',false]].forEach(([ic,tone,lab,on])=>{
+    badges.appendChild(el('div','badge '+(on?tone:'lock'),icon(on?ic:'lock',{size:28,stroke:2.4,fill:on&&ic!=='trophy'})+lab));
+  });
+  scroll.appendChild(badges);
+  sec('XP w przedmiotach','Wszystkie',()=>go('subjects'));
   const card=el('div','setcard a-up d5');
   started.forEach((s,i)=>{
     if(i)card.appendChild(el('div','setsep'));
@@ -1788,6 +1971,23 @@ function renderProfile(){
   });
   if(!started.length)card.appendChild(el('div','setrow','<span class="t grow muted">Jeszcze nic — zacznij od planu na dziś.</span>'));
   scroll.appendChild(card);
+}
+/* kostki aktywności: 8 kolumn (tygodnie, od najstarszego) × 7 dni (pn–nd); „on” = dzień w bieżącej serii z nauka_meta_v1, przyszłość wyszarzona */
+function heatmap(){
+  const t=todayStr();const now=new Date();const dow=(now.getDay()+6)%7;
+  const n=streakDisplay(),last=META.lastDay;
+  const box=el('div','heat a-up d2');box.setAttribute('aria-label','Aktywność w ostatnich 8 tygodniach');
+  for(let w=0;w<8;w++){
+    const col=el('div','col');
+    for(let d=0;d<7;d++){
+      const dt=new Date(now.getFullYear(),now.getMonth(),now.getDate()-dow-(7-w)*7+d);const ds=dstr(dt);const toToday=dayDiff(ds,t);
+      let cls='';if(toToday<0)cls='future';else if(n>0&&last){const off=dayDiff(ds,last);if(off>=0&&off<n)cls='on';}
+      if(toToday===0)cls+=' today';
+      col.appendChild(el('i',cls.trim()));
+    }
+    box.appendChild(col);
+  }
+  return box;
 }
 
 /* ============================================================ USTAWIENIA (własny przełącznik ruchu, DESIGN.md §2; reset postępów) */
@@ -1810,18 +2010,20 @@ function renderSettings(){
     r.onclick=()=>openSubject(s.id);c2.appendChild(r);
   });
   if(SUBJECTS.length)c2.appendChild(el('div','setsep'));
-  const add=el('button','setrow acid',icon('plus',{size:20,stroke:3})+'<span class="t grow">Dodaj przedmiot</span>');
-  add.onclick=()=>toast('Dodaj plik w data/ — patrz README','info');c2.appendChild(add);
+  const allS=el('button','setrow',icon('grid',{size:20,stroke:2.4})+'<span class="t grow">Wszystkie przedmioty</span>'+icon('chevron-right',{size:18,cls:'chev'}));
+  allS.onclick=()=>go('subjects');c2.appendChild(allS);c2.appendChild(el('div','setsep'));
+  const add=el('button','setrow acid',icon('plus',{size:20,stroke:3})+'<span class="t grow">Dodaj materiał</span>');
+  add.onclick=()=>openQuickAdd();c2.appendChild(add);
   scroll.appendChild(c2);
   scroll.appendChild(el('div','eyebrow sec','Dane'));
   const reset=el('button','pill danger a-up d3',icon('refresh',{size:18,stroke:2.8})+' wyzeruj postępy');
   reset.onclick=()=>{
     if(!confirm('Na pewno? Skasuje XP, gwiazdki i plan dnia. Seria zostaje.'))return;
     PROGRESS={};saveProgress();qState=null;fState=null;
-    renderSettings();toast('postępy wyzerowane','refresh');
+    renderSettings();toast('Postępy wyzerowane','refresh');
   };
   scroll.appendChild(reset);
-  scroll.appendChild(el('div','version','Nauka 2.0 · legacy · krok 5b'));
+  scroll.appendChild(el('div','version','Nauka 2.0 · legacy · krok 6'));
 }
 
 /* ============================================================ SERIA (Streak.html: płomień, licznik, kropki tygodnia z nauka_meta_v1) */
@@ -1858,7 +2060,7 @@ function renderStreak(){
   }).join('')+'</div>';
   scroll.appendChild(week);
   const foot=el('div','streakfoot');
-  const b=el('button','pill amber a-glow','wracam do nauki');b.onclick=()=>go('today');foot.appendChild(b);
+  const b=el('button','pill amber a-glow','Wracam do nauki');b.onclick=()=>go('today');foot.appendChild(b);
   scroll.appendChild(foot);
   sc.appendChild(scroll);app.appendChild(sc);
   app.appendChild(el('div','toast',''));app.lastChild.id='toast';
@@ -1870,19 +2072,15 @@ function renderEmpty(){
   const sc=el('div','screen active');
   sc.appendChild(el('div','blob a-float acid'));sc.appendChild(el('div','blob a-float d3 pink'));
   const scroll=el('div','scroll empty');
-  const steps=[['Wrzucasz prezentacje i notatki','PDF, PPTX, zdjęcia, wklejony tekst'],['Powstają poziomy, fiszki i pytania','możesz wszystko poprawić przed startem'],['Uczysz się po 10 minut dziennie','materiał wraca tuż przed zapomnieniem']];
+  const steps=[['Dodajesz zdjęcia, pliki i notatki','strona z podręcznika, PDF, PPTX, wklejony tekst'],['Powstają poziomy, fiszki i pytania','możesz wszystko poprawić przed startem'],['Uczysz się po 10 minut dziennie','materiał wraca tuż przed zapomnieniem']];
   scroll.innerHTML=`<div class="logo brand">NAUKA<span class="g">.</span></div>
     <div class="art"><div class="art-a a-sway"></div><div class="art-b a-sway d2"></div><div class="art-c a-bob">${icon('upload',{size:58,stroke:2.4})}</div></div>
-    <div class="a-up d1"><h1>Zacznij od pierwszego przedmiotu</h1><p>Wrzuć materiały z zajęć. Reszta zrobi się sama.</p></div>
+    <div class="a-up d1"><h1>Zacznij od pierwszego przedmiotu</h1><p>Dodaj materiały z zajęć. Reszta powstanie sama.</p></div>
     <div class="steps">${steps.map((s,i)=>`<div class="step a-up d${i+2}"><div class="num">${i+1}</div><div><div class="t">${s[0]}</div><div class="s">${s[1]}</div></div></div>`).join('')}</div>
-    <div class="efoot"><button class="pill a-glow" id="eadd">dodaj przedmiot</button></div>`;
+    <div class="efoot"><button class="pill a-glow" id="eadd">Dodaj materiał</button></div>`;
   sc.appendChild(scroll);app.appendChild(sc);
   app.appendChild(el('div','toast',''));app.lastChild.id='toast';
-  document.getElementById('eadd').onclick=()=>{
-    const f=scroll.querySelector('.efoot');
-    if(!f.previousElementSibling.classList.contains('addcard'))f.insertAdjacentElement('beforebegin',el('div','addcard a-up',addHint()));
-    toast('Dodaj plik w data/ — patrz README','info');
-  };
+  document.getElementById('eadd').onclick=()=>openAddInfo('any');
 }
 
 /* ============================================================ KROK 4: życia, combo, panel dobrze/źle, kafle quizu, konfetti
@@ -1950,14 +2148,46 @@ function sheetOk(q,o){
   s.querySelector('#snext').onclick=()=>{if(!advOk())return;closeSheet();o.onNext();};
   return s;
 }
-/* źle: „Nie tym razem”, poprawna litera, wyjaśnienie, [DO FISZEK] DALEJ */
+/* źle: „Nie tym razem”, poprawna litera, wyjaśnienie, [WYJAŚNIJ INACZEJ] DALEJ. o={onNext, onCards?, sub?, subj?, lv?} */
 function sheetBad(q,o){
   const sub=o.sub!=null?o.sub:(q.c!=null?'Poprawna: odpowiedź '+keys[q.c]:'');
   const s=openSheet('bad',`<div class="srow"><div class="sico">${icon('close',{size:24,stroke:3.6})}</div>
     <div class="grow"><div class="st">Nie tym razem</div>${sub?`<div class="ss">${sub}</div>`:''}</div></div>
     ${q.e?`<div class="sbox"><div class="lbl">Zapamiętaj</div><div>${q.e}</div></div>`:''}
-    <div class="sbtns">${o.onCards?'<button class="pill ghost red" id="scards">DO FISZEK</button>':''}<button class="pill red" id="snext" data-primary>DALEJ</button></div>`);
+    <div class="sbtns">${q.q?'<button class="pill ghost red" id="sexpl">WYJAŚNIJ INACZEJ</button>':''}<button class="pill red" id="snext" data-primary>DALEJ</button></div>`);
   s.querySelector('#snext').onclick=()=>{if(!advOk())return;closeSheet();o.onNext();};
+  const x=s.querySelector('#sexpl');if(x)x.onclick=()=>openExplain(q,o);
+  return s;
+}
+/* „Wyjaśnijmy inaczej” (Explain.html) — offline: alternatywne wyjaśnienia, które już są w danych (fiszka z poziomu, „prościej”/„zapamiętaj” z roladki,
+   dobrane po wspólnych słowach z pytaniem), w ostateczności wyjaśnienie e innymi słowami. Świeże wyjaśnienie AI wymaga wersji online (DESIGN.md §5). */
+const STOP=new Set(['jest','jak','czym','ktore','ktory','ktora','jaki','jaka','jakie','oraz','albo','lub','nie','tak','dla','sie','przez','tego','tym','ten','czy','ile','kto','gdzie','kiedy','moze','jego','jej','ich','tylko','bardzo','oznacza','polega','rozni','przyklad','wedlug','miedzy','pod','nad','przy','bez','jako','tzw','jakiego','jakiej','jakim','wobec','ktorych','ktorym','czego','czemu','dlaczego','zawsze','nigdy','wszystkie','wszystkich','nazywa','nazywamy','ktora','byla','byly','beda','bedzie','jednak','wtedy','niz','ktorego','robi','ma','ile','sa']);
+function words(str){return fold(String(str||'').replace(/<[^>]+>/g,' ')).split(' ').filter(w=>w.length>=4&&!STOP.has(w));}
+function stem(w){return w.length>6?w.slice(0,w.length-2):w.length>4?w.slice(0,w.length-1):w;} // prosty rdzeń: obcina końcówkę fleksyjną
+function overlap(qs,txt){const t=new Set(words(txt).map(stem));let k=0;qs.forEach(w=>{if(t.has(w))k++;});return k;}
+function explainFor(q,subj,lv){
+  const s=subj||current;if(!s)return {};
+  const qs=[...new Set(words(q.q+' '+(q.c!=null&&q.a?q.a[q.c]:'')).map(stem))];
+  const pick=(lvls,list,score)=>{let best=null,bs=0;lvls.forEach(l=>list(l).forEach(x=>{const sc=score(x);if(sc>bs){bs=sc;best=x;}}));return best;};
+  const lvOrder=lv?[lv].concat(s.levels.filter(l=>l!==lv)):s.levels;
+  const card=pick(lvOrder,l=>l.flashcards||[],c=>overlap(qs,c.t)*3+overlap(qs,c.d));
+  const feed=pick(lvOrder,l=>(l.feed||[]).filter(f=>f.real||f.mnemo),f=>overlap(qs,f.title)*3+overlap(qs,f.body)+overlap(qs,f.real)+overlap(qs,f.mnemo));
+  return {card,feed};
+}
+function openExplain(q,o){
+  const {card,feed}=explainFor(q,o.subj,o.lv);
+  const parts=[];const chips=[];
+  if(q.c!=null&&q.a)parts.push(`<span class="lbl">Poprawna odpowiedź</span><b>${q.a[q.c]}</b>`);
+  if(card){parts.push(`<span class="lbl">Fiszka</span><b>${card.t}</b> — ${card.d}`);chips.push('Fiszka');}
+  if(feed&&feed.real){parts.push(`<span class="lbl">Prościej</span>${feed.real}`);chips.push('Prościej');}
+  if(feed&&feed.mnemo){parts.push(`<span class="lbl">Zapamiętaj</span>${feed.mnemo}`);chips.push('Zapamiętaj');}
+  if(!card&&!feed){parts.push(`<span class="lbl">Innymi słowy</span>${q.e||'Zapamiętaj poprawną odpowiedź i wróć do fiszek z tego poziomu.'}`);chips.push('Wyjaśnienie');}
+  const s=openSheet('explain',`<div class="exhead"><div class="ico a-pop">${icon('bulb',{size:24,stroke:2.6})}</div><div class="grow"><div class="st2">Wyjaśnijmy inaczej</div></div></div>
+    <div class="exchips">${chips.map((c,i)=>`<span class="exchip${i?'':' on'}">${c}</span>`).join('')}</div>
+    <div class="exbox a-up d2">${parts.join('<div class="exsep"></div>')}</div>
+    <div class="exnote a-up d3">${icon('wifi',{size:15})}<span>To wyjaśnienia z materiałów. Nowe, dopasowane do ciebie tworzy AI na bieżąco — wymaga wersji online.</span></div>
+    <div class="sbtns">${o.onCards?'<button class="pill ghost" id="scards">Do fiszek</button>':''}<button class="pill cyan" id="sok" data-primary>ROZUMIEM</button></div>`);
+  s.querySelector('#sok').onclick=()=>{sheetBad(q,o);};
   const c=s.querySelector('#scards');if(c)c.onclick=()=>{closeSheet();o.onCards();};
   return s;
 }
@@ -2099,7 +2329,7 @@ function chartSvg(kind,xs,ys,fmtV){
 }
 /* sesja poziomu: pytania quizu (max 6, losowo) i zadania w jednym strumieniu — pierwsze zawsze pytanie, zadania rozłożone równo między resztę */
 function levelSession(lv){
-  const qs=shuffle(lv.quiz||[]).slice(0,Math.min(6,(lv.quiz||[]).length)).map(q=>({kind:'quiz',q}));
+  const qs=shuffle((lv.quiz||[]).map((q,qi)=>({kind:'quiz',q,qi}))).slice(0,Math.min(6,(lv.quiz||[]).length));
   const ts=shuffle((lv.tasks||[]).filter(t=>t&&TASKS[t.type])).map(task=>({kind:'task',task}));
   if(!ts.length||!qs.length)return qs.concat(ts);
   const out=[qs[0]],rest=qs.slice(1);let qi=0,ti=0;
@@ -2365,7 +2595,7 @@ const TASKS={
     const draw=()=>{const firstEmpty=slots.indexOf(null);
       tl.innerHTML='<i class="tlaxis"></i>'+rows.map((r,si)=>{const t=slots[si];const cur=si===firstEmpty;
         return `<div class="tlrow"><span class="tlyear">${r.year}</span><i class="tldot${t!=null?' on':cur?' cur a-pulse':''}"></i>
-          ${t!=null?`<button class="tlev a-pop" data-s="${si}" aria-label="${r.year}: ${evs[t].label}, tapnij, żeby cofnąć">${icon('check',{size:16,stroke:3.4})}<span>${evs[t].label}</span></button>`
+          ${t!=null?`<button class="tlev a-pop" data-s="${si}" aria-label="${r.year}: ${evs[t].label}, dotknij, żeby cofnąć">${icon('check',{size:16,stroke:3.4})}<span>${evs[t].label}</span></button>`
           :`<div class="tlslot empty${cur?' cur a-blink':''}" data-s="${si}" role="button" aria-label="Miejsce na wydarzenie z roku ${r.year}">${cur?'<span>'+(sel!=null?'upuść tutaj':'tu trafi wydarzenie')+'</span>':''}</div>`}</div>`;}).join('');
       tl.querySelectorAll('.tlev').forEach(b=>b.onclick=()=>{if(locked)return;slots[+b.dataset.s]=null;sel=null;draw();});
       tl.querySelectorAll('.tlslot').forEach(z=>z.onclick=()=>{if(locked||sel==null)return;slots[+z.dataset.s]=sel;sel=null;draw();});
@@ -2392,7 +2622,7 @@ const TASKS={
     const draw=()=>{const firstEmpty=slots.indexOf(null);
       col.innerHTML=steps.map((s,k)=>{const t=slots[k];let h;
         if(t===-1)h=`<div class="chstep given${first?' a-up d'+Math.min(6,k+1):''}">${s}</div>`;
-        else if(t!=null)h=`<button class="chstep filled a-pop" data-s="${k}" aria-label="${tiles[t]}, tapnij, żeby cofnąć">${icon('check',{size:16,stroke:3.4})}<span>${tiles[t]}</span></button>`;
+        else if(t!=null)h=`<button class="chstep filled a-pop" data-s="${k}" aria-label="${tiles[t]}, dotknij, żeby cofnąć">${icon('check',{size:16,stroke:3.4})}<span>${tiles[t]}</span></button>`;
         else h=`<div class="chslot empty${k===firstEmpty?' cur a-blink':''}" data-s="${k}" role="button" aria-label="Krok ${k+1}">${k===firstEmpty?'<span>co dalej?</span>':''}</div>`;
         return (k?`<div class="charrow">${icon('arrow-down',{size:22,stroke:3})}</div>`:'')+h;}).join('');
       col.querySelectorAll('.chstep.filled').forEach(b=>b.onclick=()=>{if(locked)return;slots[+b.dataset.s]=null;draw();});
@@ -2470,6 +2700,173 @@ const TASKS={
     draw();
   }}
 };
+
+/* ============================================================ KROK 6: POWTÓRKA NA INTERWAŁACH (DESIGN.md §4.4, ten sam klucz nauka_progress_v1)
+   PROGRESS.srs = { "<subjectId>:<levelId>:<itemId>": {box:0..4, due:"yyyy-mm-dd", seen, lapses} }; itemId = indeks fiszki albo "q"+indeks pytania.
+   Pudełka 0→1→3→7→21 dni: dobra odpowiedź podnosi pudełko, zła zrzuca do 0 (+1 lapses). Zapis: fiszki (umiem / jeszcze nie), quiz w lekcji, zakładka Quiz, sesja powtórki. */
+const SRS_INT=[0,1,3,7,21];
+function srs(){if(!PROGRESS.srs||typeof PROGRESS.srs!=='object')PROGRESS.srs={};return PROGRESS.srs;}
+function addDays(ds,k){const p=ds.split('-').map(Number);return dstr(new Date(p[0],p[1]-1,p[2]+k));}
+function srsTouch(sid,lid,item,ok){
+  const S=srs();const k=sid+':'+lid+':'+item;const e=S[k]||{box:0,due:todayStr(),seen:0,lapses:0};
+  e.seen=(e.seen|0)+1;if(ok)e.box=Math.min(4,(e.box|0)+1);else{e.box=0;e.lapses=(e.lapses|0)+1;}
+  e.due=addDays(todayStr(),SRS_INT[e.box]);S[k]=e;saveProgress();return e;
+}
+/* klucz → dane: {s, lv, kind:'card'|'quiz', c|q, idx, key}; wpisy po nieistniejących przedmiotach/poziomach są pomijane */
+function srsResolve(k){
+  const p=k.split(':');const s=SUBJECTS.find(x=>x.id===p[0]);if(!s)return null;const lv=s.levels.find(l=>l.id===p[1]);if(!lv)return null;const item=p.slice(2).join(':');
+  if(item[0]==='q'){const idx=+item.slice(1);const q=(lv.quiz||[])[idx];return q?{s,lv,kind:'quiz',q,idx,key:k}:null;}
+  const idx=+item;const c=(lv.flashcards||[])[idx];return c?{s,lv,kind:'card',c,idx,key:k}:null;
+}
+function srsEntries(){const S=srs();return Object.keys(S).map(k=>{const r=srsResolve(k);return r?{...r,e:S[k]}:null;}).filter(Boolean);}
+/* do powtórki dziś: fiszki najpierw, potem pytania; w obrębie rodzaju najstarsze terminy pierwsze */
+function srsDue(){const t=todayStr();return srsEntries().filter(x=>x.e.due<=t).sort((a,b)=>a.kind!==b.kind?(a.kind==='card'?-1:1):(a.e.due<b.e.due?-1:a.e.due>b.e.due?1:0));}
+/* stan pamięci: świeże (pudełko 0) · w trakcie (1–2) · utrwalone (3–4) */
+function srsStats(all){const st={fresh:0,mid:0,firm:0};(all||srsEntries()).forEach(x=>{const b=x.e.box|0;if(b===0)st.fresh++;else if(b<=2)st.mid++;else st.firm++;});return st;}
+function nextDueText(){const t=todayStr();const fut=srsEntries().map(x=>x.e.due).filter(d=>d>t).sort();if(!fut.length)return '';const k=dayDiff(t,fut[0]);return k===1?'jutro':`za ${k} ${pl(k,'dzień','dni','dni')}`;}
+
+/* ============================================================ POWTÓRKA (Review.html): licznik na dziś, z czego, stan pamięci, start */
+function renderReview(){
+  const scroll=shell('review',{blob:'cyan',cls:'review',title:'Powtórka',pills:false,back:()=>go('today')});
+  const all=srsEntries(),due=srsDue(),n=due.length,st=srsStats(all),tot=all.length,nd=nextDueText();
+  const hero=el('div','rvhero a-up');
+  hero.innerHTML=`<div class="grow"><div class="rvn a-pop">${n}</div><div class="rvt">${n?pl(n,'pojęcie na dziś','pojęcia na dziś','pojęć na dziś'):'nic na dziś'}</div>
+    <div class="rvs">${n?'Zaplanowane tak, żeby wróciły tuż przed zapomnieniem.':tot?'Wszystko na dziś przejrzane.'+(nd?' Najbliższa powtórka '+nd+'.':''):'Ucz się z fiszek i lekcji — pojęcia wrócą tu we właściwym dniu.'}</div></div>
+    ${icon('refresh',{size:58,stroke:1.8,cls:n?'a-spin':''})}`;
+  scroll.appendChild(hero);
+  if(n){
+    scroll.appendChild(el('div','eyebrow sec','Z czego'));
+    const rows=el('div','rvrows');
+    const bySubj=SUBJECTS.map(s=>({s,mine:due.filter(x=>x.s.id===s.id)})).filter(x=>x.mine.length).sort((a,b)=>b.mine.length-a.mine.length);
+    bySubj.forEach(({s,mine},i)=>{
+      const lv=[...new Set(mine.map(x=>noEmoji(x.lv.title)))];
+      const r=el('button','rvrow themed a-up d'+Math.min(6,i+1));r.style.setProperty('--accent',s.accent);if(s.onAccent)r.style.setProperty('--on-accent',s.onAccent);
+      r.innerHTML=`${mono(initial(s.short||s.name),'solid')}<div class="grow"><div class="t">${s.short||s.name}</div><div class="s">${lv.slice(0,2).join(' · ')}${lv.length>2?' · +'+(lv.length-2):''}</div></div><span class="n">${mine.length}</span>`;
+      r.setAttribute('aria-label',(s.short||s.name)+': '+mine.length+' do powtórki');
+      r.onclick=()=>startReview(mine);rows.appendChild(r);
+    });
+    scroll.appendChild(rows);
+  }
+  scroll.appendChild(el('div','eyebrow sec','Stan pamięci'));
+  const mem=el('div','memcard a-up d3');
+  [['Świeże','red',st.fresh,1],['W trakcie','gold',st.mid,2],['Utrwalone','acid',st.firm,3]].forEach(([lab,tone,v,d])=>{
+    mem.appendChild(el('div','memrow '+tone,`<span class="lb">${lab}</span><div class="bar"><i class="a-grow d${d}" style="width:${tot?Math.round(v/tot*100):0}%"></i></div><span class="n">${v}</span>`));
+  });
+  if(!tot)mem.appendChild(el('div','memnote','Jeszcze nic w powtórce. Każda fiszka i każde pytanie, na które odpowiesz, trafia tutaj.'));
+  scroll.appendChild(mem);
+  const foot=el('div','rvfoot');
+  if(n){const b=el('button','pill cyan a-glow','ZACZNIJ POWTÓRKĘ');b.id='rvstart';b.onclick=()=>startReview(due);foot.appendChild(b);}
+  else{const b=el('button','pill ghost','Przejrzyj fiszki');b.id='rvcards';b.onclick=()=>go('cards');foot.appendChild(b);}
+  scroll.appendChild(foot);
+}
+/* sesja powtórki: najpierw fiszki (odwracane, umiem / jeszcze nie), potem pytania (kafle + panele dobrze/źle); bez serc i combo */
+let rvState=null;
+function startReview(items){
+  rvState={items:items.slice(),idx:0,flipped:false,ok:0,bad:0,xp:0,wrong:[],marks:[],subs:new Set()};
+  renderReviewSession();
+}
+function rvAnswer(it,ok,xp){
+  const rv=rvState;rv.subs.add(it.s.id);rv.marks[rv.idx]=ok?'on':'bad';
+  srsTouch(it.s.id,it.lv.id,it.kind==='quiz'?'q'+it.idx:String(it.idx),ok);
+  if(ok){rv.ok++;if(xp){rv.xp+=xp;addXP(it.s.id,xp);}}else{rv.bad++;rv.wrong.push(it);}
+  tickDaily(it.s.id,'review',1);
+}
+function renderReviewSession(){
+  const rv=rvState;closeSheet();keyFn=null;
+  app.innerHTML='';
+  const L=el('div','lesson open rvrun');app.appendChild(L);
+  app.appendChild(el('div','toast',''));app.lastChild.id='toast';
+  if(rv.idx>=rv.items.length)return finishReview(L);
+  const it=rv.items[rv.idx];
+  const head=el('div','lessonhead');
+  const x=el('button','x',icon('close',{size:18,stroke:3}));x.setAttribute('aria-label','Przerwij powtórkę');x.onclick=()=>{if(rv.idx>0)finishReview(L);else go('review');};head.appendChild(x);
+  const seg=el('div','segbar');seg.setAttribute('aria-label',`${rv.idx+1} z ${rv.items.length}`);
+  for(let i=0;i<rv.items.length;i++)seg.appendChild(el('i',i<rv.idx?(rv.marks[i]==='bad'?'bad':'on'):''));head.appendChild(seg);
+  head.appendChild(el('div','rvcount',`${rv.idx+1} z ${rv.items.length}`));
+  L.appendChild(head);
+  const body=el('div','lessonbody');L.appendChild(body);
+  body.appendChild(el('div','blob a-float cyan'));
+  if(it.kind==='card'){
+    const c=it.c;
+    // karta w kolorze przedmiotu (Flashcards.html): tap = odwróć, przeciągnięcie w lewo = jeszcze nie, w prawo = umiem
+    const flip=el('div','flip themed a-up'+(rv.flipped?' flipped':''));flip.style.setProperty('--accent',it.s.accent);if(it.s.onAccent)flip.style.setProperty('--on-accent',it.s.onAccent);
+    flip.innerHTML=`<div class="flipinner">
+      <div class="face front"><span class="tag accent">${it.s.short||it.s.name} · ${noEmoji(it.lv.title)}</span><div class="term">${c.t}</div><div class="tapomat">dotknij, żeby odwrócić</div></div>
+      <div class="face back"><span class="tag">odpowiedź</span><div class="deftxt">${c.d}</div><div class="tapomat">dotknij, żeby wrócić</div></div></div>`;
+    let swiped=false;
+    flip.onclick=()=>{if(swiped){swiped=false;return;}rv.flipped=!rv.flipped;flip.classList.toggle('flipped');};
+    body.appendChild(flip);
+    body.appendChild(el('div','swipehint3',`<span class="l">${icon('back',{size:16,stroke:2.8,cls:'a-bob'})}w lewo = jeszcze nie</span><span class="r">w prawo = umiem${icon('chevron-right',{size:16,stroke:2.8,cls:'a-bob d2'})}</span>`));
+    const foot=el('div','lessonfoot');const btns=el('div','fbtns');
+    const no=el('button','fbtn no',icon('refresh',{size:18,stroke:2.8})+' jeszcze nie'),yes=el('button','fbtn yes',icon('check',{size:18,stroke:3.4})+' umiem');
+    no.id='rvno';yes.id='rvyes';
+    const ans=ok=>{if(!advOk())return;rvAnswer(it,ok,ok?2:0);rv.flipped=false;rv.idx++;renderReviewSession();};
+    no.onclick=()=>ans(false);yes.onclick=()=>ans(true);
+    let x0=null;flip.onpointerdown=e=>{x0=e.clientX;};
+    flip.onpointerup=e=>{if(x0==null)return;const dx=e.clientX-x0;x0=null;if(Math.abs(dx)>80){swiped=true;ans(dx>0);}};
+    btns.appendChild(no);btns.appendChild(yes);foot.appendChild(btns);L.appendChild(foot);
+    keyFn=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();flip.click();}else if(e.key==='ArrowLeft'||e.key==='1')ans(false);else if(e.key==='ArrowRight'||e.key==='2')ans(true);};
+  }else{
+    const q=it.q;
+    const blk=quizBlock(q,{n:rv.idx+1,total:rv.items.length,tag:it.s.short||it.s.name,onAnswer:(i,ok)=>{
+      rvAnswer(it,ok,ok?3:0);
+      const next=()=>{rv.idx++;renderReviewSession();};
+      if(ok){body.appendChild(confetti(4));sheetOk(q,{xp:3,mult:1,combo:0,onNext:next});}
+      else sheetBad(q,{onNext:next,subj:it.s,lv:it.lv,onCards:()=>{rvState=null;openSubject(it.s.id,'fiszki',()=>{fState={subj:it.s.id,lvl:it.lv.id,idx:0,flipped:false};});}});
+    }});
+    body.appendChild(blk.body);const foot=el('div','lessonfoot');foot.appendChild(blk.foot);L.appendChild(foot);
+  }
+}
+/* koniec powtórki (FlashcardsDone.html): pierścień celności, umiem / do powtórki / +XP, lista „wracają dziś” albo najbliższy termin, karta serii */
+function finishReview(L){
+  const rv=rvState;closeSheet();keyFn=null;
+  const total=rv.ok+rv.bad;const pct=total?Math.round(rv.ok/total*100):0;
+  // plan dnia: „Powtórka” to jedna czynność — zalicz wiersze przedmiotów z sesji, a gdy żaden nie pasuje, pierwszy oczekujący wiersz Powtórki
+  let doneAny=false;rv.subs.forEach(sid=>{if(completeDaily(sid,'review'))doneAny=true;});
+  if(!doneAny&&total){const t=daily().tasks.find(x=>!x.done&&/:review$/.test(x.id));if(t)completeDaily(t.id.split(':')[0],'review');}
+  if(!L){app.innerHTML='';L=el('div','lesson open rvrun');app.appendChild(L);app.appendChild(el('div','toast',''));app.lastChild.id='toast';}else L.innerHTML='';
+  const body=el('div','lessonbody done');body.appendChild(el('div','blob a-float cyan'));if(pct>=50)body.appendChild(confetti(6));
+  const done=rv.items.slice(0,rv.idx);const cards=done.filter(x=>x.kind==='card').length,qs=done.length-cards; // tylko to, co przejrzane (sesję można przerwać)
+  const subsTxt=[...rv.subs].map(id=>{const s=SUBJECTS.find(x=>x.id===id);return s?(s.short||s.name):'';}).filter(Boolean).join(' · ');
+  const R=52,C=Math.round(2*Math.PI*R*10)/10;const nd=nextDueText();const n=streakDisplay();
+  const lc=el('div','lc');
+  lc.innerHTML=`<div class="rvring a-pop"><svg viewBox="0 0 124 124" aria-hidden="true"><circle class="ring-bg" cx="62" cy="62" r="${R}"/><circle class="ring-fg" cx="62" cy="62" r="${R}" style="stroke-dasharray:${C};stroke-dashoffset:${Math.round(C*(1-pct/100)*10)/10}"/></svg><div class="rvpct"><b>${pct}%</b><span>umiem</span></div></div>
+    <div class="lctxt a-up d2"><div class="lct">Powtórka skończona</div><div class="lcs">${subsTxt?subsTxt+' · ':''}${cards} ${pl(cards,'pojęcie','pojęcia','pojęć')}${qs?` · ${qs} ${pl(qs,'pytanie','pytania','pytań')}`:''}</div></div>
+    <div class="lcstats a-up d3"><div class="lcstat acid"><div class="v">${rv.ok}</div><div class="k under">umiem</div></div><div class="lcstat red"><div class="v">${rv.bad}</div><div class="k under">do powtórki</div></div><div class="lcstat gold"><div class="v">+${rv.xp}</div><div class="k under">XP</div></div></div>`;
+  const card=el('div','setcard rvlist a-up d4');
+  if(rv.wrong.length){
+    card.innerHTML='<div class="eyebrow sec">Wracają dziś</div>'+rv.wrong.slice(0,3).map(w=>{const e=srs()[w.key]||{};const nm=w.kind==='card'?w.c.t:w.q.q;return `<div class="setrow"><i class="rdot red"></i><span class="t grow">${nm}</span><span class="v">${e.seen||1}. raz</span></div>`;}).join('<div class="setsep"></div>')
+      +(rv.wrong.length>3?`<div class="setsep"></div><div class="setrow"><span class="t muted">i ${rv.wrong.length-3} ${pl(rv.wrong.length-3,'kolejne','kolejne','kolejnych')}</span></div>`:'');
+  }else card.innerHTML=`<div class="setrow"><i class="rdot gold"></i><span class="t grow">Najbliższa powtórka</span><span class="v acid">${nd||'gdy dojdą nowe pojęcia'}</span></div>`;
+  lc.appendChild(card);
+  const d=daily();const dd=d.tasks.filter(t=>t.done).length;
+  const sk=el('button','lcstreak a-up d5',`<div class="ico">${icon('flame',{size:24})}</div><div class="grow"><div class="t">${n} ${pl(n,'dzień','dni','dni')} z rzędu</div><div class="s">${d.tasks.length&&dd>=d.tasks.length?'Plan dnia zrobiony':'Plan dnia: '+dd+' z '+d.tasks.length}${nd?' · następna powtórka '+nd:''}</div></div>${icon('chevron-right',{size:20})}`);
+  sk.onclick=()=>go('streak');lc.appendChild(sk);
+  body.appendChild(lc);L.appendChild(body);
+  const foot=el('div','lessonfoot col');
+  const main=el('button','pill cyan a-glow',rv.wrong.length?`POWTÓRZ TE ${rv.wrong.length}`:'GOTOWE');main.id='rvmain';
+  const wrong=rv.wrong.slice();main.onclick=wrong.length?()=>startReview(wrong):()=>go('review');
+  const alt=el('button','pill text','NA DZIŚ WYSTARCZY');alt.id='rvdone';alt.onclick=()=>go('review');
+  foot.appendChild(main);foot.appendChild(alt);L.appendChild(foot);
+  rvState=null;
+  keyFn=e=>{if(e.key==='Enter')main.click();};
+}
+/* zakładka „Fiszki” w nawigacji: przedmioty z liczbą fiszek i pojęć do powtórki → zakładka Fiszki przedmiotu */
+function renderCardsHub(){
+  const scroll=shell('cards',{blob:true,cls:'cards',title:'Fiszki',pills:false});
+  const due=srsDue();const totalC=SUBJECTS.reduce((a,s)=>a+allCards(s).length,0);
+  scroll.appendChild(el('div','',`<div class="eyebrow">${totalC} ${pl(totalC,'pojęcie','pojęcia','pojęć')} · ${SUBJECTS.length} ${pl(SUBJECTS.length,'przedmiot','przedmioty','przedmiotów')}</div><p class="sp">Wybierz przedmiot i przeglądaj fiszki. Każda odpowiedź trafia do powtórki na interwałach.</p>`));
+  if(due.length){const r=el('button','rvrow a-up d1',`<div class="mono solid">${icon('refresh',{size:22,stroke:2.6})}</div><div class="grow"><div class="t">Powtórka na dziś</div><div class="s">${due.length} ${pl(due.length,'pojęcie czeka','pojęcia czekają','pojęć czeka')}</div></div><span class="n">${due.length}</span>`);r.onclick=()=>go('review');scroll.appendChild(r);}
+  const card=el('div','setcard a-up d2');
+  SUBJECTS.forEach((s,i)=>{
+    if(i)card.appendChild(el('div','setsep'));
+    const nc=allCards(s).length,nd=due.filter(x=>x.s.id===s.id).length;
+    const r=el('button','setrow themed');r.style.setProperty('--accent',s.accent);if(s.onAccent)r.style.setProperty('--on-accent',s.onAccent);
+    r.innerHTML=`${mono(initial(s.short||s.name),'solid xs')}<div class="grow"><div class="t">${s.short||s.name}</div><div class="s">${nc} ${pl(nc,'fiszka','fiszki','fiszek')}${nd?' · '+nd+' do powtórki':''}</div></div>${icon('chevron-right',{size:18,cls:'chev'})}`;
+    r.onclick=()=>openSubject(s.id,'fiszki');card.appendChild(r);
+  });
+  scroll.appendChild(card);
+}
 
 /* ============================================================ SUBJECT shell (Path.html: pas nagłówka w --surface-2 + chipy zakładek) */
 function openSubject(id,tab,setup){
@@ -2602,7 +2999,7 @@ function renderLesson(){
     const card=el('div','fcard a-up');
     card.innerHTML=`<div class="fin"><span class="tag accent">Mikro-dawka ${ls.feedIdx+1}/${totalFeed}</span>
       <div class="ftitle">${f.title}</div><div class="fbody">${f.body}</div>
-      ${f.real?`<div class="real a-up d2"><span class="lbl">${icon('bulb',{size:15})}po ludzku</span>${f.real}</div>`:''}
+      ${f.real?`<div class="real a-up d2"><span class="lbl">${icon('bulb',{size:15})}prościej</span>${f.real}</div>`:''}
       ${f.mnemo?`<div class="mnemo a-up d3"><span class="lbl">${icon('bookmark',{size:15})}zapamiętaj</span>${f.mnemo}</div>`:''}</div>`;
     body.appendChild(card);
     const last=ls.feedIdx+1>=totalFeed;
@@ -2637,11 +3034,11 @@ function renderLesson(){
         loseHeart();
         const hp=L.querySelector('.hearts');if(hp){hp.classList.add('a-beat');hp.appendChild(el('span','minus a-blink','−1'));}
         const seg=L.querySelectorAll('.segbar i')[stepIdx];if(seg)seg.className='bad';
-        sheetBad(fb,{sub:fb.sub,onNext:()=>{if(hearts().n<=0)showNoHearts({inLesson:true,lv});else next();},onCards:()=>goCards(lv)});
+        sheetBad(fb,{sub:fb.sub,subj:s,lv,onNext:()=>{if(hearts().n<=0)showNoHearts({inLesson:true,lv});else next();},onCards:()=>goCards(lv)});
       }
     };
     const o={n:ls.qIdx+1,total:ls.items.length,combo:ls.combo,broken:ls.broken};
-    const blk=it.kind==='task'?taskBlock(it.task,{...o,onAnswer}):quizBlock(it.q,{...o,onAnswer:(i,ok)=>onAnswer(ok,it.q)});
+    const blk=it.kind==='task'?taskBlock(it.task,{...o,onAnswer}):quizBlock(it.q,{...o,onAnswer:(i,ok)=>{srsTouch(s.id,lv.id,'q'+it.qi,ok);onAnswer(ok,it.q);}});
     body.appendChild(blk.body);
     const foot=el('div','lessonfoot');foot.appendChild(blk.foot);L.appendChild(foot);
   }
@@ -2674,7 +3071,7 @@ function finishLesson(){
     <div class="lcstats"><div class="lcstat a-up d4"><div class="k">XP</div><div class="v gold">+${ls.xp+bonus}</div></div>
       <div class="lcstat a-up d5"><div class="k">Celność</div><div class="v acid">${pct}%</div></div>
       <div class="lcstat a-up d6"><div class="k">Combo</div><div class="v pink">x${ls.maxCombo}</div></div></div>
-    ${passed?'':'<p class="lcp">Poniżej 50% — przejedź roladkę jeszcze raz i spróbuj ponownie, dasz radę.</p>'}`;
+    ${passed?'':'<p class="lcp">Poniżej 50%. Przejrzyj roladkę jeszcze raz i spróbuj ponownie.</p>'}`;
   const sk=el('button','lcstreak a-up d6',`<div class="ico">${icon('flame',{size:24})}</div><div class="grow"><div class="t">${n} ${pl(n,'dzień','dni','dni')} z rzędu</div><div class="s">${d.tasks.length&&dd>=d.tasks.length?'Plan dnia zrobiony':'Plan dnia: '+dd+' z '+d.tasks.length}</div></div>${icon('chevron-right',{size:20})}`);
   sk.onclick=()=>{closeLesson();go('streak');};
   lc.appendChild(sk);body.appendChild(lc);L.appendChild(body);
@@ -2698,20 +3095,20 @@ function renderFiszki(sc){
   chips.appendChild(mk('all','Wszystko'));
   s.levels.forEach(l=>chips.appendChild(mk(l.id,noEmoji(l.title))));
   wrap.appendChild(chips);
-  const list = fState.lvl==='all'?allCards(s):(s.levels.find(l=>l.id===fState.lvl).flashcards||[]).map(c=>({...c,lvl:noEmoji(s.levels.find(l=>l.id===fState.lvl).title)}));
+  const list = fState.lvl==='all'?allCards(s):allCards(s).filter(c=>c.lid===fState.lvl); // krok 6: elementy z lid/i (klucz SRS) także po filtrze poziomu
   if(fState.idx>=list.length)fState.idx=0;
   const c=list[fState.idx]||{t:'—',d:'Brak fiszek'};
   const hq=hearts().quest||0;
   wrap.appendChild(el('div','progressrow',`<div class="bar"><i style="width:${list.length?fState.idx/list.length*100:0}%"></i></div><div class="counter">${list.length?fState.idx+1:0}/${list.length}</div>${hq?`<div class="counter red">${icon('heart',{size:12})} za ${hq}</div>`:''}`));
   const flip=el('div','flip'+(fState.flipped?' flipped':''));flip.style.height='calc(100dvh - 340px)';
   flip.innerHTML=`<div class="flipinner">
-    <div class="face front"><span class="tag">${c.lvl||''}</span><div class="term">${c.t}</div><div class="tapomat">tapnij = odpowiedź</div></div>
-    <div class="face back"><span class="tag">odpowiedź</span><div class="deftxt">${c.d}</div><div class="tapomat">tapnij = wróć</div></div></div>`;
+    <div class="face front"><span class="tag">${c.lvl||''}</span><div class="term">${c.t}</div><div class="tapomat">dotknij, żeby odwrócić</div></div>
+    <div class="face back"><span class="tag">odpowiedź</span><div class="deftxt">${c.d}</div><div class="tapomat">dotknij, żeby wrócić</div></div></div>`;
   flip.onclick=()=>{fState.flipped=!fState.flipped;flip.classList.toggle('flipped');};
   wrap.appendChild(flip);
   const btns=el('div','fbtns');
   const no=el('button','fbtn no',icon('refresh',{size:18,stroke:2.8})+' jeszcze nie');const yes=el('button','fbtn yes',icon('check',{size:18,stroke:3.4})+' umiem');
-  const next=(known)=>{if(known){addXP(s.id,2);toast('+2xp','check');}tickDaily(s.id,'review',1);heartReview();fState.flipped=false;fState.idx=(fState.idx+1)%Math.max(1,list.length);renderFiszki(sc);};
+  const next=(known)=>{if(!list.length)return;srsTouch(s.id,c.lid,c.i,known);if(known){addXP(s.id,2);toast('+2 XP','check');}tickDaily(s.id,'review',1);heartReview();fState.flipped=false;fState.idx=(fState.idx+1)%Math.max(1,list.length);renderFiszki(sc);};
   no.onclick=()=>next(false);yes.onclick=()=>next(true);
   btns.appendChild(no);btns.appendChild(yes);wrap.appendChild(btns);
   sc.innerHTML='';sc.appendChild(wrap);
@@ -2739,7 +3136,7 @@ function renderQuiz(sc){
     const card=el('div','qcard');
     card.innerHTML=`<div class="result">${bigTile(pct>=70?'hot':pct>=50?'ok':'fail')}<h2>Wynik</h2>
       <div class="score">Trafione <b>${qState.score}/${qState.list.length}</b> (${pct}%)</div>
-      <p>${pct>=70?'Solidnie ogarniasz ten przedmiot.':pct>=50?'Spoko, ale przejedź jeszcze fiszki.':'Wróć do fiszek i ścieżki, potem tu wróć.'}</p>
+      <p>${pct>=70?'Dobrze znasz ten materiał.':pct>=50?'Nieźle. Przejrzyj jeszcze fiszki.':'Wróć do fiszek i ścieżki, a potem spróbuj ponownie.'}</p>
       <button class="pill" id="qre">${LBL.again}</button></div>`;
     wrap.appendChild(card);sc.innerHTML='';sc.appendChild(wrap);
     document.getElementById('qre').onclick=()=>{qState.list=null;renderQuiz(sc);};
@@ -2749,8 +3146,9 @@ function renderQuiz(sc){
   const qb=quizBlock(q,{n:qState.idx+1,total:qState.list.length,tag:qState.lvl==='all'?(q.lvl||''):'',onAnswer:(i,ok)=>{
     qState.answered=true;
     const next=()=>{qState.idx++;renderQuiz(sc);};
+    srsTouch(s.id,q.lid,'q'+q.qi,ok);
     if(ok){qState.score++;addXP(s.id,3);wrap.appendChild(confetti(4));sheetOk(q,{xp:3,mult:1,combo:0,onNext:next});}
-    else sheetBad(q,{onNext:next});
+    else sheetBad(q,{onNext:next,subj:s,lv:s.levels.find(l=>l.id===q.lid),onCards:()=>goCards(s.levels.find(l=>l.id===q.lid))});
   }});
   wrap.appendChild(qb.body);wrap.appendChild(qb.foot);
   sc.innerHTML='';sc.appendChild(wrap);
@@ -2774,8 +3172,8 @@ function renderEgzamin(sc){
   wrap.innerHTML=`<div class="result">${bigTile('','target')}<h2>Egzamin</h2>
     <div class="specs"><div class="spec">${N}<small>losowych</small></div><div class="spec">${lim}:00<small>na czas</small></div><div class="spec">${(s.grading&&s.grading.pass)||50}%<small>zalicza</small></div></div>
     <p>Bez podpowiedzi w trakcie. Na końcu % i ocena wg siatki + przegląd błędów.</p>
-    <button class="pill" id="exstart">${icon('bolt',{size:18})} symulacja — ${N} losowych</button>
-    <button class="pill" id="exfull" style="margin-top:10px">${icon('list',{size:18})} Test końcowy — WSZYSTKIE ${ALL} pytań</button>
+    <button class="pill" id="exstart">${icon('bolt',{size:18})} Symulacja — ${N} losowych pytań</button>
+    <button class="pill" id="exfull" style="margin-top:10px">${icon('list',{size:18})} Test końcowy — wszystkie ${ALL} pytań</button>
     <p style="font-size:13px;margin-top:6px">Test końcowy = każde pytanie z przedmiotu, w losowej kolejności (${fullLim}:00).</p></div>`;
   sc.innerHTML='';sc.appendChild(wrap);
   document.getElementById('exstart').onclick=()=>beginExam(sc,N,lim*60);
@@ -2799,8 +3197,8 @@ function renderExamQ(sc){
     <div class="qcard"><span class="tag">${q.lvl||''}</span><div class="qq">${q.q}</div>
       <div class="opts">${q.a.map((o,i)=>`<button class="opt${sel===i?' sel':''}" data-i="${i}"><span class="k">${keys[i]}</span><span>${o}</span></button>`).join('')}</div>
       <div style="display:flex;gap:10px;margin-top:16px">
-        ${ex.idx>0?'<button class="pill ghost" style="flex:1" id="exprev">'+LBL.back+'wstecz</button>':''}
-        <button class="pill" style="flex:2" id="exnext">${last?'zakończ i sprawdź '+icon('flag',{size:18}):LBL.next}</button></div></div>`;
+        ${ex.idx>0?'<button class="pill ghost" style="flex:1" id="exprev">'+LBL.back+'Wstecz</button>':''}
+        <button class="pill" style="flex:2" id="exnext">${last?'Zakończ i sprawdź '+icon('flag',{size:18}):LBL.next}</button></div></div>`;
   sc.innerHTML='';sc.appendChild(wrap);
   wrap.querySelectorAll('.opt').forEach(o=>o.onclick=()=>{ex.pick[ex.idx]=+o.dataset.i;wrap.querySelectorAll('.opt').forEach(x=>x.classList.toggle('sel',+x.dataset.i===ex.pick[ex.idx]));});
   const nx=document.getElementById('exnext');nx.onclick=()=>{if(last)examFinish(sc);else{ex.idx++;renderExamQ(sc);}};
@@ -2818,16 +3216,16 @@ function examFinish(sc){
   const rev = wrong.length? wrong.map(w=>`<div class="ritem"><div class="rq">${w.q.q}</div>
       <div class="rbad">Twoja: ${w.sel==null?'— (brak)':keys[w.sel]+'. '+w.q.a[w.sel]}</div>
       <div class="rgood">Dobra: ${keys[w.q.c]}. ${w.q.a[w.q.c]}</div>
-      <div class="rsrc">${w.q.lvl||''} · ${w.q.e||''}</div></div>`).join('') : '<div class="ritem rgood">'+icon('check',{size:16,stroke:3.4})+' Zero błędów. Clean sweep.</div>';
+      <div class="rsrc">${w.q.lvl||''} · ${w.q.e||''}</div></div>`).join('') : '<div class="ritem rgood">'+icon('check',{size:16,stroke:3.4})+' Bez błędów.</div>';
   const wrap=el('div','scroll');
   wrap.innerHTML=`<div class="result">${bigTile(kind)}<h2>Ocena: ${grade}</h2>
     <div class="score">Trafione <b>${correct}/${ex.pool.length}</b> (${pct}%)</div>
-    <p>${pct>=pass?'Zdane!':'Poniżej progu — wróć do ścieżki i fiszek.'}</p>
+    <p>${pct>=pass?'Zdane.':'Poniżej progu — wróć do ścieżki i fiszek.'}</p>
     <button class="pill" id="exagain">${LBL.again}</button></div>
     <div class="review"><h3>Przegląd błędów (${wrong.length})</h3>${rev}</div>`;
   sc.innerHTML='';sc.appendChild(wrap);
   document.getElementById('exagain').onclick=()=>renderEgzamin(sc);
-  if(pct>=pass)toast('zdane! ocena '+grade,'trophy');else toast('niezaliczone','x-circle');
+  if(pct>=pass)toast('Zdane, ocena '+grade,'trophy');else toast('Niezaliczone','x-circle');
 }
 
 /* ---------- INFO ---------- */
@@ -2851,7 +3249,7 @@ function renderCwicz(sc){
   const hub=el('div','exhub');
   const items = s.lang
    ? [['typing','edit','Wpisywanie','Po polsku → '+(s.short||'język')+'. Wpisz słowo z klawiatury.'],
-      ['tiles','grid','Klocki — ułóż słowo','Poukładaj literki/wyrazy w poprawne słowo.'],
+      ['tiles','grid','Klocki — ułóż słowo','Ułóż litery lub wyrazy w poprawne słowo.'],
       ['match','link','Pary słówek','Dopasuj słowo do tłumaczenia (z fiszek).']]
    : [['match','link','Pary z fiszek','Dopasuj pojęcie do definicji.'],
       ['speed','bolt','Szybki quiz na czas','60 sekund — ile zdążysz trafić?'],
@@ -2890,18 +3288,18 @@ function cwRenderTasks(sc){
   const tb=taskBlock(it,{n:cw.idx+1,total:cw.list.length,tag:it.lvl||'',onAnswer:(ok,fb)=>{
     const next=()=>{cw.idx++;cwRenderTasks(sc);};
     if(ok){cw.score++;addXP(current.id,4);wrap.appendChild(confetti(4));sheetOk(fb,{xp:4,mult:1,combo:0,onNext:next});}
-    else sheetBad(fb,{sub:fb.sub,onNext:next});
+    else sheetBad(fb,{sub:fb.sub,subj:current,onNext:next});
   }});
   wrap.appendChild(tb.body);wrap.appendChild(tb.foot);
   sc.innerHTML='';sc.appendChild(wrap);
 }
-function cwBackBtn(sc){const b=el('button','pill ghost',LBL.back+'ćwiczenia');b.style.marginTop='12px';b.onclick=()=>renderCwicz(sc);return b;}
+function cwBackBtn(sc){const b=el('button','pill ghost',LBL.back+'Ćwiczenia');b.style.marginTop='12px';b.onclick=()=>renderCwicz(sc);return b;}
 function cwResult(sc,kind,score,total,retry){
   clearInterval(cwInt);
   const wrap=el('div','scroll');const pct=total?Math.round(score/total*100):0;
   wrap.innerHTML=`<div class="result">${bigTile(kind)}<h2>Wynik</h2>
     <div class="score">Dobrze: <b>${score}/${total}</b> (${pct}%)</div>
-    <p>${pct>=80?'Świetnie! Masz to w małym palcu.':pct>=50?'Niezłe, jeszcze runda i będzie czysto.':'Spoko, powtórz — od tego jest ćwiczenie.'}</p></div>`;
+    <p>${pct>=80?'Świetnie. Znasz to bardzo dobrze.':pct>=50?'Nieźle. Jeszcze jedna runda i będzie pewnie.':'Powtórz jeszcze raz — od tego jest ćwiczenie.'}</p></div>`;
   const f=el('div');f.style.cssText='display:flex;gap:10px;padding:0 0 8px';
   const r=el('button','pill',LBL.again);r.onclick=retry;
   f.appendChild(r);f.appendChild(cwBackBtn(sc));wrap.appendChild(f);
@@ -2917,7 +3315,7 @@ function cwRenderTyping(sc){
   const wrap=el('div','scroll');
   wrap.appendChild(el('div','progressrow',`<div class="bar"><i style="width:${cw.idx/cw.list.length*100}%"></i></div><div class="counter">${cw.idx+1}/${cw.list.length}</div>`));
   const card=el('div','qcard');
-  card.innerHTML=`<span class="tag">${it.lvl||''}</span><div class="exprompt">przetłumacz / wpisz</div><div class="exq">${it.prompt}</div>
+  card.innerHTML=`<span class="tag">${it.lvl||''}</span><div class="exprompt">Przetłumacz albo wpisz</div><div class="exq">${it.prompt}</div>
     <input class="winput" id="win" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="wpisz odpowiedź…">
     <div class="exfb" id="wfb"></div>
     <button class="pill qnext" id="wnext" style="margin-top:14px">${LBL.check}</button>`;
@@ -2930,8 +3328,8 @@ function cwRenderTyping(sc){
     checked=true;
     const ok=inp.value.trim()!=='' && exNorm(inp.value)===exNorm(it.ans);
     inp.classList.add(ok?'ok':'bad');inp.disabled=true;
-    if(ok){cw.score++;addXP(current.id,4);toast('GIT +4xp','check');fb.className='exfb ok show';fb.innerHTML=icon('check',{size:16,stroke:3.4,cls:'ic-acid'})+' Dobrze: <b>'+it.ans+'</b>';}
-    else{toast('prawie!');fb.className='exfb bad show';fb.innerHTML='Poprawnie: <b>'+it.ans+'</b>';}
+    if(ok){cw.score++;addXP(current.id,4);toast('Dobrze: +4 XP','check');fb.className='exfb ok show';fb.innerHTML=icon('check',{size:16,stroke:3.4,cls:'ic-acid'})+' Dobrze: <b>'+it.ans+'</b>';}
+    else{toast('Nie tym razem','close');fb.className='exfb bad show';fb.innerHTML='Poprawnie: <b>'+it.ans+'</b>';}
     btn.innerHTML=(cw.idx+1>=cw.list.length)?LBL.result:LBL.next;
   };
   btn.onclick=check;
@@ -2950,7 +3348,7 @@ function cwRenderTiles(sc){
   const wrap=el('div','scroll');
   wrap.appendChild(el('div','progressrow',`<div class="bar"><i style="width:${cw.idx/cw.list.length*100}%"></i></div><div class="counter">${cw.idx+1}/${cw.list.length}</div>`));
   const card=el('div','qcard');
-  card.innerHTML=`<span class="tag">${it.lvl||''}</span><div class="exprompt">ułóż: ${it.prompt}</div>
+  card.innerHTML=`<span class="tag">${it.lvl||''}</span><div class="exprompt">Ułóż: ${it.prompt}</div>
     <div class="build" id="build"></div><div class="tiles" id="bank"></div>
     <div class="exfb" id="tfb"></div>
     <button class="pill qnext" id="tnext" style="margin-top:8px">${LBL.check}</button>`;
@@ -2962,8 +3360,8 @@ function cwRenderTiles(sc){
     if(cw.checked){cw.idx++;cwRenderTiles(sc);return;}
     const got=cw.build.map(i=>cw.tiles[i].ch).join(sep);
     const ok=exNorm(got)===exNorm(it.ans);cw.checked=true;
-    if(ok){cw.score++;addXP(current.id,4);toast('GIT +4xp','check');fb.className='exfb ok show';fb.innerHTML=icon('check',{size:16,stroke:3.4,cls:'ic-acid'})+' <b>'+it.ans+'</b>';}
-    else{toast('nie tak');fb.className='exfb bad show';fb.innerHTML='Poprawnie: <b>'+it.ans+'</b>';}
+    if(ok){cw.score++;addXP(current.id,4);toast('Dobrze: +4 XP','check');fb.className='exfb ok show';fb.innerHTML=icon('check',{size:16,stroke:3.4,cls:'ic-acid'})+' <b>'+it.ans+'</b>';}
+    else{toast('Nie tak','close');fb.className='exfb bad show';fb.innerHTML='Poprawnie: <b>'+it.ans+'</b>';}
     btn.innerHTML=(cw.idx+1>=cw.list.length)?LBL.result:LBL.next;
   };
 }
@@ -2975,7 +3373,7 @@ function cwStartMatch(sc){const pool=shuffle(matchPool(current)).slice(0,5);
 function cwRenderMatch(sc){
   if(cw.done>=cw.pairs.length)return cwResult(sc,'ok',cw.pairs.length,cw.pairs.length,()=>cwStartMatch(sc));
   const wrap=el('div','scroll');
-  wrap.appendChild(el('div','exprompt','Połącz w pary (tapnij z lewej, potem z prawej)'));
+  wrap.appendChild(el('div','exprompt','Połącz w pary (wybierz z lewej, potem z prawej)'));
   const mw=el('div','matchwrap');const lc=el('div','mcol'),rc=el('div','mcol');
   const trunc=t=>t.length>64?t.slice(0,62)+'…':t;
   cw.left.forEach(o=>{const it=el('div','mitem'+(cw.matched.has('L'+o.i)?' done':'')+(cw.selL===o.i?' sel':''),o.t);it.onclick=()=>{if(cw.matched.has('L'+o.i))return;cw.selL=o.i;tryMatch(sc);};lc.appendChild(it);});
@@ -2986,8 +3384,8 @@ function cwRenderMatch(sc){
 }
 function tryMatch(sc){
   if(cw.selL==null||cw.selR==null){cwRenderMatch(sc);return;}
-  if(cw.selL===cw.selR){cw.matched.add('L'+cw.selL);cw.matched.add('R'+cw.selR);cw.done++;cw.selL=null;cw.selR=null;addXP(current.id,3);toast('para! +3xp','check');cwRenderMatch(sc);}
-  else{toast('nie pasuje','close');cw.selL=null;cw.selR=null;cwRenderMatch(sc);}
+  if(cw.selL===cw.selR){cw.matched.add('L'+cw.selL);cw.matched.add('R'+cw.selR);cw.done++;cw.selL=null;cw.selR=null;addXP(current.id,3);toast('Para: +3 XP','check');cwRenderMatch(sc);}
+  else{toast('To nie ta para','close');cw.selL=null;cw.selR=null;cwRenderMatch(sc);}
 }
 /* --- SPEED --- */
 function cwStartSpeed(sc){cw={type:'speed',list:shuffle(allQuiz(current)),idx:0,score:0,left:60};
