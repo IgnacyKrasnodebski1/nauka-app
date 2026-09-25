@@ -15,7 +15,7 @@ const FAQ = [
   { q: "Co z moimi plikami?", a: "Pliki lądują w Twoim prywatnym folderze i widzi je tylko Twoje konto. Przedmiot możesz usunąć w każdej chwili razem z tematami i postępami." },
 ];
 
-const hue = (i: number) => ({ "--hue": SUBJECT_HUES[i]!.color, "--hue-deep": SUBJECT_HUES[i]!.deep } as CSSProperties);
+const hue = (i: number) => ({ "--hue": SUBJECT_HUES[i % SUBJECT_HUES.length]!.color, "--hue-deep": SUBJECT_HUES[i % SUBJECT_HUES.length]!.deep } as CSSProperties);
 
 /** Phone mockup built from the real app components' CSS (no images). */
 function DeviceMock() {

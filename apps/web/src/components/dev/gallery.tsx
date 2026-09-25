@@ -125,7 +125,7 @@ export function Gallery() {
   const [toast, setToast] = useState(false);
   const [deckIdx, setDeckIdx] = useState(0);
   const [combo, setCombo] = useState(6);
-  const hue = SUBJECT_HUES[2]!;
+  const hue = SUBJECT_HUES[2 % SUBJECT_HUES.length]!;
   const hueStyle = { "--hue": hue.color, "--hue-deep": hue.deep } as CSSProperties;
 
   return (
