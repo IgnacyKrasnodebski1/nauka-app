@@ -10,8 +10,8 @@ window.SUBJECTS.push({
   short:"Global",
   emoji:"🌍",
   tagline:"Fale globalizacji, teorie (liberalizm/realizm/krytycyzm), global governance, efekt brukselski, konkurencyjność, kultura, regionalizacja.",
-  accent:"linear-gradient(135deg,#2563eb,#06b6d4,#22c55e)",
-  accent2:"#06b6d4",
+  accent:"#B4FF3A", accentDark:"#7FC400", onAccent:"#14210A",
+  accent2:"#B4FF3A",
   grading:{pass:50,examMin:20,scale:[[98,"5,5"],[90,"5"],[80,"4,5"],[70,"4"],[60,"3,5"],[50,"3"]],failLabel:"2 — niezaliczone"},
   info:`
     <div class="zbox"><h3>Jak liczy się ocena</h3>

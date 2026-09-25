@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Seria dni</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#FFA023;text-decoration:none}
+a:hover{color:#FFC06B}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 420px; background: #2A1C10;"></div>
+  <div class="a-float" style="position: absolute; top: 60px; left: 50%; margin-left: -140px; width: 280px; height: 280px; border-radius: 50%; background: #3D2612;"></div>
+
+  <div style="position: relative; z-index: 1; padding: 52px 18px 0; display: flex; justify-content: flex-end;">
+    <a href="Main.html" aria-label="Zamknij" style="width: 40px; height: 40px; border-radius: 50%; background: #3D2612; display: flex; align-items: center; justify-content: center;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D6B48A" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </a>
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 8px 22px 0; display: flex; flex-direction: column; align-items: center; gap: 14px;">
+    <svg class="a-beat" width="118" height="118" viewBox="0 0 24 24" fill="#FF7A1A" aria-hidden="true"><path d="M12 2c2.6 3.6 1.1 5.7 0 6.8C10.4 7.2 9 5.6 9 3.5 6.4 5.6 5 8.6 5 12a7 7 0 0 0 14 0c0-3.1-1.6-6.6-7-10z"/></svg>
+    <div class="a-pop" style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 76px; font-weight: 800; letter-spacing: -3px; line-height: 0.9; color: #FFA023;">8</div>
+    <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 25px; font-weight: 800; letter-spacing: -0.6px; color: #FFE3C0;">dni z rzędu</div>
+    <div style="font-size: 14px; font-weight: 600; color: #D6B48A; text-align: center; max-width: 280px; line-height: 1.45;">Rekord to 14. Jeszcze 6 dni i bijesz swój wynik.</div>
+    <a href="ComeBack.html" style="font-size: 12.5px; font-weight: 800; color: #FFA023;">Historia serii</a>
+  </div>
+
+  <div style="position: relative; z-index: 1; margin: 26px 18px 0; background: #1B1836; border: 2px solid #2C2850; border-radius: 26px; padding: 18px 16px; box-shadow: 0 5px 0 #14122A;">
+    <div style="font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Ten tydzień</div>
+    <div style="display: flex; justify-content: space-between; margin-top: 14px;">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div class="a-up d1" style="width: 38px; height: 38px; border-radius: 50%; background: #FF7A1A; display: flex; align-items: center; justify-content: center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#241000" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4.5 4.5L19 7"/></svg></div>
+        <span style="font-size: 11.5px; font-weight: 800; color: #9B95C9;">Pn</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div class="a-up d2" style="width: 38px; height: 38px; border-radius: 50%; background: #FF7A1A; display: flex; align-items: center; justify-content: center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#241000" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4.5 4.5L19 7"/></svg></div>
+        <span style="font-size: 11.5px; font-weight: 800; color: #9B95C9;">Wt</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div class="a-up d3" style="width: 38px; height: 38px; border-radius: 50%; background: #FF7A1A; display: flex; align-items: center; justify-content: center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#241000" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4.5 4.5L19 7"/></svg></div>
+        <span style="font-size: 11.5px; font-weight: 800; color: #9B95C9;">Śr</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div style="width: 38px; height: 38px; border-radius: 50%; background: #22D3EE; display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#04232B" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/></svg></div>
+        <span style="font-size: 11.5px; font-weight: 800; color: #9B95C9;">Cz</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div style="width: 38px; height: 38px; border-radius: 50%; background: #FF7A1A; display: flex; align-items: center; justify-content: center;"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#241000" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4.5 4.5L19 7"/></svg></div>
+        <span style="font-size: 11.5px; font-weight: 800; color: #9B95C9;">Pt</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div class="a-pulse" style="width: 38px; height: 38px; border-radius: 50%; background: #FFA023; border: 3px solid #FFE3C0; display: flex; align-items: center; justify-content: center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="#241000" aria-hidden="true"><path d="M12 2c2.6 3.6 1.1 5.7 0 6.8C10.4 7.2 9 5.6 9 3.5 6.4 5.6 5 8.6 5 12a7 7 0 0 0 14 0c0-3.1-1.6-6.6-7-10z"/></svg></div>
+        <span style="font-size: 11.5px; font-weight: 800; color: #FFE3C0;">Sb</span>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+        <div style="width: 38px; height: 38px; border-radius: 50%; background: #241F45; border: 2px dashed #3E3870;"></div>
+        <span style="font-size: 11.5px; font-weight: 800; color: #5C568F;">Nd</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: relative; z-index: 1; margin: 14px 18px 0; display: flex; align-items: center; gap: 13px; background: #0E2430; border: 2px solid #1A4C5E; border-radius: 22px; padding: 14px 16px; box-shadow: 0 4px 0 #071720;">
+    <div style="width: 44px; height: 44px; border-radius: 14px; background: #22D3EE; display: flex; align-items: center; justify-content: center; flex: none;">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#04232B" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18M3 12h18M6 6l12 12M18 6L6 18"/></svg>
+    </div>
+    <div style="flex-grow: 1;">
+      <div style="font-size: 14.5px; font-weight: 800; color: #F4F2FF;">Zamrażarka serii</div>
+      <div style="font-size: 12.5px; font-weight: 600; color: #7FAEBC; margin-top: 2px;">Masz 2 — jedna poszła w czwartek</div>
+    </div>
+  </div>
+
+  <div style="position: relative; z-index: 1; margin-top: auto; padding: 0 18px 26px;">
+    <a class="a-glow" href="Path.html" style="height: 60px; border-radius: 20px; background: #FFA023; box-shadow: 0 5px 0 #B36A08; display: flex; align-items: center; justify-content: center; color: #241000; font-size: 15px; font-weight: 800; letter-spacing: 1.2px;">WRACAM DO NAUKI</a>
+  </div>
+
+</div>
+
+</body>
+</html>

@@ -9,8 +9,8 @@ window.SUBJECTS.push({
   short:"Español",
   emoji:"🇪🇸",
   tagline:"A1 pod egzamin: powtórka z kolokwiów + nowy materiał (sklepy, pogoda, gerundio, droga, podróże).",
-  accent:"linear-gradient(135deg,#c60b1e,#ffc400,#c60b1e)",
-  accent2:"#ffc400",
+  accent:"#FFC043", accentDark:"#B3820E", onAccent:"#241800",
+  accent2:"#FFC043",
   lang:true,
   grading:{pass:50,examMin:20,scale:[[90,"5 / bdb"],[80,"4,5"],[70,"4 / db"],[60,"3,5"],[50,"3 / dst"]],failLabel:"2 — niezaliczone"},
   info:`

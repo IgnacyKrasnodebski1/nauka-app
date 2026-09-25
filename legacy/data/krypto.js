@@ -9,8 +9,8 @@ window.SUBJECTS.push({
   short:"Krypto",
   emoji:"₿",
   tagline:"Blockchain, konsensus, kryptografia, kryptoaktywa, rynek, stablecoiny — z perspektywy banku.",
-  accent:"linear-gradient(135deg,#f7931a,#a855f7,#22d3ee)",
-  accent2:"#f7931a",
+  accent:"#FFA023", accentDark:"#B36A08", onAccent:"#201202",
+  accent2:"#FFA023",
   grading:{pass:50,examMin:20,scale:[[90,"5 / bdb"],[80,"4,5"],[70,"4 / db"],[60,"3,5"],[50,"3 / dst"]],failLabel:"2 — niezaliczone"},
   info:`
     <div class="zbox"><h3>⚠️ Zakres testu</h3>

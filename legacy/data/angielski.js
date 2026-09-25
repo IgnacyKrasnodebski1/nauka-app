@@ -11,8 +11,8 @@ window.SUBJECTS.push({
   short:"English",
   emoji:"🇬🇧",
   tagline:"Business Partner B2 — Unit 3 Finance + Unit 4 Digital Business + tryby warunkowe. Słówka 1:1 z książki.",
-  accent:"linear-gradient(135deg,#1e3a8a,#3b82f6,#06b6d4)",
-  accent2:"#3b82f6",
+  accent:"#22D3EE", accentDark:"#108CA1", onAccent:"#04232B",
+  accent2:"#22D3EE",
   lang:true,
   grading:{pass:50,examMin:20,scale:[[90,"5 / bdb"],[80,"4,5"],[70,"4 / db"],[60,"3,5"],[50,"3 / dst"]],failLabel:"2 — niezaliczone"},
   info:`

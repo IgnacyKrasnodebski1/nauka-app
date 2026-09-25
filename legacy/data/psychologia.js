@@ -11,8 +11,8 @@ window.SUBJECTS.push({
   short:"Psychologia",
   emoji:"🧠",
   tagline:"Nurty psychologiczne, wpływ społeczny, stereotypy, reguły Cialdiniego i psychologia grupy.",
-  accent:"linear-gradient(135deg,#0f766e,#14b8a6,#84cc16)",
-  accent2:"#14b8a6",
+  accent:"#A855F7", accentDark:"#6B2AA8", onAccent:"#1A0A2A",
+  accent2:"#A855F7",
   grading:{pass:50,examMin:20,scale:[[90,"5"],[80,"4,5"],[70,"4"],[60,"3,5"],[50,"3"]],failLabel:"2 — niezaliczone"},
   info:`
     <div class="zbox"><h3>Co jest w kursie</h3>

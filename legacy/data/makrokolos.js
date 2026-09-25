@@ -10,8 +10,8 @@ window.SUBJECTS.push({
   short:"Makro-kolos",
   emoji:"🧮",
   tagline:"5 typów pytań z kolosa: realne PKB, inflacja, aktywność zawodowa, model Solowa, krzyż keynesowski.",
-  accent:"linear-gradient(135deg,#0ea5e9,#1ed760,#0ea5e9)",
-  accent2:"#1ed760",
+  accent:"#22D3EE", accentDark:"#108CA1", onAccent:"#04232B",
+  accent2:"#22D3EE",
   grading:{pass:50,examMin:15,scale:[[90,"5"],[80,"4,5"],[70,"4"],[60,"3,5"],[50,"3"]],failLabel:"2 — niezaliczone"},
   info:`
     <div class="zbox"><h3>🎯 Po co to</h3>

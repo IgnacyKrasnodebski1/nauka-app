@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Ustawienia</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#B4FF3A;text-decoration:none}
+a:hover{color:#CBFF6E}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <div class="a-float" style="position: absolute; top: -110px; left: -90px; width: 250px; height: 250px; border-radius: 50%; background: #1E2A10;"></div>
+
+  <div style="position: relative; z-index: 1; padding: 54px 18px 0; display: flex; align-items: center; gap: 12px;">
+    <a href="Profile.html" aria-label="Wróć do profilu" style="width: 40px; height: 40px; border-radius: 50%; background: #1B1836; border: 2px solid #2C2850; display: flex; align-items: center; justify-content: center; flex: none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B95C9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+    <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.4px;">Ustawienia</div>
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 18px 18px 0; display: flex; flex-direction: column; gap: 13px; flex-grow: 1; min-height: 0;">
+
+    <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Nauka</div>
+
+    <div class="a-up d1" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 22px; padding: 4px 15px; box-shadow: 0 4px 0 #14122A;">
+      <a href="Onboarding.html" style="display: flex; align-items: center; gap: 12px; padding: 13px 0; color: #F4F2FF;">
+        <span style="flex-grow: 1; font-size: 14px; font-weight: 700;">Cel dzienny</span>
+        <span style="font-size: 13px; font-weight: 800; color: #B4FF3A;">100 XP</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4E4778" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+      <div style="height: 2px; background: #241F45;"></div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
+        <div style="flex-grow: 1;">
+          <div style="font-size: 14px; font-weight: 700;">Tryb bez presji</div>
+          <div style="font-size: 11.5px; font-weight: 600; color: #6E67A8; margin-top: 2px;">wyłącza życia i limity</div>
+        </div>
+        <div style="width: 48px; height: 28px; border-radius: 999px; background: #241F45; padding: 3px; box-sizing: border-box; display: flex; justify-content: flex-start; flex: none;"><div style="width: 22px; height: 22px; border-radius: 50%; background: #4E4778;"></div></div>
+      </div>
+      <div style="height: 2px; background: #241F45;"></div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
+        <div style="flex-grow: 1;">
+          <div style="font-size: 14px; font-weight: 700;">Dźwięk i wibracje</div>
+        </div>
+        <div style="width: 48px; height: 28px; border-radius: 999px; background: #B4FF3A; padding: 3px; box-sizing: border-box; display: flex; justify-content: flex-end; flex: none;"><div style="width: 22px; height: 22px; border-radius: 50%; background: #14210A;"></div></div>
+      </div>
+      <div style="height: 2px; background: #241F45;"></div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
+        <div style="flex-grow: 1;">
+          <div style="font-size: 14px; font-weight: 700;">Ogranicz animacje</div>
+          <div style="font-size: 11.5px; font-weight: 600; color: #6E67A8; margin-top: 2px;">idzie za ustawieniem telefonu</div>
+        </div>
+        <div style="width: 48px; height: 28px; border-radius: 999px; background: #241F45; padding: 3px; box-sizing: border-box; display: flex; justify-content: flex-start; flex: none;"><div style="width: 22px; height: 22px; border-radius: 50%; background: #4E4778;"></div></div>
+      </div>
+    </div>
+
+    <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Powiadomienia</div>
+
+    <div class="a-up d2" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 22px; padding: 4px 15px; box-shadow: 0 4px 0 #14122A;">
+      <div style="display: flex; align-items: center; gap: 12px; padding: 13px 0;">
+        <span style="flex-grow: 1; font-size: 14px; font-weight: 700;">Przypomnienie o nauce</span>
+        <span style="font-size: 13px; font-weight: 800; color: #9B95C9;">19:30</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4E4778" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </div>
+      <div style="height: 2px; background: #241F45;"></div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
+        <div style="flex-grow: 1;">
+          <div style="font-size: 14px; font-weight: 700;">Ratunek serii</div>
+          <div style="font-size: 11.5px; font-weight: 600; color: #6E67A8; margin-top: 2px;">ping o 21:00, jeśli cel niezrobiony</div>
+        </div>
+        <div style="width: 48px; height: 28px; border-radius: 999px; background: #B4FF3A; padding: 3px; box-sizing: border-box; display: flex; justify-content: flex-end; flex: none;"><div style="width: 22px; height: 22px; border-radius: 50%; background: #14210A;"></div></div>
+      </div>
+      <div style="height: 2px; background: #241F45;"></div>
+      <div style="display: flex; align-items: center; gap: 12px; padding: 12px 0;">
+        <span style="flex-grow: 1; font-size: 14px; font-weight: 700;">Wyniki ligi</span>
+        <div style="width: 48px; height: 28px; border-radius: 999px; background: #241F45; padding: 3px; box-sizing: border-box; display: flex; justify-content: flex-start; flex: none;"><div style="width: 22px; height: 22px; border-radius: 50%; background: #4E4778;"></div></div>
+      </div>
+    </div>
+
+    <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Przedmioty</div>
+
+    <div class="a-up d3" style="background: #1B1836; border: 2px solid #2C2850; border-radius: 22px; padding: 4px 15px; box-shadow: 0 4px 0 #14122A;">
+      <a href="SubjectReady.html" style="display: flex; align-items: center; gap: 12px; padding: 12px 0; color: #F4F2FF;">
+        <div style="width: 32px; height: 32px; border-radius: 11px; background: #FF2E93; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 15px; font-weight: 800; color: #200410;">M</span></div>
+        <span style="flex-grow: 1; font-size: 14px; font-weight: 700;">Makro</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4E4778" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+      <div style="height: 2px; background: #241F45;"></div>
+      <a href="SubjectReady.html" style="display: flex; align-items: center; gap: 12px; padding: 12px 0; color: #F4F2FF;">
+        <div style="width: 32px; height: 32px; border-radius: 11px; background: #FFA023; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 15px; font-weight: 800; color: #201202;">&#8383;</span></div>
+        <span style="flex-grow: 1; font-size: 14px; font-weight: 700;">Krypto</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4E4778" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+      </a>
+      <div style="height: 2px; background: #241F45;"></div>
+      <a href="AddSubject.html" style="display: flex; align-items: center; gap: 12px; padding: 13px 0; color: #B4FF3A;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B4FF3A" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+        <span style="flex-grow: 1; font-size: 14px; font-weight: 800;">Dodaj przedmiot</span>
+      </a>
+    </div>
+
+    <div class="a-up d4" style="display: flex; align-items: center; gap: 12px; padding: 4px 4px;">
+      <span style="font-size: 12px; font-weight: 600; color: #4E4778;">Nauka 2.0 · wersja 2.0.1</span>
+      <span style="flex-grow: 1;"></span>
+      <a href="Main.html" style="font-size: 12.5px; font-weight: 800; color: #FF8FA3;">Wyloguj</a>
+    </div>
+
+  </div>
+
+</div>
+
+</body>
+</html>

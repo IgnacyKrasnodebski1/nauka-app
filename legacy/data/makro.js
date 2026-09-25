@@ -10,8 +10,8 @@ window.SUBJECTS.push({
   short:"Makro",
   emoji:"📊",
   tagline:"Zrównoważony rozwój, doktryny, fiskalna, ESG, praca, innowacje + behawioralka.",
-  accent:"linear-gradient(135deg,#ff2d95,#a855f7,#22d3ee)",
-  accent2:"#22d3ee",
+  accent:"#FF2E93", accentDark:"#B01460", onAccent:"#200410",
+  accent2:"#FF2E93",
   grading:{pass:50,examMin:20,scale:[[98,"5,5"],[90,"5"],[80,"4,5"],[70,"4"],[60,"3,5"],[50,"3"]],failLabel:"2 — niezaliczone"},
   info:`
     <div class="zbox"><h3>Jak liczy się ocena</h3>

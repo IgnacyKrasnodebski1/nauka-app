@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Liga tygodniowa</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#B4FF3A;text-decoration:none}
+a:hover{color:#CBFF6E}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <div class="a-float" style="position: absolute; top: 40px; left: 50%; margin-left: -150px; width: 300px; height: 300px; border-radius: 50%; background: #0E2430;"></div>
+
+  <div style="position: relative; z-index: 1; padding: 54px 18px 0; display: flex; align-items: center; gap: 12px;">
+    <a href="Main.html" aria-label="Wróć" style="width: 40px; height: 40px; border-radius: 50%; background: #1B1836; border: 2px solid #2C2850; display: flex; align-items: center; justify-content: center; flex: none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B95C9" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </a>
+    <div style="flex-grow: 1; font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 18px; font-weight: 800; letter-spacing: -0.4px;">Liga tygodniowa</div>
+    <a href="Friends.html" aria-label="Znajomi" style="width: 40px; height: 40px; border-radius: 50%; background: #1B1836; border: 2px solid #2C2850; display: flex; align-items: center; justify-content: center; flex: none;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#9B95C9" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.4"/><path d="M3 20c0-3.4 2.8-5.2 6-5.2s6 1.8 6 5.2"/><path d="M16 5.2a3.4 3.4 0 0 1 0 5.6M18 14.4c2 .7 3 2.3 3 5.6"/></svg>
+    </a>
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 14px 18px 0; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+    <svg class="a-sway" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#22D3EE" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M7 5H4v2a3 3 0 0 0 3 3M17 5h3v2a3 3 0 0 1-3 3"/><path d="M12 14v4M9 20h6"/></svg>
+    <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 26px; font-weight: 800; letter-spacing: -0.8px; color: #7EE8FA;">Dywizja Szmaragd</div>
+    <div class="a-blink" style="font-size: 12.5px; font-weight: 700; color: #9B95C9;">kończy się za 2 dni 4 godziny</div>
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 16px 18px 0; display: flex; flex-direction: column; gap: 7px; flex-grow: 1; min-height: 0;">
+
+    <div style="font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #7FA352;">Awans</div>
+
+    <div class="a-up d1" style="display: flex; align-items: center; gap: 12px; background: #1F2A12; border: 2px solid #4E6B24; border-radius: 16px; padding: 10px 13px;">
+      <span style="width: 24px; font-size: 14px; font-weight: 800; color: #B4FF3A;">1</span>
+      <div style="width: 34px; height: 34px; border-radius: 12px; background: #FF2E93; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 13px; font-weight: 800; color: #200410;">KW</span></div>
+      <span style="flex-grow: 1; font-size: 13.5px; font-weight: 700; color: #E8FFC7;">Kamila W.</span>
+      <span style="font-size: 13px; font-weight: 800; color: #A8C98A;">1 840</span>
+    </div>
+
+    <div class="a-up d2" style="display: flex; align-items: center; gap: 12px; background: #1F2A12; border: 2px solid #4E6B24; border-radius: 16px; padding: 10px 13px;">
+      <span style="width: 24px; font-size: 14px; font-weight: 800; color: #B4FF3A;">2</span>
+      <div style="width: 34px; height: 34px; border-radius: 12px; background: #22D3EE; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 13px; font-weight: 800; color: #04232B;">TM</span></div>
+      <span style="flex-grow: 1; font-size: 13.5px; font-weight: 700; color: #E8FFC7;">Tomek M.</span>
+      <span style="font-size: 13px; font-weight: 800; color: #A8C98A;">1 605</span>
+    </div>
+
+    <div class="a-pop d3" style="display: flex; align-items: center; gap: 12px; background: #241536; border: 2px solid #A855F7; border-radius: 18px; padding: 13px; box-shadow: 0 5px 0 #12081C;">
+      <span style="width: 24px; font-size: 16px; font-weight: 800; color: #D6B4F5;">3</span>
+      <div style="width: 38px; height: 38px; border-radius: 13px; background: #B4FF3A; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 14px; font-weight: 800; color: #14210A;">IK</span></div>
+      <div style="flex-grow: 1; min-width: 0;">
+        <div style="font-size: 14.5px; font-weight: 800; color: #F4F2FF;">Ty</div>
+        <div style="font-size: 11.5px; font-weight: 700; color: #C0A8D8; margin-top: 2px;">115 XP do awansu</div>
+      </div>
+      <span style="font-size: 15px; font-weight: 800; color: #F4F2FF;">1 490</span>
+    </div>
+
+    <div class="a-up d4" style="display: flex; align-items: center; gap: 12px; background: #1B1836; border: 2px solid #2C2850; border-radius: 16px; padding: 10px 13px;">
+      <span style="width: 24px; font-size: 14px; font-weight: 800; color: #9B95C9;">4</span>
+      <div style="width: 34px; height: 34px; border-radius: 12px; background: #FFA023; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 13px; font-weight: 800; color: #201202;">PZ</span></div>
+      <span style="flex-grow: 1; font-size: 13.5px; font-weight: 700; color: #D6D2F0;">Patryk Z.</span>
+      <span style="font-size: 13px; font-weight: 800; color: #9B95C9;">1 320</span>
+    </div>
+
+    <div class="a-up d4" style="display: flex; align-items: center; gap: 12px; background: #1B1836; border: 2px solid #2C2850; border-radius: 16px; padding: 10px 13px;">
+      <span style="width: 24px; font-size: 14px; font-weight: 800; color: #9B95C9;">5</span>
+      <div style="width: 34px; height: 34px; border-radius: 12px; background: #A855F7; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 13px; font-weight: 800; color: #1A0A2A;">AN</span></div>
+      <span style="flex-grow: 1; font-size: 13.5px; font-weight: 700; color: #D6D2F0;">Ania N.</span>
+      <span style="font-size: 13px; font-weight: 800; color: #9B95C9;">980</span>
+    </div>
+
+    <div class="a-up d5" style="display: flex; align-items: center; gap: 12px; background: #1B1836; border: 2px solid #2C2850; border-radius: 16px; padding: 10px 13px;">
+      <span style="width: 24px; font-size: 14px; font-weight: 800; color: #9B95C9;">6</span>
+      <div style="width: 34px; height: 34px; border-radius: 12px; background: #3E3870; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 13px; font-weight: 800; color: #D6D2F0;">MJ</span></div>
+      <span style="flex-grow: 1; font-size: 13.5px; font-weight: 700; color: #D6D2F0;">Marek J.</span>
+      <span style="font-size: 13px; font-weight: 800; color: #9B95C9;">640</span>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px;">
+      <div style="flex-grow: 1; height: 2px; background: #5C1F2E;"></div>
+      <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #FF8FA3;">Strefa spadku</span>
+      <div style="flex-grow: 1; height: 2px; background: #5C1F2E;"></div>
+    </div>
+
+    <div class="a-up d6" style="display: flex; align-items: center; gap: 12px; background: #2A1017; border: 2px solid #5C1F2E; border-radius: 16px; padding: 10px 13px;">
+      <span style="width: 24px; font-size: 14px; font-weight: 800; color: #FF8FA3;">7</span>
+      <div style="width: 34px; height: 34px; border-radius: 12px; background: #5C1F2E; display: flex; align-items: center; justify-content: center; flex: none;"><span style="font-size: 13px; font-weight: 800; color: #FFD4DC;">JS</span></div>
+      <span style="flex-grow: 1; font-size: 13.5px; font-weight: 700; color: #FFD4DC;">Julia S.</span>
+      <span style="font-size: 13px; font-weight: 800; color: #FF8FA3;">310</span>
+    </div>
+
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 14px 18px 26px;">
+    <a href="Path.html" class="a-glow" style="height: 58px; border-radius: 18px; background: #22D3EE; box-shadow: 0 5px 0 #108CA1; display: flex; align-items: center; justify-content: center; color: #04232B; font-size: 15px; font-weight: 800; letter-spacing: 1.2px;">ZBIERZ XP</a>
+  </div>
+
+</div>
+
+</body>
+</html>

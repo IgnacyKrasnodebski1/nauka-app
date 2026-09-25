@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Zadanie — przypisz do kategorii</title>
+
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&amp;family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap">
+<style>
+body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;background:#0E0C1C;color:#F4F2FF}
+a{color:#B4FF3A;text-decoration:none}
+a:hover{color:#CBFF6E}
+</style>
+<style>
+@keyframes dcFloat{0%,100%{transform:translate3d(0,0,0)}50%{transform:translate3d(0,-16px,0)}}
+@keyframes dcBob{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes dcPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+@keyframes dcBeat{0%,100%{transform:scale(1)}18%{transform:scale(1.28)}36%{transform:scale(1)}}
+@keyframes dcSpin{to{transform:rotate(360deg)}}
+@keyframes dcGrow{from{width:0}}
+@keyframes dcRise{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@keyframes dcPop{0%{transform:scale(0.2);opacity:0}70%{transform:scale(1.16);opacity:1}100%{transform:scale(1);opacity:1}}
+@keyframes dcFall{0%{transform:translateY(-160px) rotate(0deg);opacity:0}12%{opacity:1}88%{opacity:1}100%{transform:translateY(430px) rotate(460deg);opacity:0}}
+@keyframes dcBlink{0%,100%{opacity:1}50%{opacity:.22}}
+@keyframes dcDrain{from{width:88%}to{width:4%}}
+@keyframes dcSway{0%,100%{transform:rotate(-1.4deg)}50%{transform:rotate(1.4deg)}}
+@keyframes dcGlow{0%,100%{filter:brightness(1)}50%{filter:brightness(1.14)}}
+@keyframes dcFadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes dcShake{0%,100%{transform:translateX(0)}18%{transform:translateX(-9px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(3px)}}
+.a-float{animation:dcFloat 9s ease-in-out infinite}
+.a-bob{animation:dcBob 1.6s ease-in-out infinite}
+.a-pulse{animation:dcPulse 1.5s ease-in-out infinite}
+.a-beat{animation:dcBeat 1.9s ease-in-out infinite}
+.a-spin{animation:dcSpin 2.8s linear infinite}
+.a-grow{animation:dcGrow 1.2s cubic-bezier(.2,.9,.3,1) both}
+.a-rise{animation:dcRise .55s cubic-bezier(.2,.9,.3,1) both}
+.a-pop{animation:dcPop .6s cubic-bezier(.2,1.5,.4,1) both}
+.a-fall{animation:dcFall 3.4s linear infinite}
+.a-blink{animation:dcBlink 1.2s ease-in-out infinite}
+.a-drain{animation:dcDrain 14s linear infinite}
+.a-sway{animation:dcSway 4.2s ease-in-out infinite}
+.a-glow{animation:dcGlow 2.2s ease-in-out infinite}
+.a-up{animation:dcFadeUp .55s ease-out both}
+.a-shake{animation:dcShake .55s ease-in-out .3s both}
+.d1{animation-delay:.12s}.d2{animation-delay:.26s}.d3{animation-delay:.4s}
+.d4{animation-delay:.55s}.d5{animation-delay:.72s}.d6{animation-delay:.9s}
+@media (prefers-reduced-motion: reduce){*{animation:none !important}}
+</style>
+</head>
+<body>
+
+
+<div style="width: 390px; height: 844px; box-sizing: border-box; background: #0E0C1C; position: relative; overflow: hidden; display: flex; flex-direction: column;">
+
+  <div style="position: relative; z-index: 1; padding: 52px 18px 0; display: flex; align-items: center; gap: 12px;">
+    <a href="Path.html" aria-label="Zamknij zadanie" style="width: 40px; height: 40px; border-radius: 50%; background: #1B1836; border: 2px solid #2C2850; display: flex; align-items: center; justify-content: center; flex: none;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9B95C9" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </a>
+    <div style="flex-grow: 1; height: 12px; border-radius: 999px; background: #241F45; overflow: hidden;"><div class="a-grow" style="width: 80%; height: 100%; border-radius: 999px; background: #B4FF3A;"></div></div>
+    <div style="display: flex; align-items: center; gap: 5px; flex: none;">
+      <svg class="a-beat" width="18" height="18" viewBox="0 0 24 24" fill="#FF4767" aria-hidden="true"><path d="M12 20.5S4 15.6 4 10.4A4.4 4.4 0 0 1 12 7.9a4.4 4.4 0 0 1 8 2.5c0 5.2-8 10.1-8 10.1z"/></svg>
+      <span style="font-size: 15px; font-weight: 800; color: #FF8FA3;">5</span>
+    </div>
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 22px 18px 0; display: flex; flex-direction: column; gap: 16px; flex-grow: 1; min-height: 0;">
+
+    <div>
+      <span style="padding: 6px 12px; border-radius: 999px; background: #1F2A12; color: #B4FF3A; font-size: 10.5px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase;">Przypisz do kategorii</span>
+      <div style="font-family: 'Bricolage Grotesque', system-ui, sans-serif; font-size: 24px; font-weight: 800; letter-spacing: -0.8px; line-height: 1.15; margin-top: 12px;">Który to instrument?</div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px;">
+
+      <div style="background: #1B1836; border: 2px solid #2C2850; border-radius: 20px; padding: 13px; min-height: 118px; display: flex; flex-direction: column; gap: 9px;">
+        <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: #6E67A8;">Ekonomiczne</div>
+        <div style="padding: 9px 12px; border-radius: 13px; background: #1F2A12; border: 2px solid #4E6B24; color: #D9F5BC; font-size: 12.5px; font-weight: 800;">zasiłki</div>
+        <div style="flex-grow: 1; border-radius: 13px; border: 2px dashed #3E3870;"></div>
+      </div>
+
+      <div style="background: #1B1836; border: 2px solid #2C2850; border-radius: 20px; padding: 13px; min-height: 118px; display: flex; flex-direction: column; gap: 9px;">
+        <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: #6E67A8;">Prawne</div>
+        <div style="padding: 9px 12px; border-radius: 13px; background: #1F2A12; border: 2px solid #4E6B24; color: #D9F5BC; font-size: 12.5px; font-weight: 800;">Kodeks pracy</div>
+        <div style="flex-grow: 1; border-radius: 13px; border: 2px dashed #3E3870;"></div>
+      </div>
+
+      <div class="a-glow" style="background: #241536; border: 2px solid #A855F7; border-radius: 20px; padding: 13px; min-height: 118px; display: flex; flex-direction: column; gap: 9px;">
+        <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: #D6B4F5;">Informacyjne</div>
+        <div class="a-blink" style="flex-grow: 1; border-radius: 13px; border: 2px dashed #A855F7; display: flex; align-items: center; justify-content: center;">
+          <span style="font-size: 12px; font-weight: 800; color: #D6B4F5;">upuść tutaj</span>
+        </div>
+      </div>
+
+      <div style="background: #1B1836; border: 2px solid #2C2850; border-radius: 20px; padding: 13px; min-height: 118px; display: flex; flex-direction: column; gap: 9px;">
+        <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.1px; text-transform: uppercase; color: #6E67A8;">Kadrowe</div>
+        <div style="flex-grow: 1; border-radius: 13px; border: 2px dashed #3E3870;"></div>
+      </div>
+
+    </div>
+
+    <div style="height: 2px; background: #241F45;"></div>
+
+    <div>
+      <div style="font-size: 11px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; color: #6E67A8;">Zostało 3</div>
+      <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 13px;">
+        <div class="a-bob" style="padding: 13px 17px; border-radius: 16px; background: #A855F7; box-shadow: 0 8px 0 #12081C; color: #1A0A2A; font-size: 14px; font-weight: 800;">kampania społeczna</div>
+        <button type="button" style="cursor: pointer; font-family: inherit; padding: 13px 17px; border-radius: 16px; background: #1B1836; border: 2px solid #2C2850; box-shadow: 0 4px 0 #14122A; color: #F4F2FF; font-size: 14px; font-weight: 800;">pracownik socjalny</button>
+        <button type="button" style="cursor: pointer; font-family: inherit; padding: 13px 17px; border-radius: 16px; background: #1B1836; border: 2px solid #2C2850; box-shadow: 0 4px 0 #14122A; color: #F4F2FF; font-size: 14px; font-weight: 800;">ulga podatkowa</button>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="position: relative; z-index: 1; padding: 0 18px 26px;">
+    <a href="TaskTrueFalse.html" style="height: 58px; border-radius: 18px; background: #201C3E; display: flex; align-items: center; justify-content: center; color: #5C568F; font-size: 15px; font-weight: 800; letter-spacing: 1.2px;">PRZYPISZ WSZYSTKIE</a>
+  </div>
+
+</div>
+
+</body>
+</html>
