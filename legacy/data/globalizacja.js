@@ -8,6 +8,7 @@ window.SUBJECTS.push({
   id:"globalizacja",
   name:"Globalizacja i regionalizacja",
   short:"Global",
+  level:"studia",              // krok 9: etap (katalog) — opcjonalne
   emoji:"🌍",
   tagline:"Fale globalizacji, teorie (liberalizm/realizm/krytycyzm), global governance, efekt brukselski, konkurencyjność, kultura, regionalizacja.",
   accent:"#B4FF3A", accentDark:"#7FC400", onAccent:"#14210A",

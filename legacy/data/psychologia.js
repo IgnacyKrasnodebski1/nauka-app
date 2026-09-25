@@ -9,6 +9,7 @@ window.SUBJECTS.push({
   id:"psychologia",
   name:"Podstawy psychologii",
   short:"Psychologia",
+  level:"studia",              // krok 9: etap (katalog) — opcjonalne
   emoji:"🧠",
   tagline:"Nurty psychologiczne, wpływ społeczny, stereotypy, reguły Cialdiniego i psychologia grupy.",
   accent:"#A855F7", accentDark:"#6B2AA8", onAccent:"#1A0A2A",

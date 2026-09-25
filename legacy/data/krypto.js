@@ -7,6 +7,7 @@ window.SUBJECTS.push({
   id:"krypto",
   name:"Wprowadzenie do krypto i NFT",
   short:"Krypto",
+  level:"studia",              // krok 9: etap (katalog) — opcjonalne
   emoji:"₿",
   tagline:"Blockchain, konsensus, kryptografia, kryptoaktywa, rynek, stablecoiny — z perspektywy banku.",
   accent:"#FFA023", accentDark:"#B36A08", onAccent:"#201202",

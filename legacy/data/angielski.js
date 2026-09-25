@@ -9,6 +9,7 @@ window.SUBJECTS.push({
   id:"angielski",
   name:"Angielski B2+ (Unit 3 & 4)",
   short:"English",
+  level:"liceum",              // krok 9: etap (katalog) — opcjonalne
   emoji:"🇬🇧",
   tagline:"Business Partner B2 — Unit 3 Finance + Unit 4 Digital Business + tryby warunkowe. Słówka 1:1 z książki.",
   accent:"#22D3EE", accentDark:"#108CA1", onAccent:"#04232B",

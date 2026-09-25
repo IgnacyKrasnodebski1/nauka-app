@@ -7,6 +7,7 @@ window.SUBJECTS.push({
   id:"hiszpanski",
   name:"Hiszpański (egzamin 21.06)",
   short:"Español",
+  level:"liceum",              // krok 9: etap (katalog) — opcjonalne
   emoji:"🇪🇸",
   tagline:"A1 pod egzamin: powtórka z kolokwiów + nowy materiał (sklepy, pogoda, gerundio, droga, podróże).",
   accent:"#FFC043", accentDark:"#B3820E", onAccent:"#241800",

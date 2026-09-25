@@ -8,6 +8,7 @@ window.SUBJECTS.push({
   id:"makro",
   name:"Polityka makroekonomiczna",
   short:"Makro",
+  level:"studia",              // krok 9: etap (katalog) — opcjonalne
   emoji:"📊",
   tagline:"Zrównoważony rozwój, doktryny, fiskalna, ESG, praca, innowacje + behawioralka.",
   accent:"#FF2E93", accentDark:"#B01460", onAccent:"#200410",

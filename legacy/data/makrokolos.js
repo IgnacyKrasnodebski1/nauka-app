@@ -8,6 +8,7 @@ window.SUBJECTS.push({
   id:"makrokolos",
   name:"Makroekonomia — kolos (5 pytań)",
   short:"Makro-kolos",
+  level:"studia",              // krok 9: etap (katalog) — opcjonalne
   emoji:"🧮",
   tagline:"5 typów pytań z kolosa: realne PKB, inflacja, aktywność zawodowa, model Solowa, krzyż keynesowski.",
   accent:"#22D3EE", accentDark:"#108CA1", onAccent:"#04232B",
