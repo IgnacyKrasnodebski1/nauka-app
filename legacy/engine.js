@@ -2,6 +2,7 @@
    NAUKA — silnik wieloprzedmiotowej platformy do nauki
    Dane przedmiotów rejestrują się w window.SUBJECTS (patrz data/*.js)
    Tryby: Ścieżka (Duolingo) + Fiszki + Quiz + Egzamin + Info
+   Widoki główne (krok 3): Dziś (plan dnia) · Przedmioty · Profil · Ustawienia · Seria
    ============================================================ */
 (function(){
 "use strict";
@@ -17,7 +18,8 @@ function subjState(id){ if(!PROGRESS[id])PROGRESS[id]={xp:0,levels:{}}; return P
 const MKEY='nauka_meta_v1';
 let META=(()=>{try{return JSON.parse(STORE.getItem(MKEY)||'{}');}catch(e){return {};}})();
 function saveMeta(){try{STORE.setItem(MKEY,JSON.stringify(META));}catch(e){}}
-function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function dstr(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function todayStr(){return dstr(new Date());}
 function dayDiff(a,b){const pa=a.split('-').map(Number),pb=b.split('-').map(Number);return Math.round((Date.UTC(pb[0],pb[1]-1,pb[2])-Date.UTC(pa[0],pa[1]-1,pa[2]))/86400000);}
 /* aktualna „żywa” seria do wyświetlenia (0 jeśli wygasła) */
 function streakDisplay(){ if(!META.lastDay)return 0; const d=dayDiff(META.lastDay,todayStr()); return (d===0||d===1)?(META.streak||0):0; }
@@ -78,7 +80,8 @@ const ICONS={
   link:{d:'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5'},
   map:{d:'M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14',w:2.4},
   grid:{d:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="4" y="13" width="7" height="7" rx="2"/><rect x="13" y="13" width="7" height="7" rx="2"/>',w:2.4},
-  flag:{d:'M5 21V4M5 4h12l-2 4 2 4H5'}
+  flag:{d:'M5 21V4M5 4h12l-2 4 2 4H5'},
+  upload:{d:'M12 16V4M8 8l4-4 4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3',w:2.4}
 };
 function icon(name,o){
   o=o||{};const ic=ICONS[name]||ICONS.alert;
@@ -107,7 +110,7 @@ const LBL={
 const TOAST_TONE={check:'acid',flame:'flame',close:'red','x-circle':'red',lock:'muted',info:'cyan',trophy:'gold',bolt:'gold'};
 
 function toast(t,ic){const box=document.getElementById('toast');if(!box)return;box.innerHTML=ic?icon(ic,{size:16,cls:'ic-'+(TOAST_TONE[ic]||'acid')}):'';const s=document.createElement('span');s.textContent=t;box.appendChild(s);box.classList.add('show');clearTimeout(box._t);box._t=setTimeout(()=>box.classList.remove('show'),1500);}
-function addXP(id,n){const s=subjState(id);s.xp+=n;saveProgress();const ext=touchStreak();updateXP();updateStreakUI();if(ext&&META.streak>1)setTimeout(()=>toast('seria '+META.streak+' dni z rzędu!','flame'),1600);}
+function addXP(id,n){const s=subjState(id);s.xp+=n;const d=daily();d.xp+=n;saveProgress();const ext=touchStreak();updateXP();updateStreakUI();if(ext&&META.streak>1)setTimeout(()=>toast('seria '+META.streak+' dni z rzędu!','flame'),1600);}
 function updateXP(){const x=document.getElementById('xpNum');if(x&&current)x.textContent=subjState(current.id).xp;}
 function updateStreakUI(){const n=streakDisplay();document.querySelectorAll('[id="streakNum"]').forEach(e=>e.textContent=n);}
 
@@ -125,53 +128,331 @@ function applyTheme(s){
   set('--on-accent', s&&s.onAccent);
 }
 
-/* ============================================================ HOME */
-function renderHome(){
-  current=null;
-  applyTheme(null);
-  app.innerHTML='';
-  const top=el('div','topbar');
-  top.appendChild(el('div','logo',icon('book',{size:24,cls:'ic-acid'})+'<span class="g">NAUKA</span>'));
-  let totXP=Object.values(PROGRESS).reduce((a,s)=>a+(s.xp||0),0);
-  const pills=el('div','pills');
-  pills.appendChild(el('div','streak',`${icon('flame',{size:16,cls:'ic-flame a-beat'})}<span id="streakNum">${streakDisplay()}</span> <small>dni</small>`));
-  pills.appendChild(el('div','streak',`${icon('bolt',{size:16,cls:'ic-gold'})}<span>${totXP}</span> <small>xp</small>`));
-  top.appendChild(pills);
-  app.appendChild(top);
+/* ============================================================ KROK 3: „Dziś”, plan dnia, kafle, dolna nawigacja
+   Router widoków głównych: today (start) · subjects · profile · settings · streak.
+   Widok przedmiotu (renderSubject) zostaje bez nawigacji — ma własne zakładki i przycisk wstecz. */
+const VIEWS={today:renderToday,subjects:renderSubjects,profile:renderProfile,settings:renderSettings,streak:renderStreak};
+let view='today';
+function go(v){
+  view=VIEWS[v]?v:'today';
+  current=null;applyTheme(null);
+  try{clearInterval(cwInt);clearInterval(exInt);}catch(e){}
+  VIEWS[view]();
+}
+const renderHome=()=>go('today'); // stary punkt wejścia
 
-  const sc=el('div','screen active');const scroll=el('div','scroll');
-  const hero=el('div','hero');
-  hero.innerHTML='<h1>Wybierz przedmiot</h1><p>Ucz się w stylu gen-z: poziomy jak w Duolingo, fiszki, quizy i symulacja egzaminu. Wszystko z prezek z zajęć.</p>';
-  scroll.appendChild(hero);
+/* --- polskie daty i liczebniki --- */
+const DAYS=['Niedziela','Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota'],DAYS_S=['Nd','Pn','Wt','Śr','Cz','Pt','Sb'];
+const MONTHS=['stycznia','lutego','marca','kwietnia','maja','czerwca','lipca','sierpnia','września','października','listopada','grudnia'];
+function dateHeader(){const d=new Date();return DAYS[d.getDay()]+', '+d.getDate()+' '+MONTHS[d.getMonth()];}
+function pl(n,one,few,many){n=Math.abs(n);if(n===1)return one;const m10=n%10,m100=n%100;return (m10>=2&&m10<=4&&(m100<12||m100>14))?few:many;}
+function fmtNum(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ');}
+function totalXP(){return SUBJECTS.reduce((a,s)=>a+(((PROGRESS[s.id]||{}).xp)||0),0);} // nie Object.values — PROGRESS.daily też ma xp
+function hasProgress(s){const st=PROGRESS[s.id];return !!st&&(((st.xp||0)>0)||Object.values(st.levels||{}).some(l=>l&&l.done));}
+function applyMotion(){document.documentElement.classList.toggle('reduce-motion',!!META.reduceMotion);}
 
-  SUBJECTS.forEach(s=>{
+/* --- plan dnia: PROGRESS.daily = {date, goal, xp, tasks:[{id, done, need?, prog?}]} (DESIGN.md §4.3, ten sam klucz) --- */
+const REWARD={lesson:15,review:20,quiz:25,exam:40};
+function daily(){
+  const t=todayStr();let d=PROGRESS.daily;
+  if(!d||d.date!==t||!Array.isArray(d.tasks)){d=PROGRESS.daily={date:t,goal:100,xp:0,tasks:buildDailyTasks()};saveProgress();}
+  return d;
+}
+function buildDailyTasks(){
+  let subs=SUBJECTS.filter(hasProgress);
+  if(!subs.length)subs=SUBJECTS.slice(0,1);
+  subs=[...subs].sort((a,b)=>((PROGRESS[b.id]||{}).xp||0)-((PROGRESS[a.id]||{}).xp||0));
+  const tasks=[];
+  subs.forEach(s=>{
     const st=subjState(s.id);
-    const total=s.levels.length;
-    const done=s.levels.filter(l=>st.levels[l.id]&&st.levels[l.id].done).length;
-    const pct=total?Math.round(done/total*100):0;
-    const card=el('div','subjcard');
-    card.style.setProperty('--sa', s.accent);
-    card.innerHTML=`<div class="subjemoji mono" aria-hidden="true">${initial(s.short||s.name)}</div>
-      <div class="subjmeta">
-        <h3>${s.name}</h3>
-        <div class="sub">${s.tagline||''}</div>
-        <div class="subjprog"><div class="bar"><i style="width:${pct}%"></i></div><small>${done}/${total} poziomów</small></div>
-      </div><div class="chev">${icon('chevron-right',{size:22})}</div>`;
-    card.onclick=()=>openSubject(s.id);
-    scroll.appendChild(card);
+    const open=s.levels.find((l,i)=>levelUnlocked(s,i)&&!(st.levels[l.id]||{}).done);
+    if(open)tasks.push({id:s.id+':lesson:'+open.id,done:false});
+    const n=Math.min(12,allCards(s).length);
+    if(n)tasks.push({id:s.id+':review',done:false,need:n,prog:0});
+    const doneLv=[...s.levels].reverse().find(l=>(st.levels[l.id]||{}).done)||s.levels[0];
+    if(doneLv&&(doneLv.quiz||[]).length)tasks.push({id:s.id+':quiz:'+doneLv.id,done:false});
+    if(allQuiz(s).length>=5)tasks.push({id:s.id+':exam',done:false});
   });
-  const add=el('div','addcard');
-  add.innerHTML='<div class="subjemoji">'+icon('plus',{size:26,stroke:3})+'</div><div>Kolejny przedmiot?<br><span style="font-size:12.5px;font-weight:600">Dodaj plik w <b>data/</b> (patrz README) i pojawi się tutaj.</span></div>';
-  scroll.appendChild(add);
+  return tasks;
+}
+/* opis zadania z jego id (etykiety liczone z danych, więc w storage siedzi tylko id + done) */
+function taskInfo(t){
+  const parts=t.id.split(':');const sid=parts[0],kind=parts[1],lvId=parts[2];
+  const s=SUBJECTS.find(x=>x.id===sid);if(!s)return null;
+  const lv=lvId?s.levels.find(l=>l.id===lvId):null;
+  const short=s.short||s.name;const base={t,s,kind,reward:REWARD[kind]||0};
+  const openAt=(tab,setup)=>()=>openSubject(sid,tab,setup);
+  if(kind==='lesson'){if(!lv)return null;const nf=(lv.feed||[]).length,nq=(lv.quiz||[]).length;
+    return {...base,icon:'book',title:'Roladka — '+lv.title,sub:`${nf} ${pl(nf,'dawka','dawki','dawek')} · ${nq} ${pl(nq,'pytanie','pytania','pytań')} · +15`,go:openAt('path')};}
+  if(kind==='review'){const n=t.need||12,p=t.prog||0;
+    return {...base,icon:'cards',title:`Powtórka — ${n} ${pl(n,'fiszka','fiszki','fiszek')}`,sub:p?`${p} z ${n} przejrzane · +20`:`${short} · ${Math.max(1,Math.round(n/4))} min · +20`,go:openAt('fiszki')};}
+  if(kind==='quiz'){if(!lv)return null;const n=(lv.quiz||[]).length,m=Math.max(1,Math.round(n*0.5));
+    return {...base,icon:'question',title:'Quiz — '+lv.title,sub:`${n} ${pl(n,'pytanie','pytania','pytań')} · ${short} · ${m} min · +25`,
+      go:openAt('quiz',()=>{qState={subj:sid,lvl:lv.id,list:null,idx:0,score:0,answered:false};})};}
+  if(kind==='exam'){const N=Math.min(20,allQuiz(s).length);
+    return {...base,icon:'file',title:'Egzamin próbny',sub:`${N} ${pl(N,'pytanie','pytania','pytań')} · opcjonalnie · +40`,go:openAt('egzamin')};}
+  return null;
+}
+/* zaliczenie zadania: lesson (z id poziomu), quiz / exam / review (po przedmiocie); nagroda idzie przez addXP */
+function completeDaily(sid,kind,lvId){
+  const d=daily();const pre=sid+':'+kind;
+  const t=d.tasks.find(x=>!x.done&&(lvId?x.id===pre+':'+lvId:(x.id===pre||x.id.indexOf(pre+':')===0)));
+  if(!t)return false;
+  t.done=true;saveProgress();
+  const r=REWARD[kind]||0;if(r)addXP(sid,r);
+  setTimeout(()=>toast('plan dnia: +'+r+'xp','bolt'),3200);
+  return true;
+}
+function tickDaily(sid,kind,n){
+  const d=daily();const t=d.tasks.find(x=>!x.done&&x.id===sid+':'+kind);if(!t)return;
+  t.prog=(t.prog||0)+(n||1);
+  if(t.prog>=(t.need||1))completeDaily(sid,kind);else saveProgress();
+}
+
+/* --- wspólna skorupa widoków głównych: topbar + ekran + dolna nawigacja + toast --- */
+function renderNav(active){
+  const nav=el('nav','nav');nav.setAttribute('aria-label','Nawigacja');
+  [['today','home','Dziś'],['subjects','grid','Przedmioty'],['profile','user','Profil'],['settings','settings','Ustawienia']].forEach(([k,ic,lab])=>{
+    const b=el('button',k===active?'active':'',icon(ic,{size:24,stroke:2.4})+'<span>'+lab+'</span>');
+    if(k===active)b.setAttribute('aria-current','page');
+    b.onclick=()=>go(k);nav.appendChild(b);
+  });
+  return nav;
+}
+function shell(active,o){
+  o=o||{};app.innerHTML='';
+  if(o.blob)app.appendChild(el('div','blob a-float'+(o.blob===true?'':' '+o.blob)));
+  const top=el('div','topbar');
+  if(o.back){const b=el('button','backbtn',icon('back',{size:20,stroke:3}));b.setAttribute('aria-label','Wróć');b.onclick=o.back;top.appendChild(b);}
+  top.appendChild(el('div',o.title?'logo ttl':'logo brand',o.title||'NAUKA<span class="g">.</span>'));
+  if(o.pills!==false){
+    const pills=el('div','pills');
+    const st=el('button','streak',`${icon('flame',{size:16,cls:'ic-flame a-beat'})}<span id="streakNum">${streakDisplay()}</span> <small>dni</small>`);
+    st.setAttribute('aria-label','Seria dni');st.onclick=()=>go('streak');pills.appendChild(st);
+    pills.appendChild(el('div','streak',`${icon('bolt',{size:16,cls:'ic-gold'})}<span>${fmtNum(totalXP())}</span> <small>xp</small>`));
+    top.appendChild(pills);
+  }
+  if(o.right)top.appendChild(o.right);
+  app.appendChild(top);
+  const sc=el('div','screen active');
+  const scroll=el('div','scroll'+(o.cls?' '+o.cls:''));
   sc.appendChild(scroll);app.appendChild(sc);
+  if(active)app.appendChild(renderNav(active));
+  app.appendChild(el('div','toast',''));app.lastChild.id='toast';
+  return scroll;
+}
+function addHint(){return '<div class="subjemoji">'+icon('plus',{size:26,stroke:3})+'</div><div>Kolejny przedmiot?<br><span class="hint">Dodaj plik w <b>data/</b> (patrz README) — pojawi się tutaj. Kreator przedmiotów dojdzie w kolejnym kroku.</span></div>';}
+function toggleAddHint(after){
+  const n=after.nextElementSibling;
+  if(n&&n.classList.contains('addcard')){n.remove();return;}
+  const h=el('div','addcard a-up',addHint());
+  after.insertAdjacentElement('afterend',h);
+  try{h.scrollIntoView({block:'nearest',behavior:'smooth'});}catch(e){}
+}
+/* siatka kafli przedmiotów (Main.html): tint przedmiotu, monogram na pełnym akcencie, pasek poziomów */
+function subjectGrid(list,withAdd){
+  const grid=el('div','grid2');
+  list.forEach((s,i)=>{
+    const st=subjState(s.id);const total=s.levels.length;
+    const done=s.levels.filter(l=>(st.levels[l.id]||{}).done).length;const pct=total?Math.round(done/total*100):0;
+    const t=el('button','subjtile themed');
+    t.style.setProperty('--accent',s.accent);if(s.onAccent)t.style.setProperty('--on-accent',s.onAccent);
+    t.innerHTML=`${mono(initial(s.short||s.name),'solid')}<div class="name">${s.short||s.name}</div>
+      <div class="bar"><i class="a-grow d${Math.min(6,i+2)}" style="width:${pct}%"></i></div><small>${done}/${total} ${pl(total,'poziom','poziomy','poziomów')}</small>`;
+    t.setAttribute('aria-label',s.name+', '+done+' z '+total+' poziomów');
+    t.onclick=()=>openSubject(s.id);
+    grid.appendChild(t);
+  });
+  if(withAdd){
+    const a=el('button','subjtile add',`<div class="mono">${icon('plus',{size:22,stroke:3,cls:'a-bob'})}</div><div class="name">Dodaj<br>przedmiot</div>`);
+    a.setAttribute('aria-label','Dodaj przedmiot');a.onclick=()=>toggleAddHint(grid);grid.appendChild(a);
+  }
+  return grid;
+}
+/* karta „Plan na dziś”: zrobione (przekreślone, check), bieżące (tint przedmiotu, pulsujący kafel), późniejsze (wyciszone) */
+function renderPlan(items){
+  const card=el('div','plan a-up d2');
+  if(!items.length){card.innerHTML=`<div class="plan-row later"><div class="plan-tile">${icon('bulb',{size:18})}</div><div class="pt"><div class="t">Brak zadań na dziś</div><div class="s">dodaj przedmiot, a plan ułoży się sam</div></div></div>`;return card;}
+  let cur=false;
+  items.forEach((x,i)=>{
+    if(i)card.appendChild(el('div','plan-sep'));
+    let state='later';if(x.t.done)state='done';else if(!cur){cur=true;state='cur';}
+    const row=el('button','plan-row '+state+' themed');
+    row.style.setProperty('--accent',x.s.accent);if(x.s.onAccent)row.style.setProperty('--on-accent',x.s.onAccent);
+    row.dataset.task=x.t.id;
+    row.innerHTML=`<div class="plan-tile${state==='cur'?' a-pulse':''}">${state==='done'?icon('check',{size:19,stroke:3.4}):icon(x.icon,{size:19,stroke:state==='cur'?3:2.6})}</div>
+      <div class="pt"><div class="t">${x.title}</div>${state==='done'?'':`<div class="s">${x.sub}</div>`}</div>
+      ${state==='done'?`<span class="rw">+${x.reward}</span>`:icon('chevron-right',{size:20,cls:'chev'})}`;
+    row.setAttribute('aria-label',(state==='done'?'Zrobione: ':'')+x.title);
+    row.onclick=x.go;
+    card.appendChild(row);
+  });
+  return card;
+}
+
+/* ============================================================ DZIŚ (ekran startowy, Main.html) */
+function renderToday(){
+  const scroll=shell('today',{blob:true,cls:'today'});
+  const d=daily();const items=d.tasks.map(taskInfo).filter(Boolean);
+  const done=items.filter(x=>x.t.done).length,total=items.length;
+  scroll.appendChild(el('div','',`<div class="eyebrow">${dateHeader()}</div><h1>Plan na dziś</h1>`));
+  scroll.appendChild(el('div','planbar',`<div class="bar"><i class="a-grow" style="width:${total?done/total*100:0}%"></i></div><span>${done} z ${total}</span>`));
+  const mini=el('div','minitiles');
+  mini.appendChild(el('div','minitile gold a-up d1',icon('star',{size:17,fill:false,stroke:2.6,cls:'ic-gold'})+`<span>Misje ${done}/${total}</span>`));
+  const n=streakDisplay();
+  const m2=el('button','minitile amber a-up d2',icon('flame',{size:17,cls:'ic-flame'})+`<span>Seria ${n} ${pl(n,'dzień','dni','dni')}</span>`);
+  m2.onclick=()=>go('streak');mini.appendChild(m2);
+  scroll.appendChild(mini);
+  scroll.appendChild(renderPlan(items));
+  const hdr=el('div','sechdr','<span class="eyebrow">Twoje przedmioty</span>');
+  const all=el('button','link','Wszystkie '+icon('chevron-right',{size:14,stroke:3}));all.onclick=()=>go('subjects');hdr.appendChild(all);
+  scroll.appendChild(hdr);
+  const withP=SUBJECTS.filter(hasProgress),rest=SUBJECTS.filter(s=>!hasProgress(s));
+  scroll.appendChild(subjectGrid(withP.concat(rest).slice(0,3),true));
+}
+
+/* ============================================================ PRZEDMIOTY (dawny wybór przedmiotu → kafle) */
+function renderSubjects(){
+  const scroll=shell('subjects',{blob:true,cls:'subjects'});
+  const n=SUBJECTS.length;
+  scroll.appendChild(el('div','',`<div class="eyebrow">${n} ${pl(n,'przedmiot','przedmioty','przedmiotów')}</div><h1>Przedmioty</h1>`));
+  scroll.appendChild(subjectGrid(SUBJECTS,true));
+}
+
+/* ============================================================ PROFIL (statystyki z postępów; pełna wersja w kroku 8–9) */
+function renderProfile(){
+  const gear=el('button','backbtn',icon('settings',{size:19,stroke:2.4}));gear.setAttribute('aria-label','Ustawienia');gear.onclick=()=>go('settings');
+  const scroll=shell('profile',{blob:true,cls:'profile',title:'Profil',pills:false,right:gear});
+  const tot=totalXP();
+  const lvls=SUBJECTS.reduce((a,s)=>{const st=PROGRESS[s.id];return a+s.levels.filter(l=>st&&st.levels&&st.levels[l.id]&&st.levels[l.id].done).length;},0);
+  const lvTotal=SUBJECTS.reduce((a,s)=>a+s.levels.length,0);
+  const started=SUBJECTS.filter(hasProgress);
+  const n=streakDisplay(),best=Math.max(META.best||0,n);
+  const lvlNum=Math.floor(tot/100)+1,lvlPct=tot%100;
+  scroll.appendChild(el('div','prof',`<div class="avatar a-pop">${icon('user',{size:34,stroke:2.6})}</div>
+    <div class="pmeta"><h2>Twój profil</h2><div class="s">lokalnie, bez konta</div>
+    <div class="planbar"><div class="bar"><i class="a-grow d2" style="width:${lvlPct}%"></i></div><span>lvl ${lvlNum}</span></div></div>`));
+  const stats=el('div','grid2 stats');
+  const stat=(cls,ic,k,v,s,onclick)=>{const d=el(onclick?'button':'div','stat a-up '+cls,`<div class="k">${ic}<span>${k}</span></div><div class="v">${v}</div><div class="s">${s}</div>`);if(onclick)d.onclick=onclick;stats.appendChild(d);};
+  stat('d1',icon('flame',{size:16,cls:'ic-flame a-beat'}),'Seria',`${n} ${pl(n,'dzień','dni','dni')}`,'rekord '+best,()=>go('streak'));
+  stat('d2',icon('bolt',{size:16,cls:'ic-gold'}),'XP łącznie',fmtNum(tot),'+'+daily().xp+' dzisiaj');
+  stat('d3',icon('check',{size:16,stroke:2.8,cls:'ic-acid'}),'Poziomy',lvls,'z '+lvTotal+' zaliczone');
+  stat('d4',icon('grid',{size:16,cls:'ic-cyan'}),'Przedmioty',started.length,'z '+SUBJECTS.length+' zaczęte');
+  scroll.appendChild(stats);
+  scroll.appendChild(el('div','eyebrow sec','XP w przedmiotach'));
+  const card=el('div','setcard a-up d5');
+  started.forEach((s,i)=>{
+    if(i)card.appendChild(el('div','setsep'));
+    const r=el('button','setrow themed');r.style.setProperty('--accent',s.accent);if(s.onAccent)r.style.setProperty('--on-accent',s.onAccent);
+    r.innerHTML=`${mono(initial(s.short||s.name),'solid xs')}<span class="t grow">${s.short||s.name}</span><span class="v">${fmtNum(subjState(s.id).xp)} xp</span>${icon('chevron-right',{size:18,cls:'chev'})}`;
+    r.onclick=()=>openSubject(s.id);card.appendChild(r);
+  });
+  if(!started.length)card.appendChild(el('div','setrow','<span class="t grow muted">Jeszcze nic — zacznij od planu na dziś.</span>'));
+  scroll.appendChild(card);
+}
+
+/* ============================================================ USTAWIENIA (własny przełącznik ruchu, DESIGN.md §2; reset postępów) */
+function renderSettings(){
+  const scroll=shell('settings',{cls:'settings',title:'Ustawienia',pills:false,back:()=>go('today')});
+  scroll.appendChild(el('div','eyebrow sec','Nauka'));
+  const c1=el('div','setcard a-up d1');
+  c1.innerHTML=`<div class="setrow"><span class="t grow">Cel dzienny</span><span class="v acid">${daily().goal} XP</span></div><div class="setsep"></div>`;
+  const rm=el('div','setrow','<div class="grow"><div class="t">Ogranicz animacje</div><div class="s">własny przełącznik, niezależny od ustawień telefonu</div></div>');
+  const tg=el('button','toggle'+(META.reduceMotion?' on':''),'<i></i>');
+  tg.setAttribute('role','switch');tg.setAttribute('aria-checked',String(!!META.reduceMotion));tg.setAttribute('aria-label','Ogranicz animacje');
+  tg.onclick=()=>{META.reduceMotion=!META.reduceMotion;saveMeta();applyMotion();tg.classList.toggle('on',!!META.reduceMotion);tg.setAttribute('aria-checked',String(!!META.reduceMotion));};
+  rm.appendChild(tg);c1.appendChild(rm);scroll.appendChild(c1);
+  scroll.appendChild(el('div','eyebrow sec','Przedmioty'));
+  const c2=el('div','setcard a-up d2');
+  SUBJECTS.forEach((s,i)=>{
+    if(i)c2.appendChild(el('div','setsep'));
+    const r=el('button','setrow themed');r.style.setProperty('--accent',s.accent);if(s.onAccent)r.style.setProperty('--on-accent',s.onAccent);
+    r.innerHTML=`${mono(initial(s.short||s.name),'solid xs')}<span class="t grow">${s.short||s.name}</span>${icon('chevron-right',{size:18,cls:'chev'})}`;
+    r.onclick=()=>openSubject(s.id);c2.appendChild(r);
+  });
+  if(SUBJECTS.length)c2.appendChild(el('div','setsep'));
+  const add=el('button','setrow acid',icon('plus',{size:20,stroke:3})+'<span class="t grow">Dodaj przedmiot</span>');
+  add.onclick=()=>toast('Dodaj plik w data/ — patrz README','info');c2.appendChild(add);
+  scroll.appendChild(c2);
+  scroll.appendChild(el('div','eyebrow sec','Dane'));
+  const reset=el('button','pill danger a-up d3',icon('refresh',{size:18,stroke:2.8})+' wyzeruj postępy');
+  reset.onclick=()=>{
+    if(!confirm('Na pewno? Skasuje XP, gwiazdki i plan dnia. Seria zostaje.'))return;
+    PROGRESS={};saveProgress();qState=null;fState=null;
+    renderSettings();toast('postępy wyzerowane','refresh');
+  };
+  scroll.appendChild(reset);
+  scroll.appendChild(el('div','version','Nauka 2.0 · legacy · krok 3'));
+}
+
+/* ============================================================ SERIA (Streak.html: płomień, licznik, kropki tygodnia z nauka_meta_v1) */
+function weekDots(){
+  const t=todayStr();const now=new Date();const dow=(now.getDay()+6)%7; // 0 = poniedziałek
+  const mon=new Date(now.getFullYear(),now.getMonth(),now.getDate()-dow);
+  const n=streakDisplay(),last=META.lastDay;const out=[];
+  for(let i=0;i<7;i++){
+    const d=new Date(mon.getFullYear(),mon.getMonth(),mon.getDate()+i);const ds=dstr(d);
+    const toToday=dayDiff(ds,t); // >0 przeszłość, 0 dziś, <0 przyszłość
+    let st='miss';
+    if(toToday<0)st='future';
+    else if(n>0&&last){const off=dayDiff(ds,last);if(off>=0&&off<n)st='done';}
+    if(toToday===0)st=(st==='done')?'todaydone':'today';
+    out.push({lab:DAYS_S[(i+1)%7],st});
+  }
+  return out;
+}
+function renderStreak(){
+  app.innerHTML='';
+  const sc=el('div','screen active');
+  sc.appendChild(el('div','streakbg'));sc.appendChild(el('div','blob a-float amber'));
+  const scroll=el('div','scroll streakview');
+  const close=el('button','streakclose',icon('close',{size:18,stroke:3}));close.setAttribute('aria-label','Zamknij');close.onclick=()=>go('today');
+  scroll.appendChild(close);
+  const n=streakDisplay(),best=Math.max(META.best||0,n);
+  const left=best-n+1;
+  const msg=n===0?'Zrób dziś jedno zadanie z planu i seria startuje.':(n>=best?'To twój rekord. Nie przerywaj.':`Rekord to ${best}. Jeszcze ${left} ${pl(left,'dzień','dni','dni')} i bijesz swój wynik.`);
+  scroll.appendChild(el('div','streakhero',`${icon('flame',{size:118,cls:'ic-flame a-beat'})}<div class="streakn a-pop">${n}</div><div class="streakt">${n===1?'dzień z rzędu':'dni z rzędu'}</div><div class="streakp">${msg}</div>`));
+  const week=el('div','week');
+  week.innerHTML='<div class="eyebrow">Ten tydzień</div><div class="days">'+weekDots().map((d,i)=>{
+    const ic=d.st==='done'?icon('check',{size:19,stroke:3.6}):(d.st==='todaydone'||d.st==='today')?icon('flame',{size:18}):'';
+    return `<div class="day ${d.st}"><div class="dot a-up d${Math.min(6,i+1)}">${ic}</div><span>${d.lab}</span></div>`;
+  }).join('')+'</div>';
+  scroll.appendChild(week);
+  const foot=el('div','streakfoot');
+  const b=el('button','pill amber a-glow','wracam do nauki');b.onclick=()=>go('today');foot.appendChild(b);
+  scroll.appendChild(foot);
+  sc.appendChild(scroll);app.appendChild(sc);
+  app.appendChild(el('div','toast',''));app.lastChild.id='toast';
+}
+
+/* ============================================================ PUSTY STAN (EmptyState.html — brak plików w data/) */
+function renderEmpty(){
+  app.innerHTML='';
+  const sc=el('div','screen active');
+  sc.appendChild(el('div','blob a-float acid'));sc.appendChild(el('div','blob a-float d3 pink'));
+  const scroll=el('div','scroll empty');
+  const steps=[['Wrzucasz prezentacje i notatki','PDF, PPTX, zdjęcia, wklejony tekst'],['Powstają poziomy, fiszki i pytania','możesz wszystko poprawić przed startem'],['Uczysz się po 10 minut dziennie','materiał wraca tuż przed zapomnieniem']];
+  scroll.innerHTML=`<div class="logo brand">NAUKA<span class="g">.</span></div>
+    <div class="art"><div class="art-a a-sway"></div><div class="art-b a-sway d2"></div><div class="art-c a-bob">${icon('upload',{size:58,stroke:2.4})}</div></div>
+    <div class="a-up d1"><h1>Zacznij od pierwszego przedmiotu</h1><p>Wrzuć materiały z zajęć. Reszta zrobi się sama.</p></div>
+    <div class="steps">${steps.map((s,i)=>`<div class="step a-up d${i+2}"><div class="num">${i+1}</div><div><div class="t">${s[0]}</div><div class="s">${s[1]}</div></div></div>`).join('')}</div>
+    <div class="efoot"><button class="pill a-glow" id="eadd">dodaj przedmiot</button></div>`;
+  sc.appendChild(scroll);app.appendChild(sc);
+  app.appendChild(el('div','toast',''));app.lastChild.id='toast';
+  document.getElementById('eadd').onclick=()=>{
+    const f=scroll.querySelector('.efoot');
+    if(!f.previousElementSibling.classList.contains('addcard'))f.insertAdjacentElement('beforebegin',el('div','addcard a-up',addHint()));
+    toast('Dodaj plik w data/ — patrz README','info');
+  };
 }
 
 /* ============================================================ SUBJECT shell */
-function openSubject(id){
+function openSubject(id,tab,setup){
   current=SUBJECTS.find(s=>s.id===id);
-  if(!current)return renderHome();
+  if(!current)return go('today');
   applyTheme(current);
-  curTab='path';
+  curTab=tab||'path';
+  if(setup)setup();
   renderSubject();
 }
 function renderSubject(){
@@ -179,7 +460,7 @@ function renderSubject(){
   try{clearInterval(cwInt);clearInterval(exInt);}catch(e){}
   app.innerHTML='';
   const top=el('div','topbar');
-  const back=el('button','backbtn',icon('back',{size:20,stroke:3}));back.setAttribute('aria-label','Wróć do przedmiotów');back.onclick=renderHome;
+  const back=el('button','backbtn',icon('back',{size:20,stroke:3}));back.setAttribute('aria-label','Wróć do planu dnia');back.onclick=()=>go('today');
   top.appendChild(back);
   top.appendChild(el('div','logo',`${mono(initial(s.short||s.name),'sm')}<span class="g">${s.short||s.name}</span>`));
   const pills=el('div','pills');
@@ -308,6 +589,7 @@ function finishLesson(){
     st.levels[lv.id]={done:true,stars:Math.max(stars,prev.stars||0),best:Math.max(pct,prev.best||0)};
     if(!prev.done)addXP(s.id,15);
     saveProgress();
+    completeDaily(s.id,'lesson',lv.id);
   }
   const L=document.getElementById('lesson');
   const kind = !passed?'fail':(pct>=90?'gold':pct>=70?'hot':'ok');
@@ -349,7 +631,7 @@ function renderFiszki(sc){
   wrap.appendChild(flip);
   const btns=el('div','fbtns');
   const no=el('button','fbtn no',icon('refresh',{size:18,stroke:2.8})+' jeszcze nie');const yes=el('button','fbtn yes',icon('check',{size:18,stroke:3.4})+' umiem');
-  const next=(known)=>{if(known){addXP(s.id,2);toast('+2xp','check');}fState.flipped=false;fState.idx=(fState.idx+1)%Math.max(1,list.length);renderFiszki(sc);};
+  const next=(known)=>{if(known){addXP(s.id,2);toast('+2xp','check');}tickDaily(s.id,'review',1);fState.flipped=false;fState.idx=(fState.idx+1)%Math.max(1,list.length);renderFiszki(sc);};
   no.onclick=()=>next(false);yes.onclick=()=>next(true);
   btns.appendChild(no);btns.appendChild(yes);wrap.appendChild(btns);
   sc.innerHTML='';sc.appendChild(wrap);
@@ -374,6 +656,7 @@ function renderQuiz(sc){
   const card=el('div','qcard');
   if(qState.idx>=qState.list.length){
     const pct=qState.list.length?Math.round(qState.score/qState.list.length*100):0;
+    if(qState.list.length)completeDaily(s.id,'quiz');
     card.innerHTML=`<div class="result">${bigTile(pct>=70?'hot':pct>=50?'ok':'fail')}<h2>Wynik</h2>
       <div class="score">Trafione <b>${qState.score}/${qState.list.length}</b> (${pct}%)</div>
       <p>${pct>=70?'Solidnie ogarniasz ten przedmiot.':pct>=50?'Spoko, ale przejedź jeszcze fiszki.':'Wróć do fiszek i ścieżki, potem tu wróć.'}</p>
@@ -456,6 +739,7 @@ function examFinish(sc){
   const grade=exGrade(s,pct);const pass=(s.grading&&s.grading.pass)||50;
   const kind=pct>=90?'gold':pct>=70?'hot':pct>=pass?'ok':'fail';
   addXP(s.id,correct*3);
+  completeDaily(s.id,'exam');
   const rev = wrong.length? wrong.map(w=>`<div class="ritem"><div class="rq">${w.q.q}</div>
       <div class="rbad">Twoja: ${w.sel==null?'— (brak)':keys[w.sel]+'. '+w.q.a[w.sel]}</div>
       <div class="rgood">Dobra: ${keys[w.q.c]}. ${w.q.a[w.q.c]}</div>
@@ -622,7 +906,8 @@ function cwRenderSpeed(sc){
 /* ---------- INIT ---------- */
 document.addEventListener('DOMContentLoaded',()=>{
   app=document.getElementById('app');
-  if(!SUBJECTS.length){app.innerHTML='<div class="topbar"><div class="logo">'+icon('book',{size:24,cls:'ic-acid'})+'<span class="g">NAUKA</span></div></div><div class="scroll"><div class="zbox"><p>Brak załadowanych przedmiotów. Dodaj plik danych w <b>data/</b> (np. data/makro.js).</p></div></div>';return;}
-  renderHome();
+  applyMotion();
+  if(!SUBJECTS.length)return renderEmpty();
+  go('today');
 });
 })();
