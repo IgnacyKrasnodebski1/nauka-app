@@ -892,6 +892,202 @@ button.setrow{cursor:pointer}
 .bucket.over{background:color-mix(in srgb,var(--violet) 45%,var(--surface));border-color:var(--txt)}
 .bucket.over .bdrop{border-color:var(--txt);color:var(--txt);animation:none}
 
+/* ============================================================
+   KROK 5b — POZOSTAŁE TYPY ZADAŃ (DESIGN.md §4.1): typeterm, swipe, thesis, scenario, finderror, timeline, chain, chart, mathsteps, hotspot
+   Tylko dopisane reguły; kolory przez tokeny i color-mix, ruch przez .a-* z tokens.css.
+   ============================================================ */
+.tchip.red{background:var(--tint-red);color:var(--red-soft)}
+.tchip.violet{background:var(--tint-pink);color:var(--violet-soft)}
+.ttitle.sm{font-size:21px}
+.trow{display:flex;align-items:flex-start;gap:10px}
+.trow .ttitle{flex:1;min-width:0}
+.tcount{flex:none;font-size:12.5px;font-weight:800;color:var(--muted);padding-top:7px}
+/* mniejsze kafle A–D (Scenario / ChartRead): jak .qopt w quizie, 54 px */
+.qopt.sm{min-height:54px;padding:12px 14px;font-size:14px;border-radius:18px;gap:13px}
+.qopt.sm .k{width:30px;height:30px;font-size:13px;border-radius:10px}
+.qopts{display:flex;flex-direction:column;gap:10px}
+
+/* wpisz pojęcie (TypeTerm.html): karta definicji, pole w limonkowej ramce, kreski liter, podpowiedź i „nie pamiętam” */
+.defcard,.scenecard{background:var(--surface);border:2px solid var(--line);border-radius:24px;padding:20px;box-shadow:0 6px 0 var(--shadow)}
+.deftext{font-size:16.5px;font-weight:700;line-height:1.5;color:var(--txt);margin-top:9px}
+.termbox{display:flex;align-items:center;margin-top:9px;background:var(--surface-2);border:2px solid var(--acid);border-radius:18px;padding:13px 16px;box-shadow:0 4px 0 var(--tint-acid);transition:border-color .15s,background .15s}
+.termbox.ok{background:var(--tint-acid);border-color:var(--tint-acid-line)}
+.termbox.bad{background:var(--tint-red);border-color:var(--red);box-shadow:0 4px 0 var(--tint-red)}
+.terminput{flex:1;min-width:0;background:transparent;border:none;outline:none;color:var(--txt);font-family:var(--font-display);font-size:24px;font-weight:800;letter-spacing:.5px;min-height:32px}
+.terminput[disabled]{opacity:1}
+.letters{display:flex;gap:5px;margin-top:12px;flex-wrap:wrap}
+.letters i{width:20px;height:5px;border-radius:3px;background:var(--line-2)}
+.letters i.on{background:var(--acid)}
+.letters b{width:10px}
+.termmeta{font-size:12px;font-weight:700;color:var(--muted-2);margin-top:7px}
+.termbtns{display:flex;gap:10px}
+.hintbtn{flex:1;cursor:pointer;font-family:var(--font-body);min-height:46px;border-radius:15px;background:var(--surface);border:2px solid var(--line);color:var(--muted);font-size:12.5px;font-weight:800;padding:0 10px}
+.hintbtn.gold{background:var(--tint-gold);border-color:var(--tint-gold-line);color:color-mix(in srgb,var(--gold) 55%,var(--txt))}
+.hintbtn[disabled]{opacity:.6;cursor:default}
+
+/* dwie kategorie (Swipe.html): strefy po bokach, stos kart, stempel, kropki, dwa przyciski */
+.swipestage{position:relative;height:352px;flex:none;overflow:hidden}
+.szone{position:absolute;top:26px;bottom:56px;width:56px;display:flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s}
+.szone.l{left:0;border-radius:0 22px 22px 0;background:var(--tint-red);border:2px solid var(--tint-red-line);border-left:none}
+.szone.r{right:0;border-radius:22px 0 0 22px;background:var(--tint-cyan);border:2px solid var(--tint-cyan-line);border-right:none}
+.szone span{writing-mode:vertical-rl;font-size:13px;font-weight:800;letter-spacing:3px;text-transform:uppercase}
+.szone.l span{transform:rotate(180deg);color:var(--red-soft)}
+.szone.r span{color:var(--cyan)}
+.szone.near.l{border-color:var(--red)}
+.szone.near.r{border-color:var(--cyan);animation:dcGlow 2.2s ease-in-out infinite}
+.szone.okk{background:var(--tint-acid);border-color:var(--acid)}
+.szone.badd{background:var(--tint-red);border-color:var(--red)}
+.scard{position:absolute;left:50px;right:50px;top:12px;height:300px;border-radius:28px;background:var(--surface);border:2px solid var(--line)}
+.scard.back{top:20px;left:62px;right:62px;transform:rotate(-3deg);background:var(--surface-2);border-color:var(--line-2)}
+.scard.front{z-index:2;box-shadow:0 8px 0 var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:24px;text-align:center;touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab;transition:transform .35s cubic-bezier(.2,.9,.3,1),background .2s,border-color .2s}
+.scard.front.grab{transition:none;cursor:grabbing}
+.scard.front.to-l{border-color:var(--red)}
+.scard.front.to-r{border-color:var(--cyan)}
+.scard.front.okk{background:var(--tint-acid);border-color:var(--acid);box-shadow:0 8px 0 var(--acid-dark)}
+.scard.front.badd{background:var(--tint-red);border-color:var(--red);box-shadow:0 8px 0 var(--red-dark)}
+.scard.front.fly-l{transform:translateX(-140%) rotate(-18deg)}
+.scard.front.fly-r{transform:translateX(140%) rotate(18deg)}
+.sfront{font-family:var(--font-display);font-size:44px;font-weight:800;letter-spacing:-1px;line-height:1.1;color:var(--txt);overflow-wrap:anywhere}
+.sfront.long{font-size:24px;letter-spacing:-.5px;line-height:1.2}
+.ssub{font-size:14px;font-weight:700;color:var(--muted)}
+.stamp{position:absolute;top:18px;padding:6px 12px;border-radius:10px;border:3px solid;font-size:15px;font-weight:800;letter-spacing:2px;text-transform:uppercase;opacity:0;transition:opacity .15s}
+.stamp.l{left:18px;transform:rotate(-12deg);color:var(--red);border-color:var(--red)}
+.stamp.r{right:18px;transform:rotate(12deg);color:var(--cyan);border-color:var(--cyan)}
+.scard.to-l .stamp.l,.scard.to-r .stamp.r{opacity:1}
+.swipestage .dots{position:absolute;left:0;right:0;bottom:10px}
+.dots i.cur{background:var(--cyan)}
+.swbtns{display:flex;gap:12px}
+.swbtn{flex:1;min-height:62px;border-radius:20px;cursor:pointer;font-family:var(--font-body);display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:800;letter-spacing:1px;text-transform:uppercase;transition:transform .08s,box-shadow .08s}
+.swbtn.l{background:var(--tint-red);border:2px solid var(--tint-red-line);color:var(--red-soft);box-shadow:0 5px 0 var(--shadow)}
+.swbtn.r{background:var(--cyan);border:none;color:var(--on-cyan);box-shadow:0 5px 0 var(--cyan-dark)}
+.swbtn:active{transform:translateY(5px);box-shadow:0 0 0 var(--bg)}
+.swbtn[disabled]{cursor:default}
+
+/* czyja to teza (WhoSaid.html): karta z cudzysłowem, siatka 2 kolumn opcji {name, sub}; wybrana = fiolet */
+.thcard{background:var(--surface);border:2px solid var(--line);border-radius:26px;padding:22px 20px;box-shadow:0 6px 0 var(--shadow)}
+.thcard>.ic{color:var(--line-dash)}
+.thtext{font-family:var(--font-display);font-size:22px;font-weight:800;letter-spacing:-.6px;line-height:1.25;color:var(--txt);margin-top:8px}
+.thgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.thopt{cursor:pointer;font-family:var(--font-body);text-align:left;background:var(--surface);border:2px solid var(--line);box-shadow:0 4px 0 var(--shadow);border-radius:18px;padding:14px;min-height:86px;display:flex;flex-direction:column;justify-content:space-between;gap:6px;transition:transform .08s,box-shadow .08s,background .15s,border-color .15s}
+.thopt .n{font-size:14.5px;font-weight:800;color:var(--txt);line-height:1.2}
+.thopt .s{font-size:11.5px;font-weight:700;color:var(--muted)}
+.thopt:active{transform:translateY(4px);box-shadow:0 0 0 var(--shadow)}
+.thopt.sel{background:var(--tint-pink);border-color:var(--violet);box-shadow:0 4px 0 var(--violet)}
+.thopt.sel .s{color:var(--violet-soft)}
+.thopt.correct{background:var(--tint-acid);border-color:var(--acid);box-shadow:0 4px 0 var(--acid)}
+.thopt.correct .s{color:var(--acid-soft)}
+.thopt.wrong{background:var(--tint-red);border-color:var(--red);box-shadow:0 4px 0 var(--red-dark)}
+.thopt.wrong .s{color:var(--red-soft)}
+.thopt.dim{opacity:.55;box-shadow:none}
+.thopt[disabled]{cursor:default}
+.thopt[disabled]:active{transform:none}
+
+/* scenariusz (Scenario.html): karta „Sytuacja” */
+.scenetext{font-size:15px;font-weight:700;line-height:1.5;color:var(--txt-2);margin-top:8px}
+
+/* znajdź błąd (FindError.html): zdania w karcie; wybrane = czerwień; po sprawdzeniu fałszywe przekreślone + poprawka; chybienie = bursztyn */
+.errcard{background:var(--surface);border:2px solid var(--line);border-radius:24px;padding:12px;box-shadow:0 6px 0 var(--shadow);display:flex;flex-direction:column;gap:9px}
+.errsent{width:100%;text-align:left;cursor:pointer;font-family:var(--font-body);background:var(--surface-2);border:2px solid var(--line-2);color:var(--txt-2);border-radius:14px;padding:12px 14px;font-size:14.5px;font-weight:700;line-height:1.45;transition:background .15s,border-color .15s}
+.errsent.sel{background:var(--tint-red);border-color:var(--red);box-shadow:0 4px 0 var(--red-dark);color:color-mix(in srgb,var(--red) 20%,var(--txt))}
+.errsent.correct{background:var(--tint-red);border-color:var(--red);color:color-mix(in srgb,var(--red) 20%,var(--txt));text-decoration:line-through}
+.errsent.wrong{border-color:var(--amber);color:var(--amber-soft)}
+.errsent.dim{opacity:.55}
+.errsent[disabled]{cursor:default}
+.errfix{display:none;padding:12px 14px;border-radius:14px;font-size:13.5px;font-weight:600;line-height:1.45;border:2px solid var(--line)}
+.errfix.show{display:block;animation:dcPop .45s cubic-bezier(.2,1.5,.4,1) both}
+.errfix.ok{background:var(--tint-acid);border-color:var(--tint-acid-line);color:color-mix(in srgb,var(--acid) 30%,var(--txt))}
+.errfix.bad{background:var(--tint-gold);border-color:var(--tint-gold-line);color:color-mix(in srgb,var(--gold) 55%,var(--txt))}
+.errfix .lbl{font-size:10.5px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;opacity:.8;margin-bottom:3px}
+.notebox{display:flex;align-items:center;gap:10px;background:var(--tint-gold);border:2px solid var(--tint-gold-line);border-radius:16px;padding:12px 14px;font-size:12.5px;font-weight:700;line-height:1.4;color:color-mix(in srgb,var(--gold) 55%,var(--txt))}
+.notebox .ic{color:var(--gold);flex:none}
+
+/* oś czasu (Timeline.html): rok, kropka na osi, slot / przypięte wydarzenie; strefa pod palcem = .over */
+.tl{position:relative;display:flex;flex-direction:column;gap:14px}
+.tlaxis{position:absolute;left:73px;top:20px;bottom:20px;width:4px;border-radius:2px;background:var(--line-2)}
+.tlrow{display:flex;align-items:center;gap:12px;position:relative}
+.tlyear{width:54px;flex:none;text-align:right;font-family:var(--font-display);font-size:18px;font-weight:800;color:var(--txt)}
+.tldot{width:16px;height:16px;border-radius:50%;background:var(--line-2);border:3px solid var(--bg);flex:none;z-index:1}
+.tldot.on{background:var(--acid)}
+.tldot.cur{background:var(--violet)}
+.tlslot,.chslot{min-height:48px;border-radius:16px;border:2px dashed var(--line-dash);background:var(--surface-2);display:flex;align-items:center;padding:0 14px;font-size:12.5px;font-weight:800;color:var(--violet-soft);transition:background .15s,border-color .15s}
+.tlslot{flex:1;min-width:0}
+.tlslot.cur,.chslot.cur{border-color:var(--violet);background:var(--tint-pink)}
+.tlslot.hot,.chslot.hot{border-color:var(--violet);background:var(--tint-pink);animation:dcBlink 1.2s ease-in-out infinite}
+.tlslot.over,.chslot.over{background:color-mix(in srgb,var(--violet) 45%,var(--surface));border-color:var(--txt);color:var(--txt);animation:none}
+.tlev,.chstep.filled{min-height:48px;text-align:left;cursor:pointer;font-family:var(--font-body);background:var(--tint-acid);border:2px solid var(--tint-acid-line);border-radius:16px;padding:10px 14px;display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:800;color:color-mix(in srgb,var(--acid) 25%,var(--txt));line-height:1.3;transition:background .15s,border-color .15s}
+.tlev{flex:1;min-width:0}
+.tlev .ic,.chstep.filled .ic{color:var(--acid);flex:none}
+.tlev.bad,.chstep.bad{background:var(--tint-red);border-color:var(--red);color:color-mix(in srgb,var(--red) 20%,var(--txt))}
+.tlev.bad .ic,.chstep.bad .ic{color:var(--red)}
+.tlev[disabled],.chstep[disabled]{cursor:default}
+
+/* łańcuch przyczyn (CauseChain.html): kolumna kroków ze strzałkami; given = zwykła karta, wstawione = limonka, slot „co dalej?” */
+.chain{display:flex;flex-direction:column;gap:4px}
+.chstep.given{background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:13px 15px;font-size:14px;font-weight:800;color:var(--txt);box-shadow:0 4px 0 var(--shadow);line-height:1.3}
+.chstep.filled{width:100%;font-size:14px}
+.charrow{display:flex;justify-content:center;color:var(--muted-3);height:26px;align-items:center}
+.chslot{min-height:50px}
+
+/* wykres (ChartRead.html): karta z podpisem, SVG z jedną serią — słupki fiolet, linia cyjan, tekst w tokenach tekstu */
+.chartcard{background:var(--surface);border:2px solid var(--line);border-radius:24px;padding:16px 12px 10px;box-shadow:0 6px 0 var(--shadow)}
+.chartlbl{font-size:12px;font-weight:800;color:var(--muted);padding:0 6px 6px}
+svg.chart{width:100%;height:auto;display:block;font-family:var(--font-body)}
+.cgrid{stroke:var(--line-2);stroke-width:1.5;stroke-dasharray:4 5}
+.caxis{stroke:var(--line);stroke-width:2}
+.cbar{fill:var(--violet)}
+.cval{fill:var(--txt-2);font-size:12px;font-weight:800}
+.clab{fill:var(--muted-2);font-size:11px;font-weight:700}
+.cline{fill:none;stroke:var(--cyan);stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.cdot{fill:var(--cyan);stroke:var(--bg);stroke-width:2}
+
+/* krok po kroku (MathSteps.html): karta z wierszami wyrażeń, ramka wyjaśnienia, siatka opcji w Bricolage */
+.mathcard{background:var(--surface);border:2px solid var(--line);border-radius:24px;padding:12px;box-shadow:0 6px 0 var(--shadow);display:flex;flex-direction:column;gap:8px}
+.mrow{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:14px;background:var(--surface-2);min-height:56px}
+.mexpr{flex:1;min-width:0;font-family:var(--font-display);font-size:24px;font-weight:800;color:var(--txt);letter-spacing:.5px;line-height:1.15;overflow-wrap:anywhere}
+.mnote{font-size:11.5px;font-weight:700;color:var(--muted-2);text-align:right;max-width:44%;line-height:1.3}
+.mrow .ic{flex:none}
+.mrow.ok{background:var(--tint-acid);border:2px solid var(--tint-acid-line)}
+.mrow.ok .mexpr{color:color-mix(in srgb,var(--acid) 25%,var(--txt))}
+.mrow.ok .mnote{color:var(--acid-soft)}
+.mrow.ok .ic{color:var(--acid)}
+.mrow.bad{background:var(--tint-red);border:2px solid var(--tint-red-line)}
+.mrow.bad .mexpr{color:color-mix(in srgb,var(--red) 20%,var(--txt));text-decoration:line-through}
+.mrow.bad .mnote{color:var(--red-soft)}
+.mrow.bad .ic{color:var(--red)}
+.mexp{display:flex;align-items:center;gap:9px;padding:10px 14px;border-radius:14px;background:var(--tint-gold);border:2px solid var(--tint-gold-line);font-size:13px;font-weight:700;color:color-mix(in srgb,var(--gold) 55%,var(--txt));line-height:1.4}
+.mexp .ic{color:var(--gold);flex:none}
+.mrow.next{border:2px dashed var(--violet);background:var(--tint-pink);color:var(--violet-soft);font-size:13px;font-weight:800}
+.mgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.mopt{cursor:pointer;font-family:var(--font-display);min-height:62px;padding:8px 10px;border-radius:18px;background:var(--surface);border:2px solid var(--line);box-shadow:0 4px 0 var(--shadow);color:var(--txt);font-size:20px;font-weight:800;line-height:1.15;overflow-wrap:anywhere;transition:transform .08s,box-shadow .08s,background .15s,border-color .15s}
+.mopt:active{transform:translateY(4px);box-shadow:0 0 0 var(--shadow)}
+.mopt.sel{background:var(--tint-acid);border-color:var(--acid);box-shadow:0 4px 0 var(--acid);color:color-mix(in srgb,var(--acid) 25%,var(--txt))}
+.mopt.dim{opacity:.45;box-shadow:none;cursor:default}
+.mopt[disabled]:active{transform:none}
+
+/* wskaż na schemacie (Hotspot.html): karta z obrazem, warstwa dotyku, pierścienie (pin = pozycja, ring = animacja), etykiety, chipy kolejnych celów */
+.hotcard{background:var(--surface);border:2px solid var(--line);border-radius:26px;padding:12px;box-shadow:0 6px 0 var(--shadow)}
+.hotimg{position:relative;border-radius:16px;overflow:hidden;cursor:crosshair}
+.hotimg svg,.hotimg img{width:100%;height:auto;display:block}
+.hotlayer{position:absolute;inset:0}
+.hotpin{position:absolute;transform:translate(-50%,-50%);pointer-events:none}
+.hotring{display:block;width:100%;aspect-ratio:1;border-radius:50%;border:4px solid var(--acid);box-sizing:border-box}
+.hotring.miss{border-color:var(--red);border-width:5px}
+.hotring.reveal{border-color:var(--amber)}
+.hottag{position:absolute;left:50%;top:100%;transform:translate(-50%,6px);padding:5px 10px;border-radius:10px;background:var(--acid);color:var(--on-acid);font-size:12px;font-weight:800;white-space:nowrap;animation:dcPop .45s cubic-bezier(.2,1.5,.4,1) both}
+.hottag.reveal{background:var(--amber);color:var(--on-amber)}
+.hotchips{display:flex;gap:8px;flex-wrap:wrap}
+.hotchip{display:inline-flex;align-items:center;gap:5px;padding:8px 12px;border-radius:12px;background:var(--surface-2);border:2px solid var(--line-2);font-size:12px;font-weight:700;color:var(--muted)}
+.hotchip.cur{background:var(--tint-acid);border-color:var(--tint-acid-line);color:var(--acid)}
+.hotchip.done{color:var(--acid-soft);text-decoration:line-through}
+/* w lekcji .pill jest limonkowy (krok 4) — przycisk „pokaż, gdzie to jest” w hotspot zostaje ghost; etykieta podpowiedzi typeterm w jednej linii */
+.lesson .pill.ghost:not([disabled]){background:var(--surface);color:var(--txt-2);box-shadow:0 var(--drop-btn) 0 var(--shadow)}
+.lesson .pill.ghost:not([disabled]):active{box-shadow:0 0 0 var(--shadow)}
+.hintbtn{white-space:nowrap;font-size:12px;padding:0 8px}
+/* przeciąganie kafelków/kart nie zaznacza tekstu; pole odpowiedzi w typeterm nadal edytowalne */
+.task{-webkit-user-select:none;user-select:none}
+.terminput{-webkit-user-select:text;user-select:text}
+.hottag{white-space:normal;max-width:170px;width:max-content;text-align:center;line-height:1.3}
+
 </style>
 </head>
 <body>
@@ -959,7 +1155,10 @@ window.SUBJECTS.push({
         {s:"Kwestia społeczna to pech pojedynczej osoby, a nie problem systemowy.",v:false,e:"Kwestia społeczna to wspólne, systemowe podłoże problemów (Rysz-Kowalczyk)."},
         {s:"Realny człowiek działa jak homo economicus — zawsze racjonalnie liczy zyski i straty.",v:false,e:"Racjonalność ograniczona, heurystyki, status quo bias."},
         {s:"Polityka makroekonomiczna zarządza gospodarką jako całością (dług, stopy procentowe).",v:true,e:"Makro pilnuje finansów państwa, polityka społeczna — warunków życia ludzi."}
-      ]}
+      ]},
+      /* krok 5b */
+      {type:"typeterm",definition:"Skłonność do trzymania się obecnego stanu rzeczy („zawsze tak robiliśmy”) i opór przed zmianą — nawet gdy alternatywa jest korzystniejsza.",answer:"status quo bias",accept:["efekt status quo","bias status quo","skrzywienie status quo"],typo:1,e:"Status quo bias to jeden z powodów, dla których ludzie nie działają jak homo economicus: wybór domyślny wygrywa z lepszym, ale nowym."},
+      {type:"scenario",scene:"Firma od dziesięciu lat kupuje to samo, droższe ubezpieczenie floty. Konkurencyjna oferta ma identyczny zakres i jest o 20% tańsza, ale dyrektor mówi: „Zawsze tak robiliśmy, po co ryzykować”.",q:"Który mechanizm najlepiej to opisuje?",a:["Status quo bias","Zachowanie homo economicus","Zrównoważony rozwój","Kwestia społeczna"],c:0,e:"Trzymanie się dotychczasowego wyboru mimo lepszej alternatywy to status quo bias — przykład racjonalności ograniczonej."}
      ]},
     /* ---------------- L2 ---------------- */
     {id:"l2",title:"Doktryny",emoji:"🏛️",
@@ -985,7 +1184,17 @@ window.SUBJECTS.push({
      ],
      tasks:[
       {type:"match",title:"Doktryna i jej sedno",pairs:[["Ordoliberalizm","państwo ustala reguły gry"],["Społeczna gospodarka rynkowa","dobrobyt przez konkurencję"],["Państwo opiekuńcze","szeroka redystrybucja i transfery"],["Subsydiarność","najpierw jednostka i rodzina"]],e:"Ordoliberalizm — państwo jak sędzia na meczu; SGR (Erhard) — dobrobyt przez konkurencję; państwo opiekuńcze — transfery; subsydiarność — pomoc dopiero, gdy rodzina nie da rady."},
-      {type:"fill",text:"Krytyka ordoliberalna państwa opiekuńczego: szeroka redystrybucja rodzi {0}, a „państwo podatków” zmienia się w „państwo {1}”.",blanks:["moral hazard","długu"],bank:["konkurencję","subsydiarność","dobrobytu","ładu"],hint:"Streeck: skąd bierze się pieniądz, gdy podatki nie wystarczają?",e:"Moral hazard — ludzie przywykają do transferów; „państwo podatków” zmienia się w „państwo długu” (Streeck)."}
+      {type:"fill",text:"Krytyka ordoliberalna państwa opiekuńczego: szeroka redystrybucja rodzi {0}, a „państwo podatków” zmienia się w „państwo {1}”.",blanks:["moral hazard","długu"],bank:["konkurencję","subsydiarność","dobrobytu","ładu"],hint:"Streeck: skąd bierze się pieniądz, gdy podatki nie wystarczają?",e:"Moral hazard — ludzie przywykają do transferów; „państwo podatków” zmienia się w „państwo długu” (Streeck)."},
+      /* krok 5b */
+      {type:"thesis",thesis:"Państwo ma ustalać reguły gry dla rynku, ale samo nie powinno w nią grać.",q:"Która szkoła?",options:[{name:"Ordoliberalizm",sub:"szkoła fryburska"},{name:"Keynesizm",sub:"aktywny popyt"},{name:"Monetaryzm",sub:"podaż pieniądza"},{name:"Państwo opiekuńcze",sub:"redystrybucja"}],c:0,e:"Ordoliberalizm (Eucken, Böhm): państwo jako strażnik ładu — sędzia na meczu, nie zawodnik."},
+      {type:"swipe",title:"Ordoliberalizm czy państwo opiekuńcze?",left:"Ordoliberalizm",right:"Opiekuńcze",cards:[
+        {front:"Państwo jak sędzia",sub:"pilnuje reguł, nie gra",side:"left"},
+        {front:"Szeroka redystrybucja",sub:"transfery dla wielu grup",side:"right"},
+        {front:"Subsydiarność",sub:"najpierw jednostka i rodzina",side:"left"},
+        {front:"Solidarność transferowa",sub:"państwo jako protektor",side:"right"},
+        {front:"Ramy dla konkurencji",sub:"ład zamiast interwencji",side:"left"},
+        {front:"Ryzyko moral hazard",sub:"krytyka ze strony ordo",side:"right"}
+      ],e:"Ordoliberalizm = reguły gry i subsydiarność; państwo opiekuńcze = aktywny protektor i szerokie transfery (z ryzykiem moral hazard)."}
      ]},
     /* ---------------- L3 ---------------- */
     {id:"l3",title:"Polityka fiskalna",emoji:"💰",
@@ -1016,7 +1225,15 @@ window.SUBJECTS.push({
         {s:"Deficit bias to skłonność demokracji do nadwyżek budżetowych.",v:false,e:"Odwrotnie: do deficytu — korzyści teraz, koszty dla przyszłych pokoleń."},
         {s:"Wydatki przez BGK i PFR nie wchodzą do deficytu budżetu, ale liczą się do długu sektora.",v:true,e:"Tak wygląda wypychanie długu poza budżet — rynki i tak to widzą."}
       ]},
-      {type:"sort",title:"Trójkąt wiarygodności fiskalnej",buckets:[{name:"Reguły fiskalne",items:["limit 3% deficytu","limit 60% długu"]},{name:"Niezależne instytucje",items:["Rada Fiskalna"]},{name:"Przejrzystość budżetu",items:["jawne dane o długu","czytelna klasyfikacja wydatków"]}],e:"Reguły + niezależne instytucje + przejrzystość = trzy boki trójkąta wiarygodności."}
+      {type:"sort",title:"Trójkąt wiarygodności fiskalnej",buckets:[{name:"Reguły fiskalne",items:["limit 3% deficytu","limit 60% długu"]},{name:"Niezależne instytucje",items:["Rada Fiskalna"]},{name:"Przejrzystość budżetu",items:["jawne dane o długu","czytelna klasyfikacja wydatków"]}],e:"Reguły + niezależne instytucje + przejrzystość = trzy boki trójkąta wiarygodności."},
+      /* krok 5b */
+      {type:"finderror",sentences:["Pakt Stabilności i Wzrostu ogranicza deficyt sektora finansów publicznych do 3% PKB.","Limit długu publicznego w Pakcie Stabilności to 60% PKB.","Trójkąt wiarygodności fiskalnej to reguły, niezależne instytucje i przejrzystość budżetu.","Deficit bias to skłonność demokracji do nadwyżek budżetowych."],wrong:3,fix:"do deficytu, nie do nadwyżek",e:"Deficit bias działa w drugą stronę: wydatki i niższe podatki dają głosy teraz, a koszt długu spada na przyszłe pokolenia."},
+      {type:"chain",title:"Co się dzieje po kolei?",steps:["Rząd zwiększa wydatki bez podniesienia podatków","Rośnie deficyt budżetowy","Rośnie dług publiczny","Rynki żądają wyższych odsetek od obligacji","Rosną koszty obsługi długu"],given:[0,4],bank:["Inflacja znika","Podatki spadają same z siebie"],e:"Deficyt finansuje się długiem, a dług ma cenę: im mniej wiarygodne państwo, tym wyższe odsetki i droższa obsługa zadłużenia."},
+      {type:"chart",chart:{kind:"bar",label:"Inflacja w Polsce (CPI, średnia roczna), %",x:["2019","2020","2021","2022","2023","2024"],y:[2.3,3.4,5.1,14.4,11.4,3.6]},q:"W którym roku inflacja była najwyższa i o ile wzrosła względem roku wcześniej?",a:["2022, o 9,3 pp","2022, o 14,4 pp","2023, o 3,0 pp","2021, o 1,7 pp"],c:0,e:"Szczyt to 2022 r. (14,4%). Rok wcześniej było 5,1%, więc wzrost wyniósł 9,3 punktu procentowego — „o ile” liczymy jako różnicę, nie jako sam poziom."},
+      {type:"mathsteps",title:"Policz limit deficytu",start:"3% PKB, PKB ≈ 3400 mld zł",steps:[
+        {expr:"3% = 0,03",note:"procent to setne części",options:["3% = 0,03","3% = 0,3","3% = 3"],c:0},
+        {expr:"0,03 · 3400 mld zł = 102 mld zł",note:"mnożymy ułamek przez PKB",options:["0,03 · 3400 = 102 mld zł","0,03 · 3400 = 1020 mld zł","3400 : 3 ≈ 1133 mld zł","3400 − 3 = 3397 mld zł"],c:0}
+      ],e:"Limit 3% PKB przy PKB ok. 3,4 bln zł oznacza ok. 102 mld zł deficytu rocznie."}
      ]},
     /* ---------------- L4 ---------------- */
     {id:"l4",title:"Polska: demografia i mieszkania",emoji:"🇵🇱",
@@ -1039,6 +1256,10 @@ window.SUBJECTS.push({
       {q:"TFR w Polsce wynosi ok.:",a:["2,1","1,16","3,0","0,5"],c:1,e:"≈1,16 (2023). Próg zastępowalności pokoleń to 2,1."},
       {q:"Ubezpieczeniowy vs zaopatrzeniowy system zabezpieczenia:",a:["Ubezpieczeniowy = składkowy (ZUS); zaopatrzeniowy = podatkowy (zasiłki, pomoc społeczna)","Oba składkowe","Ubezpieczeniowy dla bogatych","Nie ma różnicy"],c:0,e:"Składkowy = emerytury z ZUS. Zaopatrzeniowy = z podatków."},
       {q:"Jaki jest cel społecznych form najmu (TBS, SIM)?",a:["Budowa premium w centrach","Zapewnienie dostępnych mieszkań osobom o średnich i niższych dochodach","Zwiększenie zysków deweloperów","Likwidacja rynku najmu"],c:1,e:"TBS i SIM = najem o umiarkowanym czynszu dla średnich/niższych dochodów."}
+     ],
+     /* krok 5b */
+     tasks:[
+      {type:"timeline",title:"Polska polityka społeczna po 1989",events:[{label:"Kuroniówka — pierwsze zasiłki dla bezrobotnych",year:1990},{label:"Polska wchodzi do Unii Europejskiej",year:2004},{label:"Start programu 500+",year:2016},{label:"500+ staje się 800+",year:2024}],e:"Od osłon socjalnych po 1989 r. (Kuroniówka), przez wejście do UE, do aktywnej polityki rodzinnej: 500+ od 2016 r. i 800+ od 2024 r."}
      ]},
     /* ---------------- L5 ---------------- */
     {id:"l5",title:"Modele welfare + Zielony Ład",emoji:"🌍",
@@ -1288,7 +1509,15 @@ const ICONS={
   'arrow-up':{d:'M12 19V5M6 11l6-6 6 6'},
   'chevron-up':{d:'M5 15l7-7 7 7',w:3},
   'chevron-down':{d:'M5 9l7 7 7-7',w:3},
-  grip:{d:'M8 9h8M8 15h8'}
+  grip:{d:'M8 9h8M8 15h8'},
+  /* krok 5b: nowe typy zadań */
+  quote:{d:'M4 18v-5c0-4 2-7 6-8l1 2c-2 1-3 3-3 5h3v6zm9 0v-5c0-4 2-7 6-8l1 2c-2 1-3 3-3 5h3v6z',fill:true},
+  'arrow-down':{d:'M12 4v16M6 14l6 6 6-6',w:3},
+  chart:{d:'M5 20v-8M11 20V5M17 20v-5M3 20h18',w:2.8},
+  calc:{d:'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 7.5h6M9 12h.5M12 12h.5M15 12h.5M9 16h.5M12 16h.5M15 16h.5"/>',w:2.4},
+  keyboard:{d:'<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 10h.5M11 10h.5M15 10h.5M8 14h8"/>',w:2.4},
+  swipe:{d:'M3 12h18M8 7l-5 5 5 5M16 7l5 5-5 5',w:2.8},
+  pointer:{d:'M9 11V5.5a1.5 1.5 0 0 1 3 0V11l4 .8a3 3 0 0 1 2.4 3l-.5 3.3A3.5 3.5 0 0 1 14.4 21H12a4 4 0 0 1-3-1.4L5.4 15a1.6 1.6 0 0 1 2.4-2.1L9 14',w:2.4}
 };
 function icon(name,o){
   o=o||{};const ic=ICONS[name]||ICONS.alert;
@@ -1592,7 +1821,7 @@ function renderSettings(){
     renderSettings();toast('postępy wyzerowane','refresh');
   };
   scroll.appendChild(reset);
-  scroll.appendChild(el('div','version','Nauka 2.0 · legacy · krok 5'));
+  scroll.appendChild(el('div','version','Nauka 2.0 · legacy · krok 5b'));
 }
 
 /* ============================================================ SERIA (Streak.html: płomień, licznik, kropki tygodnia z nauka_meta_v1) */
@@ -1796,16 +2025,78 @@ function quizBlock(q,o){
 const QUIZ_XP=5, TASK_XP=8; // baza XP za poprawne (× mnożnik combo); zadania są dłuższe niż jedno pytanie
 let taskInt=null; // licznik rundy na czas (tf)
 function taskCleanup(){if(taskInt){clearInterval(taskInt);taskInt=null;}}
-const TASK_META={
+const TASK_META={ // kolejność = kolejność kart w Ćwiczeniach (DESIGN.md §6: proste → przeciągane → chart/mathsteps/hotspot)
   tf:{label:'Prawda czy fałsz',tone:'gold',icon:'check',desc:'seria zdań, czasem na czas'},
   fill:{label:'Uzupełnij zdanie',tone:'pink',icon:'edit',desc:'wstaw brakujące słowa'},
+  typeterm:{label:'Wpisz pojęcie',tone:'acid',icon:'keyboard',desc:'od definicji do nazwy'},
+  swipe:{label:'Dwie kategorie',tone:'cyan',icon:'swipe',desc:'przesuń kartę w lewo albo w prawo'},
+  thesis:{label:'Czyja to teza',tone:'violet',icon:'quote',desc:'dopasuj myśl do autora lub szkoły'},
+  scenario:{label:'Scenariusz',tone:'red',icon:'bulb',desc:'sytuacja i jej wyjaśnienie'},
+  finderror:{label:'Znajdź błąd',tone:'red',icon:'search',desc:'jedno zdanie jest fałszywe'},
   match:{label:'Połącz w pary',tone:'cyan',icon:'link',desc:'pojęcie i jego sedno'},
   order:{label:'Ustaw kolejność',tone:'gold',icon:'list',desc:'ułóż etapy po kolei'},
-  sort:{label:'Przypisz do kategorii',tone:'acid',icon:'grid',desc:'rozdziel przykłady do grup'}
+  sort:{label:'Przypisz do kategorii',tone:'acid',icon:'grid',desc:'rozdziel przykłady do grup'},
+  timeline:{label:'Oś czasu',tone:'gold',icon:'calendar',desc:'przypnij wydarzenia do dat'},
+  chain:{label:'Łańcuch przyczyn',tone:'cyan',icon:'arrow-down',desc:'co z czego wynika'},
+  chart:{label:'Wykres',tone:'violet',icon:'chart',desc:'odczytaj dane z wykresu'},
+  mathsteps:{label:'Krok po kroku',tone:'gold',icon:'calc',desc:'rozwiąż zadanie etapami'},
+  hotspot:{label:'Wskaż na schemacie',tone:'acid',icon:'pointer',desc:'dotknij właściwego miejsca'}
 };
 function allTasks(s){return s.levels.flatMap(l=>(l.tasks||[]).filter(t=>t&&TASKS[t.type]).map(t=>({...t,lvl:noEmoji(l.title)})));}
 function norm(str){return String(str||'').trim().toLowerCase().replace(/\s+/g,' ');}
+/* porównanie odpowiedzi wpisanej z klawiatury: bez wielkości liter, ogonków i interpunkcji (typeterm) */
+function fold(str){return norm(str).replace(/ł/g,'l').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\p{L}\p{N}\s]/gu,'').replace(/\s+/g,' ').trim();}
+/* odległość edycyjna (Levenshtein) — tolerancja literówki typo:1 */
+function lev(a,b){if(a===b)return 0;const m=a.length,n=b.length;if(!m||!n)return m||n;let prev=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur;}return prev[n];}
 function listBox(rows){return '<div class="tflist">'+rows.join('')+'</div>';}
+function leftText(n){return `${n===1?'Zostało':(n>=2&&n<=4)?'Zostały':'Zostało'} ${n}`;}
+/* wybór jednej opcji + SPRAWDŹ (thesis, scenario, chart): btns = przyciski z data-i; po sprawdzeniu .correct (a-pop / a-glow) / .wrong.a-shake / .dim,
+   litera w .k zamienia się na check/close jak w quizBlock. Klawisze 1-5 / A-E, Enter. fb(sel, ok) → {e, sub} do api.finish. */
+function chooser(api,btns,c,fb){
+  const btn=el('button','pill','SPRAWDŹ');btn.disabled=true;api.foot.appendChild(btn);
+  let sel=null,done=false;
+  const select=i=>{if(done||!btns[i])return;sel=i;btns.forEach((x,k)=>x.classList.toggle('sel',k===i));btn.disabled=false;};
+  const check=()=>{if(done||sel==null)return;done=true;const ok=sel===c;
+    btns.forEach((x,k)=>{x.disabled=true;x.classList.remove('sel','a-up','a-pop','d1','d2','d3','d4','d5','d6');const kk=x.querySelector('.k');
+      if(k===c){x.classList.add('correct',ok?'a-pop':'a-glow');if(kk)kk.innerHTML=icon('check',{size:18,stroke:3.6});}
+      else if(k===sel){x.classList.add('wrong','a-shake');if(kk)kk.innerHTML=icon('close',{size:17,stroke:3.6});}
+      else x.classList.add('dim');});
+    api.finish(ok,fb(sel,ok));};
+  btns.forEach((x,k)=>x.onclick=()=>select(k));btn.onclick=check;
+  keyFn=e=>{const k=(e.key||'').toLowerCase();const m=/^[1-5]$/.test(k)?+k-1:'abcde'.indexOf(k);if(k.length===1&&m>=0&&m<btns.length)select(m);else if(e.key==='Enter'&&sel!=null){e.preventDefault();check();}};
+  return btn;
+}
+/* przeciąganie kafelka .wordtile z puli na strefę (sort, timeline, chain): pointer events, strefa pod palcem przez elementFromPoint.
+   o.targets = selektor stref (dostają .hot w trakcie i .over pod palcem), o.onDrop(i, strefa|null), o.locked(). Zwykły tap (< 8 px) zostawia onclick kafelka. */
+function tileDrag(pool,o){
+  pool.onpointerdown=e=>{const t=e.target.closest('.wordtile');if(!t||t.disabled||o.locked())return;const i=+t.dataset.i;const r=t.getBoundingClientRect();const gx=e.clientX-r.left,gy=e.clientY-r.top;let moved=false;
+    // przewijany kontener (lekcja: .task; Ćwiczenia: .scroll) — przy krawędzi auto-przewijanie, kafelek zostaje pod palcem (korekta o przesunięcie scrolla)
+    const sc=[pool.closest('.task'),pool.closest('.scroll')].find(x=>x&&x.scrollHeight>x.clientHeight+2);const st0=sc?sc.scrollTop:0;let lx=e.clientX,ly=e.clientY,autoInt=null;
+    const zones=()=>[...document.querySelectorAll(o.targets)];
+    const zoneAt=(x,y)=>{const u=document.elementFromPoint(x,y);return u&&u.closest(o.targets);};
+    const place=()=>{const ds=sc?sc.scrollTop-st0:0;t.style.transform=`translate(${lx-(r.left+gx)}px,${ly-(r.top+gy)+ds}px)`;const z=zoneAt(lx,ly);zones().forEach(b=>b.classList.toggle('over',b===z));};
+    const onMove=ev=>{lx=ev.clientX;ly=ev.clientY;const dx=lx-(r.left+gx),dy=ly-(r.top+gy);if(!moved&&Math.hypot(dx,dy)<8)return;
+      if(!moved){moved=true;t.classList.add('drag');t.classList.remove('a-bob');t.style.pointerEvents='none';zones().forEach(z=>z.classList.add('hot'));try{pool.setPointerCapture(ev.pointerId);}catch(x){}
+        if(sc)autoInt=setInterval(()=>{const cr=sc.getBoundingClientRect();const d=ly<cr.top+70?-10:ly>cr.bottom-70?10:0;if(d){sc.scrollTop+=d;place();}},16);}
+      place();};
+    const onUp=ev=>{pool.removeEventListener('pointermove',onMove);pool.removeEventListener('pointerup',onUp);pool.removeEventListener('pointercancel',onUp);clearInterval(autoInt);
+      if(!moved)return; // zwykły tap → onclick kafelka
+      const z=zoneAt(ev.clientX,ev.clientY);t.style.transform='';t.style.pointerEvents='';t.classList.remove('drag');zones().forEach(b=>b.classList.remove('hot','over'));o.onDrop(i,z);};
+    pool.addEventListener('pointermove',onMove);pool.addEventListener('pointerup',onUp);pool.addEventListener('pointercancel',onUp);};
+}
+/* wykres słupkowy / liniowy jako inline SVG (ChartRead.html): jedna seria, kolory przez klasy z tokenów, wartości nad znacznikami, etykiety x pod osią */
+function chartSvg(kind,xs,ys,fmtV){
+  const W=330,H=178,top=22,base=150,left=14,right=320;const n=Math.max(1,xs.length);const max=Math.max(1e-9,...ys);const step=(right-left)/n;
+  const yOf=v=>base-(Math.max(0,v)/max)*(base-top);const xOf=i=>left+step*i+step/2;const r1=v=>Math.round(v*10)/10;
+  const grid=[0.5,1].map(f=>`<line class="cgrid" x1="${left-4}" y1="${r1(yOf(max*f))}" x2="${right+5}" y2="${r1(yOf(max*f))}"/>`).join('');
+  let marks;
+  if(kind==='line'){marks=`<polyline class="cline" points="${ys.map((v,i)=>r1(xOf(i))+','+r1(yOf(v))).join(' ')}"/>`
+    +ys.map((v,i)=>`<circle class="cdot" cx="${r1(xOf(i))}" cy="${r1(yOf(v))}" r="5"/><text class="cval" x="${r1(xOf(i))}" y="${r1(yOf(v))-11}" text-anchor="middle">${fmtV(v)}</text>`).join('');}
+  else{const bw=Math.min(34,step*.66);marks=ys.map((v,i)=>`<rect class="cbar" x="${r1(xOf(i)-bw/2)}" y="${r1(yOf(v))}" width="${r1(bw)}" height="${r1(base-yOf(v))}" rx="7"/><text class="cval" x="${r1(xOf(i))}" y="${r1(yOf(v))-7}" text-anchor="middle">${fmtV(v)}</text>`).join('');}
+  const labs=xs.map((x,i)=>`<text class="clab" x="${r1(xOf(i))}" y="${base+20}" text-anchor="middle">${x}</text>`).join('');
+  const desc=xs.map((x,i)=>x+': '+fmtV(ys[i])).join(', ');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${kind==='line'?'Wykres liniowy':'Wykres słupkowy'}: ${desc}">${grid}<line class="caxis" x1="${left-4}" y1="${base}" x2="${right+5}" y2="${base}"/>${marks}${labs}</svg>`;
+}
 /* sesja poziomu: pytania quizu (max 6, losowo) i zadania w jednym strumieniu — pierwsze zawsze pytanie, zadania rozłożone równo między resztę */
 function levelSession(lv){
   const qs=shuffle(lv.quiz||[]).slice(0,Math.min(6,(lv.quiz||[]).length)).map(q=>({kind:'quiz',q}));
@@ -1964,20 +2255,218 @@ const TASKS={
       pool.innerHTML='';poolOrder.forEach(i=>{const it=items[i];if(it.at!=null)return;const t=el('button','wordtile'+(sel===i?' sel a-bob':''),it.t);t.dataset.i=i;t.onclick=()=>{if(locked)return;sel=(sel===i?null:i);draw();};pool.appendChild(t);});
       btn.disabled=left>0;btn.textContent=left?'PRZYPISZ WSZYSTKIE':'SPRAWDŹ';
     };
-    pool.onpointerdown=e=>{const t=e.target.closest('.wordtile');if(!t||locked)return;const i=+t.dataset.i;const r=t.getBoundingClientRect();const gx=e.clientX-r.left,gy=e.clientY-r.top;let moved=false;
-      const bucketAt=(x,y)=>{const u=document.elementFromPoint(x,y);return u&&u.closest('.bucket');};
-      const onMove=ev=>{const dx=ev.clientX-(r.left+gx),dy=ev.clientY-(r.top+gy);if(!moved&&Math.hypot(dx,dy)<8)return;
-        if(!moved){moved=true;t.classList.add('drag');t.classList.remove('a-bob');t.style.pointerEvents='none';grid.querySelectorAll('.bucket').forEach(b=>b.classList.add('hot'));try{pool.setPointerCapture(ev.pointerId);}catch(x){}}
-        t.style.transform=`translate(${dx}px,${dy}px)`;const bx=bucketAt(ev.clientX,ev.clientY);grid.querySelectorAll('.bucket').forEach(b=>b.classList.toggle('over',b===bx));};
-      const onUp=ev=>{pool.removeEventListener('pointermove',onMove);pool.removeEventListener('pointerup',onUp);pool.removeEventListener('pointercancel',onUp);
-        if(!moved)return; // zwykły tap → onclick kafelka
-        const bx=bucketAt(ev.clientX,ev.clientY);t.style.transform='';t.style.pointerEvents='';t.classList.remove('drag');
-        if(bx){items[i].at=+bx.dataset.b;sel=null;}draw();};
-      pool.addEventListener('pointermove',onMove);pool.addEventListener('pointerup',onUp);pool.addEventListener('pointercancel',onUp);};
+    tileDrag(pool,{targets:'.bucket',locked:()=>locked,onDrop:(i,bx)=>{if(bx){items[i].at=+bx.dataset.b;sel=null;}draw();}});
     const check=()=>{if(locked||btn.disabled)return;locked=true;let ok=true;
       grid.querySelectorAll('.bitem').forEach(t=>{const it=items[+t.dataset.i];const good=it&&it.at===it.b;if(!good)ok=false;t.classList.add(...(good?['ok']:['bad','a-shake']));t.disabled=true;});
       api.finish(ok,{e:ok?(task.e||''):(task.e?task.e+'<br><br>':'')+listBox(buckets.map(b=>`<div><b>${b.name}:</b> ${(b.items||[]).join(', ')}</div>`)),sub:ok?'':'Poprawny podział niżej'});};
     btn.onclick=check;keyFn=e=>{if(e.key==='Enter'){e.preventDefault();check();}};
+    draw();
+  }},
+
+  /* ===== krok 5b: pozostałe typy z DESIGN.md §4.1 ===== */
+  /* WPISZ POJĘCIE (TypeTerm.html): definicja w karcie, pole tekstowe (Bricolage), kreski = litery odpowiedzi (wypełniają się w trakcie pisania),
+     „Pierwsza litera · −2 XP” (podpowiedź, XP przez addXP), „Nie pamiętam” (= źle, pokazuje odpowiedź). Porównanie po fold(): bez wielkości liter i ogonków,
+     answer + accept; typo:1 = jedna literówka (odległość edycyjna ≤ 1). Enter w polu = SPRAWDŹ. */
+  typeterm:{render(task,api){
+    const ans=String(task.answer||'');const acc=[ans].concat(task.accept||[]).map(fold).filter(Boolean);const tol=task.typo|0;
+    const letters=ans.replace(/\s+/g,'').length;let locked=false,hinted=false;
+    api.body.appendChild(el('div','',`<div class="ttitle">${task.title||'Jak to się nazywa?'}</div>`));
+    api.body.appendChild(el('div','defcard a-up d1',`<div class="eyebrow">Definicja</div><div class="deftext">${task.definition||''}</div>`));
+    const wrap=el('div','a-up d2');
+    wrap.innerHTML=`<label class="eyebrow" for="term">Twoja odpowiedź</label><div class="termbox"><input id="term" class="terminput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Twoja odpowiedź"></div>
+      <div class="letters" aria-hidden="true">${ans.split('').map(ch=>/\s/.test(ch)?'<b></b>':'<i></i>').join('')}</div>
+      <div class="termmeta">${letters} ${pl(letters,'litera','litery','liter')}${tol?' · literówka w jednym miejscu jest akceptowana':''}</div>`;
+    api.body.appendChild(wrap);
+    const inp=wrap.querySelector('input'),box=wrap.querySelector('.termbox'),dots=[...wrap.querySelectorAll('.letters i')];
+    const btns=el('div','termbtns a-up d3');const hint=el('button','hintbtn gold','Pierwsza litera · −2 XP'),giveup=el('button','hintbtn','Nie pamiętam');btns.appendChild(hint);btns.appendChild(giveup);api.body.appendChild(btns);
+    const btn=el('button','pill','SPRAWDŹ');btn.disabled=true;api.foot.appendChild(btn);
+    const paint=()=>{const n=inp.value.replace(/\s+/g,'').length;dots.forEach((d,k)=>d.classList.toggle('on',k<n));btn.disabled=!inp.value.trim();};
+    inp.oninput=paint;
+    const check=()=>{if(locked||!inp.value.trim())return;locked=true;inp.disabled=true;const got=fold(inp.value);
+      const ok=acc.some(a=>a===got||(tol>0&&lev(a,got)<=tol));
+      box.classList.add(ok?'ok':'bad');if(!ok)box.classList.add('a-shake');
+      api.finish(ok,{e:task.e||'',sub:ok?'':'Poprawnie: '+ans});};
+    hint.onclick=()=>{if(locked||hinted)return;hinted=true;hint.disabled=true;hint.textContent='Zaczyna się na „'+ans.charAt(0).toUpperCase()+'”';if(!inp.value)inp.value=ans.charAt(0);paint();
+      if(subjState(current.id).xp>=2&&daily().xp>=2){addXP(current.id,-2);toast('Podpowiedź: −2 XP','bolt');}try{inp.focus();}catch(e){}};
+    giveup.onclick=()=>{if(locked)return;locked=true;inp.value=ans;inp.disabled=true;paint();box.classList.add('bad');api.finish(false,{e:task.e||'',sub:'Poprawnie: '+ans});};
+    btn.onclick=check;inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();check();}});
+    setTimeout(()=>{try{inp.focus();}catch(e){}},80);
+  }},
+  /* DWIE KATEGORIE (Swipe.html): strefy left/right po bokach, stos kart (front + tło), przeciąganie karty przez pointer events z przechyłem (dx/14°),
+     stempel z nazwą strefy od 30 px, odpowiedź od 80 px; do tego dwa przyciski pod spodem i strzałki ←/→. Kropki = wynik kolejnych kart.
+     Zadanie zaliczone, gdy wszystkie karty trafione; w panelu „źle” lista nietrafionych (serce raz na zadanie). */
+  swipe:{render(task,api){
+    const cards=shuffle(task.cards||[]);const n=cards.length;const L=task.left||'Lewo',R=task.right||'Prawo';
+    let i=0,busy=false;const results=[],wrong=[];
+    const head=el('div','trow',`<div class="ttitle">${task.title||L+' czy '+R+'?'}</div><span class="tcount">1 / ${n}</span>`);api.body.appendChild(head);
+    const stage=el('div','swipestage');api.body.appendChild(stage);
+    stage.innerHTML=`<div class="szone l"><span>${L}</span></div><div class="szone r"><span>${R}</span></div><div class="scard back"></div>
+      <div class="scard front"><div class="stamp l">${L}</div><div class="stamp r">${R}</div><div class="sfront"></div><div class="ssub"></div></div><div class="dots" aria-hidden="true"></div>`;
+    const card=stage.querySelector('.scard.front'),back=stage.querySelector('.scard.back'),zl=stage.querySelector('.szone.l'),zr=stage.querySelector('.szone.r'),dots=stage.querySelector('.dots'),cnt=head.querySelector('.tcount');
+    const bl=el('button','swbtn l',icon('back',{size:18,stroke:3})+'<span>'+L+'</span>'),br=el('button','swbtn r','<span>'+R+'</span>'+icon('chevron-right',{size:18,stroke:3}));
+    bl.setAttribute('aria-label',L);br.setAttribute('aria-label',R);
+    const row=el('div','swbtns');row.appendChild(bl);row.appendChild(br);api.foot.appendChild(row);
+    const drawDots=()=>{dots.innerHTML=cards.map((c,k)=>`<i class="${results[k]===true?'ok':results[k]===false?'bad':k===i?'cur a-blink':''}"></i>`).join('');};
+    const show=()=>{const c=cards[i];card.className='scard front a-pop';card.style.transform='';const sf=card.querySelector('.sfront');sf.textContent=c.front;sf.classList.toggle('long',String(c.front).length>14);
+      card.querySelector('.ssub').textContent=c.sub||'';cnt.textContent=(i+1)+' / '+n;back.style.visibility=i+1<n?'':'hidden';drawDots();};
+    const end=()=>{const bad=wrong.length;api.finish(bad===0,{e:bad?listBox(wrong.map(c=>`<div><b>${c.front}</b> — ${c.side==='left'?L:R}${c.e?'. '+c.e:''}</div>`)):(task.e||''),sub:bad?`Nietrafione: ${bad} z ${n}`:''});};
+    const answer=side=>{if(busy||i>=n)return;busy=true;const c=cards[i];const ok=(c.side==='right')===(side==='right');results[i]=ok;if(!ok)wrong.push(c);
+      const zone=side==='left'?zl:zr;zone.classList.add(ok?'okk':'badd');card.classList.remove('a-pop','grab','to-l','to-r');card.style.transform='';card.classList.add(ok?'okk':'badd','fly-'+(side==='left'?'l':'r'));drawDots();
+      setTimeout(()=>{zone.classList.remove('okk','badd');i++;busy=false;if(i>=n)end();else show();},ok?420:800);};
+    card.onpointerdown=e=>{if(busy)return;const x0=e.clientX,y0=e.clientY;let dx=0;card.classList.add('grab');card.classList.remove('a-pop');try{card.setPointerCapture(e.pointerId);}catch(x){}
+      const onMove=ev=>{dx=ev.clientX-x0;const dy=(ev.clientY-y0)*.25;card.style.transform=`translate(${dx}px,${dy}px) rotate(${dx/14}deg)`;card.classList.toggle('to-l',dx<-30);card.classList.toggle('to-r',dx>30);zl.classList.toggle('near',dx<-30);zr.classList.toggle('near',dx>30);};
+      const onUp=()=>{card.removeEventListener('pointermove',onMove);card.removeEventListener('pointerup',onUp);card.removeEventListener('pointercancel',onUp);zl.classList.remove('near');zr.classList.remove('near');
+        if(Math.abs(dx)>80)answer(dx<0?'left':'right');else{card.classList.remove('grab','to-l','to-r');card.style.transform='';}};
+      card.addEventListener('pointermove',onMove);card.addEventListener('pointerup',onUp);card.addEventListener('pointercancel',onUp);};
+    bl.onclick=()=>answer('left');br.onclick=()=>answer('right');
+    keyFn=e=>{if(e.key==='ArrowLeft'||e.key==='1')answer('left');else if(e.key==='ArrowRight'||e.key==='2')answer('right');};
+    show();
+  }},
+  /* CZYJA TO TEZA (WhoSaid.html): karta z cudzysłowem i tezą, siatka 2×N opcji {name, sub}; wybrana = fiolet; SPRAWDŹ przez chooser(). */
+  thesis:{render(task,api){
+    const opts=task.options||[];
+    api.body.appendChild(el('div','thcard a-pop d1',icon('quote',{size:34})+`<div class="thtext">${task.thesis||''}</div>`));
+    api.body.appendChild(el('div','eyebrow',task.q||'Kto tak twierdzi?'));
+    const grid=el('div','thgrid');api.body.appendChild(grid);
+    const btns=opts.map((o,k)=>{const b=el('button','thopt a-up d'+Math.min(6,k+1),`<span class="n">${o.name}</span>${o.sub?`<span class="s">${o.sub}</span>`:''}`);b.dataset.i=k;grid.appendChild(b);return b;});
+    chooser(api,btns,task.c,(sel,ok)=>({e:task.e||'',sub:ok?'':'Poprawnie: '+((opts[task.c]||{}).name||'')}));
+  }},
+  /* SCENARIUSZ (Scenario.html): karta „Sytuacja” z opisem, pytanie, opcje A–D jak w quizie (.qopt.sm), SPRAWDŹ przez chooser(). */
+  scenario:{render(task,api){
+    api.body.appendChild(el('div','scenecard a-up d1',`<div class="eyebrow">Sytuacja</div><div class="scenetext">${task.scene||''}</div>`));
+    api.body.appendChild(el('div','ttitle sm a-up d2',task.q||'Co najlepiej to wyjaśnia?'));
+    const list=el('div','qopts');api.body.appendChild(list);
+    const btns=(task.a||[]).map((a,k)=>{const b=el('button','qopt sm a-up d'+Math.min(6,k+2),`<span class="k">${keys[k]}</span><span class="t">${a}</span>`);b.dataset.i=k;list.appendChild(b);return b;});
+    chooser(api,btns,task.c,(sel,ok)=>({e:task.e||'',sub:ok?'':'Poprawna: odpowiedź '+keys[task.c]}));
+  }},
+  /* ZNAJDŹ BŁĄD (FindError.html): zdania jako kafelki w karcie, wybrane = czerwień; po SPRAWDŹ fałszywe zdanie przekreślone, pod spodem poprawka fix;
+     chybiony wybór = bursztynowa ramka (to zdanie było prawdziwe). */
+  finderror:{render(task,api){
+    const sents=task.sentences||[];const w=task.wrong|0;
+    api.body.appendChild(el('div','',`<div class="ttitle">${task.title||'Jedno zdanie jest fałszywe. Które?'}</div>`));
+    const card=el('div','errcard');api.body.appendChild(card);
+    const btns=sents.map((s,k)=>{const b=el('button','errsent a-up d'+Math.min(6,k+1),s);b.dataset.i=k;card.appendChild(b);return b;});
+    const fixBox=el('div','errfix');card.appendChild(fixBox);
+    api.body.appendChild(el('div','notebox a-up d5',icon('info',{size:18})+'<span>Po sprawdzeniu zobaczysz poprawione zdanie.</span>'));
+    chooser(api,btns,w,(sel,ok)=>{fixBox.className='errfix show '+(ok?'ok':'bad');
+      fixBox.innerHTML=`<div class="lbl">${ok?'Trafione':'Fałszywe było zdanie '+(w+1)}</div><div>${task.fix?`Poprawnie: <b>${task.fix}</b>`:'Zdanie '+(w+1)+' jest fałszywe.'}</div>`;
+      return {e:task.e||'',sub:ok?'':'Fałszywe było zdanie '+(w+1)};});
+  }},
+  /* OŚ CZASU (Timeline.html): wiersze = lata rosnąco (oś pionowa, kropki), wydarzenia wymieszane w puli kafelków. Tap kafelek (fiolet + a-bob) → tap pusty slot;
+     tap przypięte wydarzenie = wraca do puli; przeciąganie kafelka na slot przez tileDrag(). Pierwszy pusty slot mruga. Sprawdzenie po roku (równe lata = zamienne). */
+  timeline:{render(task,api){
+    const evs=(task.events||[]).map((e,k)=>({label:e.label,year:e.year,k}));const rows=[...evs].sort((a,b)=>+a.year-+b.year);const n=rows.length;
+    const poolOrder=shuffle(evs.map(e=>e.k));const slots=rows.map(()=>null);let sel=null,locked=false,first=true;
+    api.body.appendChild(el('div','',`<div class="ttitle">${task.title||'Przypnij wydarzenia do dat'}</div>`));
+    const tl=el('div','tl');api.body.appendChild(tl);
+    api.body.appendChild(el('div','tsep'));const ph=el('div','eyebrow');api.body.appendChild(ph);
+    const pool=el('div','bank pool');api.body.appendChild(pool);
+    const btn=el('button','pill','SPRAWDŹ');btn.disabled=true;api.foot.appendChild(btn);
+    const draw=()=>{const firstEmpty=slots.indexOf(null);
+      tl.innerHTML='<i class="tlaxis"></i>'+rows.map((r,si)=>{const t=slots[si];const cur=si===firstEmpty;
+        return `<div class="tlrow"><span class="tlyear">${r.year}</span><i class="tldot${t!=null?' on':cur?' cur a-pulse':''}"></i>
+          ${t!=null?`<button class="tlev a-pop" data-s="${si}" aria-label="${r.year}: ${evs[t].label}, tapnij, żeby cofnąć">${icon('check',{size:16,stroke:3.4})}<span>${evs[t].label}</span></button>`
+          :`<div class="tlslot empty${cur?' cur a-blink':''}" data-s="${si}" role="button" aria-label="Miejsce na wydarzenie z roku ${r.year}">${cur?'<span>'+(sel!=null?'upuść tutaj':'tu trafi wydarzenie')+'</span>':''}</div>`}</div>`;}).join('');
+      tl.querySelectorAll('.tlev').forEach(b=>b.onclick=()=>{if(locked)return;slots[+b.dataset.s]=null;sel=null;draw();});
+      tl.querySelectorAll('.tlslot').forEach(z=>z.onclick=()=>{if(locked||sel==null)return;slots[+z.dataset.s]=sel;sel=null;draw();});
+      const left=slots.filter(x=>x==null).length;ph.textContent=left?leftText(left):'Wszystko przypięte';
+      pool.innerHTML='';poolOrder.forEach((k,pos)=>{if(slots.includes(k))return;const t=el('button','wordtile'+(sel===k?' sel a-bob':first?' a-up d'+Math.min(6,pos+1):''),evs[k].label);t.dataset.i=k;t.onclick=()=>{if(locked)return;sel=(sel===k?null:k);draw();};pool.appendChild(t);});
+      btn.disabled=left>0;first=false;};
+    tileDrag(pool,{targets:'.tlslot.empty',locked:()=>locked,onDrop:(k,z)=>{if(z){slots[+z.dataset.s]=k;sel=null;}draw();}});
+    const check=()=>{if(locked||btn.disabled)return;locked=true;let ok=true;
+      tl.querySelectorAll('.tlev').forEach(b=>{const si=+b.dataset.s;const good=+evs[slots[si]].year===+rows[si].year;if(!good)ok=false;b.classList.remove('a-pop');b.classList.add(...(good?['ok']:['bad','a-shake']));b.disabled=true;});
+      api.finish(ok,{e:ok?(task.e||''):(task.e?task.e+'<br><br>':'')+listBox(rows.map(r=>`<div><b>${r.year}</b> — ${r.label}</div>`)),sub:ok?'':'Poprawna oś czasu niżej'});};
+    btn.onclick=check;keyFn=e=>{if(e.key==='Enter'){e.preventDefault();check();}};
+    draw();
+  }},
+  /* ŁAŃCUCH PRZYCZYN (CauseChain.html): kolumna kroków ze strzałkami; given = widoczne od startu, reszta = sloty („co dalej?”, pierwszy mruga).
+     Tap kafelek → pierwszy wolny slot, tap wstawiony krok = wraca; przeciąganie na konkretny slot przez tileDrag(). Bank = brakujące kroki + dystraktory. */
+  chain:{render(task,api){
+    const steps=task.steps||[];const given=new Set((task.given||[]).map(Number));
+    const tiles=shuffle(steps.filter((s,k)=>!given.has(k)).concat(task.bank||[]));
+    const slots=steps.map((s,k)=>given.has(k)?-1:null);let locked=false,first=true;
+    api.body.appendChild(el('div','',`<div class="ttitle">${task.title||'Co się dzieje po kolei?'}</div>`));
+    const col=el('div','chain');api.body.appendChild(col);
+    const pool=el('div','bank pool');api.body.appendChild(pool);
+    const btn=el('button','pill','SPRAWDŹ');btn.disabled=true;api.foot.appendChild(btn);
+    const draw=()=>{const firstEmpty=slots.indexOf(null);
+      col.innerHTML=steps.map((s,k)=>{const t=slots[k];let h;
+        if(t===-1)h=`<div class="chstep given${first?' a-up d'+Math.min(6,k+1):''}">${s}</div>`;
+        else if(t!=null)h=`<button class="chstep filled a-pop" data-s="${k}" aria-label="${tiles[t]}, tapnij, żeby cofnąć">${icon('check',{size:16,stroke:3.4})}<span>${tiles[t]}</span></button>`;
+        else h=`<div class="chslot empty${k===firstEmpty?' cur a-blink':''}" data-s="${k}" role="button" aria-label="Krok ${k+1}">${k===firstEmpty?'<span>co dalej?</span>':''}</div>`;
+        return (k?`<div class="charrow">${icon('arrow-down',{size:22,stroke:3})}</div>`:'')+h;}).join('');
+      col.querySelectorAll('.chstep.filled').forEach(b=>b.onclick=()=>{if(locked)return;slots[+b.dataset.s]=null;draw();});
+      pool.innerHTML='';tiles.forEach((w,i)=>{const used=slots.includes(i);const t=el('button','wordtile'+(used?' used':first?' a-up d'+Math.min(6,i+1):''),w);t.dataset.i=i;t.disabled=used;
+        t.onclick=()=>{if(locked||used)return;const free=slots.indexOf(null);if(free<0)return;slots[free]=i;draw();};pool.appendChild(t);});
+      btn.disabled=slots.some(x=>x==null);first=false;};
+    tileDrag(pool,{targets:'.chslot.empty',locked:()=>locked,onDrop:(i,z)=>{if(z)slots[+z.dataset.s]=i;draw();}});
+    const check=()=>{if(locked||btn.disabled)return;locked=true;let ok=true;
+      col.querySelectorAll('.chstep.filled').forEach(b=>{const k=+b.dataset.s;const good=norm(tiles[slots[k]])===norm(steps[k]);if(!good)ok=false;b.classList.remove('a-pop');b.classList.add(...(good?['ok']:['bad','a-shake']));b.disabled=true;});
+      api.finish(ok,{e:ok?(task.e||''):(task.e?task.e+'<br><br>':'')+listBox(steps.map((s,k)=>`<div><b>${k+1}.</b> ${s}</div>`)),sub:ok?'':'Poprawny łańcuch niżej'});};
+    btn.onclick=check;keyFn=e=>{if(e.key==='Enter'){e.preventDefault();check();}};
+    draw();
+  }},
+  /* WYKRES (ChartRead.html): karta z podpisem i wykresem (chartSvg: bar | line, jedna seria), pytanie, opcje A–D, SPRAWDŹ przez chooser(). */
+  chart:{render(task,api){
+    const ch=task.chart||{};const xs=ch.x||[],ys=(ch.y||[]).map(Number);const fmtV=v=>String(v).replace('.',',');
+    api.body.appendChild(el('div','chartcard a-up d1',`<div class="chartlbl">${ch.label||''}</div>${chartSvg(ch.kind,xs,ys,fmtV)}`));
+    api.body.appendChild(el('div','ttitle sm a-up d2',task.q||''));
+    const list=el('div','qopts');api.body.appendChild(list);
+    const btns=(task.a||[]).map((a,k)=>{const b=el('button','qopt sm a-up d'+Math.min(6,k+2),`<span class="k">${keys[k]}</span><span class="t">${a}</span>`);b.dataset.i=k;list.appendChild(b);return b;});
+    chooser(api,btns,task.c,(sel,ok)=>({e:task.e||'',sub:ok?'':'Poprawna: odpowiedź '+keys[task.c]}));
+  }},
+  /* KROK PO KROKU (MathSteps.html): karta z wyrażeniem startowym i kolejnymi krokami; każdy krok = wybór przekształcenia z opcji (siatka 2 kolumny, wymieszane) + SPRAWDŹ.
+     Dobry wybór → wiersz limonkowy z note; zły → wiersz czerwony (przekreślony) i ramka z note (wyjaśnienie), opcja gaśnie, wybierasz dalej.
+     Zaliczone = całość bez pomyłek (serce raz na zadanie). Klawisze 1-4, Enter. */
+  mathsteps:{render(task,api){
+    const steps=task.steps||[];let i=0,sel=null,mistakes=0,locked=false,order=[];const hist=[];let tried=new Set();
+    api.body.appendChild(el('div','',`<div class="ttitle">${task.title||'Rozwiąż krok po kroku'}</div>`));
+    const card=el('div','mathcard');api.body.appendChild(card);
+    const ph=el('div','eyebrow','Wybierz następny krok');api.body.appendChild(ph);
+    const grid=el('div','mgrid');api.body.appendChild(grid);
+    const btn=el('button','pill','SPRAWDŹ');btn.disabled=true;api.foot.appendChild(btn);
+    const drawCard=()=>{const last=hist[hist.length-1];
+      card.innerHTML=`<div class="mrow start"><span class="mexpr">${task.start||''}</span><span class="mnote">zadanie</span></div>`
+        +hist.map((h,k)=>`<div class="mrow ${h.ok?'ok':'bad'}${k===hist.length-1?(h.ok?' a-pop':' a-shake'):''}"><span class="mexpr">${h.expr}</span><span class="mnote">${h.ok?h.note:'nie tak'}</span>${icon(h.ok?'check':'close',{size:16,stroke:3.4})}</div>`).join('')
+        +(last&&!last.ok?`<div class="mexp">${icon('bulb',{size:16})}<span>${last.note}</span></div>`:'')
+        +(i<steps.length?`<div class="mrow next a-blink"><span>następny krok?</span></div>`:'');};
+    const drawOpts=()=>{grid.innerHTML='';sel=null;btn.disabled=true;const s=steps[i];order=shuffle((s.options||[]).map((_,k)=>k));
+      order.forEach((k,pos)=>{const b=el('button','mopt a-up d'+Math.min(6,pos+1),s.options[k]);b.dataset.i=k;if(tried.has(k)){b.disabled=true;b.classList.add('dim');}
+        b.onclick=()=>{if(locked||b.disabled)return;sel=k;grid.querySelectorAll('.mopt').forEach(x=>x.classList.toggle('sel',+x.dataset.i===k));btn.disabled=false;};grid.appendChild(b);});};
+    const check=()=>{if(locked||sel==null)return;const s=steps[i];const ok=sel===s.c;
+      if(ok){hist.push({ok:true,expr:s.expr||s.options[s.c],note:s.note||''});tried=new Set();i++;
+        if(i>=steps.length){locked=true;drawCard();grid.innerHTML='';ph.textContent='Rozwiązane';
+          api.finish(mistakes===0,{e:task.e||'',sub:mistakes?`${mistakes} ${pl(mistakes,'pomyłka','pomyłki','pomyłek')} po drodze`:''});return;}}
+      else{mistakes++;tried.add(sel);hist.push({ok:false,expr:s.options[sel],note:s.note||'Spróbuj inaczej.'});}
+      drawCard();drawOpts();};
+    btn.onclick=check;
+    keyFn=e=>{const k=e.key||'';const m=/^[1-5]$/.test(k)?+k-1:-1;if(m>=0){const b=grid.querySelectorAll('.mopt')[m];if(b&&!b.disabled)b.click();}else if(k==='Enter'&&sel!=null){e.preventDefault();check();}};
+    drawCard();drawOpts();
+  }},
+  /* WSKAŻ NA SCHEMACIE (Hotspot.html): obraz (inline <svg …> albo ścieżka <img>) w karcie, warstwa dotyku nad nim; targets:[{name,x,y,r}] w % (x, y = środek,
+     r = promień w % szerokości obrazka). Pytania po kolei („Dotknij: …”), trafienie = limonkowy pierścień + etykieta, chybienie = czerwony punkt + a-shake karty.
+     „POKAŻ, GDZIE TO JEST” = pomyłka + podświetlenie celu. Zaliczone = wszystkie cele bez pomyłek (serce raz na zadanie). */
+  hotspot:{render(task,api){
+    const tg=task.targets||[];const n=tg.length;let i=0,mistakes=0,locked=false,busy=false;
+    const title=el('div','ttitle');api.body.appendChild(title);
+    const card=el('div','hotcard a-up d1');api.body.appendChild(card);
+    const img=el('div','hotimg');const src=String(task.image||'');
+    if(/^\s*<svg/i.test(src))img.innerHTML=src;else if(src){const im=el('img');im.src=src;im.alt=task.alt||'';im.draggable=false;img.appendChild(im);}
+    const layer=el('div','hotlayer');layer.setAttribute('aria-label','Dotknij właściwego miejsca na schemacie');img.appendChild(layer);card.appendChild(img);
+    const chips=el('div','hotchips a-up d2');api.body.appendChild(chips);
+    const show=el('button','pill ghost','POKAŻ, GDZIE TO JEST');api.foot.appendChild(show);
+    const draw=()=>{title.textContent=i<n?'Dotknij: '+tg[i].name:'Wszystko wskazane';
+      chips.innerHTML=tg.map((t,k)=>`<span class="hotchip${k<i?' done':k===i?' cur':''}">${k<i?icon('check',{size:13,stroke:3.4}):''}${k===i+1?'Kolejne: ':''}${t.name}</span>`).join('');};
+    const pin=(t,cls,label)=>{const p=el('div','hotpin');p.style.left=t.x+'%';p.style.top=t.y+'%';p.style.width=(t.r*2)+'%';
+      p.innerHTML=`<i class="hotring ${cls}"></i>${label?`<b class="hottag ${cls}">${label}</b>`:''}`;layer.appendChild(p);return p;};
+    const end=()=>{locked=true;api.finish(mistakes===0,{e:task.e||'',sub:mistakes?`${mistakes} ${pl(mistakes,'pomyłka','pomyłki','pomyłek')} po drodze`:''});};
+    const hit=t=>{pin(t,'ok a-pop',t.name);i++;draw();if(i>=n)setTimeout(end,500);};
+    layer.onclick=e=>{if(locked||busy||i>=n)return;const r=img.getBoundingClientRect();const x=(e.clientX-r.left)/r.width*100,y=(e.clientY-r.top)/r.height*100;const t=tg[i];
+      const dx=(x-t.x)*r.width/100,dy=(y-t.y)*r.height/100;
+      if(Math.hypot(dx,dy)<=t.r*r.width/100)hit(t);
+      else{mistakes++;busy=true;card.classList.add('a-shake');const m=pin({x,y,r:4},'miss a-pop');setTimeout(()=>{m.remove();card.classList.remove('a-shake');busy=false;},700);}};
+    show.onclick=()=>{if(locked||busy||i>=n)return;mistakes++;busy=true;const t=tg[i];const p=pin(t,'reveal a-blink',t.name);
+      setTimeout(()=>{p.querySelectorAll('.reveal').forEach(x=>x.classList.remove('a-blink'));busy=false;i++;draw();if(i>=n)end();},1100);};
     draw();
   }}
 };
@@ -2366,7 +2855,7 @@ function renderCwicz(sc){
       ['match','link','Pary słówek','Dopasuj słowo do tłumaczenia (z fiszek).']]
    : [['match','link','Pary z fiszek','Dopasuj pojęcie do definicji.'],
       ['speed','bolt','Szybki quiz na czas','60 sekund — ile zdążysz trafić?'],
-      ['typing','edit','Wpisz pojęcie','Z definicji wpisz właściwy termin.']];
+      ['typing','edit','Pojęcie z fiszek','Z definicji wpisz właściwy termin.']]; // krok 5b: dawne „Wpisz pojęcie” — nazwa zajęta przez typ zadania typeterm
   hub.appendChild(el('div','exprompt','Wybierz ćwiczenie'));
   items.forEach(([k,em,t,p])=>{
     const c=el('div','excard',`<div class="eemoji">${icon(em,{size:26,stroke:2.4})}</div><div class="emeta"><h3>${t}</h3><p>${p}</p></div>`);

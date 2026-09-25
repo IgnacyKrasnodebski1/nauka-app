@@ -60,7 +60,10 @@ window.SUBJECTS.push({
         {s:"Kwestia społeczna to pech pojedynczej osoby, a nie problem systemowy.",v:false,e:"Kwestia społeczna to wspólne, systemowe podłoże problemów (Rysz-Kowalczyk)."},
         {s:"Realny człowiek działa jak homo economicus — zawsze racjonalnie liczy zyski i straty.",v:false,e:"Racjonalność ograniczona, heurystyki, status quo bias."},
         {s:"Polityka makroekonomiczna zarządza gospodarką jako całością (dług, stopy procentowe).",v:true,e:"Makro pilnuje finansów państwa, polityka społeczna — warunków życia ludzi."}
-      ]}
+      ]},
+      /* krok 5b */
+      {type:"typeterm",definition:"Skłonność do trzymania się obecnego stanu rzeczy („zawsze tak robiliśmy”) i opór przed zmianą — nawet gdy alternatywa jest korzystniejsza.",answer:"status quo bias",accept:["efekt status quo","bias status quo","skrzywienie status quo"],typo:1,e:"Status quo bias to jeden z powodów, dla których ludzie nie działają jak homo economicus: wybór domyślny wygrywa z lepszym, ale nowym."},
+      {type:"scenario",scene:"Firma od dziesięciu lat kupuje to samo, droższe ubezpieczenie floty. Konkurencyjna oferta ma identyczny zakres i jest o 20% tańsza, ale dyrektor mówi: „Zawsze tak robiliśmy, po co ryzykować”.",q:"Który mechanizm najlepiej to opisuje?",a:["Status quo bias","Zachowanie homo economicus","Zrównoważony rozwój","Kwestia społeczna"],c:0,e:"Trzymanie się dotychczasowego wyboru mimo lepszej alternatywy to status quo bias — przykład racjonalności ograniczonej."}
      ]},
     /* ---------------- L2 ---------------- */
     {id:"l2",title:"Doktryny",emoji:"🏛️",
@@ -86,7 +89,17 @@ window.SUBJECTS.push({
      ],
      tasks:[
       {type:"match",title:"Doktryna i jej sedno",pairs:[["Ordoliberalizm","państwo ustala reguły gry"],["Społeczna gospodarka rynkowa","dobrobyt przez konkurencję"],["Państwo opiekuńcze","szeroka redystrybucja i transfery"],["Subsydiarność","najpierw jednostka i rodzina"]],e:"Ordoliberalizm — państwo jak sędzia na meczu; SGR (Erhard) — dobrobyt przez konkurencję; państwo opiekuńcze — transfery; subsydiarność — pomoc dopiero, gdy rodzina nie da rady."},
-      {type:"fill",text:"Krytyka ordoliberalna państwa opiekuńczego: szeroka redystrybucja rodzi {0}, a „państwo podatków” zmienia się w „państwo {1}”.",blanks:["moral hazard","długu"],bank:["konkurencję","subsydiarność","dobrobytu","ładu"],hint:"Streeck: skąd bierze się pieniądz, gdy podatki nie wystarczają?",e:"Moral hazard — ludzie przywykają do transferów; „państwo podatków” zmienia się w „państwo długu” (Streeck)."}
+      {type:"fill",text:"Krytyka ordoliberalna państwa opiekuńczego: szeroka redystrybucja rodzi {0}, a „państwo podatków” zmienia się w „państwo {1}”.",blanks:["moral hazard","długu"],bank:["konkurencję","subsydiarność","dobrobytu","ładu"],hint:"Streeck: skąd bierze się pieniądz, gdy podatki nie wystarczają?",e:"Moral hazard — ludzie przywykają do transferów; „państwo podatków” zmienia się w „państwo długu” (Streeck)."},
+      /* krok 5b */
+      {type:"thesis",thesis:"Państwo ma ustalać reguły gry dla rynku, ale samo nie powinno w nią grać.",q:"Która szkoła?",options:[{name:"Ordoliberalizm",sub:"szkoła fryburska"},{name:"Keynesizm",sub:"aktywny popyt"},{name:"Monetaryzm",sub:"podaż pieniądza"},{name:"Państwo opiekuńcze",sub:"redystrybucja"}],c:0,e:"Ordoliberalizm (Eucken, Böhm): państwo jako strażnik ładu — sędzia na meczu, nie zawodnik."},
+      {type:"swipe",title:"Ordoliberalizm czy państwo opiekuńcze?",left:"Ordoliberalizm",right:"Opiekuńcze",cards:[
+        {front:"Państwo jak sędzia",sub:"pilnuje reguł, nie gra",side:"left"},
+        {front:"Szeroka redystrybucja",sub:"transfery dla wielu grup",side:"right"},
+        {front:"Subsydiarność",sub:"najpierw jednostka i rodzina",side:"left"},
+        {front:"Solidarność transferowa",sub:"państwo jako protektor",side:"right"},
+        {front:"Ramy dla konkurencji",sub:"ład zamiast interwencji",side:"left"},
+        {front:"Ryzyko moral hazard",sub:"krytyka ze strony ordo",side:"right"}
+      ],e:"Ordoliberalizm = reguły gry i subsydiarność; państwo opiekuńcze = aktywny protektor i szerokie transfery (z ryzykiem moral hazard)."}
      ]},
     /* ---------------- L3 ---------------- */
     {id:"l3",title:"Polityka fiskalna",emoji:"💰",
@@ -117,7 +130,15 @@ window.SUBJECTS.push({
         {s:"Deficit bias to skłonność demokracji do nadwyżek budżetowych.",v:false,e:"Odwrotnie: do deficytu — korzyści teraz, koszty dla przyszłych pokoleń."},
         {s:"Wydatki przez BGK i PFR nie wchodzą do deficytu budżetu, ale liczą się do długu sektora.",v:true,e:"Tak wygląda wypychanie długu poza budżet — rynki i tak to widzą."}
       ]},
-      {type:"sort",title:"Trójkąt wiarygodności fiskalnej",buckets:[{name:"Reguły fiskalne",items:["limit 3% deficytu","limit 60% długu"]},{name:"Niezależne instytucje",items:["Rada Fiskalna"]},{name:"Przejrzystość budżetu",items:["jawne dane o długu","czytelna klasyfikacja wydatków"]}],e:"Reguły + niezależne instytucje + przejrzystość = trzy boki trójkąta wiarygodności."}
+      {type:"sort",title:"Trójkąt wiarygodności fiskalnej",buckets:[{name:"Reguły fiskalne",items:["limit 3% deficytu","limit 60% długu"]},{name:"Niezależne instytucje",items:["Rada Fiskalna"]},{name:"Przejrzystość budżetu",items:["jawne dane o długu","czytelna klasyfikacja wydatków"]}],e:"Reguły + niezależne instytucje + przejrzystość = trzy boki trójkąta wiarygodności."},
+      /* krok 5b */
+      {type:"finderror",sentences:["Pakt Stabilności i Wzrostu ogranicza deficyt sektora finansów publicznych do 3% PKB.","Limit długu publicznego w Pakcie Stabilności to 60% PKB.","Trójkąt wiarygodności fiskalnej to reguły, niezależne instytucje i przejrzystość budżetu.","Deficit bias to skłonność demokracji do nadwyżek budżetowych."],wrong:3,fix:"do deficytu, nie do nadwyżek",e:"Deficit bias działa w drugą stronę: wydatki i niższe podatki dają głosy teraz, a koszt długu spada na przyszłe pokolenia."},
+      {type:"chain",title:"Co się dzieje po kolei?",steps:["Rząd zwiększa wydatki bez podniesienia podatków","Rośnie deficyt budżetowy","Rośnie dług publiczny","Rynki żądają wyższych odsetek od obligacji","Rosną koszty obsługi długu"],given:[0,4],bank:["Inflacja znika","Podatki spadają same z siebie"],e:"Deficyt finansuje się długiem, a dług ma cenę: im mniej wiarygodne państwo, tym wyższe odsetki i droższa obsługa zadłużenia."},
+      {type:"chart",chart:{kind:"bar",label:"Inflacja w Polsce (CPI, średnia roczna), %",x:["2019","2020","2021","2022","2023","2024"],y:[2.3,3.4,5.1,14.4,11.4,3.6]},q:"W którym roku inflacja była najwyższa i o ile wzrosła względem roku wcześniej?",a:["2022, o 9,3 pp","2022, o 14,4 pp","2023, o 3,0 pp","2021, o 1,7 pp"],c:0,e:"Szczyt to 2022 r. (14,4%). Rok wcześniej było 5,1%, więc wzrost wyniósł 9,3 punktu procentowego — „o ile” liczymy jako różnicę, nie jako sam poziom."},
+      {type:"mathsteps",title:"Policz limit deficytu",start:"3% PKB, PKB ≈ 3400 mld zł",steps:[
+        {expr:"3% = 0,03",note:"procent to setne części",options:["3% = 0,03","3% = 0,3","3% = 3"],c:0},
+        {expr:"0,03 · 3400 mld zł = 102 mld zł",note:"mnożymy ułamek przez PKB",options:["0,03 · 3400 = 102 mld zł","0,03 · 3400 = 1020 mld zł","3400 : 3 ≈ 1133 mld zł","3400 − 3 = 3397 mld zł"],c:0}
+      ],e:"Limit 3% PKB przy PKB ok. 3,4 bln zł oznacza ok. 102 mld zł deficytu rocznie."}
      ]},
     /* ---------------- L4 ---------------- */
     {id:"l4",title:"Polska: demografia i mieszkania",emoji:"🇵🇱",
@@ -140,6 +161,10 @@ window.SUBJECTS.push({
       {q:"TFR w Polsce wynosi ok.:",a:["2,1","1,16","3,0","0,5"],c:1,e:"≈1,16 (2023). Próg zastępowalności pokoleń to 2,1."},
       {q:"Ubezpieczeniowy vs zaopatrzeniowy system zabezpieczenia:",a:["Ubezpieczeniowy = składkowy (ZUS); zaopatrzeniowy = podatkowy (zasiłki, pomoc społeczna)","Oba składkowe","Ubezpieczeniowy dla bogatych","Nie ma różnicy"],c:0,e:"Składkowy = emerytury z ZUS. Zaopatrzeniowy = z podatków."},
       {q:"Jaki jest cel społecznych form najmu (TBS, SIM)?",a:["Budowa premium w centrach","Zapewnienie dostępnych mieszkań osobom o średnich i niższych dochodach","Zwiększenie zysków deweloperów","Likwidacja rynku najmu"],c:1,e:"TBS i SIM = najem o umiarkowanym czynszu dla średnich/niższych dochodów."}
+     ],
+     /* krok 5b */
+     tasks:[
+      {type:"timeline",title:"Polska polityka społeczna po 1989",events:[{label:"Kuroniówka — pierwsze zasiłki dla bezrobotnych",year:1990},{label:"Polska wchodzi do Unii Europejskiej",year:2004},{label:"Start programu 500+",year:2016},{label:"500+ staje się 800+",year:2024}],e:"Od osłon socjalnych po 1989 r. (Kuroniówka), przez wejście do UE, do aktywnej polityki rodzinnej: 500+ od 2016 r. i 800+ od 2024 r."}
      ]},
     /* ---------------- L5 ---------------- */
     {id:"l5",title:"Modele welfare + Zielony Ład",emoji:"🌍",

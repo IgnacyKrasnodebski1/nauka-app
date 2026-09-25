@@ -85,7 +85,15 @@ const ICONS={
   'arrow-up':{d:'M12 19V5M6 11l6-6 6 6'},
   'chevron-up':{d:'M5 15l7-7 7 7',w:3},
   'chevron-down':{d:'M5 9l7 7 7-7',w:3},
-  grip:{d:'M8 9h8M8 15h8'}
+  grip:{d:'M8 9h8M8 15h8'},
+  /* krok 5b: nowe typy zadań */
+  quote:{d:'M4 18v-5c0-4 2-7 6-8l1 2c-2 1-3 3-3 5h3v6zm9 0v-5c0-4 2-7 6-8l1 2c-2 1-3 3-3 5h3v6z',fill:true},
+  'arrow-down':{d:'M12 4v16M6 14l6 6 6-6',w:3},
+  chart:{d:'M5 20v-8M11 20V5M17 20v-5M3 20h18',w:2.8},
+  calc:{d:'<rect x="5" y="3" width="14" height="18" rx="3"/><path d="M9 7.5h6M9 12h.5M12 12h.5M15 12h.5M9 16h.5M12 16h.5M15 16h.5"/>',w:2.4},
+  keyboard:{d:'<rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 10h.5M11 10h.5M15 10h.5M8 14h8"/>',w:2.4},
+  swipe:{d:'M3 12h18M8 7l-5 5 5 5M16 7l5 5-5 5',w:2.8},
+  pointer:{d:'M9 11V5.5a1.5 1.5 0 0 1 3 0V11l4 .8a3 3 0 0 1 2.4 3l-.5 3.3A3.5 3.5 0 0 1 14.4 21H12a4 4 0 0 1-3-1.4L5.4 15a1.6 1.6 0 0 1 2.4-2.1L9 14',w:2.4}
 };
 function icon(name,o){
   o=o||{};const ic=ICONS[name]||ICONS.alert;
@@ -389,7 +397,7 @@ function renderSettings(){
     renderSettings();toast('postępy wyzerowane','refresh');
   };
   scroll.appendChild(reset);
-  scroll.appendChild(el('div','version','Nauka 2.0 · legacy · krok 5'));
+  scroll.appendChild(el('div','version','Nauka 2.0 · legacy · krok 5b'));
 }
 
 /* ============================================================ SERIA (Streak.html: płomień, licznik, kropki tygodnia z nauka_meta_v1) */
@@ -593,16 +601,78 @@ function quizBlock(q,o){
 const QUIZ_XP=5, TASK_XP=8; // baza XP za poprawne (× mnożnik combo); zadania są dłuższe niż jedno pytanie
 let taskInt=null; // licznik rundy na czas (tf)
 function taskCleanup(){if(taskInt){clearInterval(taskInt);taskInt=null;}}
-const TASK_META={
+const TASK_META={ // kolejność = kolejność kart w Ćwiczeniach (DESIGN.md §6: proste → przeciągane → chart/mathsteps/hotspot)
   tf:{label:'Prawda czy fałsz',tone:'gold',icon:'check',desc:'seria zdań, czasem na czas'},
   fill:{label:'Uzupełnij zdanie',tone:'pink',icon:'edit',desc:'wstaw brakujące słowa'},
+  typeterm:{label:'Wpisz pojęcie',tone:'acid',icon:'keyboard',desc:'od definicji do nazwy'},
+  swipe:{label:'Dwie kategorie',tone:'cyan',icon:'swipe',desc:'przesuń kartę w lewo albo w prawo'},
+  thesis:{label:'Czyja to teza',tone:'violet',icon:'quote',desc:'dopasuj myśl do autora lub szkoły'},
+  scenario:{label:'Scenariusz',tone:'red',icon:'bulb',desc:'sytuacja i jej wyjaśnienie'},
+  finderror:{label:'Znajdź błąd',tone:'red',icon:'search',desc:'jedno zdanie jest fałszywe'},
   match:{label:'Połącz w pary',tone:'cyan',icon:'link',desc:'pojęcie i jego sedno'},
   order:{label:'Ustaw kolejność',tone:'gold',icon:'list',desc:'ułóż etapy po kolei'},
-  sort:{label:'Przypisz do kategorii',tone:'acid',icon:'grid',desc:'rozdziel przykłady do grup'}
+  sort:{label:'Przypisz do kategorii',tone:'acid',icon:'grid',desc:'rozdziel przykłady do grup'},
+  timeline:{label:'Oś czasu',tone:'gold',icon:'calendar',desc:'przypnij wydarzenia do dat'},
+  chain:{label:'Łańcuch przyczyn',tone:'cyan',icon:'arrow-down',desc:'co z czego wynika'},
+  chart:{label:'Wykres',tone:'violet',icon:'chart',desc:'odczytaj dane z wykresu'},
+  mathsteps:{label:'Krok po kroku',tone:'gold',icon:'calc',desc:'rozwiąż zadanie etapami'},
+  hotspot:{label:'Wskaż na schemacie',tone:'acid',icon:'pointer',desc:'dotknij właściwego miejsca'}
 };
 function allTasks(s){return s.levels.flatMap(l=>(l.tasks||[]).filter(t=>t&&TASKS[t.type]).map(t=>({...t,lvl:noEmoji(l.title)})));}
 function norm(str){return String(str||'').trim().toLowerCase().replace(/\s+/g,' ');}
+/* porównanie odpowiedzi wpisanej z klawiatury: bez wielkości liter, ogonków i interpunkcji (typeterm) */
+function fold(str){return norm(str).replace(/ł/g,'l').normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^\p{L}\p{N}\s]/gu,'').replace(/\s+/g,' ').trim();}
+/* odległość edycyjna (Levenshtein) — tolerancja literówki typo:1 */
+function lev(a,b){if(a===b)return 0;const m=a.length,n=b.length;if(!m||!n)return m||n;let prev=Array.from({length:n+1},(_,j)=>j);for(let i=1;i<=m;i++){const cur=[i];for(let j=1;j<=n;j++)cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1));prev=cur;}return prev[n];}
 function listBox(rows){return '<div class="tflist">'+rows.join('')+'</div>';}
+function leftText(n){return `${n===1?'Zostało':(n>=2&&n<=4)?'Zostały':'Zostało'} ${n}`;}
+/* wybór jednej opcji + SPRAWDŹ (thesis, scenario, chart): btns = przyciski z data-i; po sprawdzeniu .correct (a-pop / a-glow) / .wrong.a-shake / .dim,
+   litera w .k zamienia się na check/close jak w quizBlock. Klawisze 1-5 / A-E, Enter. fb(sel, ok) → {e, sub} do api.finish. */
+function chooser(api,btns,c,fb){
+  const btn=el('button','pill','SPRAWDŹ');btn.disabled=true;api.foot.appendChild(btn);
+  let sel=null,done=false;
+  const select=i=>{if(done||!btns[i])return;sel=i;btns.forEach((x,k)=>x.classList.toggle('sel',k===i));btn.disabled=false;};
+  const check=()=>{if(done||sel==null)return;done=true;const ok=sel===c;
+    btns.forEach((x,k)=>{x.disabled=true;x.classList.remove('sel','a-up','a-pop','d1','d2','d3','d4','d5','d6');const kk=x.querySelector('.k');
+      if(k===c){x.classList.add('correct',ok?'a-pop':'a-glow');if(kk)kk.innerHTML=icon('check',{size:18,stroke:3.6});}
+      else if(k===sel){x.classList.add('wrong','a-shake');if(kk)kk.innerHTML=icon('close',{size:17,stroke:3.6});}
+      else x.classList.add('dim');});
+    api.finish(ok,fb(sel,ok));};
+  btns.forEach((x,k)=>x.onclick=()=>select(k));btn.onclick=check;
+  keyFn=e=>{const k=(e.key||'').toLowerCase();const m=/^[1-5]$/.test(k)?+k-1:'abcde'.indexOf(k);if(k.length===1&&m>=0&&m<btns.length)select(m);else if(e.key==='Enter'&&sel!=null){e.preventDefault();check();}};
+  return btn;
+}
+/* przeciąganie kafelka .wordtile z puli na strefę (sort, timeline, chain): pointer events, strefa pod palcem przez elementFromPoint.
+   o.targets = selektor stref (dostają .hot w trakcie i .over pod palcem), o.onDrop(i, strefa|null), o.locked(). Zwykły tap (< 8 px) zostawia onclick kafelka. */
+function tileDrag(pool,o){
+  pool.onpointerdown=e=>{const t=e.target.closest('.wordtile');if(!t||t.disabled||o.locked())return;const i=+t.dataset.i;const r=t.getBoundingClientRect();const gx=e.clientX-r.left,gy=e.clientY-r.top;let moved=false;
+    // przewijany kontener (lekcja: .task; Ćwiczenia: .scroll) — przy krawędzi auto-przewijanie, kafelek zostaje pod palcem (korekta o przesunięcie scrolla)
+    const sc=[pool.closest('.task'),pool.closest('.scroll')].find(x=>x&&x.scrollHeight>x.clientHeight+2);const st0=sc?sc.scrollTop:0;let lx=e.clientX,ly=e.clientY,autoInt=null;
+    const zones=()=>[...document.querySelectorAll(o.targets)];
+    const zoneAt=(x,y)=>{const u=document.elementFromPoint(x,y);return u&&u.closest(o.targets);};
+    const place=()=>{const ds=sc?sc.scrollTop-st0:0;t.style.transform=`translate(${lx-(r.left+gx)}px,${ly-(r.top+gy)+ds}px)`;const z=zoneAt(lx,ly);zones().forEach(b=>b.classList.toggle('over',b===z));};
+    const onMove=ev=>{lx=ev.clientX;ly=ev.clientY;const dx=lx-(r.left+gx),dy=ly-(r.top+gy);if(!moved&&Math.hypot(dx,dy)<8)return;
+      if(!moved){moved=true;t.classList.add('drag');t.classList.remove('a-bob');t.style.pointerEvents='none';zones().forEach(z=>z.classList.add('hot'));try{pool.setPointerCapture(ev.pointerId);}catch(x){}
+        if(sc)autoInt=setInterval(()=>{const cr=sc.getBoundingClientRect();const d=ly<cr.top+70?-10:ly>cr.bottom-70?10:0;if(d){sc.scrollTop+=d;place();}},16);}
+      place();};
+    const onUp=ev=>{pool.removeEventListener('pointermove',onMove);pool.removeEventListener('pointerup',onUp);pool.removeEventListener('pointercancel',onUp);clearInterval(autoInt);
+      if(!moved)return; // zwykły tap → onclick kafelka
+      const z=zoneAt(ev.clientX,ev.clientY);t.style.transform='';t.style.pointerEvents='';t.classList.remove('drag');zones().forEach(b=>b.classList.remove('hot','over'));o.onDrop(i,z);};
+    pool.addEventListener('pointermove',onMove);pool.addEventListener('pointerup',onUp);pool.addEventListener('pointercancel',onUp);};
+}
+/* wykres słupkowy / liniowy jako inline SVG (ChartRead.html): jedna seria, kolory przez klasy z tokenów, wartości nad znacznikami, etykiety x pod osią */
+function chartSvg(kind,xs,ys,fmtV){
+  const W=330,H=178,top=22,base=150,left=14,right=320;const n=Math.max(1,xs.length);const max=Math.max(1e-9,...ys);const step=(right-left)/n;
+  const yOf=v=>base-(Math.max(0,v)/max)*(base-top);const xOf=i=>left+step*i+step/2;const r1=v=>Math.round(v*10)/10;
+  const grid=[0.5,1].map(f=>`<line class="cgrid" x1="${left-4}" y1="${r1(yOf(max*f))}" x2="${right+5}" y2="${r1(yOf(max*f))}"/>`).join('');
+  let marks;
+  if(kind==='line'){marks=`<polyline class="cline" points="${ys.map((v,i)=>r1(xOf(i))+','+r1(yOf(v))).join(' ')}"/>`
+    +ys.map((v,i)=>`<circle class="cdot" cx="${r1(xOf(i))}" cy="${r1(yOf(v))}" r="5"/><text class="cval" x="${r1(xOf(i))}" y="${r1(yOf(v))-11}" text-anchor="middle">${fmtV(v)}</text>`).join('');}
+  else{const bw=Math.min(34,step*.66);marks=ys.map((v,i)=>`<rect class="cbar" x="${r1(xOf(i)-bw/2)}" y="${r1(yOf(v))}" width="${r1(bw)}" height="${r1(base-yOf(v))}" rx="7"/><text class="cval" x="${r1(xOf(i))}" y="${r1(yOf(v))-7}" text-anchor="middle">${fmtV(v)}</text>`).join('');}
+  const labs=xs.map((x,i)=>`<text class="clab" x="${r1(xOf(i))}" y="${base+20}" text-anchor="middle">${x}</text>`).join('');
+  const desc=xs.map((x,i)=>x+': '+fmtV(ys[i])).join(', ');
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${kind==='line'?'Wykres liniowy':'Wykres słupkowy'}: ${desc}">${grid}<line class="caxis" x1="${left-4}" y1="${base}" x2="${right+5}" y2="${base}"/>${marks}${labs}</svg>`;
+}
 /* sesja poziomu: pytania quizu (max 6, losowo) i zadania w jednym strumieniu — pierwsze zawsze pytanie, zadania rozłożone równo między resztę */
 function levelSession(lv){
   const qs=shuffle(lv.quiz||[]).slice(0,Math.min(6,(lv.quiz||[]).length)).map(q=>({kind:'quiz',q}));
@@ -761,20 +831,218 @@ const TASKS={
       pool.innerHTML='';poolOrder.forEach(i=>{const it=items[i];if(it.at!=null)return;const t=el('button','wordtile'+(sel===i?' sel a-bob':''),it.t);t.dataset.i=i;t.onclick=()=>{if(locked)return;sel=(sel===i?null:i);draw();};pool.appendChild(t);});
       btn.disabled=left>0;btn.textContent=left?'PRZYPISZ WSZYSTKIE':'SPRAWDŹ';
     };
-    pool.onpointerdown=e=>{const t=e.target.closest('.wordtile');if(!t||locked)return;const i=+t.dataset.i;const r=t.getBoundingClientRect();const gx=e.clientX-r.left,gy=e.clientY-r.top;let moved=false;
-      const bucketAt=(x,y)=>{const u=document.elementFromPoint(x,y);return u&&u.closest('.bucket');};
-      const onMove=ev=>{const dx=ev.clientX-(r.left+gx),dy=ev.clientY-(r.top+gy);if(!moved&&Math.hypot(dx,dy)<8)return;
-        if(!moved){moved=true;t.classList.add('drag');t.classList.remove('a-bob');t.style.pointerEvents='none';grid.querySelectorAll('.bucket').forEach(b=>b.classList.add('hot'));try{pool.setPointerCapture(ev.pointerId);}catch(x){}}
-        t.style.transform=`translate(${dx}px,${dy}px)`;const bx=bucketAt(ev.clientX,ev.clientY);grid.querySelectorAll('.bucket').forEach(b=>b.classList.toggle('over',b===bx));};
-      const onUp=ev=>{pool.removeEventListener('pointermove',onMove);pool.removeEventListener('pointerup',onUp);pool.removeEventListener('pointercancel',onUp);
-        if(!moved)return; // zwykły tap → onclick kafelka
-        const bx=bucketAt(ev.clientX,ev.clientY);t.style.transform='';t.style.pointerEvents='';t.classList.remove('drag');
-        if(bx){items[i].at=+bx.dataset.b;sel=null;}draw();};
-      pool.addEventListener('pointermove',onMove);pool.addEventListener('pointerup',onUp);pool.addEventListener('pointercancel',onUp);};
+    tileDrag(pool,{targets:'.bucket',locked:()=>locked,onDrop:(i,bx)=>{if(bx){items[i].at=+bx.dataset.b;sel=null;}draw();}});
     const check=()=>{if(locked||btn.disabled)return;locked=true;let ok=true;
       grid.querySelectorAll('.bitem').forEach(t=>{const it=items[+t.dataset.i];const good=it&&it.at===it.b;if(!good)ok=false;t.classList.add(...(good?['ok']:['bad','a-shake']));t.disabled=true;});
       api.finish(ok,{e:ok?(task.e||''):(task.e?task.e+'<br><br>':'')+listBox(buckets.map(b=>`<div><b>${b.name}:</b> ${(b.items||[]).join(', ')}</div>`)),sub:ok?'':'Poprawny podział niżej'});};
     btn.onclick=check;keyFn=e=>{if(e.key==='Enter'){e.preventDefault();check();}};
+    draw();
+  }},
+
+  /* ===== krok 5b: pozostałe typy z DESIGN.md §4.1 ===== */
+  /* WPISZ POJĘCIE (TypeTerm.html): definicja w karcie, pole tekstowe (Bricolage), kreski = litery odpowiedzi (wypełniają się w trakcie pisania),
+     „Pierwsza litera · −2 XP” (podpowiedź, XP przez addXP), „Nie pamiętam” (= źle, pokazuje odpowiedź). Porównanie po fold(): bez wielkości liter i ogonków,
+     answer + accept; typo:1 = jedna literówka (odległość edycyjna ≤ 1). Enter w polu = SPRAWDŹ. */
+  typeterm:{render(task,api){
+    const ans=String(task.answer||'');const acc=[ans].concat(task.accept||[]).map(fold).filter(Boolean);const tol=task.typo|0;
+    const letters=ans.replace(/\s+/g,'').length;let locked=false,hinted=false;
+    api.body.appendChild(el('div','',`<div class="ttitle">${task.title||'Jak to się nazywa?'}</div>`));
+    api.body.appendChild(el('div','defcard a-up d1',`<div class="eyebrow">Definicja</div><div class="deftext">${task.definition||''}</div>`));
+    const wrap=el('div','a-up d2');
+    wrap.innerHTML=`<label class="eyebrow" for="term">Twoja odpowiedź</label><div class="termbox"><input id="term" class="terminput" type="text" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Twoja odpowiedź"></div>
+      <div class="letters" aria-hidden="true">${ans.split('').map(ch=>/\s/.test(ch)?'<b></b>':'<i></i>').join('')}</div>
+      <div class="termmeta">${letters} ${pl(letters,'litera','litery','liter')}${tol?' · literówka w jednym miejscu jest akceptowana':''}</div>`;
+    api.body.appendChild(wrap);
+    const inp=wrap.querySelector('input'),box=wrap.querySelector('.termbox'),dots=[...wrap.querySelectorAll('.letters i')];
+    const btns=el('div','termbtns a-up d3');const hint=el('button','hintbtn gold','Pierwsza litera · −2 XP'),giveup=el('button','hintbtn','Nie pamiętam');btns.appendChild(hint);btns.appendChild(giveup);api.body.appendChild(btns);
+    const btn=el('button','pill','SPRAWDŹ');btn.disabled=true;api.foot.appendChild(btn);
+    const paint=()=>{const n=inp.value.replace(/\s+/g,'').length;dots.forEach((d,k)=>d.classList.toggle('on',k<n));btn.disabled=!inp.value.trim();};
+    inp.oninput=paint;
+    const check=()=>{if(locked||!inp.value.trim())return;locked=true;inp.disabled=true;const got=fold(inp.value);
+      const ok=acc.some(a=>a===got||(tol>0&&lev(a,got)<=tol));
+      box.classList.add(ok?'ok':'bad');if(!ok)box.classList.add('a-shake');
+      api.finish(ok,{e:task.e||'',sub:ok?'':'Poprawnie: '+ans});};
+    hint.onclick=()=>{if(locked||hinted)return;hinted=true;hint.disabled=true;hint.textContent='Zaczyna się na „'+ans.charAt(0).toUpperCase()+'”';if(!inp.value)inp.value=ans.charAt(0);paint();
+      if(subjState(current.id).xp>=2&&daily().xp>=2){addXP(current.id,-2);toast('Podpowiedź: −2 XP','bolt');}try{inp.focus();}catch(e){}};
+    giveup.onclick=()=>{if(locked)return;locked=true;inp.value=ans;inp.disabled=true;paint();box.classList.add('bad');api.finish(false,{e:task.e||'',sub:'Poprawnie: '+ans});};
+    btn.onclick=check;inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();check();}});
+    setTimeout(()=>{try{inp.focus();}catch(e){}},80);
+  }},
+  /* DWIE KATEGORIE (Swipe.html): strefy left/right po bokach, stos kart (front + tło), przeciąganie karty przez pointer events z przechyłem (dx/14°),
+     stempel z nazwą strefy od 30 px, odpowiedź od 80 px; do tego dwa przyciski pod spodem i strzałki ←/→. Kropki = wynik kolejnych kart.
+     Zadanie zaliczone, gdy wszystkie karty trafione; w panelu „źle” lista nietrafionych (serce raz na zadanie). */
+  swipe:{render(task,api){
+    const cards=shuffle(task.cards||[]);const n=cards.length;const L=task.left||'Lewo',R=task.right||'Prawo';
+    let i=0,busy=false;const results=[],wrong=[];
+    const head=el('div','trow',`<div class="ttitle">${task.title||L+' czy '+R+'?'}</div><span class="tcount">1 / ${n}</span>`);api.body.appendChild(head);
+    const stage=el('div','swipestage');api.body.appendChild(stage);
+    stage.innerHTML=`<div class="szone l"><span>${L}</span></div><div class="szone r"><span>${R}</span></div><div class="scard back"></div>
+      <div class="scard front"><div class="stamp l">${L}</div><div class="stamp r">${R}</div><div class="sfront"></div><div class="ssub"></div></div><div class="dots" aria-hidden="true"></div>`;
+    const card=stage.querySelector('.scard.front'),back=stage.querySelector('.scard.back'),zl=stage.querySelector('.szone.l'),zr=stage.querySelector('.szone.r'),dots=stage.querySelector('.dots'),cnt=head.querySelector('.tcount');
+    const bl=el('button','swbtn l',icon('back',{size:18,stroke:3})+'<span>'+L+'</span>'),br=el('button','swbtn r','<span>'+R+'</span>'+icon('chevron-right',{size:18,stroke:3}));
+    bl.setAttribute('aria-label',L);br.setAttribute('aria-label',R);
+    const row=el('div','swbtns');row.appendChild(bl);row.appendChild(br);api.foot.appendChild(row);
+    const drawDots=()=>{dots.innerHTML=cards.map((c,k)=>`<i class="${results[k]===true?'ok':results[k]===false?'bad':k===i?'cur a-blink':''}"></i>`).join('');};
+    const show=()=>{const c=cards[i];card.className='scard front a-pop';card.style.transform='';const sf=card.querySelector('.sfront');sf.textContent=c.front;sf.classList.toggle('long',String(c.front).length>14);
+      card.querySelector('.ssub').textContent=c.sub||'';cnt.textContent=(i+1)+' / '+n;back.style.visibility=i+1<n?'':'hidden';drawDots();};
+    const end=()=>{const bad=wrong.length;api.finish(bad===0,{e:bad?listBox(wrong.map(c=>`<div><b>${c.front}</b> — ${c.side==='left'?L:R}${c.e?'. '+c.e:''}</div>`)):(task.e||''),sub:bad?`Nietrafione: ${bad} z ${n}`:''});};
+    const answer=side=>{if(busy||i>=n)return;busy=true;const c=cards[i];const ok=(c.side==='right')===(side==='right');results[i]=ok;if(!ok)wrong.push(c);
+      const zone=side==='left'?zl:zr;zone.classList.add(ok?'okk':'badd');card.classList.remove('a-pop','grab','to-l','to-r');card.style.transform='';card.classList.add(ok?'okk':'badd','fly-'+(side==='left'?'l':'r'));drawDots();
+      setTimeout(()=>{zone.classList.remove('okk','badd');i++;busy=false;if(i>=n)end();else show();},ok?420:800);};
+    card.onpointerdown=e=>{if(busy)return;const x0=e.clientX,y0=e.clientY;let dx=0;card.classList.add('grab');card.classList.remove('a-pop');try{card.setPointerCapture(e.pointerId);}catch(x){}
+      const onMove=ev=>{dx=ev.clientX-x0;const dy=(ev.clientY-y0)*.25;card.style.transform=`translate(${dx}px,${dy}px) rotate(${dx/14}deg)`;card.classList.toggle('to-l',dx<-30);card.classList.toggle('to-r',dx>30);zl.classList.toggle('near',dx<-30);zr.classList.toggle('near',dx>30);};
+      const onUp=()=>{card.removeEventListener('pointermove',onMove);card.removeEventListener('pointerup',onUp);card.removeEventListener('pointercancel',onUp);zl.classList.remove('near');zr.classList.remove('near');
+        if(Math.abs(dx)>80)answer(dx<0?'left':'right');else{card.classList.remove('grab','to-l','to-r');card.style.transform='';}};
+      card.addEventListener('pointermove',onMove);card.addEventListener('pointerup',onUp);card.addEventListener('pointercancel',onUp);};
+    bl.onclick=()=>answer('left');br.onclick=()=>answer('right');
+    keyFn=e=>{if(e.key==='ArrowLeft'||e.key==='1')answer('left');else if(e.key==='ArrowRight'||e.key==='2')answer('right');};
+    show();
+  }},
+  /* CZYJA TO TEZA (WhoSaid.html): karta z cudzysłowem i tezą, siatka 2×N opcji {name, sub}; wybrana = fiolet; SPRAWDŹ przez chooser(). */
+  thesis:{render(task,api){
+    const opts=task.options||[];
+    api.body.appendChild(el('div','thcard a-pop d1',icon('quote',{size:34})+`<div class="thtext">${task.thesis||''}</div>`));
+    api.body.appendChild(el('div','eyebrow',task.q||'Kto tak twierdzi?'));
+    const grid=el('div','thgrid');api.body.appendChild(grid);
+    const btns=opts.map((o,k)=>{const b=el('button','thopt a-up d'+Math.min(6,k+1),`<span class="n">${o.name}</span>${o.sub?`<span class="s">${o.sub}</span>`:''}`);b.dataset.i=k;grid.appendChild(b);return b;});
+    chooser(api,btns,task.c,(sel,ok)=>({e:task.e||'',sub:ok?'':'Poprawnie: '+((opts[task.c]||{}).name||'')}));
+  }},
+  /* SCENARIUSZ (Scenario.html): karta „Sytuacja” z opisem, pytanie, opcje A–D jak w quizie (.qopt.sm), SPRAWDŹ przez chooser(). */
+  scenario:{render(task,api){
+    api.body.appendChild(el('div','scenecard a-up d1',`<div class="eyebrow">Sytuacja</div><div class="scenetext">${task.scene||''}</div>`));
+    api.body.appendChild(el('div','ttitle sm a-up d2',task.q||'Co najlepiej to wyjaśnia?'));
+    const list=el('div','qopts');api.body.appendChild(list);
+    const btns=(task.a||[]).map((a,k)=>{const b=el('button','qopt sm a-up d'+Math.min(6,k+2),`<span class="k">${keys[k]}</span><span class="t">${a}</span>`);b.dataset.i=k;list.appendChild(b);return b;});
+    chooser(api,btns,task.c,(sel,ok)=>({e:task.e||'',sub:ok?'':'Poprawna: odpowiedź '+keys[task.c]}));
+  }},
+  /* ZNAJDŹ BŁĄD (FindError.html): zdania jako kafelki w karcie, wybrane = czerwień; po SPRAWDŹ fałszywe zdanie przekreślone, pod spodem poprawka fix;
+     chybiony wybór = bursztynowa ramka (to zdanie było prawdziwe). */
+  finderror:{render(task,api){
+    const sents=task.sentences||[];const w=task.wrong|0;
+    api.body.appendChild(el('div','',`<div class="ttitle">${task.title||'Jedno zdanie jest fałszywe. Które?'}</div>`));
+    const card=el('div','errcard');api.body.appendChild(card);
+    const btns=sents.map((s,k)=>{const b=el('button','errsent a-up d'+Math.min(6,k+1),s);b.dataset.i=k;card.appendChild(b);return b;});
+    const fixBox=el('div','errfix');card.appendChild(fixBox);
+    api.body.appendChild(el('div','notebox a-up d5',icon('info',{size:18})+'<span>Po sprawdzeniu zobaczysz poprawione zdanie.</span>'));
+    chooser(api,btns,w,(sel,ok)=>{fixBox.className='errfix show '+(ok?'ok':'bad');
+      fixBox.innerHTML=`<div class="lbl">${ok?'Trafione':'Fałszywe było zdanie '+(w+1)}</div><div>${task.fix?`Poprawnie: <b>${task.fix}</b>`:'Zdanie '+(w+1)+' jest fałszywe.'}</div>`;
+      return {e:task.e||'',sub:ok?'':'Fałszywe było zdanie '+(w+1)};});
+  }},
+  /* OŚ CZASU (Timeline.html): wiersze = lata rosnąco (oś pionowa, kropki), wydarzenia wymieszane w puli kafelków. Tap kafelek (fiolet + a-bob) → tap pusty slot;
+     tap przypięte wydarzenie = wraca do puli; przeciąganie kafelka na slot przez tileDrag(). Pierwszy pusty slot mruga. Sprawdzenie po roku (równe lata = zamienne). */
+  timeline:{render(task,api){
+    const evs=(task.events||[]).map((e,k)=>({label:e.label,year:e.year,k}));const rows=[...evs].sort((a,b)=>+a.year-+b.year);const n=rows.length;
+    const poolOrder=shuffle(evs.map(e=>e.k));const slots=rows.map(()=>null);let sel=null,locked=false,first=true;
+    api.body.appendChild(el('div','',`<div class="ttitle">${task.title||'Przypnij wydarzenia do dat'}</div>`));
+    const tl=el('div','tl');api.body.appendChild(tl);
+    api.body.appendChild(el('div','tsep'));const ph=el('div','eyebrow');api.body.appendChild(ph);
+    const pool=el('div','bank pool');api.body.appendChild(pool);
+    const btn=el('button','pill','SPRAWDŹ');btn.disabled=true;api.foot.appendChild(btn);
+    const draw=()=>{const firstEmpty=slots.indexOf(null);
+      tl.innerHTML='<i class="tlaxis"></i>'+rows.map((r,si)=>{const t=slots[si];const cur=si===firstEmpty;
+        return `<div class="tlrow"><span class="tlyear">${r.year}</span><i class="tldot${t!=null?' on':cur?' cur a-pulse':''}"></i>
+          ${t!=null?`<button class="tlev a-pop" data-s="${si}" aria-label="${r.year}: ${evs[t].label}, tapnij, żeby cofnąć">${icon('check',{size:16,stroke:3.4})}<span>${evs[t].label}</span></button>`
+          :`<div class="tlslot empty${cur?' cur a-blink':''}" data-s="${si}" role="button" aria-label="Miejsce na wydarzenie z roku ${r.year}">${cur?'<span>'+(sel!=null?'upuść tutaj':'tu trafi wydarzenie')+'</span>':''}</div>`}</div>`;}).join('');
+      tl.querySelectorAll('.tlev').forEach(b=>b.onclick=()=>{if(locked)return;slots[+b.dataset.s]=null;sel=null;draw();});
+      tl.querySelectorAll('.tlslot').forEach(z=>z.onclick=()=>{if(locked||sel==null)return;slots[+z.dataset.s]=sel;sel=null;draw();});
+      const left=slots.filter(x=>x==null).length;ph.textContent=left?leftText(left):'Wszystko przypięte';
+      pool.innerHTML='';poolOrder.forEach((k,pos)=>{if(slots.includes(k))return;const t=el('button','wordtile'+(sel===k?' sel a-bob':first?' a-up d'+Math.min(6,pos+1):''),evs[k].label);t.dataset.i=k;t.onclick=()=>{if(locked)return;sel=(sel===k?null:k);draw();};pool.appendChild(t);});
+      btn.disabled=left>0;first=false;};
+    tileDrag(pool,{targets:'.tlslot.empty',locked:()=>locked,onDrop:(k,z)=>{if(z){slots[+z.dataset.s]=k;sel=null;}draw();}});
+    const check=()=>{if(locked||btn.disabled)return;locked=true;let ok=true;
+      tl.querySelectorAll('.tlev').forEach(b=>{const si=+b.dataset.s;const good=+evs[slots[si]].year===+rows[si].year;if(!good)ok=false;b.classList.remove('a-pop');b.classList.add(...(good?['ok']:['bad','a-shake']));b.disabled=true;});
+      api.finish(ok,{e:ok?(task.e||''):(task.e?task.e+'<br><br>':'')+listBox(rows.map(r=>`<div><b>${r.year}</b> — ${r.label}</div>`)),sub:ok?'':'Poprawna oś czasu niżej'});};
+    btn.onclick=check;keyFn=e=>{if(e.key==='Enter'){e.preventDefault();check();}};
+    draw();
+  }},
+  /* ŁAŃCUCH PRZYCZYN (CauseChain.html): kolumna kroków ze strzałkami; given = widoczne od startu, reszta = sloty („co dalej?”, pierwszy mruga).
+     Tap kafelek → pierwszy wolny slot, tap wstawiony krok = wraca; przeciąganie na konkretny slot przez tileDrag(). Bank = brakujące kroki + dystraktory. */
+  chain:{render(task,api){
+    const steps=task.steps||[];const given=new Set((task.given||[]).map(Number));
+    const tiles=shuffle(steps.filter((s,k)=>!given.has(k)).concat(task.bank||[]));
+    const slots=steps.map((s,k)=>given.has(k)?-1:null);let locked=false,first=true;
+    api.body.appendChild(el('div','',`<div class="ttitle">${task.title||'Co się dzieje po kolei?'}</div>`));
+    const col=el('div','chain');api.body.appendChild(col);
+    const pool=el('div','bank pool');api.body.appendChild(pool);
+    const btn=el('button','pill','SPRAWDŹ');btn.disabled=true;api.foot.appendChild(btn);
+    const draw=()=>{const firstEmpty=slots.indexOf(null);
+      col.innerHTML=steps.map((s,k)=>{const t=slots[k];let h;
+        if(t===-1)h=`<div class="chstep given${first?' a-up d'+Math.min(6,k+1):''}">${s}</div>`;
+        else if(t!=null)h=`<button class="chstep filled a-pop" data-s="${k}" aria-label="${tiles[t]}, tapnij, żeby cofnąć">${icon('check',{size:16,stroke:3.4})}<span>${tiles[t]}</span></button>`;
+        else h=`<div class="chslot empty${k===firstEmpty?' cur a-blink':''}" data-s="${k}" role="button" aria-label="Krok ${k+1}">${k===firstEmpty?'<span>co dalej?</span>':''}</div>`;
+        return (k?`<div class="charrow">${icon('arrow-down',{size:22,stroke:3})}</div>`:'')+h;}).join('');
+      col.querySelectorAll('.chstep.filled').forEach(b=>b.onclick=()=>{if(locked)return;slots[+b.dataset.s]=null;draw();});
+      pool.innerHTML='';tiles.forEach((w,i)=>{const used=slots.includes(i);const t=el('button','wordtile'+(used?' used':first?' a-up d'+Math.min(6,i+1):''),w);t.dataset.i=i;t.disabled=used;
+        t.onclick=()=>{if(locked||used)return;const free=slots.indexOf(null);if(free<0)return;slots[free]=i;draw();};pool.appendChild(t);});
+      btn.disabled=slots.some(x=>x==null);first=false;};
+    tileDrag(pool,{targets:'.chslot.empty',locked:()=>locked,onDrop:(i,z)=>{if(z)slots[+z.dataset.s]=i;draw();}});
+    const check=()=>{if(locked||btn.disabled)return;locked=true;let ok=true;
+      col.querySelectorAll('.chstep.filled').forEach(b=>{const k=+b.dataset.s;const good=norm(tiles[slots[k]])===norm(steps[k]);if(!good)ok=false;b.classList.remove('a-pop');b.classList.add(...(good?['ok']:['bad','a-shake']));b.disabled=true;});
+      api.finish(ok,{e:ok?(task.e||''):(task.e?task.e+'<br><br>':'')+listBox(steps.map((s,k)=>`<div><b>${k+1}.</b> ${s}</div>`)),sub:ok?'':'Poprawny łańcuch niżej'});};
+    btn.onclick=check;keyFn=e=>{if(e.key==='Enter'){e.preventDefault();check();}};
+    draw();
+  }},
+  /* WYKRES (ChartRead.html): karta z podpisem i wykresem (chartSvg: bar | line, jedna seria), pytanie, opcje A–D, SPRAWDŹ przez chooser(). */
+  chart:{render(task,api){
+    const ch=task.chart||{};const xs=ch.x||[],ys=(ch.y||[]).map(Number);const fmtV=v=>String(v).replace('.',',');
+    api.body.appendChild(el('div','chartcard a-up d1',`<div class="chartlbl">${ch.label||''}</div>${chartSvg(ch.kind,xs,ys,fmtV)}`));
+    api.body.appendChild(el('div','ttitle sm a-up d2',task.q||''));
+    const list=el('div','qopts');api.body.appendChild(list);
+    const btns=(task.a||[]).map((a,k)=>{const b=el('button','qopt sm a-up d'+Math.min(6,k+2),`<span class="k">${keys[k]}</span><span class="t">${a}</span>`);b.dataset.i=k;list.appendChild(b);return b;});
+    chooser(api,btns,task.c,(sel,ok)=>({e:task.e||'',sub:ok?'':'Poprawna: odpowiedź '+keys[task.c]}));
+  }},
+  /* KROK PO KROKU (MathSteps.html): karta z wyrażeniem startowym i kolejnymi krokami; każdy krok = wybór przekształcenia z opcji (siatka 2 kolumny, wymieszane) + SPRAWDŹ.
+     Dobry wybór → wiersz limonkowy z note; zły → wiersz czerwony (przekreślony) i ramka z note (wyjaśnienie), opcja gaśnie, wybierasz dalej.
+     Zaliczone = całość bez pomyłek (serce raz na zadanie). Klawisze 1-4, Enter. */
+  mathsteps:{render(task,api){
+    const steps=task.steps||[];let i=0,sel=null,mistakes=0,locked=false,order=[];const hist=[];let tried=new Set();
+    api.body.appendChild(el('div','',`<div class="ttitle">${task.title||'Rozwiąż krok po kroku'}</div>`));
+    const card=el('div','mathcard');api.body.appendChild(card);
+    const ph=el('div','eyebrow','Wybierz następny krok');api.body.appendChild(ph);
+    const grid=el('div','mgrid');api.body.appendChild(grid);
+    const btn=el('button','pill','SPRAWDŹ');btn.disabled=true;api.foot.appendChild(btn);
+    const drawCard=()=>{const last=hist[hist.length-1];
+      card.innerHTML=`<div class="mrow start"><span class="mexpr">${task.start||''}</span><span class="mnote">zadanie</span></div>`
+        +hist.map((h,k)=>`<div class="mrow ${h.ok?'ok':'bad'}${k===hist.length-1?(h.ok?' a-pop':' a-shake'):''}"><span class="mexpr">${h.expr}</span><span class="mnote">${h.ok?h.note:'nie tak'}</span>${icon(h.ok?'check':'close',{size:16,stroke:3.4})}</div>`).join('')
+        +(last&&!last.ok?`<div class="mexp">${icon('bulb',{size:16})}<span>${last.note}</span></div>`:'')
+        +(i<steps.length?`<div class="mrow next a-blink"><span>następny krok?</span></div>`:'');};
+    const drawOpts=()=>{grid.innerHTML='';sel=null;btn.disabled=true;const s=steps[i];order=shuffle((s.options||[]).map((_,k)=>k));
+      order.forEach((k,pos)=>{const b=el('button','mopt a-up d'+Math.min(6,pos+1),s.options[k]);b.dataset.i=k;if(tried.has(k)){b.disabled=true;b.classList.add('dim');}
+        b.onclick=()=>{if(locked||b.disabled)return;sel=k;grid.querySelectorAll('.mopt').forEach(x=>x.classList.toggle('sel',+x.dataset.i===k));btn.disabled=false;};grid.appendChild(b);});};
+    const check=()=>{if(locked||sel==null)return;const s=steps[i];const ok=sel===s.c;
+      if(ok){hist.push({ok:true,expr:s.expr||s.options[s.c],note:s.note||''});tried=new Set();i++;
+        if(i>=steps.length){locked=true;drawCard();grid.innerHTML='';ph.textContent='Rozwiązane';
+          api.finish(mistakes===0,{e:task.e||'',sub:mistakes?`${mistakes} ${pl(mistakes,'pomyłka','pomyłki','pomyłek')} po drodze`:''});return;}}
+      else{mistakes++;tried.add(sel);hist.push({ok:false,expr:s.options[sel],note:s.note||'Spróbuj inaczej.'});}
+      drawCard();drawOpts();};
+    btn.onclick=check;
+    keyFn=e=>{const k=e.key||'';const m=/^[1-5]$/.test(k)?+k-1:-1;if(m>=0){const b=grid.querySelectorAll('.mopt')[m];if(b&&!b.disabled)b.click();}else if(k==='Enter'&&sel!=null){e.preventDefault();check();}};
+    drawCard();drawOpts();
+  }},
+  /* WSKAŻ NA SCHEMACIE (Hotspot.html): obraz (inline <svg …> albo ścieżka <img>) w karcie, warstwa dotyku nad nim; targets:[{name,x,y,r}] w % (x, y = środek,
+     r = promień w % szerokości obrazka). Pytania po kolei („Dotknij: …”), trafienie = limonkowy pierścień + etykieta, chybienie = czerwony punkt + a-shake karty.
+     „POKAŻ, GDZIE TO JEST” = pomyłka + podświetlenie celu. Zaliczone = wszystkie cele bez pomyłek (serce raz na zadanie). */
+  hotspot:{render(task,api){
+    const tg=task.targets||[];const n=tg.length;let i=0,mistakes=0,locked=false,busy=false;
+    const title=el('div','ttitle');api.body.appendChild(title);
+    const card=el('div','hotcard a-up d1');api.body.appendChild(card);
+    const img=el('div','hotimg');const src=String(task.image||'');
+    if(/^\s*<svg/i.test(src))img.innerHTML=src;else if(src){const im=el('img');im.src=src;im.alt=task.alt||'';im.draggable=false;img.appendChild(im);}
+    const layer=el('div','hotlayer');layer.setAttribute('aria-label','Dotknij właściwego miejsca na schemacie');img.appendChild(layer);card.appendChild(img);
+    const chips=el('div','hotchips a-up d2');api.body.appendChild(chips);
+    const show=el('button','pill ghost','POKAŻ, GDZIE TO JEST');api.foot.appendChild(show);
+    const draw=()=>{title.textContent=i<n?'Dotknij: '+tg[i].name:'Wszystko wskazane';
+      chips.innerHTML=tg.map((t,k)=>`<span class="hotchip${k<i?' done':k===i?' cur':''}">${k<i?icon('check',{size:13,stroke:3.4}):''}${k===i+1?'Kolejne: ':''}${t.name}</span>`).join('');};
+    const pin=(t,cls,label)=>{const p=el('div','hotpin');p.style.left=t.x+'%';p.style.top=t.y+'%';p.style.width=(t.r*2)+'%';
+      p.innerHTML=`<i class="hotring ${cls}"></i>${label?`<b class="hottag ${cls}">${label}</b>`:''}`;layer.appendChild(p);return p;};
+    const end=()=>{locked=true;api.finish(mistakes===0,{e:task.e||'',sub:mistakes?`${mistakes} ${pl(mistakes,'pomyłka','pomyłki','pomyłek')} po drodze`:''});};
+    const hit=t=>{pin(t,'ok a-pop',t.name);i++;draw();if(i>=n)setTimeout(end,500);};
+    layer.onclick=e=>{if(locked||busy||i>=n)return;const r=img.getBoundingClientRect();const x=(e.clientX-r.left)/r.width*100,y=(e.clientY-r.top)/r.height*100;const t=tg[i];
+      const dx=(x-t.x)*r.width/100,dy=(y-t.y)*r.height/100;
+      if(Math.hypot(dx,dy)<=t.r*r.width/100)hit(t);
+      else{mistakes++;busy=true;card.classList.add('a-shake');const m=pin({x,y,r:4},'miss a-pop');setTimeout(()=>{m.remove();card.classList.remove('a-shake');busy=false;},700);}};
+    show.onclick=()=>{if(locked||busy||i>=n)return;mistakes++;busy=true;const t=tg[i];const p=pin(t,'reveal a-blink',t.name);
+      setTimeout(()=>{p.querySelectorAll('.reveal').forEach(x=>x.classList.remove('a-blink'));busy=false;i++;draw();if(i>=n)end();},1100);};
     draw();
   }}
 };
@@ -1163,7 +1431,7 @@ function renderCwicz(sc){
       ['match','link','Pary słówek','Dopasuj słowo do tłumaczenia (z fiszek).']]
    : [['match','link','Pary z fiszek','Dopasuj pojęcie do definicji.'],
       ['speed','bolt','Szybki quiz na czas','60 sekund — ile zdążysz trafić?'],
-      ['typing','edit','Wpisz pojęcie','Z definicji wpisz właściwy termin.']];
+      ['typing','edit','Pojęcie z fiszek','Z definicji wpisz właściwy termin.']]; // krok 5b: dawne „Wpisz pojęcie” — nazwa zajęta przez typ zadania typeterm
   hub.appendChild(el('div','exprompt','Wybierz ćwiczenie'));
   items.forEach(([k,em,t,p])=>{
     const c=el('div','excard',`<div class="eemoji">${icon(em,{size:26,stroke:2.4})}</div><div class="emeta"><h3>${t}</h3><p>${p}</p></div>`);
