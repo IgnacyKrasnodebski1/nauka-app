@@ -1,5 +1,6 @@
-import { normalizeMeta, paletteFor, todayStr, type ActivityMap, type Plan, type Quest, type Stage, type Subject, type SubjectProgress, type Topic, type TopicContent, type SrsCard, type UserMeta, type WeakMap } from "@nauka/shared";
+import { normalizeMeta, paletteFor, todayStr, type ActivityMap, type BossRecord, type GhostRecord, type Plan, type Quest, type Stage, type Subject, type SubjectProgress, type Topic, type TopicContent, type SrsCard, type UserMeta, type WeakMap } from "@nauka/shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { emptyExtra, normalizeExtra, type Extra, type Goal } from "./extra";
 import { KEYS, getJson, setJson } from "./storage";
 
 /** Mapowanie wierszy Supabase → typy shared. Wszystko tylko własne (RLS). */
@@ -34,6 +35,9 @@ export interface TopicRow {
   updated_at?: string;
 }
 
+/** true, gdy baza ma kolumny z 0003_recall2.sql (ustawiane po pierwszym pełnym pobraniu; bez nich zapisy pomijają nowe kolumny). */
+export let hasV2Columns = true;
+
 export const SUBJECT_SELECT = "id,owner_id,name,emoji,category,stage,accent,accent2,exam_date,exam_label,position,created_at,updated_at";
 export const TOPIC_SELECT = "id,subject_id,owner_id,name,emoji,source,content,generation_id,position,created_at,updated_at";
 
@@ -65,6 +69,8 @@ export interface UserData {
   achievements: string[];
   /** aktywność z ostatnich dni (dzień → xp/minuty) */
   activity: ActivityMap;
+  /** Recall 2.0: user_meta.* z migracji 0003 + profiles.goal */
+  extra: Extra;
 }
 
 /** Wiersz `user_meta` → UserMeta (brakujące pola uzupełnia `normalizeMeta`). */
@@ -79,6 +85,18 @@ export interface MetaRow {
   streak_freezes?: number;
   sound_on?: boolean;
   stats?: Partial<UserMeta["stats"]> | null;
+  /* 0003_recall2 */
+  themes?: Extra["themes"] | null;
+  boost_until?: string | null;
+  album?: Extra["album"] | null;
+  overrides?: Extra["overrides"] | null;
+  tests?: Extra["tests"] | null;
+  weekly_quest?: Quest | null;
+  history?: Extra["history"] | null;
+  daily?: Extra["daily"] | null;
+  reduce_motion?: boolean | null;
+  reminder?: Extra["reminder"] | null;
+  exams?: Extra["exams"] | null;
 }
 export function rowToMeta(m: MetaRow | null): UserMeta {
   if (!m) return normalizeMeta(null);
@@ -95,7 +113,27 @@ export function rowToMeta(m: MetaRow | null): UserMeta {
     stats: (m.stats ?? undefined) as UserMeta["stats"] | undefined,
   });
 }
-export const META_SELECT = "streak,best,last_day,gems,hearts,hearts_updated_at,daily_goal,streak_freezes,sound_on,stats";
+export const META_SELECT_V1 = "streak,best,last_day,gems,hearts,hearts_updated_at,daily_goal,streak_freezes,sound_on,stats";
+export const META_SELECT = META_SELECT_V1 + ",themes,boost_until,album,overrides,tests,weekly_quest,history,daily,reduce_motion,reminder,exams";
+
+export function rowToExtra(m: MetaRow | null, goal: Goal | null | undefined): Extra {
+  const e = emptyExtra();
+  if (!m) return { ...e, goal: goal ?? null };
+  return normalizeExtra({
+    goal: goal ?? null,
+    themes: m.themes ?? undefined,
+    boostUntil: m.boost_until ? new Date(m.boost_until).getTime() : null,
+    album: m.album ?? undefined,
+    overrides: m.overrides ?? undefined,
+    tests: m.tests ?? undefined,
+    weekly: m.weekly_quest ?? null,
+    history: m.history ?? undefined,
+    daily: m.daily ?? null,
+    reduceMotion: !!m.reduce_motion,
+    reminder: m.reminder ?? null,
+    exams: m.exams ?? undefined,
+  });
+}
 
 /** Ostatnie N dni (YYYY-MM-DD) do zapytania o aktywność. */
 export function daysAgoStr(n: number, from = new Date()): string {
@@ -115,23 +153,39 @@ export function normaliseProgress(p: Partial<SubjectProgress> | null | undefined
   const out: SubjectProgress = { xp: Number(p?.xp ?? 0), levels };
   if (p?.bestExam !== undefined && p.bestExam !== null) out.bestExam = p.bestExam;
   if (Array.isArray(p?.chests) && p.chests.length) out.chests = p.chests.map(Number);
+  if (p?.boss && typeof p.boss === "object") out.boss = { done: !!p.boss.done, n: Number(p.boss.n ?? 0), at: p.boss.at, best: p.boss.best };
+  if (p?.ghost && typeof p.ghost === "object" && Object.keys(p.ghost).length) out.ghost = p.ghost as Record<string, GhostRecord>;
   return out;
 }
 
 /** Pełne pobranie danych usera (jedno „odświeżenie”). */
 export async function fetchUserData(sb: SupabaseClient, userId: string): Promise<UserData> {
   const today = todayStr();
-  const [subj, top, prog, srs, meta, prof, quests, ach, act] = await Promise.all([
+  // kolumny z migracji 0003 — gdy baza ich jeszcze nie ma, wracamy do starego zestawu (apka nie może się wywalić)
+  const [subj, top, prog0, srs, meta0, prof0, quests, ach, act] = await Promise.all([
     sb.from("subjects").select(SUBJECT_SELECT).eq("owner_id", userId).order("position", { ascending: true }).order("created_at", { ascending: true }),
     sb.from("topics").select(TOPIC_SELECT).eq("owner_id", userId).order("position", { ascending: true }).order("created_at", { ascending: true }),
-    sb.from("progress").select("topic_id,xp,levels,weak,best_exam,chests").eq("user_id", userId),
+    sb.from("progress").select("topic_id,xp,levels,weak,best_exam,chests,boss,ghost").eq("user_id", userId),
     sb.from("srs_cards").select("topic_id,card_key,state").eq("user_id", userId),
     sb.from("user_meta").select(META_SELECT).eq("user_id", userId).maybeSingle(),
-    sb.from("profiles").select("stage,plan,show_on_leaderboard,display_name").eq("id", userId).maybeSingle(),
+    sb.from("profiles").select("stage,plan,show_on_leaderboard,display_name,goal").eq("id", userId).maybeSingle(),
     sb.from("quests_daily").select("day,quests").eq("user_id", userId).eq("day", today).maybeSingle(),
     sb.from("achievements").select("key").eq("user_id", userId),
     sb.from("activity").select("day,xp,minutes").eq("user_id", userId).gte("day", daysAgoStr(13)),
   ]);
+  type Res = { data: unknown; error: { message: string } | null };
+  let prog: Res = prog0, meta: Res = meta0, prof: Res = prof0;
+  let v2 = true;
+  if (prog.error || meta.error || prof.error) {
+    v2 = false;
+    console.warn("[data] 0003 columns missing → v1 selects", (prog.error ?? meta.error ?? prof.error)?.message);
+    [prog, meta, prof] = await Promise.all([
+      sb.from("progress").select("topic_id,xp,levels,weak,best_exam,chests").eq("user_id", userId),
+      sb.from("user_meta").select(META_SELECT_V1).eq("user_id", userId).maybeSingle(),
+      sb.from("profiles").select("stage,plan,show_on_leaderboard,display_name").eq("id", userId).maybeSingle(),
+    ]);
+  }
+  hasV2Columns = v2;
   const firstErr = [subj, top, prog, srs, meta, prof].find((r) => r.error)?.error;
   if (firstErr) throw new Error(firstErr.message);
   // tabele z migracji 0002 — gdy brak (stara baza), nie blokujemy ładowania
@@ -139,13 +193,13 @@ export async function fetchUserData(sb: SupabaseClient, userId: string): Promise
 
   const progress: Record<string, SubjectProgress> = {};
   const weak: WeakMap = {};
-  for (const r of (prog.data ?? []) as { topic_id: string; xp: number; levels: SubjectProgress["levels"]; weak: Record<string, number[]> | null; best_exam: number | null; chests?: number[] | null }[]) {
-    progress[r.topic_id] = normaliseProgress({ xp: r.xp, levels: r.levels, bestExam: r.best_exam ?? undefined, chests: r.chests ?? undefined });
+  for (const r of (prog.data ?? []) as { topic_id: string; xp: number; levels: SubjectProgress["levels"]; weak: Record<string, number[]> | null; best_exam: number | null; chests?: number[] | null; boss?: BossRecord | null; ghost?: Record<string, GhostRecord> | null }[]) {
+    progress[r.topic_id] = normaliseProgress({ xp: r.xp, levels: r.levels, bestExam: r.best_exam ?? undefined, chests: r.chests ?? undefined, boss: r.boss ?? undefined, ghost: r.ghost ?? undefined });
     if (r.weak && Object.keys(r.weak).length) weak[r.topic_id] = r.weak;
   }
   const srsMap: Record<string, SrsMap> = {};
   for (const r of (srs.data ?? []) as { topic_id: string; card_key: string; state: SrsCard }[]) (srsMap[r.topic_id] ??= {})[r.card_key] = r.state;
-  const p = prof.data as { stage: Stage | null; plan: Plan | null; show_on_leaderboard: boolean | null; display_name: string | null } | null;
+  const p = prof.data as { stage: Stage | null; plan: Plan | null; show_on_leaderboard: boolean | null; display_name: string | null; goal?: Goal | null } | null;
   const activity: ActivityMap = {};
   for (const r of (act.data ?? []) as { day: string; xp: number; minutes: number }[]) activity[r.day] = { day: r.day, xp: Number(r.xp ?? 0), minutes: Number(r.minutes ?? 0) };
   const q = quests.data as { day: string; quests: Quest[] } | null;
@@ -163,8 +217,10 @@ export async function fetchUserData(sb: SupabaseClient, userId: string): Promise
     quests: q && Array.isArray(q.quests) ? q.quests : null,
     achievements: ((ach.data ?? []) as { key: string }[]).map((r) => r.key),
     activity,
+    extra: rowToExtra(meta.data as MetaRow | null, p?.goal ?? null),
   };
 }
+
 
 export async function fetchTopic(sb: SupabaseClient, topicId: string): Promise<Topic | null> {
   const { data } = await sb.from("topics").select(TOPIC_SELECT).eq("id", topicId).maybeSingle();
@@ -211,6 +267,7 @@ export async function readCache(userId: string): Promise<UserData | null> {
     quests: c.quests ?? null,
     achievements: c.achievements ?? [],
     activity: c.activity ?? {},
+    extra: normalizeExtra(c.extra ?? null),
   };
 }
 export async function writeCache(userId: string, d: UserData): Promise<void> {

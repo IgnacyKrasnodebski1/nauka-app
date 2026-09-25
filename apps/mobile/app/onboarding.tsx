@@ -1,204 +1,137 @@
-import { CURRICULUM, DAILY_GOALS, DAILY_GOAL_LABEL, STAGES, type DailyGoal, type Stage } from "@nauka/shared";
-import { useRouter } from "expo-router";
+import type { Stage } from "@nauka/shared";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeInRight } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button3D } from "@/components/Button3D";
-import { Icon } from "@/components/Icon";
-import { SegmentedProgress } from "@/components/Lesson";
-import { LogoMark } from "@/components/Logo";
-import { Mascot, MascotBubble } from "@/components/Mascot";
-import { StagePicker, SubjectChips, type SubjectPick } from "@/components/Onboarding";
-import { Body, Display, Label, Muted, Num, Title } from "@/components/Text";
-import { Input, Touch } from "@/components/ui";
+import { StyleSheet, View } from "react-native";
+import { Icon, type IconName } from "@/components/Icon";
+import { Motion } from "@/components/Motion";
+import { Body, Display, Eyebrow, Muted } from "@/components/Text";
+import { Blob, Btn, IconTile, Press, Screen, Touch, useTop } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
-import { COLORS, PLAY, RADIUS, SPACE } from "@/lib/theme";
+import type { Goal } from "@/lib/extra";
+import { T, TONES, type Tone } from "@/lib/theme";
 
-type Step = 1 | 2 | 3 | 4;
+export const LEVELS: { id: Stage; t: string; s: string; icon: IconName; tone: Tone }[] = [
+  { id: "podstawowa", t: "Szkoła podstawowa", s: "klasy 4–8", icon: "edit", tone: "gold" },
+  { id: "liceum", t: "Liceum lub technikum", s: "klasy 1–5", icon: "book", tone: "acid" },
+  { id: "studia", t: "Studia", s: "licencjat, magisterka", icon: "cap", tone: "pink" },
+  { id: "inne", t: "Coś innego", s: "języki, kursy, certyfikaty", icon: "globe", tone: "cyan" },
+];
+export const GOALS: { id: Goal; t: string; for: Stage[] }[] = [
+  { id: "sprawdziany", t: "Kartkówki i sprawdziany", for: ["podstawowa", "liceum", "inne"] },
+  { id: "matura-p", t: "Matura podstawowa", for: ["liceum"] },
+  { id: "matura-r", t: "Matura rozszerzona", for: ["liceum"] },
+  { id: "olimpiada", t: "Olimpiada", for: ["podstawowa", "liceum"] },
+  { id: "sesja", t: "Sesja i kolokwia", for: ["studia"] },
+  { id: "wlasny", t: "Własny cel", for: ["podstawowa", "liceum", "studia", "inne"] },
+];
+export const GOAL_DEFAULT: Record<Stage, Goal> = { podstawowa: "sprawdziany", liceum: "matura-r", studia: "sesja", inne: "wlasny" };
+export const GOAL_NAME: Record<Goal, string> = { sprawdziany: "kartkówki i sprawdziany", "matura-p": "matura podstawowa", "matura-r": "matura rozszerzona", olimpiada: "olimpiada", sesja: "sesja i kolokwia", wlasny: "własny cel" };
 
-/** Onboarding 4 kroki z maskotką „Rec”: etap → przedmioty → cel dzienny → start. */
-export default function Onboarding() {
-  const app = useApp();
-  const router = useRouter();
-  const insets = useSafeAreaInsets();
-  const [step, setStep] = useState<Step>(app.stage ? 2 : 1);
-  const [stage, setStage] = useState<Stage | null>(app.stage);
-  const [picked, setPicked] = useState<SubjectPick[]>([]);
-  const [goal, setGoal] = useState<DailyGoal>(app.dailyGoal);
-  const [custom, setCustom] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
-
-  const toggle = (p: SubjectPick) => setPicked((cur) => (cur.some((x) => x.key === p.key) ? cur.filter((x) => x.key !== p.key) : [...cur, p]));
-  const addCustom = () => {
-    const name = custom.trim();
-    if (!name) return;
-    const key = `custom:${name.toLowerCase().replace(/\s+/g, "-")}`;
-    if (!picked.some((x) => x.key === key)) setPicked([...picked, { key, name, emoji: "📘" }]);
-    setCustom("");
-  };
-
-  const finish = async () => {
-    if (!stage || !picked.length) return;
-    setBusy(true);
-    setErr(null);
-    try {
-      app.setStage(stage);
-      app.setDailyGoal(goal);
-      await app.createSubjects(picked.map((p) => ({ name: p.name, emoji: p.emoji, category: p.key.startsWith("custom:") ? "inne" : p.key, stage })));
-      app.showToast("Przedmioty gotowe");
-      router.replace("/(tabs)");
-    } catch (e) {
-      setErr(e instanceof Error ? e.message : "Nie udało się zapisać przedmiotów.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const bubble: Record<Step, string> = {
-    1: "Cześć, jestem Rec! Powiedz mi, na jakim jesteś etapie.",
-    2: "Z czego się uczysz? Do każdego przedmiotu dodasz tematy ze zdjęć albo z hasła.",
-    3: "Ile chcesz robić dziennie? Cel = ring na Start i bonus XP.",
-    4: "Gotowe! Pierwsza lekcja to 10 minut. Lecimy?",
-  };
-  const mascotState = step === 4 ? "cheer" : step === 3 ? "think" : step === 2 ? "happy" : "idle";
-
+/** Pasek kroków onboardingu (4 segmenty, bieżący mruga). */
+export function StepBar({ step, total = 4 }: { step: number; total?: number }) {
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, backgroundColor: COLORS.bg0 }}>
-      <ScrollView contentContainerStyle={[s.wrap, { paddingTop: insets.top + SPACE[4], paddingBottom: insets.bottom + SPACE[6] }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <View style={s.top}>
-          {step > 1 ? (
-            <Touch onPress={() => setStep((step - 1) as Step)} style={s.back} accessibilityLabel="Wstecz">
-              <Icon name="chevron-back" size={22} color={COLORS.text} />
-            </Touch>
-          ) : (
-            <LogoMark size={38} />
-          )}
-          <SegmentedProgress done={step} total={4} color={PLAY.green} style={{ flex: 1 }} />
-          <Muted size="xs" weight={700}>
-            {step}/4
-          </Muted>
-        </View>
-
-        <View style={s.hero}>
-          <Mascot state={mascotState} size={110} streak={0} />
-          <MascotBubble text={bubble[step]} tail="left" style={{ flex: 1, maxWidth: undefined }} />
-        </View>
-
-        {step === 1 ? (
-          <Animated.View key="s1" entering={FadeInRight.duration(240)} style={s.stepBox}>
-            <Label>krok 1 · etap</Label>
-            <Display size="2xl" weight={800}>
-              Na jakim etapie jesteś?
-            </Display>
-            <Body color={COLORS.muted}>Dopasujemy przedmioty, poziom trudności i siatkę ocen. Zmienisz to potem w profilu.</Body>
-            <StagePicker value={stage} onChange={setStage} />
-            <Button3D label="Dalej" disabled={!stage} onPress={() => setStep(2)} style={{ marginTop: SPACE[2] }} right={<Icon name="arrow-forward" size={18} color="#fff" />} />
-          </Animated.View>
-        ) : null}
-
-        {step === 2 && stage ? (
-          <Animated.View key="s2" entering={FadeInRight.duration(240)} style={s.stepBox}>
-            <Label>krok 2 · przedmioty</Label>
-            <Display size="2xl" weight={800}>
-              Z czego się uczysz?
-            </Display>
-            <SubjectChips stage={stage} selected={picked.map((p) => p.key)} onToggle={toggle} />
-            <View style={s.customRow}>
-              <Input value={custom} onChangeText={setCustom} placeholder="Własny przedmiot, np. Łacina" onSubmitEditing={addCustom} returnKeyType="done" style={{ flex: 1 }} />
-              <Button3D label="Dodaj" size="sm" variant="blue" onPress={addCustom} disabled={!custom.trim()} style={{ width: 84, alignSelf: "center" }} />
-            </View>
-            {picked.filter((p) => p.key.startsWith("custom:")).length ? <Muted size="xs">własne: {picked.filter((p) => p.key.startsWith("custom:")).map((p) => p.name).join(", ")}</Muted> : null}
-            <Button3D label={picked.length ? `Dalej · ${picked.length}` : "Wybierz min. 1 przedmiot"} disabled={!picked.length} onPress={() => setStep(3)} style={{ marginTop: SPACE[2] }} right={<Icon name="arrow-forward" size={18} color="#fff" />} />
-            <Muted size="xs" center>
-              {CURRICULUM[stage].length} propozycji z podstawy programowej · kolejne dodasz później
-            </Muted>
-          </Animated.View>
-        ) : null}
-
-        {step === 3 ? (
-          <Animated.View key="s3" entering={FadeInRight.duration(240)} style={s.stepBox}>
-            <Label>krok 3 · cel dzienny</Label>
-            <Display size="2xl" weight={800}>
-              Ile dziennie?
-            </Display>
-            <Body color={COLORS.muted}>Jedna lekcja to ok. 30–50 XP. Cel możesz zmienić w profilu.</Body>
-            <View style={{ gap: SPACE[2] }}>
-              {DAILY_GOALS.map((g) => {
-                const on = goal === g;
-                const minutes = g === 20 ? "~5 min" : g === 50 ? "~10 min" : "~20 min";
-                return (
-                  <Touch key={g} onPress={() => setGoal(g)} style={[s.goal, on && { backgroundColor: PLAY.greenSoft, borderColor: PLAY.green, borderBottomColor: PLAY.greenDeep }]}>
-                    <Num size="xl" weight={800} color={on ? PLAY.green : COLORS.text} style={{ width: 64 }}>
-                      {g}
-                    </Num>
-                    <View style={{ flex: 1 }}>
-                      <Title size="base">{DAILY_GOAL_LABEL[g]}</Title>
-                      <Muted size="xs">
-                        {g} XP dziennie · {minutes}
-                      </Muted>
-                    </View>
-                    {on ? <Icon name="checkmark-circle" size={22} color={PLAY.green} /> : <Icon name="ellipse-outline" size={22} color={COLORS.faint} />}
-                  </Touch>
-                );
-              })}
-            </View>
-            <Button3D label="Dalej" onPress={() => setStep(4)} style={{ marginTop: SPACE[2] }} right={<Icon name="arrow-forward" size={18} color="#fff" />} />
-          </Animated.View>
-        ) : null}
-
-        {step === 4 && stage ? (
-          <Animated.View key="s4" entering={FadeInRight.duration(240)} style={s.stepBox}>
-            <Label>krok 4 · start</Label>
-            <Display size="2xl" weight={800}>
-              Twój plan
-            </Display>
-            <View style={s.summary}>
-              <Row icon="school" label="Etap" value={STAGES.find((x) => x.id === stage)?.label ?? ""} />
-              <Row icon="library" label="Przedmioty" value={picked.map((p) => p.name).join(", ")} />
-              <Row icon="flag" label="Cel dzienny" value={`${goal} XP · ${DAILY_GOAL_LABEL[goal]}`} />
-              <Row icon="heart" label="Serca" value="5 na start, +1 co 30 min" />
-              <Row icon="diamond" label="Klejnoty" value="za poziomy, skrzynki i misje" />
-            </View>
-            {err ? (
-              <Body size="sm" color={COLORS.danger}>
-                {err}
-              </Body>
-            ) : null}
-            <Button3D label={busy ? "Zapisuję…" : "Zaczynamy!"} disabled={busy} onPress={finish} size="lg" style={{ marginTop: SPACE[2] }} right={<Icon name="rocket" size={18} color="#fff" />} />
-          </Animated.View>
-        ) : null}
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
-}
-
-function Row({ icon, label, value }: { icon: React.ComponentProps<typeof Icon>["name"]; label: string; value: string }) {
-  return (
-    <View style={s.srow}>
-      <View style={s.sicon}>
-        <Icon name={icon} size={16} color={PLAY.green} />
-      </View>
-      <Muted size="xs" weight={700} style={{ width: 86 }}>
-        {label}
-      </Muted>
-      <Body weight={600} color={COLORS.text} style={{ flex: 1 }} numberOfLines={2}>
-        {value}
-      </Body>
+    <View style={{ flexDirection: "row", gap: 6 }}>
+      {Array.from({ length: total }, (_, i) => {
+        const seg = <View style={{ flex: 1, height: 7, borderRadius: 4, backgroundColor: i < step ? T.acid : T.line2 }} />;
+        return i === step - 1 ? (
+          <Motion key={i} kind="blink" style={{ flex: 1 }}>
+            {seg}
+          </Motion>
+        ) : (
+          <View key={i} style={{ flex: 1 }}>
+            {seg}
+          </View>
+        );
+      })}
     </View>
   );
 }
 
+/** LevelPick (LevelPick.html): etap nauki + cel (kartkówki / matura / olimpiada / sesja / własny). `?from=settings` wraca do Ustawień. */
+export default function LevelPick() {
+  const app = useApp();
+  const router = useRouter();
+  const top = useTop();
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const first = from !== "settings";
+  const [level, setLevel] = useState<Stage | null>(app.stage);
+  const [goal, setGoal] = useState<Goal | null>(app.extra.goal);
+  const goals = GOALS.filter((g) => !level || g.for.includes(level));
+  const pick = (id: Stage) => {
+    setLevel(id);
+    if (!goal || !GOALS.find((g) => g.id === goal)!.for.includes(id)) setGoal(GOAL_DEFAULT[id]);
+  };
+  const next = () => {
+    if (!level) return;
+    app.setStage(level);
+    app.setGoal(goal ?? GOAL_DEFAULT[level]);
+    if (first) router.push({ pathname: "/goal", params: { from: "first" } });
+    else {
+      app.showToast("Zapisane: " + LEVELS.find((l) => l.id === level)!.t, "check");
+      router.back();
+    }
+  };
+  return (
+    <Screen scroll pad={false} blob={<Blob tone="acid" size={280} top={-100} right={-90} />}>
+      <View style={[s.wrap, { paddingTop: top }]}>
+        <StepBar step={2} />
+        <Motion kind="up" style={{ marginTop: 8 }}>
+          <Display size={30} ls={-1} lh={33}>
+            Na jakim etapie jesteś?
+          </Display>
+          <Muted size={13.5} lh={20} style={{ marginTop: 7 }}>
+            Dopasujemy poziom trudności, język wyjaśnień i gotowe przedmioty.
+          </Muted>
+        </Motion>
+        <View style={{ gap: 10 }}>
+          {LEVELS.map((l, i) => {
+            const on = level === l.id;
+            const set = TONES[l.tone];
+            return (
+              <Motion key={l.id} kind={on ? "pop" : "up"} d={on ? 0 : i + 1}>
+                <Press onPress={() => pick(l.id)} drop={4} edge={on ? T.acidDark : T.shadow} radius={22} faceStyle={[s.opt, on ? { backgroundColor: TONES.acid.tint, borderColor: T.acid } : { backgroundColor: T.surface, borderColor: T.line }]} accessibilityLabel={l.t}>
+                  <IconTile icon={l.icon} size={48} color={on ? T.acid : set.color} on={on ? T.onAcid : set.on} />
+                  <View style={{ flex: 1 }}>
+                    <Body size={15.5} weight={800} color={on ? TONES.acid.txt : T.txt}>
+                      {l.t}
+                    </Body>
+                    <Muted size={12.5} color={on ? TONES.acid.sub : T.muted} style={{ marginTop: 2 }}>
+                      {l.s}
+                    </Muted>
+                  </View>
+                  <View style={[s.ck, on && { backgroundColor: T.acid, borderColor: T.acid }]}>{on ? <Icon name="check" size={15} stroke={4} color={T.onAcid} /> : null}</View>
+                </Press>
+              </Motion>
+            );
+          })}
+        </View>
+        <Eyebrow style={{ marginTop: 4 }}>Do czego się przygotowujesz?</Eyebrow>
+        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 9 }}>
+          {goals.map((g, i) => {
+            const on = goal === g.id;
+            return (
+              <Motion key={g.id} kind={on ? "pop" : "up"} d={on ? 0 : Math.min(6, i + 3)}>
+                <Touch onPress={() => setGoal(g.id)} accessibilityRole="button" accessibilityState={{ selected: on }} style={[s.chip, on && { backgroundColor: T.acid, borderColor: T.acid }]}>
+                  <Body size={13} weight={800} color={on ? T.onAcid : T.txt2}>
+                    {g.t}
+                  </Body>
+                </Touch>
+              </Motion>
+            );
+          })}
+        </View>
+        <View style={{ gap: 10, marginTop: 8 }}>
+          <Btn label={first ? "Dalej" : "Zapisz"} onPress={next} disabled={!level} glow />
+          {!first ? <Btn label="Wróć bez zmian" variant="text" onPress={() => router.back()} /> : null}
+        </View>
+      </View>
+    </Screen>
+  );
+}
+
 const s = StyleSheet.create({
-  wrap: { flexGrow: 1, paddingHorizontal: SPACE[5], gap: SPACE[4] },
-  top: { flexDirection: "row", alignItems: "center", gap: SPACE[3] },
-  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, alignItems: "center", justifyContent: "center" },
-  hero: { flexDirection: "row", alignItems: "center", gap: SPACE[3] },
-  stepBox: { gap: SPACE[3] },
-  customRow: { flexDirection: "row", gap: SPACE[2], alignItems: "center" },
-  goal: { flexDirection: "row", alignItems: "center", gap: SPACE[3], padding: SPACE[3], paddingHorizontal: SPACE[4], borderRadius: RADIUS.md, backgroundColor: COLORS.bg2, borderWidth: 1.5, borderColor: COLORS.line, borderBottomWidth: 4, borderBottomColor: PLAY.surfaceDeep },
-  summary: { backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.lg, padding: SPACE[4], gap: SPACE[3] },
-  srow: { flexDirection: "row", alignItems: "center", gap: SPACE[2] },
-  sicon: { width: 30, height: 30, borderRadius: 9, backgroundColor: PLAY.greenSoft, alignItems: "center", justifyContent: "center" },
+  wrap: { paddingHorizontal: 20, gap: 13 },
+  opt: { flexDirection: "row", alignItems: "center", gap: 14, padding: 14, paddingHorizontal: 15, borderWidth: 2 },
+  ck: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, borderColor: T.dash, alignItems: "center", justifyContent: "center" },
+  chip: { paddingVertical: 10, paddingHorizontal: 14, borderRadius: 14, backgroundColor: T.surface, borderWidth: 2, borderColor: T.line },
 });

@@ -1,332 +1,194 @@
-import { DAILY_GOALS, DAILY_GOAL_LABEL, GEM_COSTS, PLANS, STAGES, type Achievement, type DailyGoal, type Stage } from "@nauka/shared";
-import { useFocusEffect } from "expo-router";
-import * as WebBrowser from "expo-web-browser";
-import React, { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, Switch, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button3D } from "@/components/Button3D";
-import { BadgesGrid, RankCard } from "@/components/Gamification";
+import { ACHIEVEMENTS, dayDiff, levelProgress, todayStr } from "@nauka/shared";
+import { useRouter } from "expo-router";
+import React, { useMemo } from "react";
+import { StyleSheet, View } from "react-native";
+import { AccentProvider } from "@/components/Accent";
 import { Icon } from "@/components/Icon";
-import { AchievementModal } from "@/components/Modals";
-import { StagePicker } from "@/components/Onboarding";
-import { GemIcon, HeartsPill } from "@/components/Pills";
-import { Body, Display, Label, Muted, Num, Title } from "@/components/Text";
-import { Card, Input, TopBar, Touch } from "@/components/ui";
-import { getMe, stripeCheckout, stripePortal, type MeResponse } from "@/lib/api";
+import { Bar, Motion } from "@/components/Motion";
+import { Body, Display, Eyebrow, Muted, Num } from "@/components/Text";
+import { Blob, Card, ListCard, Mono, RoundBtn, Row, Screen, SectionHead, useTop } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
-import { hasApi } from "@/lib/env";
-import { pl } from "@/lib/plural";
-import { COLORS, PLAY, RADIUS, SPACE, UI, tabular } from "@/lib/theme";
+import { dateFromIso, firstName, fmtDate, fmtNum, initials, noEmoji, nowMs, npl } from "@/lib/format";
+import { T, TONES, type Tone } from "@/lib/theme";
 
-/** Profil: RankCard, 6 statystyk, odznaki, ranga tygodnia, ustawienia (cel, dźwięk, ranking, etap, imię), plan. */
+const BADGE_TONE: Record<string, Tone> = { flame: "amber", trophy: "gold", star: "gold", zap: "pink", bolt: "pink", cards: "cyan", boss: "violet", calendar: "cyan", map: "acid", check: "acid", flag: "acid", layers: "cyan", target: "gold", gift: "gold", moon: "violet", sun: "gold", sparkles: "pink" };
+
+/** Profil (Profile.html): awatar-monogram, ranga, 4 statystyki, aktywność 8 tygodni, odznaki, razem z innymi, XP w przedmiotach. */
 export default function Profile() {
   const app = useApp();
   const auth = useAuth();
-  const insets = useSafeAreaInsets();
-  const [me, setMe] = useState<MeResponse | null>(null);
-  const [meErr, setMeErr] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [editStage, setEditStage] = useState(false);
-  const [editName, setEditName] = useState(false);
-  const [name, setName] = useState(app.displayName ?? "");
-  const [weekly, setWeekly] = useState<{ rank: number; xp: number; total: number } | null>(null);
-  const [badge, setBadge] = useState<Achievement | null>(null);
-
-  const loadMe = useCallback(async () => {
-    if (!auth.user || !hasApi) return;
-    const token = await auth.accessToken();
-    if (!token) return;
-    try {
-      setMe(await getMe(token));
-      setMeErr(null);
-    } catch (e) {
-      setMeErr(e instanceof Error ? e.message : "Nie udało się pobrać planu.");
-    }
-  }, [auth]);
-
-  useFocusEffect(
-    useCallback(() => {
-      void loadMe();
-      app
-        .myWeeklyRank()
-        .then(setWeekly)
-        .catch(() => {});
-    }, [loadMe, app.myWeeklyRank]), // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
-  const plan = me?.plan ?? app.plan;
-  const limits = me?.limits ?? PLANS[plan];
-  const stageInfo = STAGES.find((s) => s.id === app.stage);
-  const displayName = app.displayName ?? me?.profile?.display_name ?? auth.user?.email?.split("@")[0] ?? "Ty";
-
-  /**
-   * TODO(store): przed publikacją w App Store / Google Play zakupy w apce muszą iść przez IAP
-   * (StoreKit / Google Play Billing, np. RevenueCat) — otwieranie Stripe Checkout jest OK dla TestFlight/bety
-   * i (po DMA w UE) dla zakupów webowych z linkiem, ale Apple odrzuci build, który sprzedaje subskrypcję
-   * przez zewnętrzny checkout bez IAP. Patrz README (sekcja „Sklepy”).
-   */
-  const upgrade = async (interval: "month" | "year") => {
-    const token = await auth.accessToken();
-    if (!token) return app.showToast("Sesja wygasła — zaloguj się ponownie.");
-    setBusy(true);
-    try {
-      const { url } = await stripeCheckout(token, interval);
-      await WebBrowser.openBrowserAsync(url, { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET });
-      await loadMe();
-      await app.refresh();
-    } catch (e) {
-      app.showToast(e instanceof Error ? e.message : "Checkout nie wystartował");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const portal = async () => {
-    const token = await auth.accessToken();
-    if (!token) return;
-    setBusy(true);
-    try {
-      const { url } = await stripePortal(token);
-      await WebBrowser.openBrowserAsync(url);
-      await loadMe();
-    } catch (e) {
-      app.showToast(e instanceof Error ? e.message : "Nie udało się otworzyć portalu");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const logout = async () => {
-    await app.store?.flush();
-    await auth.signOut();
-    setMe(null);
-    app.showToast("Wylogowano");
-  };
-
-  const yearlySave = Math.round((1 - PLANS.pro.priceYearlyPln / (PLANS.pro.priceMonthlyPln * 12)) * 100);
+  const router = useRouter();
+  const top = useTop();
+  const name = firstName(app.displayName, auth.user?.email);
+  const mono = initials(app.displayName, auth.user?.email);
+  const since = (() => {
+    const created = auth.user?.created_at ? dateFromIso(auth.user.created_at) : null;
+    if (!created) return "";
+    const days = Math.max(0, Math.round((nowMs() - created.getTime()) / 86400000));
+    if (days < 30) return `Uczy się od ${npl(Math.max(1, days), "dnia", "dni", "dni")}`;
+    const m = Math.round(days / 30);
+    return `Uczy się od ${npl(m, "miesiąca", "miesięcy", "miesięcy")}`;
+  })();
   const st = app.meta.stats;
+  const answered = st.cardsReviewed + st.levelsDone * 6;
+  const weekXp = app.week.reduce((a, d) => a + d.xp, 0);
+  const minutes = Object.values(app.store?.activity ?? {}).reduce((a, d) => a + d.minutes, 0);
+  const hours = Math.round(minutes / 60);
+  const daysActive = Object.values(app.store?.activity ?? {}).filter((d) => d.xp > 0).length;
+  const started = app.subjects.filter((s) => app.topicsOf(s.id).some((t) => (app.progress[t.id]?.xp ?? 0) > 0));
+  const heat = useMemo(() => heatmap(app.store?.activity ?? {}, app.extra.history), [app.store?.activity, app.extra.history]);
+  const unlocked = app.achievements;
+  const badges = [...ACHIEVEMENTS].sort((a, b) => (unlocked.has(b.key) ? 1 : 0) - (unlocked.has(a.key) ? 1 : 0)).slice(0, 6);
+  const levelsDone = app.topics.reduce((a, t) => a + t.levels.filter((l) => levelProgress(app.progressFor(t.id), l.id).done).length, 0);
+  const levelsTotal = app.topics.reduce((a, t) => a + t.levels.length, 0);
 
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.bg0 }}>
-      <TopBar title="Profil" subtitle={auth.user?.email ?? undefined} right={<HeartsPill hearts={app.hearts} showTimer />} />
-      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: 110 + insets.bottom }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        <Animated.View entering={FadeInDown.duration(300)}>
-          <RankCard rank={app.rank} totalXp={app.totalXp} name={displayName} sub={stageInfo ? `${stageInfo.emoji} ${stageInfo.label}` : undefined} />
-        </Animated.View>
-
-        {/* 6 statystyk */}
-        <View style={s.grid}>
-          <Stat icon="flame" color={PLAY.orange} value={app.streak} label="seria" delay={60} />
-          <Stat icon="trophy" color={PLAY.yellow} value={app.meta.best} label="rekord serii" delay={100} />
-          <Stat icon="flash" color={COLORS.xp} value={app.totalXp} label="XP łącznie" delay={140} />
-          <Stat icon="diamond" color={PLAY.gem} value={app.gems} label="klejnoty" delay={180} />
-          <Stat icon="layers" color={PLAY.blue} value={st.cardsReviewed} label="fiszek" delay={220} />
-          <Stat icon="flag" color={PLAY.green} value={st.levelsDone} label="poziomów" delay={260} />
+    <Screen scroll pad={false} blob={<Blob tone="violet" size={280} top={-120} right={-90} />} bottom={40}>
+      <View style={[s.wrap, { paddingTop: top }]}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Display size={18} ls={-0.4}>
+            Profil
+          </Display>
+          <RoundBtn icon="settings" onPress={() => router.push("/settings")} label="Ustawienia" />
         </View>
-
-        {/* odznaki */}
-        <Card style={{ marginTop: SPACE[4], gap: SPACE[3] }}>
-          <View style={s.row}>
-            <Title size="md">Odznaki</Title>
-            <Muted size="xs" weight={700} style={tabular}>
-              {app.achievements.size}/16
-            </Muted>
-          </View>
-          <BadgesGrid unlocked={app.achievements} onPress={setBadge} />
-        </Card>
-
-        {/* ranga tygodnia */}
-        <Card style={{ marginTop: SPACE[3], flexDirection: "row", alignItems: "center", gap: SPACE[3] }}>
-          <View style={[s.iconBox, { backgroundColor: PLAY.yellowSoft }]}>
-            <Icon name="podium" size={20} color={PLAY.yellow} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Label>ranking tygodnia</Label>
-            <Title size="md">{weekly?.rank ? `#${weekly.rank} z ${weekly.total}` : app.showOnLeaderboard ? "jeszcze bez XP w tym tygodniu" : "ukryty"}</Title>
-          </View>
-          <Num size="lg" weight={800} color={COLORS.xp}>
-            {weekly?.xp ?? 0} XP
-          </Num>
-        </Card>
-
-        {/* ustawienia */}
-        <Card style={{ marginTop: SPACE[3], gap: SPACE[4] }}>
-          <Title size="md">Ustawienia</Title>
-          <View style={{ gap: SPACE[2] }}>
-            <Label>cel dzienny</Label>
-            <View style={{ flexDirection: "row", gap: SPACE[2] }}>
-              {DAILY_GOALS.map((g) => {
-                const on = app.dailyGoal === g;
-                return (
-                  <Touch key={g} onPress={() => app.setDailyGoal(g as DailyGoal)} style={[s.goal, on && { backgroundColor: PLAY.greenSoft, borderColor: PLAY.green, borderBottomColor: PLAY.greenDeep }]}>
-                    <Num size="lg" weight={800} color={on ? PLAY.green : COLORS.text}>
-                      {g}
-                    </Num>
-                    <Muted size="xs" weight={600} color={on ? PLAY.green : COLORS.muted}>
-                      {DAILY_GOAL_LABEL[g as DailyGoal]}
-                    </Muted>
-                  </Touch>
-                );
-              })}
-            </View>
-          </View>
-          <Setting icon="volume-high" label="Dźwięki" hint="krótkie efekty w lekcji" value={app.soundOn} onChange={app.setSoundOn} />
-          <Setting icon="podium" label="Widoczność w rankingu" hint="tylko imię i XP" value={app.showOnLeaderboard} onChange={app.setShowOnLeaderboard} />
-          <View style={{ gap: SPACE[2] }}>
-            <Label>imię w rankingu</Label>
-            {editName ? (
-              <View style={{ flexDirection: "row", gap: SPACE[2] }}>
-                <Input value={name} onChangeText={setName} placeholder="np. Kasia" style={{ flex: 1 }} maxLength={24} />
-                <Button3D
-                  label="OK"
-                  size="sm"
-                  onPress={() => {
-                    app.setDisplayName(name);
-                    setEditName(false);
-                    app.showToast("Zapisane");
-                  }}
-                  style={{ width: 72, alignSelf: "center" }}
-                />
-              </View>
-            ) : (
-              <View style={s.row}>
-                <Title size="base">{displayName}</Title>
-                <Button3D label="Zmień" size="sm" variant="ghost" onPress={() => setEditName(true)} style={{ width: 90 }} />
-              </View>
-            )}
-          </View>
-          <View style={{ gap: SPACE[2] }}>
-            <Label>etap edukacji</Label>
-            {editStage ? (
-              <StagePicker
-                value={app.stage}
-                onChange={(stg: Stage) => {
-                  app.setStage(stg);
-                  setEditStage(false);
-                  app.showToast("Zapisane");
-                }}
-              />
-            ) : (
-              <View style={s.row}>
-                <Title size="base">{stageInfo ? `${stageInfo.emoji} ${stageInfo.label}` : "nie ustawiono"}</Title>
-                <Button3D label="Zmień" size="sm" variant="ghost" onPress={() => setEditStage(true)} style={{ width: 90 }} />
-              </View>
-            )}
-          </View>
-          <View style={{ gap: SPACE[2] }}>
-            <Label>zamrożenie serii · masz {app.meta.streakFreezes}</Label>
-            <Button3D label={`Kup zamrożenie · ${GEM_COSTS.streakFreeze}`} variant="blue" size="sm" onPress={app.buyStreakFreeze} right={<GemIcon size={14} color="#fff" />} disabled={app.gems < GEM_COSTS.streakFreeze || app.meta.streakFreezes >= 2} />
-          </View>
-        </Card>
-
-        {/* plan */}
-        <Card style={{ marginTop: SPACE[3], gap: SPACE[3], borderColor: plan === "pro" ? PLAY.purple : COLORS.line }}>
-          <View style={s.row}>
-            <View>
-              <Label>plan</Label>
-              <Display size="xl" weight={800} color={plan === "pro" ? PLAY.purple : COLORS.text}>
-                {plan === "pro" ? "Pro" : "Free"}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 16 }}>
+          <Motion kind="pop">
+            <View style={s.avatar}>
+              <Display size={30} color={T.onAcid}>
+                {mono}
               </Display>
             </View>
-            <View style={[s.proBadge, { backgroundColor: plan === "pro" ? PLAY.purpleSoft : PLAY.redSoft }]}>
-              <Icon name={plan === "pro" ? "infinite" : "heart"} size={16} color={plan === "pro" ? PLAY.purple : PLAY.red} />
-              <Muted size="xs" weight={700} color={plan === "pro" ? PLAY.purple : PLAY.red}>
-                {plan === "pro" ? "nieskończone serca" : "5 serc"}
-              </Muted>
+          </Motion>
+          <View style={{ flex: 1 }}>
+            <Display size={23} ls={-0.7}>
+              {name}
+            </Display>
+            <Muted size={12.5} style={{ marginTop: 3 }}>
+              {since || app.rank.name}
+            </Muted>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+              <Bar pct={app.rank.pct} color={app.rank.color} height={9} d={2} style={{ flex: 1 }} />
+              <Body size={11.5} weight={800} color={T.muted}>
+                {app.rank.name}
+              </Body>
             </View>
           </View>
-          {me?.subscription?.current_period_end ? <Muted size="xs">do {new Date(me.subscription.current_period_end).toLocaleDateString("pl-PL")}</Muted> : null}
-          <Body color={COLORS.muted} style={tabular}>
-            Generacje w tym miesiącu:{" "}
-            <Body weight={700} color={COLORS.text}>
-              {me?.usage.generations ?? "–"}
-            </Body>{" "}
-            / {limits.generationsPerMonth}
-            {"\n"}Wiadomości do tutora:{" "}
-            <Body weight={700} color={COLORS.text}>
-              {me?.usage.tutorMessages ?? "–"}
-            </Body>
-            {plan === "pro" ? " (bez limitu)" : " / 30 dziennie"}
-          </Body>
-          {meErr ? (
-            <Body size="sm" color={COLORS.danger}>
-              {meErr}
-            </Body>
-          ) : null}
-          {!hasApi ? (
-            <Body size="sm" color={COLORS.danger}>
-              Brak EXPO_PUBLIC_API_URL — plan i limity niedostępne.
-            </Body>
-          ) : null}
-          {plan !== "pro" ? (
-            <View style={{ gap: SPACE[2] }}>
-              <Button3D label={`Pro — ${PLANS.pro.priceMonthlyPln} zł/mies.`} variant="purple" onPress={() => upgrade("month")} disabled={busy || !hasApi} left={<Icon name="infinite" size={18} color="#fff" />} />
-              <Button3D label={`Rocznie ${PLANS.pro.priceYearlyPln} zł · taniej o ${yearlySave}%`} variant="ghost" onPress={() => upgrade("year")} disabled={busy || !hasApi} />
-              <Muted size="xs">
-                Pro: nieskończone serca, {PLANS.pro.generationsPerMonth} tematów/mies., {PLANS.pro.filesPerGeneration} plików na raz do {PLANS.pro.maxFileMb} MB, tutor bez limitu. Płatność BLIK/karta w przeglądarce.
-              </Muted>
-            </View>
-          ) : (
-            <Button3D label="Zarządzaj subskrypcją" size="sm" variant="ghost" onPress={portal} disabled={busy} />
-          )}
+        </View>
+        <View style={s.grid}>
+          <Stat d={1} icon="flame" iconColor={T.flame} beat k="Seria" v={npl(app.streak, "dzień", "dni", "dni")} sub={`rekord ${Math.max(app.meta.best, app.streak)}`} onPress={() => router.push("/streak")} />
+          <Stat d={2} icon="bolt" iconColor={T.gold} k="XP łącznie" v={fmtNum(app.totalXp)} sub={`+${weekXp} w tym tygodniu`} />
+          <Stat d={3} icon="check" iconColor={T.acid} k="Poziomy" v={String(levelsDone)} sub={`z ${levelsTotal} zaliczone`} />
+          <Stat d={4} icon="clock" iconColor={T.cyan} k="Czas nauki" v={hours ? `${hours} h` : `${minutes} min`} sub={daysActive ? `średnio ${Math.round(minutes / daysActive)} min dziennie` : `${answered} odpowiedzi`} />
+        </View>
+        <SectionHead label="Aktywność — 8 tygodni" link="Twój tydzień" onLink={() => router.push("/weekly")} />
+        <Card padding={16}>
+          <View style={{ flexDirection: "row", justifyContent: "space-between", gap: 6 }} accessibilityLabel="Aktywność w ostatnich 8 tygodniach">
+            {heat.map((col, w) => (
+              <View key={w} style={{ gap: 6, flex: 1 }}>
+                {col.map((c, d) => (
+                  <View key={d} style={[s.cell, { backgroundColor: c === 3 ? T.acid : c === 2 ? T.acidDark : c === 1 ? "#3E6B1E" : c === -1 ? "#1C1938" : T.line2 }]} />
+                ))}
+              </View>
+            ))}
+          </View>
         </Card>
-
-        <Touch onPress={logout} style={{ alignSelf: "center", marginTop: SPACE[6], padding: SPACE[2] }}>
-          <Body weight={600} color={COLORS.danger}>
-            Wyloguj
-          </Body>
-        </Touch>
-        <Muted size="xs" center style={{ marginTop: SPACE[3] }}>
-          Recall v0.1 · {pl(app.subjects.length, "przedmiot", "przedmioty", "przedmiotów")} · {pl(app.topics.length, "temat", "tematy", "tematów")}
-          {app.offline ? " · offline (cache)" : ""}
+        <SectionHead label="Odznaki" link="Album pojęć" onLink={() => router.push("/album")} />
+        <View style={s.badges}>
+          {badges.map((b) => {
+            const on = unlocked.has(b.key);
+            const tone = TONES[BADGE_TONE[b.icon] ?? "acid"];
+            return (
+              <View key={b.key} style={[s.badge, on ? { backgroundColor: tone.tint, borderColor: tone.tintLine } : { backgroundColor: T.surface2, borderColor: T.dash, borderStyle: "dashed" }]} accessibilityLabel={b.title + (on ? "" : ": zablokowana")}>
+                <Icon name={on ? b.icon : "lock"} size={28} stroke={2.4} color={on ? tone.color : T.muted3} />
+                <Body size={11} weight={800} color={on ? tone.txt : T.muted3} center numberOfLines={2} style={{ marginTop: 6 }}>
+                  {b.title}
+                </Body>
+              </View>
+            );
+          })}
+        </View>
+        <Eyebrow>Razem z innymi</Eyebrow>
+        <Motion kind="up" d={4}>
+          <ListCard>
+            <Row icon="trophy" iconColor={T.gold} title="Liga tygodniowa" sub="ranking XP z innymi uczącymi się" onPress={() => router.push("/league")} />
+            <Row icon="users" iconColor={T.pink} title="Znajomi" sub="kody, zaproszenia, wspólny tydzień · wkrótce" onPress={() => router.push("/friends")} />
+          </ListCard>
+        </Motion>
+        <SectionHead label="XP w przedmiotach" link="Wszystkie" onLink={() => router.push("/settings")} />
+        <Motion kind="up" d={5}>
+          <ListCard>
+            {started.map((sub) => (
+              <AccentProvider key={sub.id} color={sub.accent2} seed={sub.name}>
+                <Row left={<Mono text={sub.name} size={32} />} title={noEmoji(sub.name)} value={`${fmtNum(app.topicsOf(sub.id).reduce((a, t) => a + (app.progress[t.id]?.xp ?? 0), 0))} xp`} valueColor={T.txt2} onPress={() => router.push({ pathname: "/s/[subjectId]", params: { subjectId: sub.id } })} />
+              </AccentProvider>
+            ))}
+            {!started.length ? <Row title="Jeszcze nic — zacznij od planu na dziś." titleColor={T.muted} /> : null}
+          </ListCard>
+        </Motion>
+        <Muted size={11.5} center>
+          {app.plan === "pro" ? "Plan Pro" : "Plan darmowy"} · {auth.user?.email ?? ""}
         </Muted>
-      </ScrollView>
-      {badge ? <AchievementModal achievement={badge} unlocked={app.achievements.has(badge.key)} onClose={() => setBadge(null)} /> : null}
-    </View>
-  );
-}
-
-function Stat({ icon, color, value, label, delay }: { icon: React.ComponentProps<typeof Icon>["name"]; color: string; value: number; label: string; delay: number }) {
-  return (
-    <Animated.View entering={FadeInDown.delay(delay).duration(300)} style={[s.stat, { borderBottomColor: color }]}>
-      <Icon name={icon} size={18} color={color} />
-      <Num size="lg" weight={800} color={COLORS.text} style={tabular}>
-        {value}
-      </Num>
-      <Muted size="xs" weight={600} numberOfLines={1}>
-        {label}
-      </Muted>
-    </Animated.View>
-  );
-}
-
-function Setting({ icon, label, hint, value, onChange }: { icon: React.ComponentProps<typeof Icon>["name"]; label: string; hint: string; value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <View style={s.row}>
-      <View style={{ flexDirection: "row", alignItems: "center", gap: SPACE[3], flex: 1 }}>
-        <View style={[s.iconBox, { backgroundColor: COLORS.bg3 }]}>
-          <Icon name={icon} size={18} color={value ? PLAY.green : COLORS.muted} />
-        </View>
-        <View>
-          <Body weight={700} color={COLORS.text}>
-            {label}
-          </Body>
-          <Muted size="xs">{hint}</Muted>
-        </View>
       </View>
-      <Switch value={value} onValueChange={onChange} trackColor={{ true: PLAY.green, false: COLORS.bg4 }} thumbColor="#fff" />
-    </View>
+    </Screen>
   );
 }
+
+function Stat({ d, icon, iconColor, k, v, sub, onPress, beat }: { d: number; icon: string; iconColor: string; k: string; v: string; sub: string; onPress?: () => void; beat?: boolean }) {
+  return (
+    <Motion kind="up" d={d} style={s.statCell}>
+      <Card padding={15} onPress={onPress}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+          {beat ? (
+            <Motion kind="beat">
+              <Icon name={icon} size={16} color={iconColor} />
+            </Motion>
+          ) : (
+            <Icon name={icon} size={16} color={iconColor} stroke={2.8} />
+          )}
+          <Eyebrow size={10.5}>{k}</Eyebrow>
+        </View>
+        <Num size={30} style={{ marginTop: 8 }} numberOfLines={1} adjustsFontSizeToFit>
+          {v}
+        </Num>
+        <Muted size={11.5} style={{ marginTop: 2 }} numberOfLines={1}>
+          {sub}
+        </Muted>
+      </Card>
+    </Motion>
+  );
+}
+
+/** 8 kolumn (tygodnie) × 7 dni; intensywność z XP dnia (0/1/2/3), -1 = przyszłość. */
+function heatmap(activity: Record<string, { xp: number }>, history: Record<string, { levels: number }>): number[][] {
+  const t = todayStr();
+  const now = new Date();
+  const dow = (now.getDay() + 6) % 7;
+  const out: number[][] = [];
+  for (let w = 0; w < 8; w++) {
+    const col: number[] = [];
+    for (let d = 0; d < 7; d++) {
+      const dt = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dow - (7 - w) * 7 + d);
+      const ds = todayStr(dt);
+      if (dayDiff(ds, t) < 0) col.push(-1);
+      else {
+        const xp = (activity[ds]?.xp ?? 0) + (history[ds]?.levels ?? 0) * 10;
+        col.push(xp >= 100 ? 3 : xp >= 40 ? 2 : xp > 0 ? 1 : 0);
+      }
+    }
+    out.push(col);
+  }
+  return out;
+}
+
+export const _fmtDate = fmtDate;
 
 const s = StyleSheet.create({
-  scroll: { paddingHorizontal: UI.gutter, paddingTop: SPACE[2] },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACE[2], marginTop: SPACE[3] },
-  stat: { width: "31%", flexGrow: 1, backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderBottomWidth: 4, borderRadius: RADIUS.md, padding: SPACE[3], gap: 4, alignItems: "flex-start" },
-  row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: SPACE[3] },
-  iconBox: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  goal: { flex: 1, alignItems: "center", gap: 2, paddingVertical: SPACE[3], borderRadius: RADIUS.md, backgroundColor: COLORS.bg3, borderWidth: 1.5, borderColor: COLORS.line, borderBottomWidth: 4, borderBottomColor: PLAY.surfaceDeep },
-  proBadge: { flexDirection: "row", alignItems: "center", gap: 5, paddingVertical: 6, paddingHorizontal: 10, borderRadius: RADIUS.pill },
+  wrap: { paddingHorizontal: 18, gap: 16 },
+  avatar: { width: 72, height: 72, borderRadius: 24, backgroundColor: T.acid, alignItems: "center", justifyContent: "center", shadowColor: T.acidDark, shadowOpacity: 1, shadowRadius: 0, shadowOffset: { width: 0, height: 5 } },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 11 },
+  statCell: { width: "47%", flexGrow: 1 },
+  cell: { height: 12, borderRadius: 4 },
+  badges: { flexDirection: "row", flexWrap: "wrap", gap: 11 },
+  badge: { width: "30%", flexGrow: 1, borderWidth: 2, borderRadius: 20, paddingVertical: 12, paddingHorizontal: 8, alignItems: "center" },
 });

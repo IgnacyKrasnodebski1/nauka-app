@@ -8,7 +8,10 @@ import {
   levelInstructions,
   GenerationOptionsSchema,
   OutlineSchema,
-  LevelGenSchema,
+  LevelCoreGenSchema,
+  LevelTasksGenSchema,
+  RAW_JSON_INSTRUCTION,
+  expandGenTask,
   FIX_DISTRACTORS_PROMPT,
   needsLengthFix,
   biasedQuestionIndexes,
@@ -19,6 +22,7 @@ import {
   type GenerationOptions,
   type Outline,
   type LevelGen,
+  type GenTask,
   type TopicContent,
 } from "@nauka/shared";
 import { aiConfigured, getClient, modelId } from "./client.js";
@@ -95,16 +99,18 @@ export async function generateTopic(input: GenerateInput): Promise<GenerateResul
   let usage: Usage = { input: 0, output: 0 };
   let servedModel = model;
 
-  async function call<T>(userText: string, format: ReturnType<typeof betaZodOutputFormat<any>>, maxTokens: number, parse: (text: string) => T | null): Promise<T> {
+  type Format = ReturnType<typeof betaZodOutputFormat<any>>;
+
+  async function callOnce<T>(userText: string, format: Format | undefined, maxTokens: number, parse: (text: string) => T | null): Promise<T> {
     const stream = client.beta.messages.stream({
       model,
       max_tokens: maxTokens,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       thinking: { type: "adaptive" },
-      output_config: { effort: "medium", format },
+      output_config: format ? { effort: "medium", format } : { effort: "medium" },
       system,
-      messages: [{ role: "user", content: [...blocks, { type: "text", text: userText }] }],
+      messages: [{ role: "user", content: [...blocks, { type: "text", text: format ? userText : `${userText}\n\n${RAW_JSON_INSTRUCTION}` }] }],
     });
     let msg: Anthropic.Beta.BetaMessage & { parsed_output?: unknown };
     try {
@@ -126,6 +132,19 @@ export async function generateTopic(input: GenerateInput): Promise<GenerateResul
     return parsed;
   }
 
+  /**
+   * Structured-output call with a fallback: when the API rejects the compiled grammar as too large (HTTP 400),
+   * the same request is repeated without `output_config.format` and the JSON is parsed from the text.
+   */
+  async function call<T>(userText: string, format: Format, maxTokens: number, parse: (text: string) => T | null): Promise<T> {
+    try {
+      return await callOnce(userText, format, maxTokens, parse);
+    } catch (e) {
+      if (e instanceof GenerationError && e.code === "api" && /grammar/i.test(e.message)) return callOnce(userText, undefined, maxTokens, parse);
+      throw e;
+    }
+  }
+
   // ---- phase 1: outline
   input.onProgress?.("outline");
   const outline = await call<Outline>(`${basePrompt}\n\n${OUTLINE_INSTRUCTIONS}`, betaZodOutputFormat(OutlineSchema), 8000, (t) => safeParse(OutlineSchema, t));
@@ -133,10 +152,21 @@ export async function generateTopic(input: GenerateInput): Promise<GenerateResul
   outline.levels = outline.levels.slice(0, Math.max(1, want));
   if (!outline.levels.length) throw new GenerationError("AI nie znalazło w materiałach treści do nauki.", "invalid_output");
 
-  // ---- phase 2: levels in parallel
+  // ---- phase 2: levels in parallel — two calls per level (core content + compact tasks), so each output grammar stays small
   input.onProgress?.("levels", `${outline.levels.length} poziomów`);
   const levels = await Promise.all(
-    outline.levels.map((_, i) => call<LevelGen>(`${basePrompt}\n\n${levelInstructions(outline, i)}`, betaZodOutputFormat(LevelGenSchema), 16000, (t) => safeParse(LevelGenSchema, t))),
+    outline.levels.map(async (_, i): Promise<LevelGen> => {
+      const [core, tasksGen] = await Promise.all([
+        call(`${basePrompt}\n\n${levelInstructions(outline, i, "core")}`, betaZodOutputFormat(LevelCoreGenSchema), 16000, (t) => safeParse(LevelCoreGenSchema, t)),
+        call(`${basePrompt}\n\n${levelInstructions(outline, i, "tasks")}`, betaZodOutputFormat(LevelTasksGenSchema), 12000, (t) => safeParse(LevelTasksGenSchema, t)).catch((e) => {
+          // tasks are an enhancement: a failed tasks call must not lose the level (refusals still abort)
+          if (e instanceof GenerationError && e.code !== "refusal") return { tasks: [] };
+          throw e;
+        }),
+      ]);
+      const tasks = tasksGen.tasks.map(expandGenTask).filter((t): t is GenTask => t !== null);
+      return { ...core, tasks };
+    }),
   );
 
   // ---- phase 3: anti-guessing — rewrite distractors where the correct option stands out by length
@@ -199,11 +229,15 @@ export async function generateTopic(input: GenerateInput): Promise<GenerateResul
 }
 
 function safeParse<T>(schema: { parse: (v: unknown) => T }, text: string): T | null {
-  try {
-    return schema.parse(JSON.parse(text));
-  } catch {
-    return null;
+  const candidates = [text, text.replace(/^[\s\S]*?```(?:json)?\s*/i, "").replace(/```[\s\S]*$/, ""), text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)];
+  for (const c of candidates) {
+    try {
+      return schema.parse(JSON.parse(c));
+    } catch {
+      /* try next */
+    }
   }
+  return null;
 }
 
 /** @deprecated use generateTopic */

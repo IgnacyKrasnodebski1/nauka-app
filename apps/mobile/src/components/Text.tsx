@@ -1,48 +1,43 @@
 import React from "react";
 import { Text as RNText, type StyleProp, type TextProps, type TextStyle } from "react-native";
-import { COLORS, TYPE, body, display, tabular } from "@/lib/theme";
+import { T, body, display, tabular } from "@/lib/theme";
 
-type Size = keyof typeof TYPE.scale;
 interface P extends TextProps {
-  size?: Size;
+  size?: number;
   color?: string;
   center?: boolean;
   style?: StyleProp<TextStyle>;
+  /** tracking w px */
+  ls?: number;
+  lh?: number;
 }
 
-const lh = (px: number, k: number) => Math.round(px * k);
-
-/** Bricolage Grotesque — nagłówki, liczby, tytuły. letter-spacing −0.02em. */
-export function Display({ size = "xl", weight = 700, color = COLORS.text, center, style, ...rest }: P & { weight?: 600 | 700 | 800 }) {
-  const px = TYPE.scale[size];
-  return <RNText {...rest} style={[{ fontFamily: display(weight), fontSize: px, lineHeight: lh(px, size === "4xl" || size === "3xl" ? TYPE.lineHeight.tight : TYPE.lineHeight.snug), letterSpacing: px * TYPE.tracking.tight, color }, center && { textAlign: "center" }, style]} />;
+/** Bricolage Grotesque 800 — nagłówki, liczby, tytuły (podglądy: letter-spacing −0.4…−3 px). */
+export function Display({ size = 24, color = T.txt, center, style, ls, lh, weight = 800, ...rest }: P & { weight?: 700 | 800 }) {
+  return <RNText {...rest} style={[{ fontFamily: display(weight), fontSize: size, lineHeight: lh ?? Math.round(size * 1.15), letterSpacing: ls ?? -size * 0.033, color }, center && { textAlign: "center" }, style]} />;
 }
 
-/** Tytuł karty / sekcji — display 600, 17–20px. */
-export function Title({ size = "md", color = COLORS.text, center, style, ...rest }: P) {
-  const px = TYPE.scale[size];
-  return <RNText {...rest} style={[{ fontFamily: display(600), fontSize: px, lineHeight: lh(px, TYPE.lineHeight.snug), letterSpacing: px * TYPE.tracking.tight, color }, center && { textAlign: "center" }, style]} />;
+/** Plus Jakarta Sans — treść. Domyślnie 14 px / 700. */
+export function Body({ size = 14, weight = 700, color = T.txt, center, style, ls, lh, ...rest }: P & { weight?: 500 | 600 | 700 | 800 }) {
+  return <RNText {...rest} style={[{ fontFamily: body(weight), fontSize: size, lineHeight: lh ?? Math.round(size * 1.4), letterSpacing: ls ?? 0, color }, center && { textAlign: "center" }, style]} />;
 }
 
-/** Manrope body — 15px, textSoft. */
-export function Body({ size = "base", weight = 400, color = COLORS.textSoft, center, style, ...rest }: P & { weight?: 400 | 500 | 600 | 700 }) {
-  const px = TYPE.scale[size];
-  return <RNText {...rest} style={[{ fontFamily: body(weight), fontSize: px, lineHeight: lh(px, TYPE.lineHeight.normal), color }, center && { textAlign: "center" }, style]} />;
+/** Opisy i meta — 12 px / 600, kolor muted. */
+export function Muted({ size = 12, weight = 600, color = T.muted, center, style, ls, lh, ...rest }: P & { weight?: 500 | 600 | 700 | 800 }) {
+  return <RNText {...rest} style={[{ fontFamily: body(weight), fontSize: size, lineHeight: lh ?? Math.round(size * 1.4), letterSpacing: ls ?? 0, color }, center && { textAlign: "center" }, style]} />;
 }
 
-/** Opisy, meta — muted. */
-export function Muted({ size = "sm", weight = 500, color = COLORS.muted, center, style, ...rest }: P & { weight?: 400 | 500 | 600 | 700 }) {
-  const px = TYPE.scale[size];
-  return <RNText {...rest} style={[{ fontFamily: body(weight), fontSize: px, lineHeight: lh(px, TYPE.lineHeight.normal), color }, center && { textAlign: "center" }, style]} />;
-}
-
-/** Eyebrow: 12px 600 uppercase, letter-spacing 1.4. */
-export function Label({ color = COLORS.muted, center, style, ...rest }: P) {
-  return <RNText {...rest} style={[{ fontFamily: body(600), fontSize: TYPE.scale.xs, lineHeight: 16, letterSpacing: 1.4, textTransform: "uppercase", color }, center && { textAlign: "center" }, style]} />;
+/** Eyebrow: 11 px / 800 / uppercase / tracking 1.2 (podglądy: 10.5–12 px). */
+export function Eyebrow({ size = 11, color = T.muted2, center, style, ls, ...rest }: P) {
+  return <RNText {...rest} style={[{ fontFamily: body(800), fontSize: size, lineHeight: Math.round(size * 1.35), letterSpacing: ls ?? 1.2, textTransform: "uppercase", color }, center && { textAlign: "center" }, style]} />;
 }
 
 /** Liczba display z tabular-nums. */
-export function Num({ size = "lg", weight = 700, color = COLORS.text, style, ...rest }: P & { weight?: 600 | 700 | 800 }) {
-  const px = TYPE.scale[size];
-  return <RNText {...rest} style={[{ fontFamily: display(weight), fontSize: px, lineHeight: lh(px, TYPE.lineHeight.snug), color }, tabular, style]} />;
+export function Num({ size = 26, color = T.txt, center, style, ls, lh, weight = 800, ...rest }: P & { weight?: 700 | 800 }) {
+  return <RNText {...rest} style={[{ fontFamily: display(weight), fontSize: size, lineHeight: lh ?? Math.round(size * 1.1), letterSpacing: ls ?? -size * 0.02, color }, tabular, center && { textAlign: "center" }, style]} />;
+}
+
+/** Etykieta przycisku: 15 px / 800 / tracking 1.2 / uppercase. */
+export function BtnLabel({ size = 15, color = T.onAcid, style, ls, ...rest }: P) {
+  return <RNText {...rest} numberOfLines={1} style={[{ fontFamily: body(800), fontSize: size, lineHeight: Math.round(size * 1.3), letterSpacing: ls ?? 1.2, textTransform: "uppercase", color }, style]} />;
 }

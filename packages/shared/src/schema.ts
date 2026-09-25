@@ -314,6 +314,21 @@ export const GenTaskSchema = z.object({
 });
 export type GenTask = z.infer<typeof GenTaskSchema>;
 
+/**
+ * Compact task shape for structured output (the flat GenTaskSchema makes the output grammar too large):
+ * `payload` is a JSON string with the type-specific fields (same names as GenTaskSchema). Expanded by `expandGenTask()`.
+ */
+export const GenTaskCompactSchema = z.object({
+  type: z.enum(AI_TASK_TYPES),
+  title: z.string(),
+  e: z.string(),
+  payload: z.string(),
+  src_page: z.number(),
+  src_quote: z.string(),
+});
+export type GenTaskCompact = z.infer<typeof GenTaskCompactSchema>;
+export const LevelTasksGenSchema = z.object({ tasks: z.array(GenTaskCompactSchema) });
+
 const GenQuizSchema = z.object({ q: z.string(), a: z.array(z.string()), c: z.number(), e: z.string(), src_page: z.number(), src_quote: z.string() });
 const GenFeedSchema = z.object({ title: z.string(), body: z.string(), real: z.string(), mnemo: z.string() });
 const GenCardSchema = z.object({ t: z.string(), d: z.string() });
@@ -385,9 +400,11 @@ export const LevelGenSchema = z.object({
   flashcards: z.array(GenCardSchema),
   quiz: z.array(GenQuizSchema),
   games: z.array(GenGameSchema),
-  tasks: z.array(GenTaskSchema),
+  tasks: z.array(GenTaskSchema).optional(),
 });
 export type LevelGen = z.infer<typeof LevelGenSchema>;
+/** Core level content without tasks — used as the structured-output format of the level call. */
+export const LevelCoreGenSchema = LevelGenSchema.omit({ tasks: true });
 
 export const GenerationOptionsSchema = z.object({
   stage: StageSchema,

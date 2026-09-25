@@ -1,4 +1,4 @@
-import { TopicContentSchema, TaskSchema, type GeneratedTopic, type GenGame, type GenTask } from "./schema.js";
+import { GenTaskSchema, TopicContentSchema, TaskSchema, type GeneratedTopic, type GenGame, type GenTask } from "./schema.js";
 import type { MiniGame, QuizQuestion, Task, TaskSource, TopicContent, Stage } from "./types.js";
 
 import { subjectHue } from "./theme.js";
@@ -82,6 +82,24 @@ export function blankGenTask(partial: Partial<GenTask> & { type: GenTask["type"]
  * Flat AI task → valid `Task` (validated with TaskSchema) or null. Tolerant: trims, drops empty strings, accepts
  * `___` gaps in fill text, dedupes banks, clamps sizes.
  */
+/** Expand the compact AI task (payload JSON) into the flat GenTask; null when the payload is not JSON. */
+export function expandGenTask(c: { type: GenTask["type"]; title: string; e: string; payload: string; src_page?: number; src_quote?: string }): GenTask | null {
+  let data: Record<string, unknown> = {};
+  try {
+    const parsed = c.payload?.trim() ? JSON.parse(c.payload) : {};
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) data = parsed as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+  const blank = blankGenTask({ type: c.type });
+  const out: Record<string, unknown> = { ...blank, title: c.title, e: c.e, src_page: c.src_page ?? 0, src_quote: c.src_quote ?? "" };
+  for (const k of Object.keys(blank)) {
+    if (k in data && data[k] != null && typeof data[k] === typeof (blank as Record<string, unknown>)[k] && Array.isArray(data[k]) === Array.isArray((blank as Record<string, unknown>)[k])) out[k] = data[k];
+  }
+  const res = GenTaskSchema.safeParse(out);
+  return res.success ? res.data : null;
+}
+
 export function convertTask(g: GenTask, materialId?: string): Task | null {
   const base = { title: opt(g.title), e: opt(g.e), src: sourceFrom(g.src_quote, g.src_page, materialId) };
   let t: Task | null = null;

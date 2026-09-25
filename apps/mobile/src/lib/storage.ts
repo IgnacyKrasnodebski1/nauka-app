@@ -6,6 +6,9 @@ export const KEYS = {
   cache: "recall_cache_v3",
   /** ostatni etap (do prefill w onboardingu) */
   stage: "recall_stage_v1",
+  /** dzień pokazania ComeBack / podsumowania tygodnia (lokalne flagi UI) */
+  comebackShown: "recall_comeback_v1",
+  weeklyShown: "recall_weekly_v1",
 } as const;
 
 export async function getJson<T>(key: string, fallback: T): Promise<T> {

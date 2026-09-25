@@ -47,6 +47,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     "expo-router",
     "expo-web-browser",
+    "expo-sharing",
     [
       "expo-splash-screen",
       { image: "./assets/splash.png", resizeMode: "contain", backgroundColor: "#0a0a12", imageWidth: 200 },

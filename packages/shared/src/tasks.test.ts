@@ -351,3 +351,14 @@ test("achievements: legacy badges added, optional stats tolerated", () => {
   const old = { ...meta, stats: { cardsReviewed: 0, levelsDone: 1, perfectLevels: 0, examsPassed: 0, comboBest: 0, questsDone: 0, chestsOpened: 0, nightOwl: false, earlyBird: false } };
   assert.deepEqual(evaluateAchievements({ meta: old, topicsCount: 0, totalXp: 0, streak: 0 }, new Set()).map((a) => a.key), ["first_level"]);
 });
+
+test("expandGenTask: compact payload → flat GenTask, bad JSON → null", async () => {
+  const { expandGenTask } = await import("./finalize.js");
+  const ok = expandGenTask({ type: "fill", title: "Uzupełnij", e: "bo tak", payload: JSON.stringify({ text: "Woda to {0}", blanks: ["H2O"], bank: ["CO2"], hint: "" }), src_page: 1, src_quote: "Woda to H2O" });
+  assert.ok(ok && ok.type === "fill" && ok.text === "Woda to {0}" && ok.blanks[0] === "H2O" && ok.src_page === 1);
+  assert.ok(GenTaskSchema.safeParse(ok).success);
+  // wrong-typed fields are ignored, missing ones fall back to blanks
+  const partial = expandGenTask({ type: "tf", title: "P/F", e: "", payload: JSON.stringify({ statements: "nope", seconds: 30 }), src_page: 0, src_quote: "" });
+  assert.ok(partial && partial.type === "tf" && Array.isArray(partial.statements) && partial.seconds === 30);
+  assert.equal(expandGenTask({ type: "tf", title: "x", e: "", payload: "{not json", src_page: 0, src_quote: "" }), null);
+});

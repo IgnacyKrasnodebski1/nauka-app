@@ -15,7 +15,7 @@ const COMMON_RULES = `STRUKTURA
 - Każdy poziom ma: feed (4–6 mikro-dawek wiedzy), flashcards (6–10), quiz (6–10 pytań, 4 odpowiedzi), games (2 mini-gry różnych typów), tasks (4–6 zadań RÓŻNYCH typów).
 - feed.body może zawierać prosty HTML: <b>, <i>, <br>, <ul><li>. feed.real = to samo 'po ludzku' w 1 zdaniu. feed.mnemo = mnemotechnika albo pusty string.
 - Mini-gry: "match" (pary termin↔znaczenie, 4–8 par), "cloze" (zdanie z luką ___ + 3–4 opcje), "truefalse" (5–10 zdań prawda/fałsz z wyjaśnieniem), "order" (ułóż kroki/etapy w kolejności, 3–6 kroków). W obiekcie gry wypełnij TYLKO pola swojego typu; pozostałe tablice zostaw puste, a nieużywane stringi puste.
-- ZADANIA (tasks): 4–6 na poziom, każde innego typu, dobrane do treści (historia → timeline/chain/thesis, nauki ścisłe → fill/typeterm/finderror/sort, języki → swipe/fill/match). Obiekt zadania jest płaski i ma pola WSZYSTKICH typów: wypełnij TYLKO pola swojego typu, resztę zostaw pustą ("" / [] / 0). Pole "e" = wyjaśnienie do panelu wyniku (1–2 zdania). Typy:
+- ZADANIA (tasks): 4–6 na poziom, każde innego typu, dobrane do treści (historia → timeline/chain/thesis, nauki ścisłe → fill/typeterm/finderror/sort, języki → swipe/fill/match). Obiekt zadania: {type, title, e, payload, src_page, src_quote}, gdzie "payload" to STRING z JSON-em zawierającym pola danego typu (nazwy pól jak niżej), a "e" = wyjaśnienie do panelu wyniku (1–2 zdania). Typy i pola payload:
   · "tf": statements 5–8 × {s, v, e}; seconds = 0 albo 45–60 (runda na czas — tylko gdy zdania są krótkie).
   · "fill": text ze znacznikami {0}, {1}… (1–3 luki), blanks[i] = słowo do luki {i}, bank = 2–4 dystraktory (prawdopodobne, tej samej kategorii), hint = krótka podpowiedź.
   · "typeterm": definition (1–2 zdania, bez podawania nazwy), answer = pojęcie (1–3 słowa), accept = warianty/synonimy.
@@ -84,18 +84,31 @@ export function buildGenerationUserPrompt(opts: GenerationOptions, materialsSumm
 /** Phase 1 (outline): appended to the user prompt. Output = OutlineSchema. */
 export const OUTLINE_INSTRUCTIONS = `FAZA 1 — KONSPEKT. Zwróć TYLKO metadane tematu (name, short, emoji, tagline, category, info_html) i listę poziomów. Dla każdego poziomu: title, emoji, summary (1 zdanie) oraz scope = 3–6 punktów (tekst z myślnikami) mówiących DOKŁADNIE, jakie pojęcia/fakty/umiejętności wchodzą w ten poziom, tak by poziomy się nie powtarzały. Nie generuj feed, fiszek, quizu ani gier.`;
 
-/** Phase 2 (one level): appended to the user prompt. Output = LevelGenSchema. */
-export function levelInstructions(outline: { name: string; levels: { title: string; scope: string }[] }, index: number): string {
+/**
+ * Phase 2 (one level): appended to the user prompt. Two calls per level, because the flat task schema makes a single
+ * structured-output grammar too large: `part: "core"` → LevelCoreGenSchema (feed, flashcards, quiz, games),
+ * `part: "tasks"` → LevelTasksGenSchema (compact tasks with JSON payload). `part: "all"` keeps the single-call wording.
+ */
+export function levelInstructions(outline: { name: string; levels: { title: string; scope: string }[] }, index: number, part: "core" | "tasks" | "all" = "all"): string {
   const l = outline.levels[index]!;
   const others = outline.levels
     .map((x, i) => `${i + 1}. ${x.title}`)
     .join("; ");
+  const ret =
+    part === "core"
+      ? "Zwróć TYLKO feed, flashcards, quiz i games dla tego poziomu (bez tasks)."
+      : part === "tasks"
+        ? "Zwróć TYLKO tasks: 4–6 zadań RÓŻNYCH typów dla tego poziomu, każde jako {type, title, e, payload, src_page, src_quote}, gdzie payload to STRING z poprawnym JSON-em pól danego typu."
+        : "Zwróć feed, flashcards, quiz, games i tasks (4–6 zadań różnych typów) dla tego poziomu.";
   return `FAZA 2 — JEDEN POZIOM. Temat: „${outline.name}”. Wszystkie poziomy: ${others}.
 Generujesz WYŁĄCZNIE poziom ${index + 1}: „${l.title}”.
 Zakres tego poziomu:
 ${l.scope}
-Nie wchodź w zakres pozostałych poziomów. Zwróć feed, flashcards, quiz, games i tasks (4–6 zadań różnych typów) dla tego poziomu.`;
+Nie wchodź w zakres pozostałych poziomów. ${ret}`;
 }
+
+/** Appended to a call that runs without a structured-output grammar (fallback when the grammar is rejected as too large). */
+export const RAW_JSON_INSTRUCTION = `FORMAT ODPOWIEDZI: zwróć WYŁĄCZNIE jeden obiekt JSON zgodny z opisaną strukturą — bez komentarzy, bez markdown, bez tekstu przed ani po JSON-ie.`;
 
 /** System prompt for the in-lesson tutor chat ("wytłumacz mi to"). */
 export const TUTOR_SYSTEM_PROMPT = `Jesteś korepetytorem w aplikacji Recall. Odpowiadasz krótko (max 6 zdań), po polsku, luźno ale konkretnie. Tłumaczysz na przykładach. Jeśli uczeń pyta o coś spoza materiału, odpowiedz, ale zaznacz, że to poza zakresem. Nie podawaj gotowych odpowiedzi do pytań quizowych — naprowadzaj.`;

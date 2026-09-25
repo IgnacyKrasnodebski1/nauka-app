@@ -1,6 +1,8 @@
-# @nauka/mobile — Recall na iOS / Android
+# @nauka/mobile — Recall na iOS / Android (design 2.0)
 
-Expo SDK 57 + expo-router, TypeScript strict, czysty `StyleSheet` (bez UI-kitów). Ten sam kontrakt danych (`@nauka/shared`) i to samo API (`apps/web`) co wersja webowa. Model produktu: **przedmiot** (kontener użytkownika) → **tematy** generowane przez AI (ze zdjęć/PDF/tekstu albo z samego hasła) → poziomy: feed, fiszki, mini-gry, quiz, egzamin. Logowanie wymagane — brak trybu gościa i cudzej biblioteki (patrz `docs/PRODUCT.md`).
+Expo SDK 57 + expo-router, TypeScript strict, czysty `StyleSheet` (bez UI-kitów). Ten sam kontrakt danych (`@nauka/shared`) i to samo API (`apps/web`) co wersja webowa. Model produktu: **przedmiot** (kontener użytkownika) → **tematy** generowane przez AI (ze zdjęć / PDF / tekstu albo z samego hasła) → poziomy: roladka → pytania i zadania → boss rozdziału; do tego fiszki (SRS), powtórka, egzamin próbny, plan do sprawdzianu, tryb nocny, misje, plecak, album pojęć. Logowanie wymagane — brak trybu gościa (patrz `docs/PRODUCT.md`).
+
+Wygląd i mechanika: `design/DESIGN.md`, `design/tokens.css`, `design/preview/*.html` (prawda wizualna, 390×844) oraz `docs/PORT-2.0.md`. Silnik referencyjny: `legacy/engine.js` — zachowania przeniesione 1:1, tam gdzie brakowało ich w `@nauka/shared` (plan dnia, plan do sprawdzianu, cram) leżą w `src/lib/{plan,tests}.ts` jako kopie logiki weba.
 
 ## Szybki start (Expo Go)
 
@@ -16,7 +18,7 @@ npm run start                   # QR → Expo Go (iOS/Android) albo `i` / `a` na
 
 Skrypty: `start`, `ios`, `android`, `web`, `typecheck` (`tsc --noEmit`), `lint` (`expo lint`), `icons` (regeneruje PNG w `assets/`), `export:web`.
 
-> Uwaga: w tym monorepo `npx expo …` czasem nie znajduje `@expo/cli` (npx bierze inny bin). Skrypty npm (`npm run start`) działają zawsze; alternatywnie `node ../../node_modules/expo/bin/cli start`.
+> W tym monorepo `npx expo …` czasem nie znajduje `@expo/cli`. Skrypty npm działają zawsze; alternatywnie `node ../../node_modules/expo/bin/cli start` / `… export --platform web`.
 
 ## Env
 
@@ -24,89 +26,100 @@ Skrypty: `start`, `ios`, `android`, `web`, `typecheck` (`tsc --noEmit`), `lint` 
 | --- | --- |
 | `EXPO_PUBLIC_SUPABASE_URL` | URL projektu Supabase |
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | anon key (RLS chroni dane; **nigdy** service role) |
-| `EXPO_PUBLIC_API_URL` | adres weba (`apps/web`), np. `https://nauka.pl` — tam żyje `/api/generate`, `/api/tutor`, `/api/me`, `/api/stripe/*` |
+| `EXPO_PUBLIC_API_URL` | adres weba (`apps/web`) — tam żyje `/api/generate`, `/api/tutor`, `/api/me`, `/api/stripe/*` |
 | `EAS_PROJECT_ID` | opcjonalnie, po `eas init` |
 
-W Supabase Auth → URL Configuration dodaj redirecty: `recall://auth/callback` (build), `exp://…/--/auth/callback` (Expo Go; adres wypisze `REDIRECT_URI` w `src/lib/auth.tsx`). Google OAuth: włącz providera w Supabase, client id/secret z Google Cloud. Baza: `supabase/migrations/0001_init.sql` (tabele `subjects`, `topics`, `progress`, `srs_cards`, `user_meta`, `activity`, RPC `log_activity`).
+W Supabase Auth → URL Configuration dodaj redirecty: `recall://auth/callback` (build), `exp://…/--/auth/callback` (Expo Go; adres wypisze `REDIRECT_URI` w `src/lib/auth.tsx`). Baza: `supabase/migrations/0001_init.sql` + `0002_gamification.sql` + `0003_recall2.sql` (kolumny 2.0: `profiles.goal`, `user_meta.themes/boost_until/album/overrides/tests/weekly_quest/history/daily/reduce_motion/reminder/exams`, `progress.boss/ghost`). Bez migracji 0003 apka działa dalej — `fetchUserData` wraca do selectów v1 i pola 2.0 żyją tylko w sesji.
 
 ## Ekrany (`app/`)
 
-| trasa | co robi |
-| --- | --- |
-| `(auth)/login` | magic link / hasło / rejestracja / Google. Bez „pomiń”. |
-| `onboarding` | po pierwszym logowaniu: etap (`STAGES`) → chipsy przedmiotów z `CURRICULUM[stage]` + własne → insert `subjects` (kolor z `paletteFor(name)`), `profiles.stage`. |
-| `onboarding-add` | „+ przedmiot” z Home (te same chipsy, już dodane wyszarzone). |
-| `(tabs)/today` **Dziś** | dzienna sesja z `buildDailySession` po wszystkich tematach: fiszki do powtórki (ocena 0–3 → `review()` → `srs_cards`), słabe pytania (→ `progress.weak`), na końcu link do nowego poziomu; ekran końcowy z XP + `log_activity`. |
-| `(tabs)/index` **Przedmioty** | 🔥 streak / ⚡ XP, karta „Dziś” (ile fiszek/słabych/nowy poziom, ~min, Start), siatka przedmiotów (emoji, nazwa, tematy, % poziomów, badge „sprawdzian za N dni”), „+ przedmiot”. |
-| `(tabs)/profile` **Profil** | etap, plan + zużycie z `GET /api/me`, Pro → Stripe Checkout (`platform: "mobile"`) w przeglądarce, portal, wyloguj. |
-| `s/[subjectId]` | nagłówek w kolorze przedmiotu; **Sprawdzian**: „Mam sprawdzian” → data `RRRR-MM-DD` + nazwa → `exam_date/exam_label` → plan z `buildExamPlan` (dni z zadaniami, odliczanie); lista **tematów** (emoji, nazwa, poziomy, gwiazdki, źródło); CTA „📸 Z materiałów” / „✍️ Z hasła”; **Fiszki** i **Egzamin** z całego przedmiotu; usuń przedmiot. |
-| `s/[subjectId]/new?mode=materials\|prompt` | `materials`: aparat / galeria (multi) / PDF+txt / wklejony tekst + opis; `prompt`: pole „np. fotosynteza, klasa 7”. Poziomy 2–6, „język obcy”. Upload do Storage `materials/{uid}/{uuid}.{ext}` + wiersze `materials`, potem `POST /api/generate` `{ subjectId, materialIds?, text?, options: { stage, subjectName, mode, hint, levels, lang } }` → `{ topicId }` → `t/[topicId]`. |
-| `s/[subjectId]/cards`, `s/[subjectId]/exam` | fiszki (SRS) i egzamin (losowanie po wszystkich tematach) z całego przedmiotu. |
-| `t/[topicId]` | temat: Ścieżka (odblokowywanie z shared) · Fiszki (flip + SRS) · Quiz · Egzamin (timer z `grading.examMin`, `gradeFor`, przegląd błędów) · Info (HTML → tekst, bez WebView). |
-| `t/[topicId]/l/[levelId]` | lekcja: feed → fiszki → mini-gry (match/cloze/truefalse/order) → quiz → wynik. Po quizie: `applyQuizResult`, `markWeak` → `progress.weak`, `log_activity(xp, minuty)`, `touchStreak`. Przycisk 🤖 wytłumacz → tutor (`POST /api/tutor` z `topicId`, streaming jeśli RN fetch to umie). |
+Nawigacja: dolny pasek **Dziś · Powtórka · [+] · Fiszki · Profil** (plus = arkusz „Dodaj materiał”). Bramka w `app/_layout.tsx`: brak sesji → login; bez etapu → `onboarding` (LevelPick) → `goal`; z etapem bez przedmiotów → `empty`; ≥ 3 dni przerwy → `comeback` (raz dziennie); poniedziałek → `weekly?mode=last` (raz). `?preview=1` wyłącza przekierowania (zrzuty).
 
-## Design system „Premium dark”
+| trasa | podgląd | co robi |
+| --- | --- | --- |
+| `(auth)/login` | — | hasło / link na maila / rejestracja / Google, marka Recall |
+| `onboarding`, `goal` | LevelPick, Onboarding | etap (`STAGES`) + cel (`profiles.goal`), cel dzienny XP (`DAILY_GOALS`) + przypomnienie; `?from=settings` wraca do ustawień |
+| `empty`, `catalog` | EmptyState, Catalog | pierwszy start; katalog `CURRICULUM` wg etapu, multi-wybór → `createSubjects` |
+| `(tabs)/index` | Main | plan na dziś (`src/lib/plan.ts` + wiersze planu do sprawdzianu), pasek celu, kafle Misje / Seria / Album, siatka przedmiotów |
+| `(tabs)/review` | Review | zaległe SRS per przedmiot, stan pamięci (`srsBox`), start powtórki |
+| `(tabs)/cards` | — | hub fiszek: przedmioty z liczbą fiszek i zaległych |
+| `(tabs)/profile` | Profile | ranga (`rankFor`), statystyki, heatmapa, odznaki, liga / znajomi |
+| `quick-add` | QuickAdd | arkusz: zdjęcie / plik / tekst / hasło / katalog / „Mam sprawdzian” |
+| `add?mode=photo\|file\|text\|prompt&subjectId=` | AddSubject, Scanner, Detected, Generating, SubjectReady, ErrorState | pętla aparatu (wiele stron), pliki, tekst, hasło → upload do Storage → `POST /api/generate` → nazwa i kolor przedmiotu, wyłączanie poziomów (`overrides["hide:…"]`) |
+| `s/[subjectId]` | SubjectReady/Path (pas) | przedmiot: pas w kolorze, chip „Sprawdzian za N dni”, tematy jako rozdziały, skróty Fiszki / Egzamin / Powtórka, usuń |
+| `s/[subjectId]/info` | SubjectInfo | bloki `info` tematu jako kafle, siatka ocen z `grading.scale` (podświetlony ostatni wynik), egzamin, plan, udostępnianie |
+| `s/[subjectId]/cards?topicId&levelId&heal=1` | Flashcards, FlashcardsDone | talia (tap = obrót, swipe = odpowiedź) → SRS (`reviewCard` + album), +2 XP; `heal=1`: 5 fiszek = +1 życie |
+| `s/[subjectId]/exam` | ExamStart | zakres poziomów (wszystkie tematy), liczba pytań, limit (`grading.examMin`), siatka, ostatnie podejście (`user_meta.exams`) |
+| `exam-run?subjectId&levels&n&lim` | ExamRun, Exam | egzamin: timer, siatka pytań (skok), flagi, „Zakończ” z podsumowaniem; wynik: ocena (`gradeFor`), „Gdzie tracisz punkty”, talia błędów (`weak`), przegląd z poprawką i źródłem |
+| `t/[topicId]?tab=path\|quiz\|tasks` | Path, Quiz | ścieżka (węzły 74/88 px, skrzynie `chestIndexes`, boss `bossNodeState`), zakładki Fiszki / Quiz / Ćwiczenia (`TASK_META`) / Egzamin / Klasa |
+| `t/[topicId]/l/[levelId]` | Lesson, Quiz, QuizCorrect/Wrong, Ghost, NoHearts, LevelComplete | roladka (swipe w górę) → `levelSession` (pytania + 15 typów zadań), serca, combo (`comboXp`), duch (`ghost.ts`), panele dobrze/źle z „Wyjaśnij inaczej” (tutor AI / offline) i „Zgłoś/popraw”; wynik: `applyQuizResult`, gemy `levelGems`, plan dnia, plan do sprawdzianu, misje |
+| `t/[topicId]/boss` | Boss | walka: `startBoss/bossNext/bossAnswer/finishBoss`, 20 s na pytanie, pasek życia, wynik |
+| `review-run?subjectId&deck=1&limit` | Flashcards, FlashcardsDone | sesja powtórki (fiszki + pytania z talii błędów), bez serc; plan dnia „review”/„weak” |
+| `cram?subjectId` | Cram | noc przed egzaminem: 4 bloki po 5 min (najsłabsze, fiszki z zakresu, 10 pytań, błędy), „Idź spać” |
+| `test-new`, `test-plan?subjectId` | TestPlan | „Mam sprawdzian” (przedmiot, data, zakres) → `createTestPlan` (`src/lib/tests.ts` = algorytm weba) → plan dzień po dniu, gotowość, usuń |
+| `missions`, `shop`, `streak`, `comeback`, `album`, `weekly` | Missions, Shop, Streak, ComeBack, Album, WeeklyStory | misje (`questsForToday`, `weeklyQuestFor`, `claimQuest`), plecak (`SHOP_ITEMS`, boost, motywy), seria, powrót, album (`albumTiles`), tydzień (`activity` + `history`) |
+| `edit-question?topicId&levelId&qi` | EditContent | poprawka pytania → `user_meta.overrides` (nakładana przez `qOf` w lekcji, quizie, egzaminie, bossie, powtórce, cramie) |
+| `league`, `friends`, `share` | League, Friends, ShareClass | liga = prawdziwy ranking (`weekly_leaderboard`); znajomi i klasa = kod gotowy, reszta „wkrótce” |
+| `settings` | Settings | profil, etap i cel, motyw, ranking, dźwięk, ogranicz animacje (`reduce_motion`), przypomnienie, przedmioty, plan Pro (Stripe), eksport / import JSON (`expo-sharing`, `expo-document-picker`), wyloguj |
 
-Tokeny wyłącznie z `@nauka/shared` (`COLORS`, `SUBJECT_HUES`, `RADIUS`, `SPACE`, `TYPE`, `SHADOW`, `MOTION`, `subjectHue`) — patrz `docs/DESIGN.md`. W apce nic nie jest hardkodowane poza wariantami alfa tokenów.
+## Skin 2.0
 
-- `src/lib/theme.ts` — re-eksport tokenów, nazwy fontów (`FONT.display700` = `BricolageGrotesque_700Bold`, `FONT.body500` = `Manrope_500Medium`…), `hueFrom(subject.accent2)` → `{ color, soft, ring, glow }`, cienie (`shadowCard`, `shadowGlow`), `tabular`.
-- Fonty: `@expo-google-fonts/bricolage-grotesque` (600/700/800) + `@expo-google-fonts/manrope` (400–700) ładowane w `app/_layout.tsx` przez `expo-font`; splash trzymany do czasu załadowania.
-- `src/components/Text.tsx` — `Display` (Bricolage, −0.02em), `Title`, `Body`, `Muted`, `Label` (eyebrow 12px, letter-spacing 1.4, uppercase), `Num` (tabular-nums).
-- `src/components/ui.tsx` — `Button` (primary = złoty gradient accentStrong→accent, tekst accentInk, glow; secondary = szkło; ghost; danger), `Touch` (press scale 0.98 na Reanimated, respektuje Reduce Motion), `Card` (bg2 + hairline + 1px highlight + shadow.card), `IconTile` (hue.soft + ring 40%), `StatPill` (streak pomarańcz / XP złoto), `MiniPill`, `Chip(s)`, `ProgressBar` (w kolorze przedmiotu), `Input`, `Empty`, `Toast` (dół, szkło).
-- `src/components/Accent.tsx` — `HueProvider`/`useHue()` (kolor przedmiotu dla poddrzewa) i `Glow` (miękka pseudo-radialna poświata 0.10–0.18 alfa: 14 koncentrycznych kół, bez ostrych krawędzi).
-- Ruch: `useReduceMotion()` (`AccessibilityInfo.isReduceMotionEnabled`) wyłącza puls aktywnego węzła ścieżki, licznik XP, gwiazdki, confetti (max 40 cząstek, 1.2 s, plain `Animated`), flip fiszki (spring z `MOTION.spring`).
-- Tab bar: `expo-blur` (`BlurView tint="dark"`) + szkło, aktywna ikona i etykieta złote (11px).
-- Lekcja ma opcjonalny param `?phase=feed|cards|games|quiz` (deep link / podgląd — start od danego etapu).
+Tokeny wyłącznie z `@nauka/shared` (`TOKENS` = `design/tokens.css`). Nic nie jest hardkodowane poza kolorami z podglądów (tinty tekstu).
 
-Podgląd (Playwright, 390×844 @2x, web export): `scratchpad/shots-mobile.mjs` — loguje się kontem testowym i robi zrzuty login → home → przedmiot → temat → quiz → wynik → Dziś → profil → fiszki.
+- `src/lib/theme.ts` — `T` (aliasy tokenów), `TONES` (acid / pink / amber / cyan / gold / red / violet: kolor, ciemna krawędź, tusz, tint, linia tintu), `accentOf(accent2, seed)` (motyw przedmiotu), fonty `FONT.*` (Bricolage Grotesque 700/800, Plus Jakarta Sans 500–800), `UI` (gutter 18, przycisk 58, węzeł 74/88).
+- `src/lib/motion.ts` — `useReduceMotion()` = ustawienie systemu **lub** przełącznik w ustawieniach.
+- `src/components/Motion.tsx` — odpowiedniki klas `.a-*` na Reanimated: float, bob, pulse, beat, spin, rise, pop, fall, blink, sway, glow, up, shake (+ `Bar` = `.a-grow`, `Confetti` = `.a-fall`).
+- `src/components/Icon.tsx` — port `ICONS` z legacy do `react-native-svg` (te same nazwy, bez emoji w chrome), `StarRow`.
+- `src/components/ui.tsx` — `Press` (twarda krawędź `DROP.*`, wciśnięcie o N px), `Btn`, `RoundBtn`, `TopBar`, `Card` / `AccentCard` / `ListCard` / `Row`, `Chip`, `Tag`, `Mono` (monogram zamiast emoji), `IconTile`, `Toggle`, `Pill`, `Ring`, `SegBar`, `Dots`, `Sheet` (panel od dołu `.a-rise`), `Toast`, `Note`, `Empty`.
+- `src/components/QuizBlock.tsx`, `Sheets.tsx` (SheetOk / SheetBad / ExplainSheet / SourceSheet / NoHeartsSheet), `Flip.tsx` (fiszka 3D + swipe), `PathView.tsx`, `BossSvg.tsx`, `ChartSvg.tsx`, `HtmlText.tsx`, `TopicTabs.tsx` (Quiz / Ćwiczenia), `tasks/*` (16 rendererów zadań; drag przez gesture-handler z tap-to-place jako alternatywą).
 
 ## Kod
 
 ```
 src/lib/
-  supabase.ts              klient (AsyncStorage, PKCE) — `null` bez env
-  auth.tsx                 AuthProvider: sesja, magic link, hasło, Google (expo-web-browser), obsługa `code`/tokenów z deep linku
-  app-state.tsx            AppProvider: ProgressStore, subjects + topics, daily session (buildDailySession), CRUD przedmiotów, XP/streak, toast
-  data.ts                  mapowanie wierszy (`rowToSubject`, `rowToTopic`), `fetchUserData`, `insertSubjects` (paletteFor), cache offline
-  store/progress-store.ts  Supabase-only: `progress` (xp, levels, weak, best_exam) po topic_id, `srs_cards`, `user_meta`, `profiles.stage`, RPC `log_activity`;
-                           po każdym zapisie snapshot do AsyncStorage (`recall_cache_v3:<uid>`)
-  api.ts                   /api/me, /api/generate (→ topicId), /api/tutor (topicId; stream albo pełny tekst), /api/stripe/*
-  upload.ts                Storage upload (File.base64 → ArrayBuffer) + `materials`
-  html.ts                  mini HTML → bloki tekstu (b/i/br/p/h3/ul/li/table, div.zbox)
-  games.ts                 fallback „dopasuj pary” z fiszek gdy poziom nie ma `games`, etykiety gier, `minutesSince`
-  theme.ts                 tokeny z @nauka/shared + fonty + `hueFrom()`; plural.ts — polska liczba mnoga
-src/components/            Text, ui, Accent (HueProvider, Glow), SubjectCard, TopicCard, ExamPlanView, LevelPath (pulsujący węzeł), FeedCard,
-                           Flashcard (3D flip), QuizCard, games/*, TutorModal, Onboarding (StagePicker, SubjectChips), ResultView (XP counter, gwiazdki, confetti), HtmlText
-src/screens/topic/         PathTab, FlashcardsTab (1 temat albo cały przedmiot), QuizTab, ExamTab (1 temat albo cały przedmiot), InfoTab
+  supabase.ts, auth.tsx      klient + sesja (PKCE, magic link, Google)
+  app-state.tsx              AppProvider: store, przedmioty/tematy, XP (jedyny lejek: addXp + applyBoost), serca, gemy, misje,
+                             odznaki, plan dnia, plany do sprawdzianu, album, poprawki, boss/duch, egzaminy, toast
+  data.ts                    mapowanie wierszy, fetchUserData (fallback do selectów v1 bez migracji 0003), cache offline
+  store/progress-store.ts    Supabase: progress (+ boss/ghost), srs_cards, user_meta (+ pola 2.0, zapisy scalane 300 ms), activity
+  extra.ts                   kształty 2.0 (Extra) = apps/web/src/lib/store/extra.ts
+  plan.ts, tests.ts          plan dnia i plan do sprawdzianu (kopie algorytmów weba)
+  topic-view.ts              poziomy bez wyłączonych, pula pytań/fiszek z poprawkami (qOf)
+  srs-view.ts                wpisy SRS (zaległe / wszystkie)
+  api.ts, upload.ts          /api/*, upload do Storage
+  format.ts                  daty, liczba mnoga, noEmoji, nowMs (czas poza renderem)
 ```
 
 ## Postępy i offline
 
-- Źródło prawdy: Supabase (`progress` kluczowane `topic_id`, `srs_cards`, `user_meta`, `activity` przez RPC). Cała logika XP / gwiazdek / odblokowań / streaka / SRS / sesji / planu pochodzi z `@nauka/shared`.
-- AsyncStorage to **tylko cache do odczytu**: po każdym `fetchUserData` i każdym zapisie store zrzuca snapshot (`subjects`, `topics`, `progress`, `srs`, `weak`, `meta`, `stage`) pod `recall_cache_v3:<uid>`. Bez sieci apka startuje z cache (toast „📴”), tematy i lekcje działają; zapisy kolejkują się w pamięci i lecą przy następnej okazji w tej sesji (po restarcie bez sieci przepadną — świadome uproszczenie).
-- Bramka w `app/_layout.tsx`: brak sesji → login; sesja bez etapu/przedmiotów (i online) → onboarding.
+- Źródło prawdy: Supabase. Cała mechanika (XP, gwiazdki, odblokowania, seria, SRS, combo, serca, gemy, misje, boss, duch, album) pochodzi z `@nauka/shared`.
+- AsyncStorage = cache do odczytu (`recall_cache_v3:<uid>`, ze snapshotem `extra`) + flagi UI (ComeBack / tydzień). Bez sieci apka startuje z cache, zapisy kolejkują się w pamięci sesji.
+- `setExtra` scala zapisy `user_meta.*` (300 ms); `flush()` przy zamknięciu / w tle zapisuje od razu.
+
+## Podgląd / zrzuty
+
+`scratchpad/shots5-mobile.mjs` (Playwright, 390×844 @2x) loguje się kontem testowym na eksport webowy (`expo export --platform web` + `static5.mjs`) i robi zrzuty wszystkich ekranów do `shots5/mobile-*.png`, obok podglądów z `design/preview`.
 
 ## Build / EAS
 
 ```bash
 npm i -g eas-cli && eas login
 eas init                                   # zapisze projectId → EAS_PROJECT_ID w .env
-eas build --profile development --platform ios     # dev client
-eas build --profile preview --platform android     # APK do testów
+eas build --profile development --platform ios
+eas build --profile preview --platform android
 eas build --profile production --platform all
-eas submit --platform ios                          # uzupełnij ascAppId w eas.json
 ```
 
-Profile w `eas.json`: `development`, `preview` (APK), `production` (autoIncrement). Zmienne `EXPO_PUBLIC_*` ustaw w EAS (`eas env:create`). Bundle id `app.recall.study`, scheme `nauka`. Ikony: `npm run icons` — podmień na finalne przed publikacją.
+Profile w `eas.json`: `development`, `preview` (APK), `production`. Zmienne `EXPO_PUBLIC_*` ustaw w EAS. Bundle id `app.recall.study`, scheme `recall`. Ikony: `npm run icons`.
 
 ## Sklepy — WAŻNE (TODO IAP)
 
-`profile.tsx` → „Przejdź na Pro” otwiera **Stripe Checkout** (`POST /api/stripe/checkout`, `platform: "mobile"`) w `expo-web-browser`. OK dla **TestFlight / bety wewnętrznej** i dystrybucji poza sklepami (EU/DMA), ale **App Store odrzuci build sprzedający subskrypcję cyfrową bez StoreKit (IAP)**, Google Play analogicznie wymaga Play Billing. Przed publikacją: RevenueCat (`react-native-purchases`, produkty `nauka_pro_month` / `nauka_pro_year`) + webhook ustawiający `profiles.plan` (jak dziś webhook Stripe). Miejsce w kodzie: komentarz `TODO(store)` w `app/(tabs)/profile.tsx`.
+`settings` → „Przejdź na Pro” otwiera **Stripe Checkout** (`POST /api/stripe/checkout`, `platform: "mobile"`) w `expo-web-browser`. OK dla TestFlight / bety, ale App Store i Google Play wymagają IAP (RevenueCat + webhook ustawiający `profiles.plan`) przed publikacją.
 
 ## Uwagi techniczne
 
-- **Monorepo / Metro**: `apps/web` pinuje `react@19.3.0`, a RN 0.86 wymaga `react@19.2.3`, więc npm zagnieżdża `react`/`react-dom` w `apps/mobile/node_modules`. `metro.config.js` ma resolver, który dla pakietów obecnych lokalnie zawsze bierze lokalną kopię — w bundlu jest jeden React (sprawdzone w `expo export`). `expo-doctor` zgłasza ten duplikat — skutek pinów weba.
-- **Upload w RN**: `supabase.storage.upload()` nie przyjmuje `Blob` z `file://`, dlatego plik jest czytany przez `expo-file-system` `File.base64()`, dekodowany `base64-arraybuffer` i wysyłany jako `ArrayBuffer`.
-- **Typed routes**: `experiments.typedRoutes` — typy generują się do `.expo/types` przy `expo start`; `tsc` przechodzi też bez nich.
-- **TypeScript 6** (wymagany przez Expo 57): `tsconfig.json` bez `baseUrl`, `paths` względne do tsconfig.
-- **Data sprawdzianu**: prosty input `RRRR-MM-DD` (bez natywnego date pickera — zero dodatkowych natywnych zależności).
+- **Monorepo / Metro**: `metro.config.js` bierze lokalną kopię pakietów obecnych w `apps/mobile/node_modules` (jeden React w bundlu). `expo-doctor` zgłasza duplikat `react` — skutek pinów weba.
+- **Upload w RN**: plik czytany przez `expo-file-system` `File.base64()` → `ArrayBuffer` → `supabase.storage.upload`.
+- **Typed routes**: `.expo/types/router.d.ts` generuje `expo start`; ręcznie: `EXPO_ROUTER_APP_ROOT=$PWD/app node -e "require('@expo/router-server/build/typed-routes').regenerateDeclarations(require('path').resolve('.expo/types'), {})"`.
+- **Lint**: reguły React Compiler (`react-hooks/refs`, `purity`, `set-state-in-effect`) — czas bierzemy przez `nowMs()`/`todayIso()` z `format.ts`, losowe talie budujemy w inicjalizatorach `useState`, gesty z refami mają punktowe `eslint-disable` (callbacki gestu nie działają w renderze).
+- **Data sprawdzianu**: stepper dni + szybkie chipy (bez natywnego date pickera).

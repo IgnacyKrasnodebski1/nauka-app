@@ -1,6 +1,7 @@
 import { addActivity, emptyMeta, emptyProgress, markWeak, todayStr, type ActivityMap, type LeaderboardRow, type Plan, type Quest, type Stage, type SubjectProgress, type UserMeta, type WeakMap } from "@nauka/shared";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { normaliseProgress, writeCache, type SrsMap, type UserData } from "../data";
+import { hasV2Columns, normaliseProgress, writeCache, type SrsMap, type UserData } from "../data";
+import { emptyExtra, type Extra } from "../extra";
 
 /**
  * Postępy zalogowanego usera — Supabase jest źródłem prawdy (`progress` po topic_id, `srs_cards`, `user_meta`,
@@ -20,6 +21,9 @@ export class ProgressStore {
   quests: Quest[] | null = null;
   achievements = new Set<string>();
   activity: ActivityMap = {};
+  /** Recall 2.0 (0003_recall2): motywy, boost, album, poprawki, plany, tygodniówka, dziennik, plan dnia, ruch, przypomnienie, cel */
+  extra: Extra = emptyExtra();
+  private metaTimer: ReturnType<typeof setTimeout> | null = null;
   private queue: Promise<unknown> = Promise.resolve();
   /** ustawiane przez AppProvider — snapshot całości do cache */
   snapshot: (() => UserData) | null = null;
@@ -41,6 +45,7 @@ export class ProgressStore {
     this.quests = d.quests;
     this.achievements = new Set(d.achievements);
     this.activity = d.activity;
+    this.extra = d.extra ?? emptyExtra();
   }
 
   private enqueue(fn: () => PromiseLike<unknown>) {
@@ -54,9 +59,12 @@ export class ProgressStore {
   private upsertProgress(topicId: string) {
     const p = this.progress[topicId] ?? emptyProgress();
     const weak = this.weak[topicId] ?? {};
-    this.enqueue(() =>
-      this.sb.from("progress").upsert({ user_id: this.userId, topic_id: topicId, xp: p.xp, levels: p.levels, weak, best_exam: p.bestExam ?? null, chests: p.chests ?? [] }, { onConflict: "user_id,topic_id" }),
-    );
+    const row: Record<string, unknown> = { user_id: this.userId, topic_id: topicId, xp: p.xp, levels: p.levels, weak, best_exam: p.bestExam ?? null, chests: p.chests ?? [] };
+    if (hasV2Columns) {
+      row.boss = p.boss ?? null;
+      row.ghost = p.ghost ?? {};
+    }
+    this.enqueue(() => this.sb.from("progress").upsert(row, { onConflict: "user_id,topic_id" }));
   }
   setProgress(topicId: string, p: SubjectProgress) {
     this.progress = { ...this.progress, [topicId]: normaliseProgress(p) };
@@ -71,28 +79,60 @@ export class ProgressStore {
   getMeta() {
     return this.meta;
   }
-  /** Wszystkie kolumny `user_meta` (streak, portfel, serca, ustawienia, stats). */
+  /** Wszystkie kolumny `user_meta` (streak, portfel, serca, ustawienia, stats) + kolumny 0003 z `extra`. */
   setMeta(m: UserMeta) {
     this.meta = m;
-    this.enqueue(() =>
-      this.sb.from("user_meta").upsert(
-        {
-          user_id: this.userId,
-          streak: m.streak,
-          best: m.best,
-          last_day: m.lastDay,
-          total_xp: this.totalXp(),
-          gems: Math.max(0, Math.round(m.gems)),
-          hearts: Math.max(0, Math.min(5, Math.round(m.hearts))),
-          hearts_updated_at: m.heartsUpdatedAt,
-          daily_goal: m.dailyGoal,
-          streak_freezes: Math.max(0, Math.min(5, m.streakFreezes)),
-          sound_on: m.soundOn,
-          stats: m.stats,
-        },
-        { onConflict: "user_id" },
-      ),
-    );
+    this.persistMeta();
+  }
+  getExtra() {
+    return this.extra;
+  }
+  /** Zmiana pól 2.0; `goal` idzie do `profiles.goal`, reszta do `user_meta`. */
+  setExtra(patch: Partial<Extra>) {
+    this.extra = { ...this.extra, ...patch };
+    if ("goal" in patch && hasV2Columns) this.enqueue(() => this.sb.from("profiles").update({ goal: patch.goal ?? null }).eq("id", this.userId));
+    this.persistMeta();
+  }
+  /** Scalone (~300 ms): kilka pól zmienia się w jednej interakcji (xp → seria → stats → album). */
+  private persistMeta() {
+    if (this.snapshot) void writeCache(this.userId, this.snapshot());
+    if (this.metaTimer) clearTimeout(this.metaTimer);
+    this.metaTimer = setTimeout(() => this.writeMetaNow(), 300);
+  }
+  private writeMetaNow() {
+    this.metaTimer = null;
+    {
+      const m = this.meta,
+        e = this.extra;
+      const row: Record<string, unknown> = {
+        user_id: this.userId,
+        streak: m.streak,
+        best: m.best,
+        last_day: m.lastDay,
+        total_xp: this.totalXp(),
+        gems: Math.max(0, Math.round(m.gems)),
+        hearts: Math.max(0, Math.min(5, Math.round(m.hearts))),
+        hearts_updated_at: m.heartsUpdatedAt,
+        daily_goal: m.dailyGoal,
+        streak_freezes: Math.max(0, Math.min(5, m.streakFreezes)),
+        sound_on: m.soundOn,
+        stats: m.stats,
+      };
+      if (hasV2Columns) {
+        row.themes = e.themes;
+        row.boost_until = e.boostUntil ? new Date(e.boostUntil).toISOString() : null;
+        row.album = e.album;
+        row.overrides = e.overrides;
+        row.tests = e.tests;
+        row.weekly_quest = e.weekly;
+        row.history = e.history;
+        row.daily = e.daily;
+        row.reduce_motion = e.reduceMotion;
+        row.reminder = e.reminder;
+        row.exams = e.exams;
+      }
+      this.enqueue(() => this.sb.from("user_meta").upsert(row, { onConflict: "user_id" }));
+    }
   }
 
   getSrs(topicId: string): SrsMap {
@@ -166,6 +206,10 @@ export class ProgressStore {
     return Object.values(this.progress).reduce((a, p) => a + (p.xp || 0), 0);
   }
   async flush() {
+    if (this.metaTimer) {
+      clearTimeout(this.metaTimer);
+      this.writeMetaNow();
+    }
     await this.queue;
   }
 }

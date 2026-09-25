@@ -1,26 +1,22 @@
 import React, { useState } from "react";
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Glow } from "@/components/Accent";
-import { Button3D } from "@/components/Button3D";
 import { Icon } from "@/components/Icon";
-import { Logo } from "@/components/Logo";
-import { Mascot, MascotBubble } from "@/components/Mascot";
-import { Body, Display, Label, Muted } from "@/components/Text";
-import { Input, Screen, Touch } from "@/components/ui";
+import { Motion } from "@/components/Motion";
+import { Body, Display, Eyebrow, Muted } from "@/components/Text";
+import { Blob, Btn, Input, Note, Screen, Touch } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
 import { useAuth } from "@/lib/auth";
-import { COLORS, PLAY, RADIUS, SPACE } from "@/lib/theme";
+import { T } from "@/lib/theme";
 
 type Mode = "magic" | "password" | "signup";
 
-/** Logowanie wymagane — brak trybu gościa. Logo + maskotka z dymkiem + przyciski 3D. */
+/** Logowanie (marka Recall 2.0): logo, hasło/link/rejestracja, Google. Bez trybu gościa. */
 export default function Login() {
   const auth = useAuth();
   const app = useApp();
   const insets = useSafeAreaInsets();
-  const [mode, setMode] = useState<Mode>("magic");
+  const [mode, setMode] = useState<Mode>("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -32,14 +28,13 @@ export default function Login() {
     try {
       const info = await fn();
       if (info) setMsg({ ok: true, text: info });
-      else app.showToast("Zalogowano");
+      else app.showToast("Zalogowano", "check");
     } catch (e) {
       setMsg({ ok: false, text: e instanceof Error ? e.message : "Nie wyszło. Spróbuj jeszcze raz." });
     } finally {
       setBusy(false);
     }
   };
-
   const validEmail = /\S+@\S+\.\S+/.test(email.trim());
   const submit = () =>
     run(async () => {
@@ -54,84 +49,74 @@ export default function Login() {
       return needsConfirm ? "Konto założone. Potwierdź maila (link w skrzynce) i wróć tu." : undefined;
     });
 
-  const bubble = msg ? (msg.ok ? "Sprawdź skrzynkę!" : "Hmm, coś nie zagrało.") : mode === "signup" ? "Nowe konto = nowa seria. Zaczynamy?" : "Cześć! Jestem Rec. Zaloguj się i lecimy.";
-
   return (
-    <Screen padded={false}>
-      <Glow color={PLAY.purple} size={460} alpha={0.14} style={{ top: -200, alignSelf: "center" }} />
+    <Screen pad={false} blob={<><Blob tone="acid" size={300} top={-120} right={-110} /><Blob tone="pink" size={240} bottom={80} left={-110} d={3} /></>}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
-        <ScrollView contentContainerStyle={[s.wrap, { paddingTop: insets.top + SPACE[6], paddingBottom: insets.bottom + SPACE[6] }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <Animated.View entering={FadeInDown.duration(300)} style={s.head}>
-            <Logo size={40} />
-          </Animated.View>
-          <Animated.View entering={FadeInDown.delay(60).duration(300)} style={s.hero}>
-            <Mascot state={msg && !msg.ok ? "sad" : msg?.ok ? "cheer" : "happy"} size={120} streak={3} />
-            <View style={{ flex: 1, gap: SPACE[2] }}>
-              <MascotBubble text={bubble} tail="left" style={{ maxWidth: undefined }} />
-              <View style={s.perks}>
-                <Perk icon="heart" color={PLAY.red} label="serca" />
-                <Perk icon="diamond" color={PLAY.gem} label="klejnoty" />
-                <Perk icon="flame" color={PLAY.orange} label="seria" />
-                <Perk icon="trophy" color={PLAY.yellow} label="ranking" />
-              </View>
-            </View>
-          </Animated.View>
-          <Animated.View entering={FadeInDown.delay(120).duration(300)}>
-            <Display size="2xl" weight={800}>
+        <ScrollView contentContainerStyle={[s.wrap, { paddingTop: Math.max(insets.top, 14) + 40, paddingBottom: insets.bottom + 26 }]} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <Display size={26} ls={-1}>
+            RECALL
+            <Display size={26} color={T.acid}>
+              .
+            </Display>
+          </Display>
+          <Motion kind="up" d={1}>
+            <Display size={31} ls={-1.1} lh={34}>
               Ucz się z tego, co masz.
             </Display>
-            <Body color={COLORS.muted} style={{ marginTop: 4 }}>
-              Notatki, zdjęcia albo samo hasło — AI składa z tego lekcje jak w Duolingo. Konto trzyma Twoje przedmioty i postępy.
-            </Body>
-          </Animated.View>
-
-          {!auth.enabled ? (
-            <View style={s.warn}>
-              <Body size="sm" color={COLORS.accent}>
-                Brak konfiguracji Supabase (EXPO_PUBLIC_SUPABASE_URL / ANON_KEY). Uzupełnij .env i zrestartuj.
-              </Body>
-            </View>
-          ) : null}
-
-          <View style={s.modes}>
+            <Muted size={14} lh={21} style={{ marginTop: 9 }}>
+              Zdjęcie strony, notatki albo samo hasło — z tego powstają poziomy, fiszki i pytania. Konto trzyma przedmioty i postępy na każdym urządzeniu.
+            </Muted>
+          </Motion>
+          {!auth.enabled ? <Note tone="gold" icon="alert" text="Brak konfiguracji Supabase (EXPO_PUBLIC_SUPABASE_URL / ANON_KEY). Uzupełnij .env i zrestartuj." /> : null}
+          <Motion kind="up" d={2} style={{ flexDirection: "row", gap: 7 }}>
             {(
               [
-                ["magic", "Link na maila"],
                 ["password", "Hasło"],
+                ["magic", "Link na maila"],
                 ["signup", "Rejestracja"],
               ] as [Mode, string][]
             ).map(([m, l]) => (
-              <Touch key={m} onPress={() => setMode(m)} style={[s.mode, mode === m && s.modeOn]}>
-                <Body size="sm" weight={700} color={mode === m ? "#fff" : COLORS.muted}>
+              <Touch key={m} onPress={() => setMode(m)} accessibilityRole="button" accessibilityState={{ selected: mode === m }} style={[s.chip, mode === m && { backgroundColor: T.acid, borderColor: T.acid }]}>
+                <Body size={12.5} weight={800} color={mode === m ? T.onAcid : T.muted}>
                   {l}
                 </Body>
               </Touch>
             ))}
-          </View>
-
-          <View style={{ gap: SPACE[2] }}>
-            <Label>e-mail</Label>
+          </Motion>
+          <Motion kind="up" d={3} style={{ gap: 10 }}>
+            <Eyebrow>E-mail</Eyebrow>
             <Input value={email} onChangeText={setEmail} placeholder="twoj@email.pl" autoCapitalize="none" autoComplete="email" keyboardType="email-address" textContentType="emailAddress" editable={!busy && auth.enabled} />
             {mode !== "magic" ? (
               <>
-                <Label style={{ marginTop: SPACE[2] }}>hasło</Label>
+                <Eyebrow style={{ marginTop: 4 }}>Hasło</Eyebrow>
                 <Input value={password} onChangeText={setPassword} placeholder="min. 6 znaków" secureTextEntry autoComplete={mode === "signup" ? "new-password" : "password"} textContentType={mode === "signup" ? "newPassword" : "password"} editable={!busy && auth.enabled} onSubmitEditing={submit} />
               </>
             ) : null}
+          </Motion>
+          {msg ? <Note tone={msg.ok ? "acid" : "red"} icon={msg.ok ? "mail" : "alert"} text={msg.text} /> : null}
+          <View style={{ gap: 10, marginTop: 4 }}>
+            <Btn label={busy ? "Chwila…" : mode === "magic" ? "Wyślij link" : mode === "password" ? "Zaloguj się" : "Załóż konto"} onPress={submit} disabled={busy || !auth.enabled} glow right={<Icon name="chevron-right" size={18} stroke={3} color={T.onAcid} />} />
+            <Btn label="Kontynuuj z Google" variant="ghost" onPress={() => run(() => auth.signInGoogle())} disabled={busy || !auth.enabled} left={<Icon name="globe" size={18} color={T.txt2} />} />
           </View>
-
-          {msg ? (
-            <Body size="sm" weight={600} color={msg.ok ? COLORS.success : COLORS.danger}>
-              {msg.text}
-            </Body>
-          ) : null}
-
-          <View style={{ gap: SPACE[3], marginTop: SPACE[1] }}>
-            <Button3D label={busy ? "Chwila…" : mode === "magic" ? "Wyślij link" : mode === "password" ? "Zaloguj się" : "Załóż konto"} onPress={submit} disabled={busy || !auth.enabled} right={<Icon name="arrow-forward" size={18} color="#fff" />} />
-            <Button3D label="Kontynuuj z Google" variant="ghost" onPress={() => run(() => auth.signInGoogle())} disabled={busy || !auth.enabled} left={<Icon name="logo-google" size={18} color={COLORS.textSoft} />} />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6, justifyContent: "center" }}>
+            {(
+              [
+                ["heart", T.red, "życia"],
+                ["gem", T.cyan, "gemy"],
+                ["flame", T.flame, "seria"],
+                ["trophy", T.gold, "liga"],
+              ] as [string, string, string][]
+            ).map(([ic, c, l]) => (
+              <View key={l} style={s.perk}>
+                <Icon name={ic} size={13} color={c} />
+                <Muted size={10.5} weight={700}>
+                  {l}
+                </Muted>
+              </View>
+            ))}
           </View>
-          <Muted size="xs" center style={{ marginTop: SPACE[2] }}>
-            Free: 3 tematy z AI miesięcznie. Bez karty.
+          <Muted size={11.5} center>
+            Za darmo: 3 tematy z AI miesięcznie. Bez karty.
           </Muted>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -139,25 +124,8 @@ export default function Login() {
   );
 }
 
-function Perk({ icon, color, label }: { icon: React.ComponentProps<typeof Icon>["name"]; color: string; label: string }) {
-  return (
-    <View style={s.perk}>
-      <Icon name={icon} size={13} color={color} />
-      <Muted size="xs" weight={700} style={{ fontSize: 10 }}>
-        {label}
-      </Muted>
-    </View>
-  );
-}
-
 const s = StyleSheet.create({
-  wrap: { flexGrow: 1, paddingHorizontal: SPACE[5], gap: SPACE[4] },
-  head: { flexDirection: "row", alignItems: "center" },
-  hero: { flexDirection: "row", alignItems: "center", gap: SPACE[3] },
-  perks: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  perk: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.pill, paddingVertical: 4, paddingHorizontal: 8 },
-  warn: { backgroundColor: "rgba(242,193,78,0.10)", borderWidth: 1, borderColor: COLORS.accentGlow, borderRadius: RADIUS.sm, padding: SPACE[3] },
-  modes: { flexDirection: "row", gap: 4, backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.md, padding: 4 },
-  mode: { flex: 1, paddingVertical: 10, borderRadius: RADIUS.sm, alignItems: "center", borderBottomWidth: 3, borderBottomColor: "transparent" },
-  modeOn: { backgroundColor: PLAY.green, borderBottomColor: PLAY.greenDeep },
+  wrap: { flexGrow: 1, paddingHorizontal: 22, gap: 16 },
+  chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 999, backgroundColor: T.surface, borderWidth: 2, borderColor: T.line },
+  perk: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: T.surface, borderWidth: 2, borderColor: T.line, borderRadius: 999, paddingVertical: 4, paddingHorizontal: 9 },
 });

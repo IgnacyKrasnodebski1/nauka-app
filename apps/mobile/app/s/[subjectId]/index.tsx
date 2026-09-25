@@ -1,344 +1,217 @@
-import { levelProgress, subjectCompletion, unlockedIndex, type Topic } from "@nauka/shared";
+import { dayDiff, levelProgress, todayStr } from "@nauka/shared";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { HueProvider } from "@/components/Accent";
-import { Button3D, Tile3D } from "@/components/Button3D";
-import { ExamPlanView } from "@/components/ExamPlanView";
+import { StyleSheet, View } from "react-native";
+import { AccentProvider, useAccent } from "@/components/Accent";
 import { Icon } from "@/components/Icon";
-import { Mascot, MascotBubble } from "@/components/Mascot";
-import { GemsPill, HeartsPill, StreakPill } from "@/components/Pills";
-import { Ring } from "@/components/Ring";
-import { examCountdown, subjectStats } from "@/components/SubjectCard";
-import { Body, Display, Label, Muted, Num, Title } from "@/components/Text";
-import { BackButton, Button, Card, Empty, Input, Loading, Touch } from "@/components/ui";
+import { Bar, Motion } from "@/components/Motion";
+import { Body, Display, Eyebrow, Muted } from "@/components/Text";
+import { Blob, Btn, Card, Empty, IconTile, Mono, Pill, Press, RoundBtn, Screen, Sheet, Touch, useTop } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
-import { pl } from "@/lib/plural";
-import { COLORS, PLAY, RADIUS, SPACE, UI, hueFrom, tabular } from "@/lib/theme";
+import { fmtDate, inDays, noEmoji, npl } from "@/lib/format";
+import { tpTitle } from "@/lib/tests";
+import { T, TONES } from "@/lib/theme";
+import { topicShort, visibleLevels } from "@/lib/topic-view";
 
-type Tab = "topics" | "exam";
-
-/** Strona przedmiotu: baner jednostki w hue z ringiem, zakładki, sprawdzian z odliczaniem i maskotką, jednostki, kafle CTA 3D. */
+/**
+ * Przedmiot (kontener): pas w kolorze przedmiotu (SubjectReady/Path.html), chip „Sprawdzian za N dni”, tematy jako rozdziały
+ * (każdy = własna ścieżka), skróty do fiszek i egzaminu, dodanie materiału, usunięcie przedmiotu (arkusz potwierdzenia).
+ */
 export default function SubjectScreen() {
   const { subjectId } = useLocalSearchParams<{ subjectId: string }>();
   const app = useApp();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const subject = app.findSubject(subjectId ?? "");
-  const topics = app.topicsOf(subjectId ?? "");
-  const [tab, setTab] = useState<Tab>("topics");
-  const [editExam, setEditExam] = useState(false);
-  const [date, setDate] = useState(subject?.examDate ?? "");
-  const [label, setLabel] = useState(subject?.examLabel ?? "");
-  const [busy, setBusy] = useState(false);
-
   const back = () => (router.canGoBack() ? router.back() : router.replace("/(tabs)"));
-  if (!app.ready) return <Loading label="wczytuję…" />;
   if (!subject)
     return (
-      <View style={{ flex: 1, backgroundColor: COLORS.bg0, paddingTop: insets.top, justifyContent: "center" }}>
-        <Empty icon="?" title="Nie ma takiego przedmiotu" action={<Button label="Wróć" onPress={back} />} />
-      </View>
+      <Screen>
+        <Empty icon="alert" title="Nie ma takiego przedmiotu" action={<Btn label="Wróć" onPress={back} />} />
+      </Screen>
     );
+  return (
+    <AccentProvider color={subject.accent2} seed={subject.name}>
+      <SubjectBody subjectId={subject.id} onBack={back} />
+    </AccentProvider>
+  );
+}
 
-  const hue = hueFrom(subject.accent2, subject.name);
-  const st = subjectStats(topics, app.progressFor);
-  const days = examCountdown(subject);
-  const stars = topics.reduce((a, t) => a + t.levels.reduce((b, l) => b + levelProgress(app.progressFor(t.id), l.id).stars, 0), 0);
-  const nextTopic = topics.find((t) => subjectCompletion(t, app.progressFor(t.id)).done < t.levels.length) ?? topics[0];
-
-  const saveExam = async (clear = false) => {
-    const d = clear ? "" : date.trim();
-    if (d && !/^\d{4}-\d{2}-\d{2}$/.test(d)) return app.showToast("Data w formacie RRRR-MM-DD");
-    if (d && Number.isNaN(new Date(d + "T00:00:00").getTime())) return app.showToast("To nie jest poprawna data");
+function SubjectBody({ subjectId, onBack }: { subjectId: string; onBack: () => void }) {
+  const app = useApp();
+  const router = useRouter();
+  const acc = useAccent();
+  const top = useTop();
+  const subject = app.findSubject(subjectId)!;
+  const topics = app.topicsOf(subjectId);
+  const [del, setDel] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const total = topics.reduce((a, t) => a + visibleLevels(t, app.extra.overrides).length, 0);
+  const done = topics.reduce((a, t) => a + visibleLevels(t, app.extra.overrides).filter((l) => levelProgress(app.progressFor(t.id), l.id).done).length, 0);
+  const xp = topics.reduce((a, t) => a + (app.progress[t.id]?.xp ?? 0), 0);
+  const cards = topics.reduce((a, t) => a + t.levels.reduce((b, l) => b + l.flashcards.length, 0), 0);
+  const qs = topics.reduce((a, t) => a + t.levels.reduce((b, l) => b + l.quiz.length, 0), 0);
+  const due = app.dueCount(subjectId);
+  const test = app.testFor(subjectId);
+  const today = todayStr();
+  const N = test ? dayDiff(today, test.date) : subject.examDate ? dayDiff(today, subject.examDate) : null;
+  const row = test?.plan.find((r) => r.date === today);
+  const remove = async () => {
     setBusy(true);
     try {
-      await app.updateSubject(subject.id, { examDate: d || null, examLabel: clear ? null : label.trim() || null });
-      setEditExam(false);
-      app.showToast(d ? "Plan gotowy" : "Sprawdzian usunięty");
+      await app.deleteSubject(subjectId);
+      app.showToast("Przedmiot usunięty", "trash");
+      router.replace("/(tabs)");
     } catch (e) {
-      app.showToast(e instanceof Error ? e.message : "Nie zapisało się");
-    } finally {
+      app.showToast(e instanceof Error ? e.message : "Nie udało się usunąć", "alert");
       setBusy(false);
     }
   };
-
-  const remove = () =>
-    Alert.alert("Usunąć przedmiot?", `„${subject.name}” razem z ${pl(topics.length, "tematem", "tematami", "tematami")} i postępami. Tego nie da się cofnąć.`, [
-      { text: "Anuluj", style: "cancel" },
-      {
-        text: "Usuń",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            await app.deleteSubject(subject.id);
-            app.showToast("Usunięte");
-            back();
-          } catch (e) {
-            app.showToast(e instanceof Error ? e.message : "Nie udało się usunąć");
-          }
-        },
-      },
-    ]);
-
-  const newTopic = (mode: "materials" | "prompt") => router.push({ pathname: "/s/[subjectId]/new", params: { subjectId: subject.id, mode } });
-  const openTopic = (t: Topic) => router.push({ pathname: "/t/[topicId]", params: { topicId: t.id } });
-  const continueTopic = (t: Topic) => {
-    const p = app.progressFor(t.id);
-    const lv = t.levels[unlockedIndex(t, p)];
-    if (lv) router.push({ pathname: "/t/[topicId]/l/[levelId]", params: { topicId: t.id, levelId: lv.id } });
-    else openTopic(t);
-  };
-
   return (
-    <HueProvider color={hue.color}>
-      <View style={{ flex: 1, backgroundColor: COLORS.bg0 }}>
-        <View style={[s.headRow, { paddingTop: insets.top + SPACE[2] }]}>
-          <BackButton onPress={back} />
-          <View style={{ flexDirection: "row", gap: 6 }}>
-            <StreakPill streak={app.streak} compact />
-            <GemsPill gems={app.gems} compact />
-            <HeartsPill hearts={app.hearts} compact />
+    <Screen scroll pad={false} bottom={40} blob={<Blob tone="mid" size={300} top={210} center />}>
+      <View style={[s.band, { paddingTop: top }]}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <RoundBtn icon="back" onPress={onBack} label="Wróć do planu dnia" size={44} />
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+              <Mono text={subject.name} size={26} radius={8} />
+              <Display size={19} ls={-0.4} numberOfLines={1} style={{ flex: 1 }}>
+                {noEmoji(subject.name)}
+              </Display>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 7 }}>
+              <Bar pct={total ? (done / total) * 100 : 0} color={acc.color} style={{ flex: 1 }} />
+              <Body size={11.5} weight={800} color={acc.sub}>
+                {done}/{total} · {xp} xp
+              </Body>
+            </View>
           </View>
+          <RoundBtn icon="info" onPress={() => router.push({ pathname: "/s/[subjectId]/info", params: { subjectId } })} label="Zasady zaliczenia" />
+          <Pill kind="gems" value={app.gems} onPress={() => router.push("/shop")} />
         </View>
-        <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: 60 + insets.bottom }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-          {/* baner */}
-          <Animated.View entering={FadeInDown.duration(300)} style={[s.banner, { backgroundColor: hue.color, borderBottomColor: hue.deep }]}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: SPACE[4] }}>
-              <View style={s.emojiBox}>
-                <Display size="3xl" weight={700} style={{ lineHeight: 46 }}>
-                  {subject.emoji}
-                </Display>
-              </View>
-              <View style={{ flex: 1, minWidth: 0 }}>
-                <Label color="rgba(255,255,255,0.8)">{nextTopic ? `jednostka ${topics.indexOf(nextTopic) + 1} z ${topics.length}` : "przedmiot"}</Label>
-                <Display size="2xl" weight={800} color="#fff" numberOfLines={2}>
-                  {subject.name}
-                </Display>
-                <Body size="sm" color="rgba(255,255,255,0.9)" style={tabular}>
-                  {pl(st.topics, "temat", "tematy", "tematów")} · {st.done}/{st.total} {pl(st.total, "poziom", "poziomy", "poziomów", false)}
-                </Body>
-              </View>
-              <Ring pct={st.pct} size={68} stroke={8} color="#fff" track="rgba(0,0,0,0.25)">
-                <Num size="sm" weight={800} color="#fff" style={[tabular, { fontSize: 15 }]}>
-                  {st.pct}%
-                </Num>
-              </Ring>
-            </View>
-            <View style={s.bannerStats}>
-              <BannerStat icon="star" value={`${stars}/${st.total * 3}`} label="gwiazdek" />
-              <BannerStat icon="flash" value={String(topics.reduce((a, t) => a + app.progressFor(t.id).xp, 0))} label="XP" />
-              <BannerStat icon="alarm" value={days === null ? "—" : days === 0 ? "dziś" : `${days} dni`} label="sprawdzian" />
-            </View>
-            {nextTopic ? <Button3D label={st.done === 0 ? "Zacznij naukę" : "Kontynuuj"} color="#fff" deep="#C9CCDA" textColor={hue.deep} onPress={() => continueTopic(nextTopic)} style={{ marginTop: SPACE[3] }} right={<Icon name="play" size={16} color={hue.deep} />} /> : null}
-          </Animated.View>
-
-          {/* CTA 3D */}
-          <View style={s.ctaRow}>
-            <Tile3D color={PLAY.purple} deep={PLAY.purpleDeep} onPress={() => newTopic("materials")} style={{ flex: 1 }} faceStyle={s.cta}>
-              <Icon name="camera" size={26} color="#fff" />
-              <Title size="base" color="#fff">
-                Z materiałów
-              </Title>
-              <Muted size="xs" color="rgba(255,255,255,0.85)">
-                zdjęcia, PDF, tekst
-              </Muted>
-            </Tile3D>
-            <Tile3D color={PLAY.blue} deep={PLAY.blueDeep} onPress={() => newTopic("prompt")} style={{ flex: 1 }} faceStyle={s.cta}>
-              <Icon name="sparkles" size={26} color="#fff" />
-              <Title size="base" color="#fff">
-                Z hasła
-              </Title>
-              <Muted size="xs" color="rgba(255,255,255,0.85)">
-                np. „fotosynteza”
-              </Muted>
-            </Tile3D>
-          </View>
-
-          {/* zakładki */}
-          <View style={s.seg}>
-            {(
-              [
-                ["topics", "Jednostki", "list"],
-                ["exam", "Sprawdzian", "calendar"],
-              ] as [Tab, string, React.ComponentProps<typeof Icon>["name"]][]
-            ).map(([id, l, icon]) => (
-              <Touch key={id} onPress={() => setTab(id)} style={[s.segItem, tab === id && { backgroundColor: hue.color, borderBottomColor: hue.deep }]}>
-                <Icon name={icon} size={15} color={tab === id ? "#fff" : COLORS.muted} />
-                <Muted size="sm" weight={700} color={tab === id ? "#fff" : COLORS.muted}>
-                  {l}
-                </Muted>
-              </Touch>
-            ))}
-          </View>
-
-          {tab === "exam" ? (
-            <Card style={{ marginBottom: SPACE[5] }}>
-              {editExam || !subject.examDate ? (
-                editExam ? (
-                  <View style={{ gap: SPACE[2] }}>
-                    <Label>sprawdzian</Label>
-                    <Input value={date} onChangeText={setDate} placeholder="Data: RRRR-MM-DD" keyboardType="numbers-and-punctuation" />
-                    <Input value={label} onChangeText={setLabel} placeholder="np. kartkówka z fotosyntezy" />
-                    <View style={{ flexDirection: "row", gap: SPACE[2], marginTop: SPACE[1] }}>
-                      <Button3D label="Anuluj" variant="ghost" size="sm" onPress={() => setEditExam(false)} style={{ flex: 1 }} />
-                      <Button3D label={busy ? "…" : "Zapisz"} size="sm" onPress={() => saveExam()} disabled={busy} style={{ flex: 2 }} />
-                    </View>
-                    {subject.examDate ? <Button3D label="Usuń sprawdzian" variant="red" size="sm" onPress={() => saveExam(true)} /> : null}
-                  </View>
-                ) : (
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: SPACE[3] }}>
-                    <Mascot state="think" size={84} streak={app.streak} />
-                    <View style={{ flex: 1, gap: SPACE[2] }}>
-                      <Title size="md">Masz sprawdzian?</Title>
-                      <Body size="sm" color={COLORS.muted}>
-                        Podaj datę, a rozpiszę tematy na dni: poziomy, powtórki i symulacja dzień przed.
-                      </Body>
-                      <Button3D
-                        label="Ustaw datę"
-                        variant="blue"
-                        size="sm"
-                        onPress={() => {
-                          setDate(subject.examDate ?? "");
-                          setLabel(subject.examLabel ?? "");
-                          setEditExam(true);
-                        }}
-                      />
-                    </View>
-                  </View>
-                )
-              ) : (
-                <>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: SPACE[3], marginBottom: SPACE[3] }}>
-                    <Mascot state={days !== null && days <= 2 ? "sad" : "think"} size={72} streak={app.streak} />
-                    <View style={{ flex: 1 }}>
-                      <MascotBubble text={days === null ? "Ten sprawdzian już był." : days === 0 ? "To dziś! Szybka powtórka?" : days <= 2 ? "Blisko. Skup się na słabych pytaniach." : "Mamy czas. Trzymajmy się planu."} tail="left" />
-                    </View>
-                  </View>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: SPACE[3] }}>
-                    <Title size="md" style={{ flex: 1 }} numberOfLines={2}>
-                      {subject.examLabel || "Sprawdzian"} · {subject.examDate}
-                    </Title>
-                    <Touch onPress={() => setEditExam(true)}>
-                      <Muted size="xs" weight={700} color={hue.color}>
-                        Zmień
-                      </Muted>
-                    </Touch>
-                  </View>
-                  {days !== null ? <ExamPlanView topics={topics} progress={app.progress} examDate={subject.examDate} onLevel={(topicId, levelId) => router.push({ pathname: "/t/[topicId]/l/[levelId]", params: { topicId, levelId } })} /> : null}
-                </>
-              )}
-            </Card>
-          ) : (
-            <>
-              {topics.length === 0 ? (
-                <Card style={{ alignItems: "center", gap: SPACE[3] }}>
-                  <Mascot state="think" size={110} streak={app.streak} />
-                  <Display size="lg" weight={700} center>
-                    Jeszcze pusto
-                  </Display>
-                  <Body center color={COLORS.muted}>
-                    Sfotografuj notatki albo wpisz hasło — AI zrobi poziomy, fiszki, gry i quiz.
-                  </Body>
-                </Card>
-              ) : (
-                <View style={{ gap: SPACE[3] }}>
-                  {topics.map((t, i) => (
-                    <Animated.View key={t.id} entering={FadeInDown.delay(80 + i * 60).duration(300)}>
-                      <UnitCard topic={t} index={i} onOpen={() => openTopic(t)} onContinue={() => continueTopic(t)} />
-                    </Animated.View>
-                  ))}
-                </View>
-              )}
-              {topics.length ? (
-                <View style={[s.ctaRow, { marginTop: SPACE[4] }]}>
-                  <Button3D label="Fiszki" variant="ghost" onPress={() => router.push({ pathname: "/s/[subjectId]/cards", params: { subjectId: subject.id } })} style={{ flex: 1 }} left={<Icon name="layers" size={16} color={COLORS.textSoft} />} />
-                  <Button3D label="Egzamin" variant="ghost" onPress={() => router.push({ pathname: "/s/[subjectId]/exam", params: { subjectId: subject.id } })} style={{ flex: 1 }} left={<Icon name="school" size={16} color={COLORS.textSoft} />} />
-                </View>
-              ) : null}
-            </>
-          )}
-
-          <Touch onPress={remove} hitSlop={8} style={{ alignSelf: "center", padding: SPACE[3], marginTop: SPACE[4] }}>
-            <Muted size="xs" weight={600} color={COLORS.faint}>
-              Usuń przedmiot
+        {N != null && N >= 0 ? (
+          <Touch onPress={() => (test ? router.push({ pathname: "/test-plan", params: { subjectId } }) : router.push({ pathname: "/test-new", params: { subjectId } }))} accessibilityRole="button" style={s.testChip}>
+            <Icon name="calendar" size={15} stroke={2.6} color={TONES.red.txt} />
+            <Body size={12.5} weight={800} color={TONES.red.txt}>
+              Sprawdzian {inDays(N)}
+            </Body>
+            <Muted size={11.5} color={TONES.red.sub} style={{ flex: 1 }} numberOfLines={1}>
+              {N > 0 && row ? `· dziś: ${tpTitle(row, topics).toLowerCase()}${row.done ? " (zrobione)" : ""}` : test ? "" : "· ułóż plan dzień po dniu"}
             </Muted>
+            <Icon name="chevron-right" size={16} color={TONES.red.sub} />
           </Touch>
-        </ScrollView>
+        ) : null}
       </View>
-    </HueProvider>
-  );
-}
-
-function BannerStat({ icon, value, label }: { icon: React.ComponentProps<typeof Icon>["name"]; value: string; label: string }) {
-  return (
-    <View style={s.bstat}>
-      <Icon name={icon} size={14} color="rgba(255,255,255,0.9)" />
-      <Num size="base" weight={800} color="#fff" style={{ fontSize: 15 }}>
-        {value}
-      </Num>
-      <Muted size="xs" color="rgba(255,255,255,0.8)" style={{ fontSize: 10 }}>
-        {label}
-      </Muted>
-    </View>
-  );
-}
-
-/** Karta „Jednostka N”: emoji, nazwa, pasek postępu, gwiazdki, przycisk Kontynuuj/Powtórz 3D. */
-function UnitCard({ topic, index, onOpen, onContinue }: { topic: Topic; index: number; onOpen: () => void; onContinue: () => void }) {
-  const app = useApp();
-  const hue = hueFrom(app.findSubject(topic.subjectId)?.accent2, topic.name);
-  const p = app.progressFor(topic.id);
-  const { done, total, pct } = subjectCompletion(topic, p);
-  const stars = topic.levels.reduce((a, l) => a + levelProgress(p, l.id).stars, 0);
-  const finished = done === total && total > 0;
-  return (
-    <Card style={{ padding: SPACE[4], gap: SPACE[3] }}>
-      <Touch onPress={onOpen} style={{ flexDirection: "row", alignItems: "center", gap: SPACE[3] }}>
-        <View style={[s.unitEmoji, { backgroundColor: hue.soft, borderColor: hue.ring }]}>
-          <Display size="xl" weight={700} style={{ lineHeight: 30 }}>
-            {topic.emoji}
-          </Display>
+      <View style={s.wrap}>
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          {(
+            [
+              ["cards", "Fiszki", cards ? `${cards}${due ? ` · ${due} dziś` : ""}` : "brak", () => router.push({ pathname: "/s/[subjectId]/cards", params: { subjectId } }), !cards],
+              ["target", "Egzamin", qs ? npl(Math.min(20, qs), "pytanie", "pytania", "pytań") : "brak", () => router.push({ pathname: "/s/[subjectId]/exam", params: { subjectId } }), qs < 5],
+              ["refresh", "Powtórka", due ? `${due} na dziś` : "nic na dziś", () => router.push({ pathname: "/review-run", params: { subjectId } }), !due],
+            ] as [string, string, string, () => void, boolean][]
+          ).map(([ic, t, sub, go, off], i) => (
+            <Motion key={t} kind="up" d={i + 1} style={{ flex: 1 }}>
+              <Press onPress={off ? () => app.showToast("Najpierw dodaj materiał", "info") : go} drop={4} edge={T.shadow} radius={20} faceStyle={[s.quick, off && { opacity: 0.55 }]} accessibilityLabel={`${t}: ${sub}`}>
+                <Icon name={ic} size={20} stroke={2.4} color={acc.color} />
+                <Body size={13} weight={800}>
+                  {t}
+                </Body>
+                <Muted size={11} numberOfLines={1}>
+                  {sub}
+                </Muted>
+              </Press>
+            </Motion>
+          ))}
         </View>
-        <View style={{ flex: 1, minWidth: 0 }}>
-          <Label color={hue.color}>jednostka {index + 1}</Label>
-          <Title size="md" numberOfLines={2}>
-            {topic.name}
-          </Title>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 }}>
-            <Icon name="star" size={12} color={PLAY.yellow} />
-            <Muted size="xs" weight={600} style={tabular}>
-              {stars}/{total * 3} · {done}/{total} poziomów · {topic.source === "prompt" ? "z hasła" : "z materiałów"}
-            </Muted>
-          </View>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Eyebrow>
+            Tematy · {topics.length}
+          </Eyebrow>
+          <Touch onPress={() => router.push({ pathname: "/add", params: { subjectId } })} accessibilityRole="button" hitSlop={8}>
+            <Body size={12.5} weight={800} color={T.acid}>
+              Dodaj materiał
+            </Body>
+          </Touch>
         </View>
-        <Icon name="chevron-forward" size={20} color={COLORS.faint} />
-      </Touch>
-      <View style={s.bar}>
-        <View style={[s.barFill, { width: `${pct}%`, backgroundColor: hue.color }]} />
+        {!topics.length ? (
+          <Motion kind="up" d={2}>
+            <Card padding={20}>
+              <View style={{ alignItems: "center", gap: 10 }}>
+                <IconTile icon="upload" size={52} kind="bob" />
+                <Display size={20} center>
+                  Jeszcze pusto
+                </Display>
+                <Muted center lh={18}>
+                  Zrób zdjęcie strony, wrzuć PDF albo wpisz samo hasło. Za minutę masz z tego ścieżkę, fiszki i pytania.
+                </Muted>
+                <Btn label="Dodaj pierwszy temat" glow onPress={() => router.push({ pathname: "/add", params: { subjectId } })} style={{ alignSelf: "stretch", marginTop: 4 }} />
+              </View>
+            </Card>
+          </Motion>
+        ) : null}
+        <View style={{ gap: 10 }}>
+          {topics.map((t, i) => {
+            const lv = visibleLevels(t, app.extra.overrides);
+            const p = app.progressFor(t.id);
+            const dn = lv.filter((l) => levelProgress(p, l.id).done).length;
+            const all = lv.length > 0 && dn === lv.length;
+            const boss = p.boss?.done;
+            const next = lv.find((l) => !levelProgress(p, l.id).done);
+            return (
+              <Motion key={t.id} kind="up" d={Math.min(6, i + 2)}>
+                <Press onPress={() => router.push({ pathname: "/t/[topicId]", params: { topicId: t.id } })} drop={4} edge={T.shadow} radius={22} faceStyle={s.topic} accessibilityLabel={`${topicShort(t)}: ${dn} z ${lv.length} poziomów`}>
+                  <View style={[s.num, all && { backgroundColor: acc.color }]}>
+                    {all ? <Icon name={boss ? "trophy" : "check"} size={20} stroke={3.4} color={acc.on} /> : <Display size={17} color={acc.color}>{i + 1}</Display>}
+                  </View>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Body size={14.5} weight={800} numberOfLines={1}>
+                      {topicShort(t)}
+                    </Body>
+                    <Muted size={12} style={{ marginTop: 2 }} numberOfLines={1}>
+                      {all ? (boss ? "wszystko zaliczone · boss pokonany" : "wszystko zaliczone · boss czeka") : next ? `dalej: ${noEmoji(next.title)}` : "brak poziomów"}
+                    </Muted>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8 }}>
+                      <Bar pct={lv.length ? (dn / lv.length) * 100 : 0} color={acc.color} height={8} d={Math.min(6, i + 2)} style={{ flex: 1 }} />
+                      <Muted size={11} weight={800}>
+                        {dn}/{lv.length}
+                      </Muted>
+                    </View>
+                  </View>
+                  <Icon name="chevron-right" size={18} color={T.muted2} />
+                </Press>
+              </Motion>
+            );
+          })}
+        </View>
+        {subject.examDate && !test ? (
+          <Muted size={11.5} center>
+            Sprawdzian: {fmtDate(subject.examDate)}
+            {subject.examLabel ? ` · ${subject.examLabel}` : ""}
+          </Muted>
+        ) : null}
+        <Btn label="Usuń przedmiot" variant="text" onPress={() => setDel(true)} />
       </View>
-      <View style={{ flexDirection: "row", gap: SPACE[2] }}>
-        <Button3D label={finished ? "Powtórz" : done === 0 ? "Start" : "Kontynuuj"} variant={finished ? "blue" : "green"} size="sm" onPress={onContinue} style={{ flex: 1 }} right={<Icon name="play" size={14} color="#fff" />} />
-        <Button3D label="Ścieżka" variant="ghost" size="sm" onPress={onOpen} style={{ flex: 1 }} left={<Icon name="map" size={14} color={COLORS.textSoft} />} />
-      </View>
-    </Card>
+      <Sheet open={del} onClose={() => setDel(false)} tone="red" bg={T.surface2}>
+        <Display size={22} ls={-0.6}>
+          Usunąć „{noEmoji(subject.name)}”?
+        </Display>
+        <Muted size={13} lh={19}>
+          Znikną {npl(topics.length, "temat", "tematy", "tematów")}, postępy, fiszki i powtórki z tego przedmiotu. Tego nie da się cofnąć.
+        </Muted>
+        <View style={{ flexDirection: "row", gap: 10, marginTop: 4 }}>
+          <Btn label="Zostaw" variant="ghost" onPress={() => setDel(false)} style={{ flex: 1 }} />
+          <Btn label={busy ? "Usuwam…" : "Usuń"} variant="danger" onPress={remove} disabled={busy} style={{ flex: 1 }} />
+        </View>
+      </Sheet>
+    </Screen>
   );
 }
 
 const s = StyleSheet.create({
-  scroll: { paddingHorizontal: UI.gutter, paddingTop: SPACE[2] },
-  headRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: UI.gutter, paddingBottom: SPACE[2] },
-  banner: { borderRadius: RADIUS.xl, padding: SPACE[5], borderBottomWidth: 6, marginBottom: SPACE[4] },
-  emojiBox: { width: 64, height: 64, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center" },
-  bannerStats: { flexDirection: "row", gap: SPACE[2], marginTop: SPACE[4] },
-  bstat: { flex: 1, flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(0,0,0,0.2)", borderRadius: RADIUS.sm, paddingVertical: 8, paddingHorizontal: 10 },
-  ctaRow: { flexDirection: "row", gap: SPACE[3], marginBottom: SPACE[4] },
-  cta: { padding: SPACE[4], gap: 4, minHeight: 104 },
-  seg: { flexDirection: "row", gap: 4, marginBottom: SPACE[4], padding: 4, backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.md },
-  segItem: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 9, borderRadius: RADIUS.sm, borderBottomWidth: 3, borderBottomColor: "transparent" },
-  unitEmoji: { width: 52, height: 52, borderRadius: 16, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  bar: { height: 8, backgroundColor: COLORS.bg3, borderRadius: 999, overflow: "hidden" },
-  barFill: { height: "100%", borderRadius: 999 },
+  band: { paddingHorizontal: 18, paddingBottom: 12, backgroundColor: T.surface2, borderBottomWidth: 2, borderBottomColor: T.line, gap: 12 },
+  testChip: { flexDirection: "row", alignItems: "center", gap: 8, backgroundColor: TONES.red.tint, borderWidth: 2, borderColor: TONES.red.tintLine, borderRadius: 14, paddingVertical: 9, paddingHorizontal: 12 },
+  wrap: { paddingHorizontal: 18, paddingTop: 16, gap: 14 },
+  quick: { backgroundColor: T.surface, borderWidth: 2, borderColor: T.line, padding: 12, gap: 5, minHeight: 84 },
+  topic: { flexDirection: "row", alignItems: "center", gap: 13, backgroundColor: T.surface, borderWidth: 2, borderColor: T.line, paddingVertical: 13, paddingHorizontal: 14 },
+  num: { width: 40, height: 40, borderRadius: 14, backgroundColor: T.line2, alignItems: "center", justifyContent: "center" },
 });

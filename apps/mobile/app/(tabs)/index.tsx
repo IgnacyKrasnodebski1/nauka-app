@@ -1,209 +1,267 @@
-import { MASCOT_LINES, type MascotState, type LeaderboardRow } from "@nauka/shared";
-import { useFocusEffect, useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import { albumCount, dayDiff, levelProgress, questsSummary, todayStr } from "@nauka/shared";
+import { useRouter } from "expo-router";
+import React from "react";
 import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Button3D, Tile3D } from "@/components/Button3D";
-import { Leaderboard, QuestsCard, StreakCalendar } from "@/components/Gamification";
+import { AccentProvider, useAccent } from "@/components/Accent";
 import { Icon } from "@/components/Icon";
-import { Logo } from "@/components/Logo";
-import { Mascot, MascotBubble } from "@/components/Mascot";
-import { GemsPill, HeartsPill, StreakPill } from "@/components/Pills";
-import { DailyGoalRing, Ring } from "@/components/Ring";
-import { examBadgeShort, examCountdown, subjectStats } from "@/components/SubjectCard";
-import { Body, Display, Label, Muted, Num, Title } from "@/components/Text";
-import { SectionHead, Touch } from "@/components/ui";
+import { Bar, Motion } from "@/components/Motion";
+import { Body, Display, Eyebrow, Muted } from "@/components/Text";
+import { Blob, Card, Mono, Pill, Press, Screen, Sep, Touch } from "@/components/ui";
 import { useApp } from "@/lib/app-state";
-import { pl } from "@/lib/plural";
-import { COLORS, PLAY, RADIUS, SPACE, UI, hueFrom, tabular } from "@/lib/theme";
+import { dateHeader, fmtNum, inDays, noEmoji } from "@/lib/format";
+import type { PlanInfo } from "@/lib/plan";
+import { splitKey, tpSub, tpTitle, TP_ICON } from "@/lib/tests";
+import { T, TONES, accentOf } from "@/lib/theme";
 
-/** Home „Start”: TopBar z logo i pillami, ring celu + maskotka, karta „Dziś” 3D, misje, kafle przedmiotów, ranking, seria. */
-export default function Home() {
+const THEME_BLOB: Record<string, "violet" | "cyan" | "pink" | "gold" | "amber"> = { violet: "violet", cyan: "cyan", pink: "pink", gold: "gold", amber: "amber" };
+
+/** „Dziś” (Main.html): logo + pigułki, plan na dziś (pasek + cel), mini-kafle, karta planu, kafle przedmiotów, [+] w nawigacji. */
+export default function Main() {
   const app = useApp();
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const d = app.daily;
-  const hasSession = d.items.length > 0;
-  const sessionSubject = d.newLevel ? app.findSubject(app.findTopic(d.newLevel.topicId)?.subjectId ?? "") : app.subjects[0];
-  const hue = hueFrom(sessionSubject?.accent2, sessionSubject?.name);
-  const [board, setBoard] = useState<LeaderboardRow[]>([]);
-  const dayIdx = useMemo(() => new Date().getDate(), []);
-
-  useFocusEffect(
-    useCallback(() => {
-      let alive = true;
-      app
-        .fetchLeaderboard(3)
-        .then((rows) => alive && setBoard(rows))
-        .catch(() => {});
-      return () => {
-        alive = false;
+  const today = todayStr();
+  const testRows = app.tests
+    .map((t) => {
+      const s = app.findSubject(t.subjectId);
+      if (!s) return null;
+      const N = dayDiff(today, t.date);
+      if (N < 0) return null;
+      const r = t.plan.find((x) => x.date === today);
+      const topics = app.topicsOf(s.id);
+      if (N === 0) return { id: "test:" + t.id, done: false, icon: "calendar", title: "Sprawdzian dziś — powodzenia", sub: `${s.name} · plan zrobiony, teraz spokojnie`, reward: 0, go: () => router.push({ pathname: "/test-plan", params: { subjectId: s.id } }) };
+      if (!r) return null;
+      return {
+        id: "test:" + t.id,
+        done: !!r.done,
+        icon: TP_ICON[r.kind],
+        title: "Do sprawdzianu — " + tpTitle(r, topics),
+        sub: `${s.name} · ${inDays(N)} · ${tpSub(r)}`,
+        reward: 0,
+        go: () => {
+          if (r.done) return router.push({ pathname: "/test-plan", params: { subjectId: s.id } });
+          if (r.kind === "rest") return app.showToast("Dziś wolne. Odpoczynek też się liczy", "check");
+          if (r.kind === "learn") {
+            const k = r.lv?.[0];
+            if (k) {
+              const { topicId, levelId } = splitKey(k);
+              return router.push({ pathname: "/t/[topicId]/l/[levelId]", params: { topicId, levelId } });
+            }
+          }
+          if (r.kind === "review" && r.short) return router.push({ pathname: "/cram", params: { subjectId: s.id } });
+          if (r.kind === "review") return router.push({ pathname: "/review-run", params: { subjectId: s.id } });
+          if (r.kind === "weak") return router.push({ pathname: "/review-run", params: { subjectId: s.id, deck: "1" } });
+          return router.push({ pathname: "/s/[subjectId]/exam", params: { subjectId: s.id } });
+        },
       };
-    }, [app.fetchLeaderboard, app.tick]), // eslint-disable-line react-hooks/exhaustive-deps
-  );
-
-  const mascotState: MascotState = app.goalMet ? "cheer" : app.streakAtRisk ? "sleep" : "idle";
-  const line = app.goalMet ? "Cel dnia zrobiony. Jesteś w formie!" : app.streakAtRisk ? MASCOT_LINES.sleep[dayIdx % 2]! : hasSession ? MASCOT_LINES.idle[dayIdx % 3]! : "Dodaj pierwszy temat, a ułożę Ci plan.";
+    })
+    .filter((x): x is NonNullable<typeof x> => !!x);
+  const planRows = [
+    ...testRows,
+    ...app.planItems.map((p) => ({ id: p.task.id, done: p.task.done, icon: p.icon, title: p.title, sub: p.sub, reward: p.reward, go: () => goPlan(p), subjectId: p.subjectId })),
+  ];
+  const done = planRows.filter((r) => r.done).length,
+    total = planRows.length;
+  function goPlan(p: PlanInfo) {
+    switch (p.kind) {
+      case "lesson":
+        return router.push({ pathname: "/t/[topicId]/l/[levelId]", params: { topicId: p.topicId!, levelId: p.levelId! } });
+      case "review":
+        return router.push({ pathname: "/review-run", params: { subjectId: p.subjectId } });
+      case "quiz":
+        return router.push({ pathname: "/t/[topicId]", params: { topicId: p.topicId!, tab: "quiz", levelId: p.levelId! } });
+      case "exam":
+        return router.push({ pathname: "/s/[subjectId]/exam", params: { subjectId: p.subjectId } });
+      case "weak":
+        return router.push({ pathname: "/review-run", params: { subjectId: p.subjectId, deck: "1" } });
+    }
+  }
+  const qs = questsSummary(app.quests);
+  const alb = albumCount(app.album, app.topics);
+  const withP = app.subjects.filter((s) => app.topicsOf(s.id).some((t) => (app.progress[t.id]?.xp ?? 0) > 0));
+  const rest = app.subjects.filter((s) => !withP.includes(s));
+  const shown = [...withP, ...rest].slice(0, 5);
+  let cur = false;
 
   return (
-    <View style={{ flex: 1, backgroundColor: COLORS.bg0 }}>
-      <View style={[s.top, { paddingTop: insets.top + SPACE[2] }]}>
-        <Logo size={30} />
-        <View style={s.pills}>
-          <StreakPill streak={app.streak} compact />
-          <GemsPill gems={app.gems} compact />
-          <HeartsPill hearts={app.hearts} compact />
-        </View>
-      </View>
-      <ScrollView contentContainerStyle={[s.scroll, { paddingBottom: 110 + insets.bottom }]} refreshControl={<RefreshControl refreshing={app.refreshing} onRefresh={app.refresh} tintColor={PLAY.green} />} showsVerticalScrollIndicator={false}>
-        {/* cel dzienny + maskotka */}
-        <Animated.View entering={FadeInDown.duration(300)} style={s.hero}>
-          <DailyGoalRing xp={app.todayXp} goal={app.dailyGoal} size={104} />
-          <View style={{ flex: 1, gap: SPACE[2] }}>
-            <MascotBubble state={mascotState} text={line} tail="left" style={{ maxWidth: undefined }} />
-            <Muted size="xs" weight={600}>
-              cel dzienny {app.dailyGoal} XP · {app.rank.name} · {app.totalXp} XP łącznie
-            </Muted>
+    <Screen pad={false} blob={<Blob tone={THEME_BLOB[app.extra.themes.active] ?? "violet"} size={300} top={-130} right={-100} />}>
+      <ScrollView contentContainerStyle={[s.scroll, { paddingTop: Math.max(insets.top, 14) + 12, paddingBottom: 40 }]} refreshControl={<RefreshControl refreshing={app.refreshing} onRefresh={app.refresh} tintColor={T.acid} />} showsVerticalScrollIndicator={false}>
+        <View style={s.head}>
+          <Display size={21} ls={-0.8}>
+            RECALL
+            <Display size={21} color={T.acid}>
+              .
+            </Display>
+          </Display>
+          <View style={{ flexDirection: "row", gap: 8 }}>
+            <Pill kind="streak" value={app.streak} beat onPress={() => router.push("/streak")} />
+            <Pill kind="gems" value={fmtNum(app.gems)} onPress={() => router.push("/shop")} />
           </View>
-          <Mascot state={mascotState} size={88} streak={app.streak} />
-        </Animated.View>
-
-        {/* karta „Dziś” */}
-        <Animated.View entering={FadeInDown.delay(60).duration(300)}>
-          <Tile3D color={hue.color} deep={hue.deep} onPress={() => router.push("/(tabs)/today")} style={{ marginBottom: SPACE[4] }} faceStyle={s.today}>
-            <View style={{ flexDirection: "row", alignItems: "center", gap: SPACE[3] }}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Label color="rgba(255,255,255,0.85)">dzienna misja · ~{d.minutes} min</Label>
-                <Display size="xl" weight={800} color="#fff" numberOfLines={2}>
-                  {hasSession ? (d.newLevel ? d.newLevel.title : "Powtórka na dziś") : "Dodaj pierwszy temat"}
-                </Display>
-                <Body size="sm" color="rgba(255,255,255,0.9)">
-                  {hasSession ? `${pl(d.reviewCount, "powtórka", "powtórki", "powtórek")} · ${pl(d.weakCount, "słabe pytanie", "słabe pytania", "słabych pytań")}${d.newLevel ? " · nowy poziom" : ""}` : "Ułożę Ci sesję, gdy pojawi się pierwszy temat."}
-                </Body>
+        </View>
+        <View>
+          <Eyebrow size={12}>{dateHeader()}</Eyebrow>
+          <Display size={30} ls={-1} lh={32} style={{ marginTop: 6 }}>
+            Plan na dziś
+          </Display>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+          <Bar pct={total ? (done / total) * 100 : 0} color={T.acid} style={{ flex: 1 }} />
+          <Body size={12} weight={800} color={T.muted}>
+            {done} z {total}
+          </Body>
+        </View>
+        <Motion kind="up" d={1}>
+          <Touch onPress={() => router.push("/goal")} accessibilityRole="button" accessibilityLabel={`Cel dzienny: ${app.todayXp} z ${app.dailyGoal} XP`} style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Icon name="bolt" size={15} color={T.gold} />
+            <Bar pct={app.goalPct} color={T.gold} height={8} d={2} style={{ flex: 1 }} />
+            <Body size={12} weight={800} color={T.muted}>
+              {app.todayXp} / {app.dailyGoal} XP
+            </Body>
+          </Touch>
+        </Motion>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Mini tone="gold" icon="star" label={`Misje ${qs.done}/${qs.total}`} d={1} onPress={() => router.push("/missions")} />
+          <Mini tone="amber" icon="flame" label={`Seria ${app.streak}`} d={2} onPress={() => router.push("/streak")} />
+          <Mini tone="cyan" icon="cards" label={`Album ${alb.n}`} d={3} onPress={() => router.push("/album")} />
+        </View>
+        <Motion kind="up" d={2}>
+          <Card padding={8} radius={24} drop={5}>
+            {!planRows.length ? (
+              <View style={s.prow}>
+                <View style={[s.ptile, { backgroundColor: T.line2 }]}>
+                  <Icon name="bulb" size={18} color={T.muted} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Body color={T.txt2}>Brak zadań na dziś</Body>
+                  <Muted style={{ marginTop: 2 }}>dodaj materiał, a plan ułoży się sam</Muted>
+                </View>
               </View>
-              <View style={s.todayIcon}>
-                <Icon name="rocket" size={30} color="#fff" />
-              </View>
-            </View>
-            <Button3D label={hasSession ? "Start" : "Zobacz"} variant="ghost" color="#fff" deep="#C9CCDA" textColor={hue.deep} onPress={() => router.push("/(tabs)/today")} style={{ marginTop: SPACE[4] }} right={<Icon name="play" size={16} color={hue.deep} />} />
-          </Tile3D>
-        </Animated.View>
-
-        {app.offline ? (
-          <Muted size="xs" center style={{ marginBottom: SPACE[3] }}>
-            offline — pokazuję zapisane dane
-          </Muted>
-        ) : null}
-
-        {/* misje */}
-        <Animated.View entering={FadeInDown.delay(120).duration(300)}>
-          <QuestsCard quests={app.quests} onClaim={app.claimQuest} style={{ marginBottom: SPACE[5] }} />
-        </Animated.View>
-
-        {/* przedmioty */}
-        <SectionHead
-          label="przedmioty"
-          right={
-            <Touch onPress={() => router.push("/onboarding-add")} style={s.addBtn}>
-              <Icon name="add" size={16} color={PLAY.green} />
-              <Muted size="xs" weight={700} color={PLAY.green}>
-                dodaj
-              </Muted>
-            </Touch>
-          }
-        />
+            ) : (
+              planRows.map((r, i) => {
+                let state: "done" | "cur" | "later" = "later";
+                if (r.done) state = "done";
+                else if (!cur) {
+                  cur = true;
+                  state = "cur";
+                }
+                const subj = "subjectId" in r ? app.findSubject((r as { subjectId: string }).subjectId) : app.findSubject(r.id.split(":")[0]!);
+                const acc = accentOf(subj?.accent2, subj?.name);
+                const row = (
+                  <View style={[s.prow, state === "cur" && { backgroundColor: acc.tint, borderWidth: 2, borderColor: acc.tintLine, borderRadius: 18, marginVertical: 4, paddingVertical: 12 }]}>
+                    <Motion kind={state === "cur" ? "pulse" : "none"}>
+                      <View style={[s.ptile, { backgroundColor: state === "done" ? T.acid : state === "cur" ? acc.color : T.line2 }]}>
+                        {state === "done" ? <Icon name="check" size={19} stroke={3.4} color={T.onAcid} /> : <Icon name={r.icon} size={19} stroke={state === "cur" ? 3 : 2.6} color={state === "cur" ? acc.on : T.muted} />}
+                      </View>
+                    </Motion>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Body size={state === "cur" ? 14.5 : 14} weight={state === "cur" ? 800 : 700} color={state === "done" ? "#7A74AA" : state === "cur" ? T.txt : T.txt2} style={state === "done" && { textDecorationLine: "line-through" }} numberOfLines={2}>
+                        {r.title}
+                      </Body>
+                      {state !== "done" ? (
+                        <Muted size={12} color={state === "cur" ? acc.sub : T.muted2} style={{ marginTop: 2 }} numberOfLines={1}>
+                          {r.sub}
+                        </Muted>
+                      ) : null}
+                    </View>
+                    {state === "done" ? (
+                      r.reward ? (
+                        <Body size={12} weight={800} color={T.muted3}>
+                          +{r.reward}
+                        </Body>
+                      ) : null
+                    ) : (
+                      <Icon name="chevron-right" size={20} color={state === "cur" ? acc.sub : T.muted2} />
+                    )}
+                  </View>
+                );
+                return (
+                  <React.Fragment key={r.id}>
+                    {i ? <Sep style={{ marginHorizontal: 10 }} /> : null}
+                    <Touch onPress={r.go} accessibilityRole="button" accessibilityLabel={(state === "done" ? "Zrobione: " : "") + r.title}>
+                      {row}
+                    </Touch>
+                  </React.Fragment>
+                );
+              })
+            )}
+          </Card>
+        </Motion>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+          <Eyebrow size={12}>Przedmioty</Eyebrow>
+          <Touch onPress={() => router.push("/settings")} hitSlop={8} accessibilityRole="button">
+            <Body size={12.5} weight={800} color={T.acid}>
+              Zarządzaj
+            </Body>
+          </Touch>
+        </View>
         <View style={s.grid}>
-          {app.subjects.map((sub, i) => (
-            <Animated.View key={sub.id} entering={FadeInDown.delay(160 + i * 60).duration(300)} style={s.cell}>
-              <SubjectTile subject={sub} onPress={() => router.push({ pathname: "/s/[subjectId]", params: { subjectId: sub.id } })} />
-            </Animated.View>
-          ))}
-          <Animated.View entering={FadeInDown.delay(160 + app.subjects.length * 60).duration(300)} style={s.cell}>
-            <Touch onPress={() => router.push("/onboarding-add")} style={s.addcard}>
-              <View style={s.plus}>
-                <Icon name="add" size={26} color={COLORS.muted} />
-              </View>
-              <Muted size="sm" weight={700}>
-                nowy przedmiot
-              </Muted>
-            </Touch>
-          </Animated.View>
+          {shown.map((sub, i) => {
+            const topics = app.topicsOf(sub.id);
+            const total = topics.reduce((a, t) => a + t.levels.length, 0);
+            const done = topics.reduce((a, t) => a + t.levels.filter((l) => levelProgress(app.progressFor(t.id), l.id).done).length, 0);
+            const pct = total ? Math.round((done / total) * 100) : 0;
+            return (
+              <AccentProvider key={sub.id} color={sub.accent2} seed={sub.name}>
+                <SubjectTile name={sub.name} pct={pct} label={topics.length ? `${done} z ${total}` : "pusty"} d={i + 2} onPress={() => router.push({ pathname: "/s/[subjectId]", params: { subjectId: sub.id } })} />
+              </AccentProvider>
+            );
+          })}
+          <Touch onPress={() => router.push("/quick-add")} accessibilityRole="button" accessibilityLabel="Dodaj materiał" style={s.addTile}>
+            <View style={[s.mono, { backgroundColor: T.line2 }]}>
+              <Motion kind="bob">
+                <Icon name="plus" size={22} stroke={3} color={T.acid} />
+              </Motion>
+            </View>
+            <Body size={13} weight={800} color={T.acid} center lh={16}>
+              Dodaj{"\n"}materiał
+            </Body>
+          </Touch>
         </View>
-
-        {/* ranking */}
-        <SectionHead
-          label="ranking tygodnia"
-          right={
-            <Touch onPress={() => router.push("/(tabs)/ranking")} style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
-              <Muted size="xs" weight={700} color={PLAY.blue}>
-                cały
-              </Muted>
-              <Icon name="chevron-forward" size={14} color={PLAY.blue} />
-            </Touch>
-          }
-          style={{ marginTop: SPACE[5] }}
-        />
-        <View style={s.board}>
-          <Leaderboard rows={board} compact />
-        </View>
-
-        {/* seria */}
-        <StreakCalendar week={app.week} streak={app.streak} style={{ marginTop: SPACE[4] }} />
       </ScrollView>
-    </View>
+    </Screen>
   );
 }
 
-/** Kafel przedmiotu: hue.soft tło + deep krawędź, emoji 40, nazwa, tematy, mini-ring %, badge sprawdzianu. */
-function SubjectTile({ subject, onPress }: { subject: Parameters<typeof examCountdown>[0] & { id: string; name: string; emoji: string; accent2: string }; onPress: () => void }) {
-  const app = useApp();
-  const st = subjectStats(app.topicsOf(subject.id), app.progressFor);
-  const hue = hueFrom(subject.accent2, subject.name);
-  const days = examCountdown(subject);
+function Mini({ tone, icon, label, d, onPress }: { tone: "gold" | "amber" | "cyan"; icon: "star" | "flame" | "cards"; label: string; d: number; onPress: () => void }) {
+  const set = TONES[tone];
   return (
-    <Tile3D color={hue.soft} deep={hue.deep} onPress={onPress} faceStyle={[s.tile, { borderColor: hue.ring }]} accessibilityLabel={subject.name}>
-      <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <Display size="3xl" weight={700} style={{ lineHeight: 44 }}>
-          {subject.emoji}
-        </Display>
-        <Ring pct={st.pct} size={40} stroke={5} color={hue.color}>
-          <Num size="xs" weight={800} color={COLORS.text} style={[tabular, { fontSize: 10 }]}>
-            {st.pct}%
-          </Num>
-        </Ring>
-      </View>
-      <Title size="md" numberOfLines={2} style={{ marginTop: SPACE[2] }}>
-        {subject.name}
-      </Title>
-      <Muted size="xs" weight={600} style={[tabular, { marginTop: 2 }]}>
-        {st.topics === 0 ? "pusto — dodaj temat" : `${pl(st.topics, "temat", "tematy", "tematów")} · ${st.done}/${st.total} lvl`}
+    <Motion kind="up" d={d} style={{ flex: 1 }}>
+      <Touch onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={[s.mini, { backgroundColor: set.tint, borderColor: set.tintLine }]}>
+        <Icon name={icon} size={17} stroke={2.6} fill={icon === "flame"} color={icon === "flame" ? T.flame : set.color} />
+        <Body size={12.5} weight={800} color={set.txt} numberOfLines={1}>
+          {label}
+        </Body>
+      </Touch>
+    </Motion>
+  );
+}
+
+function SubjectTile({ name, pct, label, d, onPress }: { name: string; pct: number; label: string; d: number; onPress: () => void }) {
+  const acc = useAccent();
+  return (
+    <Press onPress={onPress} drop={4} edge={acc.tintShadow} radius={22} style={s.cell} faceStyle={[s.tile, { backgroundColor: acc.tint, borderColor: acc.tintLine }]} accessibilityLabel={`${name}, ${label}`}>
+      <Mono text={name} size={44} />
+      <Body size={13} weight={800} numberOfLines={1}>
+        {noEmoji(name)}
+      </Body>
+      <Bar pct={pct} color={acc.color} track={acc.tintShadow} height={7} d={d} style={{ alignSelf: "stretch" }} />
+      <Muted size={11} weight={700} color={acc.sub}>
+        {label}
       </Muted>
-      {days !== null ? (
-        <View style={[s.badge, days <= 2 ? { backgroundColor: PLAY.red } : { backgroundColor: hue.color }]}>
-          <Icon name="alarm" size={11} color="#fff" />
-          <Muted size="xs" weight={700} color="#fff" numberOfLines={1} style={{ fontSize: 10 }}>
-            {examBadgeShort(days)}
-          </Muted>
-        </View>
-      ) : null}
-    </Tile3D>
+    </Press>
   );
 }
 
 const s = StyleSheet.create({
-  top: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: UI.gutter, paddingBottom: SPACE[3], backgroundColor: COLORS.bg0 },
-  pills: { flexDirection: "row", alignItems: "center", gap: 6 },
-  scroll: { paddingHorizontal: UI.gutter, paddingTop: SPACE[2] },
-  hero: { flexDirection: "row", alignItems: "center", gap: SPACE[3], marginBottom: SPACE[4] },
-  today: { padding: SPACE[5] },
-  todayIcon: { width: 56, height: 56, borderRadius: 18, backgroundColor: "rgba(255,255,255,0.22)", alignItems: "center", justifyContent: "center" },
-  addBtn: { flexDirection: "row", alignItems: "center", gap: 2, paddingVertical: 4, paddingHorizontal: 8, borderRadius: RADIUS.pill, backgroundColor: PLAY.greenSoft },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: SPACE[3] },
-  cell: { width: "47.5%", flexGrow: 1 },
-  tile: { padding: SPACE[4], minHeight: 156, borderWidth: 1 },
-  badge: { flexDirection: "row", alignItems: "center", gap: 4, alignSelf: "flex-start", paddingVertical: 3, paddingHorizontal: 8, borderRadius: RADIUS.pill, marginTop: SPACE[2] },
-  addcard: { minHeight: 156 + 4, borderWidth: 2, borderStyle: "dashed", borderColor: COLORS.lineStrong, borderRadius: RADIUS.lg, alignItems: "center", justifyContent: "center", gap: SPACE[2] },
-  plus: { width: 48, height: 48, borderRadius: 16, backgroundColor: COLORS.bg3, alignItems: "center", justifyContent: "center" },
-  board: { backgroundColor: COLORS.bg2, borderWidth: 1, borderColor: COLORS.line, borderRadius: RADIUS.lg, padding: SPACE[4], paddingBottom: 0, overflow: "hidden" },
+  scroll: { paddingHorizontal: 20, gap: 13 },
+  head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  mini: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 2, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 12, minHeight: 44 },
+  prow: { flexDirection: "row", alignItems: "center", gap: 13, paddingVertical: 11, paddingHorizontal: 10 },
+  ptile: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  cell: { width: (390 - 40 - 20) / 3, flexGrow: 1, maxWidth: "32%" },
+  tile: { paddingVertical: 14, paddingHorizontal: 10, alignItems: "center", gap: 9, borderWidth: 2, minHeight: 132 },
+  addTile: { width: (390 - 40 - 20) / 3, flexGrow: 1, maxWidth: "32%", backgroundColor: T.surface2, borderWidth: 2, borderStyle: "dashed", borderColor: T.dash, borderRadius: 22, paddingVertical: 14, paddingHorizontal: 10, alignItems: "center", justifyContent: "center", gap: 9, minHeight: 136 },
+  mono: { width: 44, height: 44, borderRadius: 15, alignItems: "center", justifyContent: "center" },
 });
