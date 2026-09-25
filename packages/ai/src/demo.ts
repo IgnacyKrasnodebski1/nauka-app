@@ -1,4 +1,4 @@
-import type { GeneratedTopic } from "@nauka/shared";
+import { blankGenTask, type GeneratedTopic } from "@nauka/shared";
 
 /**
  * Demo generator used when no ANTHROPIC_API_KEY is configured — lets the whole flow
@@ -31,6 +31,61 @@ export function demoGenerated(topic: string, levels: number): GeneratedTopic {
       { type: "match", title: "Dopasuj pojęcia", pairs: [{ l: "XP", r: "punkty doświadczenia" }, { l: "Streak", r: "seria dni z rzędu" }, { l: "SRS", r: "powtórki w odstępach" }, { l: "Egzamin", r: "20 losowych pytań na czas" }], cloze: [], tf: [], prompt: "", steps: [] },
       { type: "truefalse", title: "Prawda czy fałsz", pairs: [], cloze: [], tf: [{ s: "Poziomy odblokowują się po kolei.", v: true, e: "Tak — po zaliczeniu poprzedniego." }, { s: "Egzamin nie ma limitu czasu.", v: false, e: "Ma — czas z grading.examMin." }, { s: "Gość może uczyć się bez konta.", v: true, e: "Postępy trzymane lokalnie do czasu logowania." }], prompt: "", steps: [] },
       { type: "order", title: "Ułóż lekcję", pairs: [], cloze: [], tf: [], prompt: "Ułóż etapy lekcji w kolejności", steps: ["Roladka", "Fiszki", "Mini-gry", "Quiz", "Wynik"] },
+    ],
+    /* tasks 2.0 — one of each simple type, so both UIs can exercise the renderers without an API key */
+    tasks: [
+      blankGenTask({
+        type: "tf",
+        seconds: 45,
+        e: "Próg to 50%, seria rośnie codziennie, a serca odnawiają się co 30 minut.",
+        statements: [
+          { s: "Poziom zaliczasz od 50% poprawnych odpowiedzi.", v: true, e: "50% = 1 gwiazdka, 70% = 2, 90% = 3." },
+          { s: "Seria rośnie tylko w weekendy.", v: false, e: "Seria rośnie każdego dnia z nauką." },
+          { s: "Jedno serce odnawia się co 30 minut.", v: true, e: "Pięć serc, każde wraca po 30 minutach." },
+          { s: "Zadanie na czas daje mniej XP niż pytanie.", v: false, e: "Zadanie = 8 XP bazowo, pytanie = 5." },
+        ],
+      }),
+      blankGenTask({
+        type: "fill",
+        title: "Uzupełnij zasady",
+        text: "Poziom zaliczasz od {0} procent, a trzy gwiazdki dostajesz od {1} procent.",
+        blanks: ["50", "90"],
+        bank: ["30", "70"],
+        hint: "Progi gwiazdek: 50 / 70 / 90.",
+        e: "50% zalicza, 70% daje 2 gwiazdki, 90% trzy.",
+      }),
+      blankGenTask({
+        type: "typeterm",
+        definition: "Metoda powtórek, w której odstępy między kolejnymi powtórzeniami rosną.",
+        answer: "SRS",
+        accept: ["spaced repetition", "powtórki w odstępach"],
+        e: "SRS = spaced repetition system: karta wraca po 1, 3, 7, 21 dniach.",
+      }),
+      blankGenTask({
+        type: "swipe",
+        left: "Nagroda",
+        right: "Kara",
+        cards: [
+          { front: "+5 XP", sub: "poprawna odpowiedź", side: "left", e: "" },
+          { front: "−1 serce", sub: "zła odpowiedź", side: "right", e: "" },
+          { front: "Skrzynia", sub: "co trzeci poziom", side: "left", e: "" },
+          { front: "Utrata serii", sub: "dzień bez nauki", side: "right", e: "" },
+        ],
+      }),
+      blankGenTask({
+        type: "scenario",
+        scene: `Kasia ma sprawdzian z „${t}” za 3 dni i dwa niezaliczone poziomy.`,
+        q: "Co podpowie jej plan do sprawdzianu?",
+        a: ["Po jednym poziomie dziennie, ostatni dzień tylko powtórka", "Wszystko ostatniej nocy", "Tylko egzamin próbny", "Nic — plan liczy jedynie XP"],
+        c: 0,
+        e: "Plan rozkłada poziomy na dni, a dzień przed sprawdzianem zostawia krótką powtórkę.",
+      }),
+      blankGenTask({
+        type: "order",
+        title: "Kolejność lekcji",
+        items: ["Roladka", "Fiszki", "Zadania i quiz", "Wynik poziomu"],
+        e: "Najpierw czytasz, potem utrwalasz, na końcu sprawdzasz.",
+      }),
     ],
   });
   return {

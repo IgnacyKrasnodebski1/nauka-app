@@ -2,7 +2,8 @@ import type { UserMeta } from "./types.js";
 
 export const HEARTS_MAX = 5;
 export const HEART_REGEN_MS = 30 * 60_000;
-export const HEART_REFILL_GEMS = 150;
+/** legacy KROK 8 `REFILL_GEMS` — same as GEM_COSTS.heartRefill */
+export const HEART_REFILL_GEMS = 50;
 
 export interface HeartsView {
   hearts: number;

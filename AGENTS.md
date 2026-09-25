@@ -27,7 +27,7 @@ docs/             ARCHITECTURE.md, PRODUCT.md, DESIGN.md (system „Duolingo in 
 - Plan usera (`profiles.plan`) zmienia tylko webhook Stripe (RLS blokuje update przez usera). Limity w `PLANS` (shared).
 - Model AI: `claude-opus-5` domyślnie (`RECALL_AI_MODEL`), adaptive thinking, structured outputs przez `betaZodOutputFormat(GeneratedTopicSchema)`, fallbacks `"default"`. Bez klucza = tryb demo (nie crashować).
 - Build weba i typecheck mobile muszą przechodzić **bez** żadnych env (klienci tworzone leniwie).
-- UI po polsku, luźny gen-z; treść merytoryczna poprawna. Bez UI-kitów. Wygląd wg docs/DESIGN.md: przyciski 3D (`HARD_EDGE`), paleta `PLAY`, kolor przedmiotu przez `hueFromColor`, maskotka i dźwięki z shared.
+- UI po polsku, luźny gen-z; treść merytoryczna poprawna. Bez UI-kitów. Wygląd wg design/DESIGN.md (handoff 2.0) i docs/DESIGN.md: tokeny `TOKENS`/`TOKENS_CSS` z shared, twarde cienie (`DROP`), kolor przedmiotu przez `hueFromColor`; 16 typów zadań przez `levelSession` i checkery z `tasks.ts`; mapa portu: docs/PORT-2.0.md.
 - Gamifikacja: XP/serca/klejnoty/questy liczone funkcjami z shared (`comboXp`, `loseHeart`, `openChest`, `applyQuestEvent`, `evaluateAchievements`, `rankFor`); `addXp` w store jest jedynym lejkiem XP.
 
 ## Workflow przy zmianach

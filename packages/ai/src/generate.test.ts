@@ -13,6 +13,18 @@ test("demo generation without API key yields valid subject", async () => {
   assert.equal(r.content.levels.length, 2);
   assert.ok(TopicContentSchema.safeParse(r.content).success);
   assert.ok(r.content.levels[0]!.games!.length >= 2);
+  // tasks 2.0 come through finalizeGenerated from the demo's flat GenTask objects
+  const tasks = r.content.levels[0]!.tasks!;
+  assert.ok(tasks.length >= 5, `expected demo tasks, got ${tasks.length}`);
+  assert.deepEqual(tasks.map((t) => t.type), ["tf", "fill", "typeterm", "swipe", "scenario", "order"]);
+  const tf = tasks[0]!;
+  assert.ok(tf.type === "tf" && tf.seconds === 45 && tf.statements.length === 4);
+});
+
+test("demo tasks are valid for every level and every schema", async () => {
+  const r = await generateTopic({ materials: [], options: { stage: "studia", mode: "prompt", hint: "Makroekonomia", levels: 4 } });
+  for (const l of r.content.levels) assert.ok((l.tasks?.length ?? 0) >= 5, l.id);
+  assert.ok(TopicContentSchema.safeParse(r.content).success);
 });
 
 test("prompt mode demo works without materials", async () => {

@@ -127,7 +127,10 @@ export function streakAtRisk(meta: UserMeta, now = new Date()): boolean {
 }
 
 export function emptyStats(): UserStats {
-  return { cardsReviewed: 0, levelsDone: 0, perfectLevels: 0, examsPassed: 0, comboBest: 0, questsDone: 0, chestsOpened: 0, nightOwl: false, earlyBird: false };
+  return {
+    cardsReviewed: 0, levelsDone: 0, perfectLevels: 0, examsPassed: 0, comboBest: 0, questsDone: 0, chestsOpened: 0, nightOwl: false, earlyBird: false,
+    albumCount: 0, bestExamPct: 0, bosses: 0, planDays: 0, subjectsDone: 0, timedPerfect: 0, tasksDone: 0,
+  };
 }
 
 export function emptyMeta(now = new Date()): UserMeta {

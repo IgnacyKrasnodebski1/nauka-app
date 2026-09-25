@@ -19,3 +19,8 @@ export * from "./sfx.js";
 export * from "./mascot.js";
 export * from "./logo.js";
 export * from "./quiz-quality.js";
+/* 2.0 */
+export * from "./tasks.js";
+export * from "./boss.js";
+export * from "./ghost.js";
+export * from "./album.js";

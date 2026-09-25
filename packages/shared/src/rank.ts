@@ -1,12 +1,15 @@
+import { TOKENS } from "./theme.js";
+
+/** Rank tiers; colours from tokens 2.0. */
 export const RANKS = [
-  { name: "Nowicjusz", min: 0, color: "#9BA3B5" },
-  { name: "Uczeń", min: 250, color: "#58CC02" },
-  { name: "Ogarniacz", min: 750, color: "#1CB0F6" },
-  { name: "Mózg", min: 1500, color: "#CE82FF" },
-  { name: "Ekspert", min: 3000, color: "#FF9600" },
-  { name: "Mistrz", min: 6000, color: "#FF4B4B" },
-  { name: "Legenda", min: 12000, color: "#FFC800" },
-  { name: "Recall", min: 25000, color: "#5EC8FF" },
+  { name: "Nowicjusz", min: 0, color: TOKENS.muted },
+  { name: "Uczeń", min: 250, color: TOKENS.acid },
+  { name: "Ogarniacz", min: 750, color: TOKENS.cyan },
+  { name: "Mózg", min: 1500, color: TOKENS.violet },
+  { name: "Ekspert", min: 3000, color: TOKENS.amber },
+  { name: "Mistrz", min: 6000, color: TOKENS.red },
+  { name: "Legenda", min: 12000, color: TOKENS.gold },
+  { name: "Recall", min: 25000, color: TOKENS.pink },
 ] as const;
 
 export interface Rank {

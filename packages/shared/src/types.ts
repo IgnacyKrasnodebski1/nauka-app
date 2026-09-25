@@ -31,6 +31,16 @@ export interface Flashcard {
   d: string;
 }
 
+/**
+ * Where a question / task came from (design/DESIGN.md §4.1) — powers `SourceView`.
+ * `material` = materials row id (stamped by the API), `page` = page / photo number, `quote` = the sentence it was built from.
+ */
+export interface TaskSource {
+  material?: string;
+  page?: number;
+  quote?: string;
+}
+
 /** Multiple choice. `c` = index of the correct answer (0 = A). */
 export interface QuizQuestion {
   q: string;
@@ -38,6 +48,8 @@ export interface QuizQuestion {
   c: number;
   /** explanation — always present */
   e: string;
+  /** optional source pointer (materials mode) */
+  src?: TaskSource;
 }
 
 /** Mini-game: match pairs (left ↔ right). */
@@ -72,6 +84,144 @@ export interface OrderGame {
 export type MiniGame = MatchGame | ClozeGame | TrueFalseGame | OrderGame;
 export type MiniGameType = MiniGame["type"];
 
+/* ---------------- tasks 2.0 (design/DESIGN.md §4.1, legacy engine.js KROK 5/5b) ----------------
+ * 15 task types + flashcards = the 16 task screens. Every field beyond `type` follows the legacy data shape,
+ * so legacy `data/*.js` subjects and AI output share one contract. All optional on Level (old content stays valid). */
+
+interface TaskBase {
+  /** heading over the task (falls back to TASK_META label) */
+  title?: string;
+  /** explanation shown in the feedback panel */
+  e?: string;
+  src?: TaskSource;
+}
+
+/** Pairs: left ↔ right, two shuffled columns, tap-tap. */
+export interface MatchTask extends TaskBase {
+  type: "match";
+  pairs: [string, string][];
+}
+/** Fill the gaps: `text` uses `{0}`, `{1}`… placeholders; `blanks[i]` is the answer for `{i}`; `bank` = distractor tiles. */
+export interface FillTask extends TaskBase {
+  type: "fill";
+  text: string;
+  blanks: string[];
+  bank: string[];
+  hint?: string;
+}
+/** Put items in order. `items` are in the CORRECT order; the UI shuffles (never starts solved). */
+export interface OrderTask extends TaskBase {
+  type: "order";
+  items: string[];
+}
+/** Sort tiles into 2–4 buckets. */
+export interface SortTask extends TaskBase {
+  type: "sort";
+  buckets: { name: string; items: string[] }[];
+}
+/** True / false run, optionally timed (whole round in `seconds`). Passed only when every statement is right. */
+export interface TfTask extends TaskBase {
+  type: "tf";
+  seconds?: number;
+  statements: { s: string; v: boolean; e?: string }[];
+}
+/** Pin events to years on a vertical axis. Equal years are interchangeable. */
+export interface TimelineTask extends TaskBase {
+  type: "timeline";
+  events: { label: string; year: number }[];
+}
+/** Exactly one sentence is false: `wrong` = its index, `fix` = the correct word / phrase. */
+export interface FindErrorTask extends TaskBase {
+  type: "finderror";
+  sentences: string[];
+  wrong: number;
+  fix: string;
+}
+/** "Whose thesis": a quote → author / school. `c` = index into `options`. */
+export interface ThesisTask extends TaskBase {
+  type: "thesis";
+  thesis: string;
+  q?: string;
+  options: { name: string; sub?: string }[];
+  c: number;
+}
+/** Cause chain: `steps` in order, `given` = indexes visible from the start, `bank` = distractors mixed with the missing steps. */
+export interface ChainTask extends TaskBase {
+  type: "chain";
+  steps: string[];
+  given: number[];
+  bank: string[];
+}
+/** Scenario: a situation, a question and A–D answers. */
+export interface ScenarioTask extends TaskBase {
+  type: "scenario";
+  scene: string;
+  q: string;
+  a: string[];
+  c: number;
+}
+/** Two categories: swipe each card left or right. */
+export interface SwipeTask extends TaskBase {
+  type: "swipe";
+  left: string;
+  right: string;
+  cards: { front: string; sub?: string; side: "left" | "right"; e?: string }[];
+}
+/** Type the term from its definition. Compared with `foldAnswer()`; `typo` = allowed edit distance (default 1). */
+export interface TypeTermTask extends TaskBase {
+  type: "typeterm";
+  definition: string;
+  answer: string;
+  accept?: string[];
+  typo?: number;
+}
+/** Read a one-series bar / line chart, then answer A–D. Values ≥ 0. */
+export interface ChartTask extends TaskBase {
+  type: "chart";
+  chart: { kind: "bar" | "line"; label?: string; x: string[]; y: number[] };
+  q: string;
+  a: string[];
+  c: number;
+}
+/** Solve step by step: each step = pick the right transformation from `options` (`expr` = expression after the step). */
+export interface MathStepsTask extends TaskBase {
+  type: "mathsteps";
+  start: string;
+  steps: { expr: string; note?: string; options: string[]; c: number }[];
+}
+/** Point at targets on a schematic. `x`,`y` = centre in % of the image, `r` = radius in % of the width. Asked in order. */
+export interface HotspotTask extends TaskBase {
+  type: "hotspot";
+  image: string;
+  alt?: string;
+  targets: { name: string; x: number; y: number; r: number }[];
+}
+
+export type Task =
+  | MatchTask
+  | FillTask
+  | OrderTask
+  | SortTask
+  | TfTask
+  | TimelineTask
+  | FindErrorTask
+  | ThesisTask
+  | ChainTask
+  | ScenarioTask
+  | SwipeTask
+  | TypeTermTask
+  | ChartTask
+  | MathStepsTask
+  | HotspotTask;
+export type TaskType = Task["type"];
+
+/** All 15 `tasks` types in the order the practice tab lists them (simple → drag → chart/math/hotspot). */
+export const TASK_TYPES: TaskType[] = ["tf", "fill", "typeterm", "swipe", "thesis", "scenario", "finderror", "match", "order", "sort", "timeline", "chain", "chart", "mathsteps", "hotspot"];
+
+/** Text-only task types the AI may generate (no chart / mathsteps / hotspot — those need curated data or images). */
+export const AI_TASK_TYPES = ["tf", "fill", "typeterm", "swipe", "thesis", "scenario", "finderror", "timeline", "chain", "match", "order", "sort"] as const;
+export type AiTaskType = (typeof AI_TASK_TYPES)[number];
+
 export interface Level {
   id: string;
   title: string;
@@ -82,6 +232,10 @@ export interface Level {
   flashcards: Flashcard[];
   quiz: QuizQuestion[];
   games?: MiniGame[];
+  /** tasks 2.0 — when absent, `levelTasks()` derives them from `games` */
+  tasks?: Task[];
+  /** id of the material this level was generated from (design/DESIGN.md §4.2) */
+  fromMaterial?: string;
 }
 
 export interface Grading {
@@ -155,7 +309,43 @@ export interface SubjectProgress {
   bestExam?: number;
   /** opened chest indexes on the path (see gems.ts chestIndexes) */
   chests?: number[];
+  /** chapter boss record (boss.ts) */
+  boss?: BossRecord;
+  /** best run per level id (ghost.ts) */
+  ghost?: Record<string, GhostRecord>;
 }
+
+/** Chapter boss — one per topic (legacy `PROGRESS[sid].boss`). */
+export interface BossRecord {
+  done: boolean;
+  /** wins */
+  n: number;
+  /** YYYY-MM-DD of the last win */
+  at?: string;
+  /** best time in seconds */
+  best?: number;
+}
+
+/** One answer of a lesson run: `t` = ms since the first item, `correct`. */
+export interface GhostStep {
+  t: number;
+  correct: boolean;
+}
+/** Best run of a level (legacy `PROGRESS.ghost["sid:lid"]`). */
+export interface GhostRecord {
+  run: GhostStep[];
+  /** YYYY-MM-DD */
+  at: string;
+}
+
+export type AlbumRarity = "common" | "rare" | "epic";
+/** Collected flashcard (legacy `PROGRESS.album["sid:lid:idx"]`). */
+export interface AlbumEntry {
+  rarity: AlbumRarity;
+  /** YYYY-MM-DD */
+  at: string;
+}
+export type AlbumMap = Record<string, AlbumEntry>;
 
 export interface LevelProgress {
   done: boolean;
@@ -179,6 +369,21 @@ export interface UserStats {
   earlyBird: boolean;
   /** YYYY-MM-DD of the last day the daily-goal bonus was granted */
   goalBonusDay?: string;
+  /* ---- 2.0 counters (optional: older rows lack them; emptyStats() fills zeros) ---- */
+  /** flashcards collected in the album (album.ts) */
+  albumCount?: number;
+  /** best exam score in % */
+  bestExamPct?: number;
+  /** chapter bosses beaten (first wins) */
+  bosses?: number;
+  /** days the whole daily plan was completed */
+  planDays?: number;
+  /** topics with every level done */
+  subjectsDone?: number;
+  /** timed tasks (tf with `seconds`) finished without a mistake */
+  timedPerfect?: number;
+  /** tasks 2.0 solved correctly */
+  tasksDone?: number;
 }
 
 /** Streak / wallet / settings — one row per user (user_meta). */
@@ -222,6 +427,8 @@ export interface Quest {
   reward: number;
   done: boolean;
   claimed: boolean;
+  /** weekly mission (quests.ts weeklyQuestFor) — ids start with `w:` */
+  weekly?: boolean;
 }
 
 export interface Achievement {

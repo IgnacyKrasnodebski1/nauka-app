@@ -67,7 +67,7 @@ test("chests: indexes, openable, idempotent", () => {
   const p = { xp: 0, levels: { a: { done: true, best: 80, stars: 2, attempts: 1 }, b: { done: true, best: 80, stars: 2, attempts: 1 }, c: { done: true, best: 80, stars: 2, attempts: 1 } } } as never;
   assert.equal(chestOpenable(p, levels, 2), true);
   const o = openChest(p, 2)!;
-  assert.equal(o.gems, 20);
+  assert.equal(o.gems, 10); // legacy GEM.chest
   assert.equal(openChest(o.progress, 2), null);
   assert.equal(chestOpenable(o.progress, levels, 2), false);
   const m = addGems(emptyMeta(), 100);
@@ -131,6 +131,8 @@ test("daily: week strip and today xp", () => {
 
 test("theme helpers", () => {
   assert.equal(hueDeep("#ffffff", 0.5), "#808080");
-  assert.equal(hueFromColor("#2EB8FF").deep, "#1B8AC4");
-  assert.ok(cssVars().includes("--play-green:#58CC02") && cssVars().includes("--hard-edge:4px"));
+  assert.equal(hueFromColor("#22D3EE").deep, "#108CA1"); // curated cyan → tokens cyan-dark
+  assert.equal(hueFromColor("#22D3EE").on, "#04232B");
+  assert.equal(hueFromColor("#2EB8FF").deep, "#2184b8"); // legacy stored hue → computed edge
+  assert.ok(cssVars().includes("--play-green:#B4FF3A") && cssVars().includes("--hard-edge:4px") && cssVars().includes("--acid-dark:#7FC400"));
 });
