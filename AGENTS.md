@@ -1,59 +1,52 @@
 # AGENTS.md — kontekst projektu dla Codex
 
 ## Czym jest ten projekt
-**nauka-app** — wieloprzedmiotowa apka do nauki w stylu Duolingo (poziomy odblokowywane po kolei) + tryby: roladka (feed), fiszki, quiz, symulacja egzaminu. **Vanilla JS, bez frameworków, bez bundlera.** Działa offline, otwierana wprost z pliku.
+**Cramfox** (repo `nauka-app`) — apka do nauki w stylu Duolingo z lisem-maskotką. Użytkownik zakłada konto, startuje z pustą listą i **sam tworzy przedmioty z własnych materiałów** (zdjęcia stron, PDF, wklejony tekst) — backend z AI (Claude) zamienia je w poziomy, roladkę, fiszki, quizy i zadania. Tryby: ścieżka poziomów, fiszki, quiz, egzamin, powtórka SRS, plan do sprawdzianu, gamifikacja (seria, kamienie milowe, gemy, misje, boss — Szop Zapominalski).
 
-Powstała z prezentacji z zajęć. Przedmioty: Makro (polityka makroekonomiczna) i Krypto (blockchain/kryptowaluty).
+**Vanilla JS, bez frameworków i bundlera.** Buduje się do jednego pliku `build/nauka-all.html`, który Capacitor pakuje jako apkę iOS (`native/`).
 
 ## Struktura
 ```
-index.html      # wersja edytowalna — ładuje styles.css, engine.js, data/*.js przez <script>
-engine.js       # CAŁA logika: router, ekran wyboru, ścieżka poziomów, fiszki, quiz, egzamin
-styles.css      # style; motyw każdego przedmiotu przez zmienną CSS --accent / --accent2
-data/
-  makro.js      # przedmiot — robi window.SUBJECTS.push({...})
-  krypto.js     # przedmiot
-build.js        # `node build.js` → skleja jednoplikowe wersje do build/
-build/          # gotowe pliki jednoplikowe (na telefon / do odpalenia bez serwera)
-README.md       # pełny schemat danych + instrukcja dodawania przedmiotu
+cloud-config.js  # URL Supabase, publiczny klucz anon, URL API (wartości publiczne)
+cloud.js         # chmura bez UI: sesja, REST do Supabase, Storage, API (CapacitorHttp), cache, mapper, sanitizer, sync, generowanie
+engine.js        # silnik (jedno IIFE): router, Dziś, ścieżka, lekcja, zadania, fiszki, egzamin, gamifikacja, lis, szop
+cloud-ui.js      # UI chmury: start z konta, logowanie, karta „Konto”, dodawanie materiału, generowanie, „przedmiot gotowy”
+styles.css       # style (tokeny z design/tokens.css), bez gradientów i kół w tle
+index.html       # wersja dev — ładuje 4 skrypty przez <script src> (kolejność ma znaczenie)
+build.js         # `node build.js` → build/nauka-all.html (+ CSP z hashami skryptów)
+backend/         # migracje SQL do Supabase (wgrywane przez CLI)
+native/          # Capacitor iOS: `npm run sync` kopiuje build do Xcode
+design/          # handoff designu 2.0 (DESIGN.md, tokens.css, makiety)
+test/fixtures/   # tematy w formacie backendu do testów (w tym próby XSS)
+docs/            # BIBLIA.md = pełna dokumentacja projektu (czytaj przed większą zmianą); plan-wyklady.md = plan Etapu 2
 ```
+
+## Backend (istniejący, z gałęzi `origin/claude/peaceful-hamilton-jy11e3`)
+- **Supabase** `zhgxhdsnizujzygpcyfl` (eu-central-1): konta e-mail + hasło (bez potwierdzania maila), tabele `subjects`, `topics` (JSONB `TopicContent`), `materials`, `generations`, `profiles`, `usage`; bucket `materials` (`{uid}/{uuid}.ext`). Tabela `app_state` (postępy Cramfoxa jako jeden blob) i RPC `delete_my_account()` — z `backend/0004_cramfox.sql`.
+- **API** `https://nauka-jet.vercel.app`: `POST /api/generate` (synchronicznie ~2 min), `GET /api/me`. **API nie ma CORS** — na iOS wołamy je natywnie przez `Capacitor.Plugins.CapacitorHttp` (tylko `readTimeout`, bez `connectTimeout`!), w przeglądarce przez lokalne proxy.
+- Nowe konto: 30 dni planu Pro (trigger `handle_new_user`), potem free: 3 generacje/mies. Globalny bezpiecznik: 300 generacji/dobę.
 
 ## Jak to działa (ważne reguły)
-- Dane ładują się przez `<script src>` (NIE przez `fetch`), więc apka działa też z `file://` (bez serwera, bez CORS). **Nie zamieniaj na fetch/JSON.**
-- Każdy plik w `data/` zaczyna się od `window.SUBJECTS = window.SUBJECTS || [];` i `window.SUBJECTS.push({...})`.
-- Silnik (`engine.js`) jest jednym IIFE; czyta `window.SUBJECTS` na `DOMContentLoaded`.
-- Postępy (XP, gwiazdki, zaliczone poziomy) trzymane w `localStorage` przez bezpieczny wrapper `STORE` (łapie wyjątki na iOS file://). Klucz: `nauka_progress_v1`.
-
-## Kontrakt danych (NIE psuć)
-```js
-{
-  id, name, short, emoji, tagline,
-  accent, accent2,                       // kolory motywu
-  grading: { pass, examMin, scale:[[próg,"ocena"],...], failLabel },
-  info: `<div class="zbox">...HTML...</div>`,
-  levels: [
-    { id, title, emoji,
-      feed:[{title, body, real?, mnemo?}],   // mikro-dawki (HTML w body)
-      flashcards:[{t, d}],                    // termin / definicja
-      quiz:[{q, a:[...], c, e}]               // c = INDEKS poprawnej odpowiedzi (0=A)
-    }
-  ]
-}
-```
-Poziomy odblokowują się po kolei (quiz w lekcji ≥ 50% zalicza poziom). Zakładki Fiszki/Quiz/Egzamin działają na całym przedmiocie.
+- Kolejność skryptów: `cloud-config` → `cloud` (ustawia `window.NAUKA_UID`) → `engine` → `cloud-ui` (`window.NAUKA_BOOT` startuje silnik po wczytaniu przedmiotów z konta).
+- Postępy w localStorage **per konto**: `nauka_progress_v1:<uid>` i `nauka_meta_v1:<uid>`; synchronizowane do `app_state` (debounce, scalanie tak, żeby XP i seria nie spadały; nigdy push przed pierwszym pull na urządzeniu).
+- Przedmioty z konta: cache w IndexedDB (fallback localStorage), mapowane w `cloud.js → toEngine()`: przedmiot = przedmiot z bazy, poziomy = poziomy wszystkich jego tematów po kolei, id poziomu `t<8 znaków topicId>_<levelId>` (bez `:` — klucze SRS/album/override dzielą się na `:`), pierwszy poziom każdego kolejnego tematu ma `chapter:true` (odblokowany od razu).
+- **Każdy string treści z bazy przechodzi przez `clean()`** (sanitizer w `cloud.js`) — treść z AI trafia do `innerHTML` w WebView z mostkiem do natywnych pluginów. Nie omijaj tego. Nie usuwaj elementów z tablic quiz/feed/tasks (indeksy są kluczami postępów) — nieobsługiwane zadania dostają `type:'_skip'`.
+- Silnik wystawia `window.NaukaEngine` (helpery, `registerView`, `setSubjects`, `upsertSubject`) i woła `window.NAUKA_HOOKS` (`saved`, `settingsTop`, `profileSub`, `addPhoto`, `addFile`, `addText`).
 
 ## Workflow przy zmianach
-1. Edytuj `data/*.js` (treść), `engine.js` (logika) lub `styles.css` (wygląd).
-2. Po zmianie danych/silnika odpal `node build.js` (regeneruje `build/`).
-3. Sprawdź w przeglądarce `index.html` (dev) albo `build/nauka-all.html` (build).
-4. Test sanity (opcjonalnie): `npm i jsdom` i prosty skrypt klikający `.subjcard` → węzeł ścieżki → lekcja → egzamin; sprawdź brak błędów JS w `window.onerror`.
+1. Edytuj pliki źródłowe (nie `build/`).
+2. `node build.js`, potem `cd native && npm run sync` (iOS).
+3. Testy: jsdom z atrapą backendu (patrz README → Testy); symulator iOS na prawdziwym backendzie.
+4. Migracje: nowy plik `backend/000N_*.sql` (idempotentny), wgrywany przez Supabase CLI.
 
 ## Konwencje
-- Język UI: polski, luźny gen-z, ale treść merytoryczna ma być poprawna.
-- Dodając przedmiot: skopiuj `data/makro.js`, zmień `id` (unikalny, bez spacji) i treść, dopisz `<script src="data/twoj.js">` w `index.html`, odpal `node build.js`.
-- Indeks `c` w quizie liczony od 0. Zawsze dawaj pole `e` (wyjaśnienie).
+- Język UI: polski, rzeczowy i ciepły, bez młodzieżowego slangu (apka ma pasować 16-latkowi i studentowi). Zero emoji w UI.
+- Nowe pola danych opcjonalne; stare zapisy muszą dalej działać.
+- Indeks `c` w quizie liczony od 0; zawsze pole `e` (wyjaśnienie).
 
 ## Czego NIE robić
-- Nie dodawać frameworków/bundlerów (ma zostać jednoplikowo-odpalalne).
-- Nie używać `fetch` do danych.
-- Nie zmieniać klucza `localStorage` bez migracji (utrata postępów użytkownika).
+- Nie dodawać frameworków ani bundlera (jeden plik HTML dla Capacitora).
+- Nie zmieniać nazw kluczy localStorage bez migracji (utrata postępów).
+- Nie wstawiać treści z bazy do DOM bez `clean()` / `esc()`.
+- Nie ponawiać automatycznie `POST /api/generate` (każde wywołanie zjada limit użytkownika).
+- Nie wspominać w UI o płatnościach ani planie Pro (App Store 3.1.1) — zakupy w aplikacji dojdą osobno.

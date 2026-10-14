@@ -155,13 +155,13 @@ ghost:{ "<levelId>": [{t, correct}] }          // przebieg najlepszego podejści
 
 ## 5. Decyzje przed kodowaniem
 
-Te rzeczy wykraczają poza obecny model „vanilla JS z pliku, offline":
+Stan na wersję 3.0 (Cramfox):
 
-- **AI** — rozpoznawanie zdjęć (OCR), generowanie lekcji, „wyjaśnij inaczej" i rozpoznanie przedmiotu wymagają serwera z modelem. Bez tego rdzeń produktu nie działa.
-- **Backend i konta** — synchronizacja między urządzeniami, udostępnianie klasie, liga, znajomi.
-- **Użytkownicy poniżej 16 lat** — zgoda rodzica na przetwarzanie danych (RODO) i przemyślenie funkcji społecznościowych dla nieletnich.
+- **AI i backend — podjęte.** Supabase (konta e-mail + hasło, baza, Storage) i API na Vercelu (`/api/generate` → Claude). Klient: `cloud.js` + `cloud-ui.js`. Wbudowanych przedmiotów i katalogu nie ma — użytkownik startuje z pustym kontem.
+- **Wiek — na start 16+** (potwierdzenie przy rejestracji). Młodsi użytkownicy wymagają zgody rodzica (RODO) i przemyślenia funkcji społecznościowych — do decyzji później.
 - **Prawa autorskie** — zdjęcia podręczników do własnej nauki są OK; udostępnianie klasie obejmuje tylko wygenerowane pytania i fiszki, **nigdy skany stron**. Warto to potwierdzić z prawnikiem.
-- **Jakość treści** — AI się myli, dlatego każde pytanie ma źródło i ścieżkę poprawki. Katalog gotowych przedmiotów wymaga weryfikacji merytorycznej.
+- **Jakość treści** — AI się myli, dlatego każde pytanie ma źródło i ścieżkę poprawki.
+- **Otwarte:** zakupy w aplikacji (po 30 dniach próby plan free: 3 generacje/mies.), SMTP i reset hasła, streaming generowania („pierwsze pytania po kilkunastu sekundach” z §0), społeczność (liga, znajomi, udostępnianie).
 
 ---
 
@@ -180,9 +180,10 @@ Te rzeczy wykraczają poza obecny model „vanilla JS z pliku, offline":
 
 Kroki 1–8 da się zrobić w obecnej architekturze. Po każdym kroku: `node build.js` i test `build/nauka-all.html` na telefonie.
 
-## 7. Czego nie ruszać (dopóki nie zapadnie decyzja o backendzie)
+## 7. Czego nie ruszać
 
-- Ładowanie danych przez `<script src>`, nie `fetch`.
-- Klucz `localStorage` `nauka_progress_v1` bez migracji.
-- Brak frameworków i bundlerów.
-- Nowe pola w danych są opcjonalne — stare przedmioty działają bez zmian.
+- Brak frameworków i bundlerów — build to jeden plik HTML dla Capacitora.
+- Klucze `localStorage` `nauka_progress_v1:<uid>` / `nauka_meta_v1:<uid>` bez migracji.
+- Treść z bazy/AI zawsze przez sanitizer `clean()` z `cloud.js`, zanim trafi do DOM.
+- Nowe pola w danych są opcjonalne — stare tematy działają bez zmian.
+- Indeksy w `quiz`/`feed`/`tasks` są kluczami postępów — nie usuwaj elementów, oznaczaj je do pominięcia.
