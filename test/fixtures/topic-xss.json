@@ -1,0 +1,176 @@
+{
+ "name": "Test<img src=x onerror=\"window.__pwned=1\">",
+ "short": "X<img src=x onerror=\"window.__pwned=1\">",
+ "emoji": "🧪",
+ "tagline": "t<img src=x onerror=\"window.__pwned=1\">",
+ "accent": "javascript:alert(1)",
+ "accent2": "#fff",
+ "grading": {
+  "pass": 50,
+  "examMin": 5,
+  "scale": [
+   [
+    90,
+    "5<img src=x onerror=\"window.__pwned=1\">"
+   ],
+   [
+    50,
+    "3"
+   ]
+  ],
+  "failLabel": "2<img src=x onerror=\"window.__pwned=1\">"
+ },
+ "info": "<div class=\"zbox\" onclick=\"window.__pwned=1\"><h3>Info<img src=x onerror=\"window.__pwned=1\"></h3><script>window.__pwned=1</script><a href=\"javascript:window.__pwned=1\">link</a><svg onload=\"window.__pwned=1\"></svg></div><div class=\"zbox\"><h3>&lt;img src=x onerror=\"window.__pwned=1\"&gt;&lt;style&gt;body{display:none}&lt;/style&gt;</h3><p>x</p></div>",
+ "levels": [
+  {
+   "id": "l1",
+   "title": "Poziom<img src=x onerror=\"window.__pwned=1\">",
+   "emoji": "1",
+   "feed": [
+    {
+     "title": "F<img src=x onerror=\"window.__pwned=1\">",
+     "body": "<b>ok</b><img src=x onerror=\"window.__pwned=1\"><iframe src=\"javascript:window.__pwned=1\"></iframe>",
+     "real": "r<img src=x onerror=\"window.__pwned=1\">",
+     "mnemo": "m<img src=x onerror=\"window.__pwned=1\">"
+    }
+   ],
+   "flashcards": [
+    {
+     "t": "T<img src=x onerror=\"window.__pwned=1\">",
+     "d": "D<img src=x onerror=\"window.__pwned=1\">"
+    },
+    {
+     "t": "T2",
+     "d": "D2"
+    },
+    {
+     "t": "T3",
+     "d": "D3"
+    }
+   ],
+   "quiz": [
+    {
+     "q": "Q<img src=x onerror=\"window.__pwned=1\">",
+     "a": [
+      "A<img src=x onerror=\"window.__pwned=1\">",
+      "B",
+      "C",
+      "D"
+     ],
+     "c": 0,
+     "e": "E<img src=x onerror=\"window.__pwned=1\">",
+     "src": {
+      "material": "m<img src=x onerror=\"window.__pwned=1\">",
+      "page": 1,
+      "quote": "q<img src=x onerror=\"window.__pwned=1\">"
+     }
+    },
+    {
+     "q": "Q2",
+     "a": [
+      "A",
+      "B\" onfocus=\"window.__pwned=1\" autofocus x=\"",
+      "C"
+     ],
+     "c": 1,
+     "e": "e"
+    }
+   ],
+   "tasks": [
+    {
+     "type": "match",
+     "title": "xss-match",
+     "pairs": [
+      [
+       "<img src=x onerror=\"window.__pwned=1\">",
+       "r1"
+      ],
+      [
+       "&lt;img src=x onerror=\"window.__pwned=1\"&gt;",
+       "r2"
+      ],
+      [
+       "a\" onfocus=\"window.__pwned=1",
+       "r3"
+      ]
+     ]
+    },
+    {
+     "type": "chain",
+     "steps": [
+      "a\" onfocus=\"window.__pwned=1\" autofocus x=\"",
+      "b",
+      "c",
+      "d"
+     ],
+     "given": [
+      0
+     ],
+     "bank": [
+      "x\" onfocus=\"window.__pwned=1\" autofocus x=\""
+     ]
+    },
+    {
+     "type": "timeline",
+     "title": "T<img src=x onerror=\"window.__pwned=1\">",
+     "events": [
+      {
+       "label": "L<img src=x onerror=\"window.__pwned=1\">",
+       "year": "2020\" onfocus=\"window.__pwned=1\" autofocus x=\""
+      },
+      {
+       "label": "M",
+       "year": 2021
+      }
+     ]
+    },
+    {
+     "type": "hotspot",
+     "image": "<svg onload=\"window.__pwned=1\"></svg>",
+     "targets": [
+      {
+       "name": "n",
+       "x": 1,
+       "y": 1,
+       "r": 1
+      }
+     ]
+    },
+    {
+     "type": "tf",
+     "seconds": 30,
+     "statements": [
+      {
+       "s": "S<img src=x onerror=\"window.__pwned=1\">",
+       "v": true,
+       "e": "e<img src=x onerror=\"window.__pwned=1\">"
+      }
+     ]
+    },
+    {
+     "type": "typeterm",
+     "title": "xss-type",
+     "definition": "Def &lt;img src=x onerror=\"window.__pwned=1\"&gt;",
+     "answer": "don't <b>",
+     "accept": [
+      "dont"
+     ]
+    },
+    {
+     "type": "timeline",
+     "title": "xss-time",
+     "events": [
+      {
+       "year": 1900,
+       "label": "a\" onfocus=\"window.__pwned=1"
+      },
+      {
+       "year": 1950,
+       "label": "&lt;img src=x onerror=\"window.__pwned=1\"&gt;"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

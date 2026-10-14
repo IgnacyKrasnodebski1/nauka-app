@@ -2,20 +2,16 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>NAUKA 📚 — wieloprzedmiotowa apka do nauki</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Cramfox — nauka z Twoich materiałów</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div id="app"></div>
-<!-- DANE PRZEDMIOTÓW: każdy plik rejestruje się w window.SUBJECTS -->
-<script src="data/makro.js"></script>
-<script src="data/makrokolos.js"></script>
-<script src="data/krypto.js"></script>
-<script src="data/hiszpanski.js"></script>
-<script src="data/angielski.js"></script>
-<script src="data/psychologia.js"></script>
-<!-- SILNIK -->
+<!-- kolejność ma znaczenie: chmura ustawia konto (NAUKA_UID) przed silnikiem; UI chmury startuje silnik po wczytaniu przedmiotów -->
+<script src="cloud-config.js"></script>
+<script src="cloud.js"></script>
 <script src="engine.js"></script>
+<script src="cloud-ui.js"></script>
 </body>
 </html>

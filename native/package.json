@@ -1,0 +1,17 @@
+{
+  "name": "nauka-native",
+  "private": true,
+  "description": "Natywna skorupka iOS (Capacitor) dla build/nauka-all.html — silnik i dane zostają w katalogu nadrzędnym",
+  "scripts": {
+    "web": "node ../build.js && mkdir -p www && cp ../build/nauka-all.html www/index.html",
+    "sync": "npm run web && npx cap sync ios",
+    "open": "npx cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "8.5.2",
+    "@capacitor/ios": "8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.2"
+  }
+}

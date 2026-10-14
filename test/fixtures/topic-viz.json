@@ -1,0 +1,436 @@
+{
+ "name": "Wizualizacje — test",
+ "short": "Wizualizacje",
+ "tagline": "7 typów, XSS, emoji, długie teksty, złe wartości",
+ "lang": false,
+ "levels": [
+  {
+   "id": "l1",
+   "title": "Wizualizacje — wszystkie typy",
+   "feed": [
+    {
+     "title": "Droga do niepodległości",
+     "body": "<b>Niepodległość</b> Polska odzyskała po I wojnie światowej. <b>Pokój ryski</b> zamknął spory o wschodnią granicę.",
+     "real": "Kluczowe daty: 1914, 11 listopada 1918, 1920 i 1921.",
+     "viz": {
+      "type": "timeline",
+      "caption": "Najważniejsze daty<img src=x onerror=\"window.__pwned=1\">",
+      "items": [
+       {
+        "when": "1914",
+        "label": "Wybuch I wojny światowej"
+       },
+       {
+        "when": "11 listopada 1918",
+        "label": "Odzyskanie <b>niepodległości</b><img src=x onerror=\"window.__pwned=1\">"
+       },
+       {
+        "when": "1920",
+        "label": "Bitwa Warszawska"
+       },
+       {
+        "when": "1921",
+        "label": "Pokój ryski"
+       }
+      ]
+     }
+    },
+    {
+     "title": "Dwa systemy",
+     "body": "<b>Kapitalizm</b> opiera się na własności prywatnej, a <b>socjalizm</b> na własności wspólnej.",
+     "viz": {
+      "type": "compare",
+      "a": "Kapitalizm<img src=x onerror=\"window.__pwned=1\">",
+      "b": "Socjalizm\" onmouseover=\"window.__pwned=1",
+      "rows": [
+       {
+        "k": "Własność<script>window.__pwned=1</script>",
+        "a": "prywatna",
+        "b": "wspólna"
+       },
+       {
+        "k": "Ceny",
+        "a": "rynek",
+        "b": "plan centralny"
+       },
+       {
+        "k": "Cel",
+        "a": "zysk",
+        "b": "równość"
+       }
+      ],
+      "html": "<b onclick=1>x</b>"
+     }
+    },
+    {
+     "title": "Obieg wody",
+     "body": "<b>Obieg wody</b> to ciągły ruch wody między oceanem, atmosferą i lądem.",
+     "viz": {
+      "type": "cycle",
+      "caption": "Obieg wody w przyrodzie 🌍",
+      "steps": [
+       "Parowanie 🌊",
+       "Skraplanie ☁️",
+       "Opady 🌧",
+       "Spływ do oceanu"
+      ]
+     }
+    },
+    {
+     "title": "Inflacja",
+     "body": "Gdy rośnie <b>podaż pieniądza</b>, rosną ceny. To <b>inflacja</b>.",
+     "viz": {
+      "type": "flow",
+      "kind": "cause",
+      "steps": [
+       "Bank centralny drukuje pieniądz",
+       "Rośnie podaż pieniądza",
+       "Rosną ceny"
+      ]
+     }
+    },
+    {
+     "title": "Podział organizmów",
+     "body": "Organizmy dzielimy na <b>królestwa</b>. Najważniejsze to rośliny, zwierzęta i grzyby.",
+     "viz": {
+      "type": "tree",
+      "root": "Organizmy",
+      "groups": [
+       {
+        "name": "Rośliny",
+        "items": [
+         "mchy",
+         "paprocie",
+         "nasienne"
+        ]
+       },
+       {
+        "name": "Zwierzęta",
+        "items": [
+         "bezkręgowce",
+         "kręgowce"
+        ]
+       },
+       {
+        "name": "Grzyby",
+        "items": [
+         "Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi opis Bardzo długi o",
+         "drożdże"
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "title": "Ludność miast",
+     "body": "Największym miastem Polski jest <b>Warszawa</b> (1,86 mln), dalej Kraków (0,8 mln), Wrocław (0,67 mln), Łódź (0,66 mln) i Poznań (0,54 mln).",
+     "viz": {
+      "type": "bars",
+      "unit": "mln",
+      "caption": "Ludność miast",
+      "items": [
+       {
+        "label": "Warszawa",
+        "value": 1.86
+       },
+       {
+        "label": "Kraków",
+        "value": "0,8"
+       },
+       {
+        "label": "Wrocław",
+        "value": 0.67
+       },
+       {
+        "label": "Łódź",
+        "value": 0.66
+       },
+       {
+        "label": "Gdańsk",
+        "value": "abc"
+       },
+       {
+        "label": "Szczecin",
+        "value": -5
+       },
+       {
+        "label": "Poznań<img src=x onerror=\"window.__pwned=1\">",
+        "value": 0.54
+       }
+      ]
+     }
+    },
+    {
+     "title": "Polska w liczbach",
+     "body": "<b>Polska</b> ma 38 mln mieszkańców i 312 tys. km² powierzchni.",
+     "viz": {
+      "type": "numbers",
+      "items": [
+       {
+        "value": "38 mln",
+        "label": "mieszkańców"
+       },
+       {
+        "value": "312 tys. km²",
+        "label": "powierzchni"
+       },
+       {
+        "value": "16",
+        "label": "R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R R&D i B&R "
+       }
+      ],
+      "extra": {
+       "evil": "<img src=x onerror=\"window.__pwned=1\">"
+      }
+     }
+    },
+    {
+     "title": "Tylko schemat",
+     "body": "",
+     "viz": {
+      "type": "flow",
+      "steps": [
+       "Zbierz dane",
+       "Postaw hipotezę",
+       "Sprawdź ją doświadczeniem"
+      ]
+     }
+    }
+   ],
+   "flashcards": [
+    {
+     "t": "Niepodległość",
+     "d": "Polska odzyskała ją w 1918 roku."
+    },
+    {
+     "t": "Inflacja",
+     "d": "Wzrost ogólnego poziomu cen."
+    },
+    {
+     "t": "Obieg wody",
+     "d": "Ciągły ruch wody w przyrodzie."
+    }
+   ],
+   "quiz": [
+    {
+     "q": "Kiedy Polska odzyskała niepodległość?",
+     "a": [
+      "1914",
+      "1918",
+      "1920",
+      "1921"
+     ],
+     "c": 1,
+     "e": "11 listopada 1918."
+    },
+    {
+     "q": "Co powoduje inflację?",
+     "a": [
+      "spadek cen",
+      "wzrost podaży pieniądza",
+      "eksport",
+      "podatki"
+     ],
+     "c": 1,
+     "e": "Więcej pieniądza → wyższe ceny."
+    }
+   ],
+   "tasks": []
+  },
+  {
+   "id": "l2",
+   "title": "Złe wizualizacje",
+   "feed": [
+    {
+     "title": "Nieznany typ",
+     "body": "<b>Wykres kołowy</b> nie jest obsługiwany.",
+     "viz": {
+      "type": "pie",
+      "items": [
+       {
+        "label": "a",
+        "value": 1
+       },
+       {
+        "label": "b",
+        "value": 2
+       }
+      ]
+     }
+    },
+    {
+     "title": "Za mało punktów",
+     "body": "<b>Oś czasu</b> potrzebuje trzech punktów.",
+     "viz": {
+      "type": "timeline",
+      "items": [
+       {
+        "when": "1",
+        "label": "a"
+       },
+       {
+        "when": "2",
+        "label": "b"
+       }
+      ]
+     }
+    },
+    {
+     "title": "Same zera",
+     "body": "<b>Zerowe słupki</b> nic nie mówią.",
+     "viz": {
+      "type": "bars",
+      "unit": "%",
+      "items": [
+       {
+        "label": "a",
+        "value": 0
+       },
+       {
+        "label": "b",
+        "value": 0
+       }
+      ]
+     }
+    },
+    {
+     "title": "Złe liczby",
+     "body": "<b>Złe wartości</b> odpadają.",
+     "viz": {
+      "type": "bars",
+      "items": [
+       {
+        "label": "a",
+        "value": "abc"
+       },
+       {
+        "label": "b",
+        "value": -1
+       },
+       {
+        "label": "c",
+        "value": null
+       },
+       {
+        "label": "d",
+        "value": {
+         "x": 1
+        }
+       }
+      ]
+     }
+    },
+    {
+     "title": "Brak B",
+     "body": "<b>Porównanie</b> wymaga dwóch stron.",
+     "viz": {
+      "type": "compare",
+      "a": "A",
+      "rows": [
+       {
+        "k": "x",
+        "a": "1",
+        "b": "2"
+       },
+       {
+        "k": "y",
+        "a": "3",
+        "b": "4"
+       }
+      ]
+     }
+    },
+    {
+     "title": "Tekst zamiast obiektu",
+     "body": "<b>Napis</b> to nie wizualizacja.",
+     "viz": "{\"type\":\"cycle\"}"
+    },
+    {
+     "title": "Tablica",
+     "body": "<b>Tablica</b> to nie wizualizacja.",
+     "viz": [
+      {
+       "type": "cycle",
+       "steps": [
+        "a",
+        "b",
+        "c"
+       ]
+      }
+     ]
+    },
+    {
+     "title": "Jedna grupa",
+     "body": "<b>Drzewo</b> potrzebuje dwóch gałęzi.",
+     "viz": {
+      "type": "tree",
+      "root": "R",
+      "groups": [
+       {
+        "name": "g",
+        "items": [
+         "x"
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "title": "Liczba jako obiekt",
+     "body": "<b>Liczby</b> muszą być tekstem.",
+     "viz": {
+      "type": "numbers",
+      "items": [
+       {
+        "value": {
+         "a": 1
+        },
+        "label": "x"
+       }
+      ]
+     }
+    },
+    {
+     "title": "Pusty cykl",
+     "body": "<b>Cykl</b> z pustych kroków.",
+     "viz": {
+      "type": "cycle",
+      "steps": [
+       "",
+       "  ",
+       "🌍"
+      ]
+     }
+    }
+   ],
+   "flashcards": [
+    {
+     "t": "Oś czasu",
+     "d": "Daty po kolei."
+    },
+    {
+     "t": "Wykres kołowy",
+     "d": "Nieobsługiwany."
+    },
+    {
+     "t": "Porównanie",
+     "d": "Dwie strony."
+    }
+   ],
+   "quiz": [
+    {
+     "q": "Ile punktów potrzebuje oś czasu?",
+     "a": [
+      "1",
+      "2",
+      "3",
+      "10"
+     ],
+     "c": 2,
+     "e": "Co najmniej trzy."
+    }
+   ],
+   "tasks": []
+  }
+ ]
+}

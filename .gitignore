@@ -3,3 +3,4 @@ node_modules/
 deploy/
 .vercel
 .env*
+supabase/.temp/

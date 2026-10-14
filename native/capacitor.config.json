@@ -1,0 +1,11 @@
+{
+  "appId": "com.ignacykrasnodebski.nauka",
+  "appName": "Cramfox",
+  "webDir": "www",
+  "backgroundColor": "#0E0C1C",
+  "ios": {
+    "scrollEnabled": false,
+    "contentInset": "never",
+    "backgroundColor": "#0E0C1C"
+  }
+}
