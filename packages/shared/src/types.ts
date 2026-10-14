@@ -22,7 +22,60 @@ export interface FeedItem {
   real?: string;
   /** mnemonic */
   mnemo?: string;
+  /** optional structured visual shown under the dose (chat lesson); only in topics generated with `options.viz` */
+  viz?: Viz;
 }
+
+/* ---------------- dose visuals (VizSchema in schema.ts is the runtime contract) ---------------- */
+
+export const VIZ_TYPES = ["timeline", "compare", "cycle", "flow", "tree", "bars", "numbers"] as const;
+export type VizType = (typeof VIZ_TYPES)[number];
+
+/** Every branch may carry a short caption (≤120 chars). */
+interface VizBase {
+  caption?: string;
+}
+/** 3–7 dated events in order. */
+export interface VizTimeline extends VizBase {
+  type: "timeline";
+  items: { when: string; label: string }[];
+}
+/** Two things side by side: 2–5 rows of aspect `k` → value for `a` and `b`. */
+export interface VizCompare extends VizBase {
+  type: "compare";
+  a: string;
+  b: string;
+  rows: { k: string; a: string; b: string }[];
+}
+/** 3–6 steps that loop back to the first. */
+export interface VizCycle extends VizBase {
+  type: "cycle";
+  steps: string[];
+}
+/** 2–6 steps in a line: cause → effect chain or a process. */
+export interface VizFlow extends VizBase {
+  type: "flow";
+  kind: "cause" | "process";
+  steps: string[];
+}
+/** A root split into 2–4 groups of 1–5 items (classification). */
+export interface VizTree extends VizBase {
+  type: "tree";
+  root: string;
+  groups: { name: string; items: string[] }[];
+}
+/** 2–7 non-negative values in one unit. */
+export interface VizBars extends VizBase {
+  type: "bars";
+  unit: string;
+  items: { label: string; value: number }[];
+}
+/** 1–4 key numbers with labels (value is display text, e.g. "21%", "1789"). */
+export interface VizNumbers extends VizBase {
+  type: "numbers";
+  items: { value: string; label: string }[];
+}
+export type Viz = VizTimeline | VizCompare | VizCycle | VizFlow | VizTree | VizBars | VizNumbers;
 
 export interface Flashcard {
   /** term / front */
@@ -456,6 +509,11 @@ export interface GenerationOptions {
   lang?: boolean;
   /** UI/content language, default "pl" */
   locale?: "pl" | "en";
+  /**
+   * Client can render dose visuals (`FeedItem.viz`). Only then does the generator ask for them and shorten bodies;
+   * without it the prompt and output grammar are exactly the pre-viz ones (older clients keep full-text doses).
+   */
+  viz?: boolean;
 }
 
 export type Plan = "free" | "pro";

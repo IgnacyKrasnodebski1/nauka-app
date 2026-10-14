@@ -6,8 +6,17 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js", "default": "./dist/index.js" } },
-  "files": ["dist", "src"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
@@ -16,7 +25,11 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.125.0",
     "@nauka/shared": "*",
+    "fflate": "^0.8.3",
     "zod": "^4.1.0"
   },
-  "devDependencies": { "typescript": "^5.9.0", "@types/node": "^22.0.0" }
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  }
 }

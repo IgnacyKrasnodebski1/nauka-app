@@ -14,6 +14,11 @@ export function getClient(): Anthropic {
   return _client;
 }
 
+/** Tests only: swap the shared client for a mock (null restores lazy creation). Not exported from index. */
+export function setClientForTests(client: Anthropic | null): void {
+  _client = client;
+}
+
 /** Model used for generation & tutor. Override with RECALL_AI_MODEL (legacy alias NAUKA_AI_MODEL). */
 export function modelId(): string {
   return process.env.RECALL_AI_MODEL || process.env.NAUKA_AI_MODEL || "claude-opus-5";

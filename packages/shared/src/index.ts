@@ -4,6 +4,7 @@ export * from "./gamification.js";
 export * from "./srs.js";
 export * from "./plans.js";
 export * from "./prompts.js";
+export * from "./review.js";
 export * from "./finalize.js";
 export * from "./session.js";
 export * from "./theme.js";
@@ -19,6 +20,7 @@ export * from "./sfx.js";
 export * from "./mascot.js";
 export * from "./logo.js";
 export * from "./quiz-quality.js";
+export * from "./coverage.js";
 /* 2.0 */
 export * from "./tasks.js";
 export * from "./boss.js";

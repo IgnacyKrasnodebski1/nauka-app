@@ -220,7 +220,7 @@ create policy "usage read own" on public.usage for select using (user_id = auth.
 
 -- ---------- storage ----------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('materials', 'materials', false, 26214400, array['image/jpeg','image/png','image/webp','image/gif','application/pdf','text/plain','text/markdown'])
+values ('materials', 'materials', false, 52428800, array['image/jpeg','image/png','image/webp','image/gif','application/pdf','text/plain','text/markdown','application/vnd.openxmlformats-officedocument.presentationml.presentation'])
 on conflict (id) do update set file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists "materials storage own" on storage.objects;

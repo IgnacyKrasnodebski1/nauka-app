@@ -1,15 +1,65 @@
 import { z } from "zod";
-import { AI_TASK_TYPES } from "./types.js";
+import { AI_TASK_TYPES, VIZ_TYPES } from "./types.js";
 
 /** Runtime schemas. Used to validate AI output, imports and DB reads. */
 
 export const StageSchema = z.enum(["podstawowa", "liceum", "studia", "inne"]);
+
+/* ---------------- dose visuals (types.ts `Viz`) ---------------- */
+
+/** Length limits of every viz string — `parseViz()` truncates to these BEFORE validating (a long label must not drop the visual). */
+export const VIZ_LIMITS = {
+  caption: 120,
+  timeline: { when: 24, label: 80 },
+  compare: { a: 40, b: 40, k: 40, cell: 80 },
+  step: 60,
+  tree: { root: 60, name: 40, item: 50 },
+  bars: { unit: 12, label: 40 },
+  numbers: { value: 16, label: 80 },
+} as const;
+const vs = (max: number) => z.string().min(1).max(max);
+const vizBase = { caption: z.string().max(VIZ_LIMITS.caption).optional() };
+
+export const VizTimelineSchema = z.object({
+  type: z.literal("timeline"),
+  ...vizBase,
+  items: z.array(z.object({ when: vs(VIZ_LIMITS.timeline.when), label: vs(VIZ_LIMITS.timeline.label) })).min(3).max(7),
+});
+export const VizCompareSchema = z.object({
+  type: z.literal("compare"),
+  ...vizBase,
+  a: vs(VIZ_LIMITS.compare.a),
+  b: vs(VIZ_LIMITS.compare.b),
+  rows: z.array(z.object({ k: vs(VIZ_LIMITS.compare.k), a: vs(VIZ_LIMITS.compare.cell), b: vs(VIZ_LIMITS.compare.cell) })).min(2).max(5),
+});
+export const VizCycleSchema = z.object({ type: z.literal("cycle"), ...vizBase, steps: z.array(vs(VIZ_LIMITS.step)).min(3).max(6) });
+export const VizFlowSchema = z.object({ type: z.literal("flow"), ...vizBase, kind: z.enum(["cause", "process"]), steps: z.array(vs(VIZ_LIMITS.step)).min(2).max(6) });
+export const VizTreeSchema = z.object({
+  type: z.literal("tree"),
+  ...vizBase,
+  root: vs(VIZ_LIMITS.tree.root),
+  groups: z.array(z.object({ name: vs(VIZ_LIMITS.tree.name), items: z.array(vs(VIZ_LIMITS.tree.item)).min(1).max(5) })).min(2).max(4),
+});
+export const VizBarsSchema = z.object({
+  type: z.literal("bars"),
+  ...vizBase,
+  unit: z.string().max(VIZ_LIMITS.bars.unit),
+  items: z.array(z.object({ label: vs(VIZ_LIMITS.bars.label), value: z.number().min(0).refine(Number.isFinite, "finite") })).min(2).max(7),
+});
+export const VizNumbersSchema = z.object({
+  type: z.literal("numbers"),
+  ...vizBase,
+  items: z.array(z.object({ value: vs(VIZ_LIMITS.numbers.value), label: vs(VIZ_LIMITS.numbers.label) })).min(1).max(4),
+});
+/** Stored visual of one feed dose: discriminated union on `type`; unknown keys are stripped. */
+export const VizSchema = z.discriminatedUnion("type", [VizTimelineSchema, VizCompareSchema, VizCycleSchema, VizFlowSchema, VizTreeSchema, VizBarsSchema, VizNumbersSchema]);
 
 export const FeedItemSchema = z.object({
   title: z.string().min(1).max(200),
   body: z.string().min(1).max(4000),
   real: z.string().max(1000).optional(),
   mnemo: z.string().max(1000).optional(),
+  viz: VizSchema.optional(),
 });
 
 export const FlashcardSchema = z.object({
@@ -115,7 +165,7 @@ export const TimelineTaskSchema = z.object({
 });
 
 export const FindErrorTaskSchema = z
-  .object({ type: z.literal("finderror"), ...taskBase, sentences: z.array(str(400)).min(2).max(6), wrong: idx, fix: str(200) })
+  .object({ type: z.literal("finderror"), ...taskBase, sentences: z.array(str(400)).min(2).max(6), wrong: idx, fix: str(400) })
   .refine((v) => v.wrong < v.sentences.length, { message: "wrong must index into sentences", path: ["wrong"] });
 
 export const ThesisTaskSchema = z
@@ -280,12 +330,12 @@ export const GenTaskSchema = z.object({
   items: z.array(z.string()),
   /** sort: 2–4 buckets with items */
   buckets: z.array(z.object({ name: z.string(), items: z.array(z.string()) })),
-  /** tf: statements; seconds = 0 (untimed) or 30–90 */
+  /** tf: statements; seconds = 0 (untimed) or 45–60 (the prompt's range; finalize accepts 10–600) */
   seconds: z.number(),
   statements: z.array(z.object({ s: z.string(), v: z.boolean(), e: z.string() })),
   /** timeline: events with years */
   events: z.array(z.object({ label: z.string(), year: z.number() })),
-  /** finderror: sentences, wrong = index of the false one, fix = the correct word/phrase */
+  /** finderror: sentences, wrong = index of the false one, fix = the corrected sentence (older output: the correct word/phrase) */
   sentences: z.array(z.string()),
   wrong: z.number(),
   fix: z.string(),
@@ -333,6 +383,18 @@ const GenQuizSchema = z.object({ q: z.string(), a: z.array(z.string()), c: z.num
 const GenFeedSchema = z.object({ title: z.string(), body: z.string(), real: z.string(), mnemo: z.string() });
 const GenCardSchema = z.object({ t: z.string(), d: z.string() });
 
+/** `viz_type` values in the viz-mode grammar ("none" = no visual for this dose). */
+export const VIZ_GEN_TYPES = ["none", ...VIZ_TYPES] as const;
+/**
+ * Feed dose in the viz-mode grammar (only when `options.viz`): `viz` is a JSON STRING with the branch fields
+ * without `type` ("" when none) — a nested union per dose would blow up the structured-output grammar.
+ * Parsed and validated by `parseViz()` in finalize.
+ */
+const GenFeedVizSchema = GenFeedSchema.extend({ viz_type: z.enum(VIZ_GEN_TYPES), viz: z.string() });
+/** Generated dose after the level call: viz fields present only in viz mode. */
+const GenFeedOutSchema = GenFeedSchema.extend({ viz_type: z.enum(VIZ_GEN_TYPES).optional(), viz: z.string().optional() });
+export type GenFeed = z.infer<typeof GenFeedOutSchema>;
+
 /**
  * Schema for what the AI returns (whole topic). Kept slightly simpler than TopicContentSchema so the
  * structured-output grammar stays small; `finalizeGenerated()` fills the rest.
@@ -349,7 +411,7 @@ export const GeneratedTopicSchema = z.object({
       title: z.string(),
       emoji: z.string(),
       summary: z.string(),
-      feed: z.array(GenFeedSchema),
+      feed: z.array(GenFeedOutSchema),
       flashcards: z.array(GenCardSchema),
       quiz: z.array(z.object({ q: z.string(), a: z.array(z.string()), c: z.number(), e: z.string(), src_page: z.number().optional(), src_quote: z.string().optional() })),
       games: z.array(GenGameSchema),
@@ -396,15 +458,30 @@ export type Outline = z.infer<typeof OutlineSchema>;
 
 /** Phase 2 of generation: content of ONE level (generated in parallel per level). */
 export const LevelGenSchema = z.object({
-  feed: z.array(GenFeedSchema),
+  feed: z.array(GenFeedOutSchema),
   flashcards: z.array(GenCardSchema),
   quiz: z.array(GenQuizSchema),
   games: z.array(GenGameSchema),
   tasks: z.array(GenTaskSchema).optional(),
 });
 export type LevelGen = z.infer<typeof LevelGenSchema>;
-/** Core level content without tasks — used as the structured-output format of the level call. */
-export const LevelCoreGenSchema = LevelGenSchema.omit({ tasks: true });
+/** Core level content without tasks — used as the structured-output format of the level call (pre-viz grammar, unchanged). */
+export const LevelCoreGenSchema = z.object({
+  feed: z.array(GenFeedSchema),
+  flashcards: z.array(GenCardSchema),
+  quiz: z.array(GenQuizSchema),
+  games: z.array(GenGameSchema),
+});
+/** Same as LevelCoreGenSchema plus `viz_type` / `viz` (JSON string) on every dose — the format when `options.viz`. */
+export const LevelCoreGenVizSchema = LevelCoreGenSchema.extend({ feed: z.array(GenFeedVizSchema) });
+/**
+ * Parser for viz-mode level output read from raw text (no grammar, e.g. the fallback when the grammar is rejected):
+ * a dose without `viz_type` / `viz`, or with a value outside the enum, keeps the dose and just has no visual —
+ * `parseViz()` validates whatever is there. Never used as an output format.
+ */
+export const LevelCoreGenVizLooseSchema = LevelCoreGenSchema.extend({
+  feed: z.array(GenFeedSchema.extend({ viz_type: z.enum(VIZ_GEN_TYPES).optional().catch(undefined), viz: z.string().optional().catch(undefined) })),
+});
 
 export const GenerationOptionsSchema = z.object({
   stage: StageSchema,
@@ -414,4 +491,6 @@ export const GenerationOptionsSchema = z.object({
   levels: z.number().int().min(1).max(8).optional(),
   lang: z.boolean().optional(),
   locale: z.enum(["pl", "en"]).optional(),
+  /** client renders dose visuals — see GenerationOptions.viz */
+  viz: z.boolean().optional(),
 });

@@ -1,14 +1,21 @@
 import { z } from "zod";
 import { GenerationOptionsSchema, PLANS, TopicContentSchema } from "@nauka/shared";
-import { generateTopic, GenerationError } from "@/lib/ai";
+import { generateTopic, GenerationError, intakeMaterials, type IntakeFailure, type IntakeRow } from "@/lib/ai";
 import { getUserFromRequest, jsonError, NO_SUPABASE } from "@/lib/auth";
 import { hasServiceRole, hasSupabaseEnv } from "@/lib/env";
-import { getPlan, reserveGeneration } from "@/lib/plan";
+import { getPlan, getUsage, reserveGeneration } from "@/lib/plan";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { rowToTopic, TOPIC_SELECT, type TopicRow } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
+
+/** Cap on all materials of one generation together (they are held in memory and uploaded to the Files API). */
+const MAX_TOTAL_MATERIALS_MB = 150;
+/** Mirrors the per-account daily cap inside `increment_usage` (backend/0004_cramfox.sql); used only by the read-only pre-check. */
+const DAILY_GENERATIONS_PER_USER = 20;
+/** What `increment_usage` reports (minus 1) when that daily cap is hit; Cramfox reads `used: 999999` as the daily limit. */
+const DAILY_CAP_SENTINEL = 999_999;
 
 const BodySchema = z
   .object({
@@ -23,13 +30,15 @@ const BodySchema = z
     if (mode === "prompt" && !b.options.hint?.trim()) ctx.addIssue({ code: "custom", message: "Tryb „prompt” wymaga options.hint (temat)." });
   });
 
-interface MaterialRow {
-  id: string;
-  storage_path: string;
-  mime: string;
-  size_bytes: number;
-  name: string | null;
-}
+type MaterialRow = IntakeRow;
+
+const limitError = (used: number, limit: number): IntakeFailure => ({
+  ok: false,
+  status: 402,
+  code: "limit_reached",
+  message: `Wykorzystano ${used}/${limit} generacji w tym miesiącu`,
+  extra: { used, limit },
+});
 
 export async function POST(req: Request) {
   if (!hasSupabaseEnv()) return jsonError(NO_SUPABASE, 503, { code: "no_config" });
@@ -62,18 +71,45 @@ export async function POST(req: Request) {
     if (error) return jsonError(error.message, 500);
     materials = (data ?? []) as MaterialRow[];
     if (materials.length !== body.materialIds.length) return jsonError("Część materiałów nie istnieje albo nie należy do Ciebie", 400, { code: "bad_materials" });
+    // early, cheap checks on the sizes the client declared; intake re-checks the real sizes while downloading
     const tooBig = materials.find((m) => m.size_bytes > limits.maxFileMb * 1024 * 1024);
-    if (tooBig) return jsonError(`Plik „${tooBig.name ?? tooBig.id}” przekracza ${limits.maxFileMb} MB`, 400, { code: "file_too_big" });
+    if (tooBig) return jsonError(`Plik „${tooBig.name ?? tooBig.id}” przekracza ${limits.maxFileMb} MB`, 400, { code: "file_too_big", name: tooBig.name ?? undefined, maxMb: limits.maxFileMb });
+    const totalBytes = materials.reduce((sum, m) => sum + (Number(m.size_bytes) || 0), 0);
+    if (totalBytes > MAX_TOTAL_MATERIALS_MB * 1024 * 1024)
+      return jsonError(`Materiały do jednego tematu mogą mieć razem najwyżej ${MAX_TOTAL_MATERIALS_MB} MB (teraz ${Math.ceil(totalBytes / (1024 * 1024))} MB). Podziel je na kilka tematów.`, 400, { code: "too_much_material", maxMb: MAX_TOTAL_MATERIALS_MB });
   }
 
-  // monthly quota (atomic)
-  let reserved: Awaited<ReturnType<typeof reserveGeneration>>;
-  try {
-    reserved = await reserveGeneration(ctx.user.id, plan);
-  } catch (e) {
-    return jsonError((e as Error).message, 500);
-  }
-  if (!reserved.ok) return jsonError(`Wykorzystano ${reserved.used - 1}/${reserved.limit} generacji w tym miesiącu`, 402, { code: "limit_reached", used: reserved.used - 1, limit: reserved.limit });
+  // MIME allow-list → read-only quota pre-check → download (real sizes) → PPTX unpacking → text budget → charge.
+  // A request that fails because of the materials themselves is never charged (see docs/API.md).
+  const intake = await intakeMaterials(materials, {
+    maxFileMb: limits.maxFileMb,
+    maxTotalMb: MAX_TOTAL_MATERIALS_MB,
+    pastedChars: mode === "materials" ? (body.text?.trim().length ?? 0) : 0,
+    precheck: async () => {
+      const usage = await getUsage(ctx.supabase, ctx.user.id);
+      if (usage.generations >= limits.generationsPerMonth) return limitError(usage.generations, limits.generationsPerMonth);
+      const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+      const { count } = await admin.from("generations").select("id", { count: "exact", head: true }).eq("owner_id", ctx.user.id).gt("created_at", since);
+      if ((count ?? 0) >= DAILY_GENERATIONS_PER_USER) return limitError(DAILY_CAP_SENTINEL, limits.generationsPerMonth);
+      return null;
+    },
+    download: async (m) => {
+      const { data, error } = await admin.storage.from("materials").download(m.storage_path);
+      if (error || !data) throw new Error(`Nie mogę pobrać „${m.name ?? m.id}”: ${error?.message ?? "brak pliku"}`);
+      return new Uint8Array(await data.arrayBuffer());
+    },
+    // monthly quota (atomic) — the charge
+    reserve: async () => {
+      try {
+        const r = await reserveGeneration(ctx.user.id, plan);
+        return r.ok ? { ok: true as const, value: r } : limitError(r.used - 1, r.limit);
+      } catch (e) {
+        return { ok: false as const, status: 500, code: "reserve_failed", message: (e as Error).message };
+      }
+    },
+  });
+  if (!intake.ok) return jsonError(intake.message, intake.status, { code: intake.code, ...intake.extra });
+  if (intake.stats.decks) console.info("[generate] pptx", ctx.user.id, intake.stats);
 
   const options = { ...body.options, mode, subjectName: body.options.subjectName ?? subject.name };
   const { data: gen, error: genErr } = await admin
@@ -85,14 +121,7 @@ export async function POST(req: Request) {
   const generationId = (gen as { id: string }).id;
 
   try {
-    const files = await Promise.all(
-      materials.map(async (m) => {
-        const { data, error } = await admin.storage.from("materials").download(m.storage_path);
-        if (error || !data) throw new Error(`Nie mogę pobrać „${m.name ?? m.id}”: ${error?.message ?? "brak pliku"}`);
-        return { mime: m.mime, data: Buffer.from(await data.arrayBuffer()), name: m.name ?? undefined };
-      }),
-    );
-    const out = await generateTopic({ materials: files, text: mode === "materials" ? body.text : undefined, options });
+    const out = await generateTopic({ materials: intake.materials, text: mode === "materials" ? body.text : undefined, options, decks: intake.stats.decks });
     const content = TopicContentSchema.parse(out.content);
     if (out.demo && !content.tagline.includes("DEMO")) content.tagline = `DEMO · ${content.tagline}`.slice(0, 300);
 
@@ -117,7 +146,7 @@ export async function POST(req: Request) {
     console.error("[generate] failed", generationId, msg);
     await admin.from("generations").update({ status: "failed", error: msg.slice(0, 2000), finished_at: new Date().toISOString() }).eq("id", generationId);
     // usage was already incremented — intentionally not decremented (see docs/API.md)
-    return jsonError(msg, code === "no_input" ? 400 : 500, { code, generationId });
+    return jsonError(msg, code === "no_input" || code === "too_long" ? 400 : 500, { code, generationId });
   }
 }
 

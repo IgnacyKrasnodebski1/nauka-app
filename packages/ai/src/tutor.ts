@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { TUTOR_SYSTEM_PROMPT, type TopicContent } from "@nauka/shared";
+import { TUTOR_SYSTEM_PROMPT, vizText, type TopicContent } from "@nauka/shared";
 import { aiConfigured, getClient, modelId } from "./client.js";
 
 export interface TutorInput {
@@ -17,7 +17,8 @@ function strip(html: string): string {
 export function tutorContext(subject: TutorInput["subject"], levelId?: string): string {
   const level = subject.levels.find((l) => l.id === levelId) ?? subject.levels[0];
   if (!level) return `Przedmiot: ${subject.name}`;
-  const feed = level.feed.map((f) => `- ${f.title}: ${strip(f.body)}`).join("\n");
+  // a dose with a visual may keep its details (stages, comparison rows) only in the visual
+  const feed = level.feed.map((f) => `- ${f.title}: ${strip(f.body)}${f.viz ? ` [${vizText(f.viz)}]` : ""}`).join("\n");
   const cards = level.flashcards.map((c) => `- ${c.t}: ${strip(c.d)}`).join("\n");
   return `Przedmiot: ${subject.name}\nPoziom: ${level.title}\n\nMateriał:\n${feed}\n\nPojęcia:\n${cards}`.slice(0, 12000);
 }

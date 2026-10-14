@@ -33,7 +33,7 @@ Zostało: merge do `main`, Google OAuth (1.4), przełączenie Stripe z test na l
 5. Authentication → URL Configuration:
    - Site URL: `https://twoja-domena.pl`
    - Redirect URLs: `https://twoja-domena.pl/auth/callback`, `http://localhost:3000/auth/callback`, `recall://auth/callback`, `exp://**`
-6. Storage: bucket `materials` tworzy migracja (prywatny, 25 MB, tylko obrazy/PDF/txt).
+6. Storage: bucket `materials` tworzy migracja (prywatny, 50 MB (maksimum darmowego planu Supabase), tylko obrazy/PDF/txt).
 7. Settings → API → skopiuj `anon` i `service_role` (do env Vercela, pkt 4).
 
 ## 2. Anthropic (AI)

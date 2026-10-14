@@ -1,8 +1,9 @@
-import { GenTaskSchema, TopicContentSchema, TaskSchema, type GeneratedTopic, type GenGame, type GenTask } from "./schema.js";
-import type { MiniGame, QuizQuestion, Task, TaskSource, TopicContent, Stage } from "./types.js";
+import { GenTaskSchema, TopicContentSchema, TaskSchema, VizSchema, VIZ_LIMITS, type GeneratedTopic, type GenFeed, type GenGame, type GenTask } from "./schema.js";
+import { VIZ_TYPES, type FeedItem, type MiniGame, type QuizQuestion, type Task, type TaskSource, type TopicContent, type Stage, type Viz, type VizType } from "./types.js";
+import { plainText } from "./review.js";
 
 import { subjectHue } from "./theme.js";
-import { shuffleAnswers } from "./quiz-quality.js";
+import { contentStems, resolveOptionLetters, shuffleAnswers, tidyPunctuation } from "./quiz-quality.js";
 
 /**
  * Subject/topic palette: [accent, accent2].
@@ -100,8 +101,34 @@ export function expandGenTask(c: { type: GenTask["type"]; title: string; e: stri
   return res.success ? res.data : null;
 }
 
+/** Leading enumerator of an order item ("R0 ", "1. ", "Etap 2:", "B)") — it gives the order away. */
+const ENUMERATOR = /^\s*(?:(?:etap|krok|faza|step)\s*\d+|[A-Z]?\d{1,2}|[A-Ha-h])\s*(?:[.):\-–—]\s*|\s+)(?=\S)/iu;
+
+/**
+ * Order items that all start with an enumerator ("R0 Refuse", "R3 Reuse"…) are solvable by sorting the numbers:
+ * strip the enumerators. null = an item would be left empty (the task is dropped).
+ */
+export function stripOrderEnumerators(items: string[]): string[] | null {
+  if (items.length < 2 || !items.every((x) => ENUMERATOR.test(x))) return items;
+  const out = items.map((x) => x.replace(ENUMERATOR, "").trim());
+  return out.every(Boolean) ? out : null;
+}
+
+/** Card / statement explanation too short to say why ("Model nordycki.", "To wymóg minimalny.") — better none than an empty line. */
+const thinNote = (e: string | undefined) => (e && contentStems(e).length >= 3 ? e : undefined);
+
+/** A swipe card's `sub` that names a category ("Szwecja" / "model nordycki" for the bucket "Model nordycki") gives the answer away. */
+function subNamesCategory(sub: string | undefined, categories: string[]): boolean {
+  if (!sub) return false;
+  const st = new Set(contentStems(sub).filter((w) => w.length >= 4));
+  return categories.some((c) => {
+    const cs = contentStems(c).filter((w) => w.length >= 4);
+    return cs.length > 0 && cs.every((w) => st.has(w));
+  });
+}
+
 export function convertTask(g: GenTask, materialId?: string): Task | null {
-  const base = { title: opt(g.title), e: opt(g.e), src: sourceFrom(g.src_quote, g.src_page, materialId) };
+  const base = { title: opt(g.title), e: opt(g.e) ? tidyPunctuation(g.e.trim()) : undefined, src: sourceFrom(g.src_quote, g.src_page, materialId) };
   let t: Task | null = null;
   switch (g.type) {
     case "match": {
@@ -120,9 +147,12 @@ export function convertTask(g: GenTask, materialId?: string): Task | null {
       t = { type: "fill", ...base, text, blanks, bank, hint: opt(g.hint) };
       break;
     }
-    case "order":
-      t = { type: "order", ...base, items: clean(g.items.length ? g.items : g.steps).slice(0, 8) };
+    case "order": {
+      const items = stripOrderEnumerators(clean(g.items.length ? g.items : g.steps).slice(0, 8));
+      if (!items) return null;
+      t = { type: "order", ...base, items };
       break;
+    }
     case "sort":
       t = { type: "sort", ...base, buckets: g.buckets.map((b) => ({ name: (b.name ?? "").trim(), items: clean(b.items).slice(0, 8) })).filter((b) => b.name && b.items.length).slice(0, 4) };
       break;
@@ -131,7 +161,7 @@ export function convertTask(g: GenTask, materialId?: string): Task | null {
         type: "tf",
         ...base,
         seconds: g.seconds >= 10 ? Math.min(600, Math.round(g.seconds)) : undefined,
-        statements: g.statements.filter((s) => s.s?.trim()).slice(0, 15).map((s) => ({ s: s.s.trim(), v: !!s.v, e: opt(s.e) })),
+        statements: g.statements.filter((s) => s.s?.trim()).slice(0, 15).map((s) => ({ s: s.s.trim(), v: !!s.v, e: thinNote(opt(s.e)) })),
       };
       break;
     case "timeline":
@@ -140,16 +170,16 @@ export function convertTask(g: GenTask, materialId?: string): Task | null {
     case "finderror":
       t = { type: "finderror", ...base, sentences: clean(g.sentences).slice(0, 6), wrong: g.wrong, fix: (g.fix ?? "").trim() };
       break;
-    case "thesis":
-      t = {
-        type: "thesis",
-        ...base,
-        thesis: (g.thesis ?? "").trim(),
-        q: opt(g.q),
-        options: g.options.filter((o) => o.name?.trim()).slice(0, 6).map((o) => ({ name: o.name.trim(), sub: opt(o.sub) })),
-        c: g.c,
-      };
+    case "thesis": {
+      const thesis = (g.thesis ?? "").trim();
+      let options: { name: string; sub?: string }[] = g.options.filter((o) => o.name?.trim()).slice(0, 6).map((o) => ({ name: o.name.trim(), sub: opt(o.sub) }));
+      // the correct option's sub restating the thesis ("małe państwo, deregulacja" for "Państwo ma być jak najmniejsze") is a giveaway: drop every sub
+      const tst = new Set(contentStems(thesis));
+      const echo = (sub: string | undefined) => (sub ? contentStems(sub).filter((w) => tst.has(w)).length : 0);
+      if (options[g.c] && echo(options[g.c]!.sub) >= 1 && options.every((o, i) => i === g.c || echo(o.sub) === 0)) options = options.map((o) => ({ name: o.name }));
+      t = { type: "thesis", ...base, thesis, q: opt(g.q), options, c: g.c };
       break;
+    }
     case "chain": {
       const steps = clean(g.steps).slice(0, 8);
       const given = [...new Set(g.given.filter((i) => Number.isInteger(i) && i >= 0 && i < steps.length))];
@@ -159,16 +189,23 @@ export function convertTask(g: GenTask, materialId?: string): Task | null {
     case "scenario":
       t = { type: "scenario", ...base, scene: (g.scene ?? "").trim(), q: (g.q ?? "").trim(), a: g.a.map((s) => (s ?? "").trim()).slice(0, 5), c: g.c };
       if (t.a.some((s) => !s)) return null;
+      if (t.e) t.e = resolveOptionLetters(t.e, t.a);
       break;
-    case "swipe":
+    case "swipe": {
+      const left = (g.left ?? "").trim();
+      const right = (g.right ?? "").trim();
       t = {
         type: "swipe",
         ...base,
-        left: (g.left ?? "").trim(),
-        right: (g.right ?? "").trim(),
-        cards: g.cards.filter((c) => c.front?.trim() && (c.side === "left" || c.side === "right")).slice(0, 12).map((c) => ({ front: c.front.trim(), sub: opt(c.sub), side: c.side, e: opt(c.e) })),
+        left,
+        right,
+        cards: g.cards
+          .filter((c) => c.front?.trim() && (c.side === "left" || c.side === "right"))
+          .slice(0, 12)
+          .map((c) => ({ front: c.front.trim(), sub: subNamesCategory(opt(c.sub), [left, right]) ? undefined : opt(c.sub), side: c.side, e: thinNote(opt(c.e)) })),
       };
       break;
+    }
     case "typeterm":
       t = { type: "typeterm", ...base, definition: (g.definition ?? "").trim(), answer: (g.answer ?? "").trim(), accept: clean(g.accept).slice(0, 8), typo: 1 };
       if (!t.accept!.length) delete t.accept;
@@ -180,10 +217,282 @@ export function convertTask(g: GenTask, materialId?: string): Task | null {
   return r.success ? (r.data as Task) : null;
 }
 
+/* ---------------- dose visuals: parse, sanitize, ground, cap ---------------- */
+
+/** Why visuals were dropped while finalizing (generation quality stats). */
+export interface VizDropStats {
+  /** not JSON / not an object / unknown type / wrong shape or counts / bad numbers */
+  schema: number;
+  /** labels not found in the level, or numbers / dates not in the dose's body or real */
+  grounding: number;
+  /** over the per-level cap of ceil(feed / 2) */
+  cap: number;
+}
+
+export type ParseVizResult = { viz: Viz; drop?: undefined } | { viz?: undefined; drop?: "schema" | "grounding" };
+
+const EMOJI = /[\p{Extended_Pictographic}\u{1F1E6}-\u{1F1FF}\u{FE0F}\u{200D}]/gu;
+
+/** Plain, single-line, length-capped viz string ("" when not a string/number). Tags and stray brackets removed. */
+function vtext(v: unknown, max: number): string {
+  if (typeof v === "number" && Number.isFinite(v)) v = String(v);
+  if (typeof v !== "string") return "";
+  let t = plainText(v).replace(/[<>]/g, "").replace(EMOJI, "").replace(/\s+/g, " ").trim();
+  // cut by code points: a cut through a surrogate pair would leave a lone surrogate, which jsonb rejects
+  if (t.length > max) t = `${[...t].slice(0, max - 1).join("").slice(0, max - 1).replace(/[\uD800-\uDBFF]$/, "").trimEnd()}…`;
+  return t;
+}
+const arr = (v: unknown): unknown[] => (Array.isArray(v) ? v : []);
+const rec = (v: unknown): Record<string, unknown> => (v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {});
+/** Bars value: a finite number ≥ 0 (a numeric string such as "12,5" is accepted); anything else → NaN (fails the schema). */
+function vnum(v: unknown): number {
+  if (typeof v === "number") return v;
+  if (typeof v === "string" && /^\s*\d+(?:[.,]\d+)?\s*$/.test(v)) return Number(v.trim().replace(",", "."));
+  return NaN;
+}
+
+/** Keep only the known fields of the branch, as plain truncated strings (arrays above the max count are cut). */
+function shapeViz(type: VizType, d: Record<string, unknown>): Record<string, unknown> {
+  const L = VIZ_LIMITS;
+  const caption = vtext(d.caption, L.caption) || undefined;
+  const list = (v: unknown, max: number, n: number) => arr(v).slice(0, n).map((x) => vtext(x, max));
+  switch (type) {
+    case "timeline":
+      return { type, caption, items: arr(d.items).slice(0, 7).map((x) => ({ when: vtext(rec(x).when, L.timeline.when), label: vtext(rec(x).label, L.timeline.label) })) };
+    case "compare":
+      return {
+        type,
+        caption,
+        a: vtext(d.a, L.compare.a),
+        b: vtext(d.b, L.compare.b),
+        rows: arr(d.rows).slice(0, 5).map((x) => ({ k: vtext(rec(x).k, L.compare.k), a: vtext(rec(x).a, L.compare.cell), b: vtext(rec(x).b, L.compare.cell) })),
+      };
+    case "cycle":
+      return { type, caption, steps: list(d.steps, L.step, 6) };
+    case "flow":
+      return { type, caption, kind: d.kind === "cause" ? "cause" : "process", steps: list(d.steps, L.step, 6) };
+    case "tree":
+      return {
+        type,
+        caption,
+        root: vtext(d.root, L.tree.root),
+        groups: arr(d.groups).slice(0, 4).map((x) => ({ name: vtext(rec(x).name, L.tree.name), items: list(rec(x).items, L.tree.item, 5) })),
+      };
+    case "bars":
+      return { type, caption, unit: vtext(d.unit, L.bars.unit), items: arr(d.items).slice(0, 7).map((x) => ({ label: vtext(rec(x).label, L.bars.label), value: vnum(rec(x).value) })) };
+    case "numbers":
+      return { type, caption, items: arr(d.items).slice(0, 4).map((x) => ({ value: vtext(rec(x).value, L.numbers.value), label: vtext(rec(x).label, L.numbers.label) })) };
+  }
+}
+
+/** Text strings of a visual that must be grounded in the level (data numbers are checked separately). */
+function vizLabels(v: Viz): string[] {
+  const out: string[] = v.caption ? [v.caption] : [];
+  switch (v.type) {
+    case "timeline":
+      return [...out, ...v.items.map((i) => i.label)];
+    case "compare":
+      return [...out, v.a, v.b, ...v.rows.flatMap((r) => [r.k, r.a, r.b])];
+    case "cycle":
+    case "flow":
+      return [...out, ...v.steps];
+    case "tree":
+      return [...out, v.root, ...v.groups.flatMap((g) => [g.name, ...g.items])];
+    case "bars":
+      return [...out, ...v.items.map((i) => i.label)];
+    case "numbers":
+      return [...out, ...v.items.map((i) => i.label)];
+  }
+}
+
+/** Data fields whose numbers must appear in THIS dose's body or real: dates, key numbers, bar values. */
+function vizData(v: Viz): string[] {
+  switch (v.type) {
+    case "timeline":
+      return v.items.map((i) => i.when);
+    case "numbers":
+      return v.items.map((i) => i.value);
+    case "bars":
+      return v.items.map((i) => String(i.value));
+    default:
+      return [];
+  }
+}
+
+const normText = (s: string) =>
+  plainText(s)
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[\u00a0\u2007\u202f]/g, " ");
+
+/** Generic cell values of a comparison ("tak", "brak"…): grounded by themselves, like "nie" and "—". */
+const NEUTRAL = ["tak", "brak", "yes", "none", "nic", "żaden", "żadna", "żadne"];
+const STOP = new Set([...NEUTRAL, "oraz", "albo", "lub", "czyli", "przez", "przy", "jest", "się", "dla", "nie", "jak", "the", "and", "with", "from", "that", "this", "jego", "jej", "ich", "który", "która", "które", "tego", "tym", "ten", "też", "także", "pod", "nad", "bez", "między"]);
+/** Word stems (first 4 letters — a rough cut through Polish inflection: król/króla, władza/władzą) of words with 3+ letters. */
+function stems(s: string): string[] {
+  return (normText(s).match(/[\p{L}\p{N}]+/gu) ?? []).filter((w) => w.length >= 3 && !STOP.has(w) && !/^\d+$/.test(w)).map((w) => w.slice(0, 4));
+}
+
+const SCALE: [RegExp, number][] = [
+  [/^\s*(?:tys\.?|tysi[ęe]c\p{L}*|k\b)/u, 1e3],
+  [/^\s*(?:mln\.?|milion\p{L}*)/u, 1e6],
+  [/^\s*(?:mld\.?|miliard\p{L}*)/u, 1e9],
+];
+/** A number; the thousands group must end the digit run ("3 1789" is 3 and 1789, not 3178 and 9). */
+const NUM = /(?<![\p{L}\d.,])(\d{1,3}(?: \d{3})+(?!\d)|\d+)(?:[.,](\d+))?/gu;
+/** "14.07.1789" → "14/07/1789" in the haystack (a separator that cannot glue the parts into one number); in the needle (`yearOnly`) only the year has to match. */
+const DOTTED_DATE = /\b(\d{1,2})\.(\d{1,2})\.(\d{3,4})\b/g;
+
+/**
+ * Number tokens of a text, each with its alternative readings: "1 000" / "1000" → 1000; "12,5" → 12.5;
+ * "1.500" → 1.5 | 1500; "3 tys." → 3 | 3000; "21%" → 21. Digits glued to a letter on the left (CO2, H2O) are not numbers.
+ */
+function numberTokens(s: string, yearOnly = false): number[][] {
+  const t = normText(s).replace(DOTTED_DATE, (_, d, m, y) => (yearOnly ? y : `${d}/${m}/${y}`));
+  const out: number[][] = [];
+  for (const m of t.matchAll(NUM)) {
+    const int = m[1]!.replace(/ /g, "");
+    const frac = m[2];
+    const alts = [Number(frac ? `${int}.${frac}` : int)];
+    if (frac && frac.length === 3) alts.push(Number(int + frac));
+    const scale = SCALE.find(([r]) => r.test(t.slice((m.index ?? 0) + m[0].length)))?.[1];
+    if (scale) for (const a of [...alts]) alts.push(Math.round(a * scale * 1000) / 1000);
+    out.push(alts.filter(Number.isFinite));
+  }
+  return out;
+}
+function numberSet(s: string): Set<number> {
+  return new Set(numberTokens(s).flat());
+}
+/** Every number token of `needle` has at least one reading in `hay`. */
+function numbersCovered(needle: string, hay: Set<number>): boolean {
+  return numberTokens(needle, true).every((alts) => alts.some((n) => hay.has(n)));
+}
+
+export interface VizGroundingContext {
+  /** plain text of the whole level (every dose, flashcards, quiz) — labels must come from here */
+  levelText: string;
+  /** body + real of THIS dose — numbers and dates must come from here */
+  doseText: string;
+}
+
+/** Plain text a visual is grounded against: every dose's title/body/real/mnemo, flashcards t/d, quiz q/a/e. */
+export function levelTextForViz(l: { feed: { title: string; body: string; real?: string; mnemo?: string }[]; flashcards: { t: string; d: string }[]; quiz: { q: string; a: string[]; e: string }[] }): string {
+  return [
+    ...l.feed.flatMap((f) => [f.title, f.body, f.real ?? "", f.mnemo ?? ""]),
+    ...l.flashcards.flatMap((c) => [c.t, c.d]),
+    ...l.quiz.flatMap((q) => [q.q, ...q.a, q.e]),
+  ].join("\n");
+}
+
+/**
+ * Turn the model's `viz_type` + `viz` (JSON string, branch fields without `type`) into a stored `Viz`, or report why
+ * it was dropped. Never throws. Order: JSON.parse → keep known fields, strip tags/emoji, truncate strings and cut
+ * over-long arrays → VizSchema → grounding:
+ *  - at least 3 of every 4 label strings share a word stem with the whole level's text (strings without words pass);
+ *  - every number in the data fields (timeline.when, numbers.value, bars values) appears in this dose's body/real;
+ *    numbers inside labels must appear there too, except small integers (0–10), which may come from anywhere in the level.
+ */
+export function parseViz(type: string | undefined, raw: string | undefined, ctx: VizGroundingContext): ParseVizResult {
+  try {
+    if (!type || type === "none") return {};
+    if (!(VIZ_TYPES as readonly string[]).includes(type)) return { drop: "schema" };
+    let data: unknown;
+    try {
+      data = JSON.parse(raw ?? "");
+    } catch {
+      return { drop: "schema" };
+    }
+    if (!data || typeof data !== "object" || Array.isArray(data)) return { drop: "schema" };
+    const shaped = shapeViz(type as VizType, data as Record<string, unknown>);
+    if (shaped.caption === undefined) delete shaped.caption;
+    const res = VizSchema.safeParse(shaped);
+    if (!res.success) return { drop: "schema" };
+    const viz = res.data as Viz;
+    if (viz.type === "bars" && viz.items.every((i) => i.value === 0)) return { drop: "schema" };
+
+    const levelStems = new Set(stems(ctx.levelText));
+    // a 3-letter word is its own stem and would only match itself ("kot" vs "kota"): match it by prefix both ways
+    const levelPrefix3 = new Set([...levelStems].map((x) => x.slice(0, 3)));
+    const stemGrounded = (x: string) => levelStems.has(x) || (x.length === 3 && levelPrefix3.has(x)) || levelStems.has(x.slice(0, 3));
+    const labels = vizLabels(viz);
+    const grounded = labels.filter((l) => {
+      const st = stems(l);
+      return !st.length || st.some(stemGrounded);
+    }).length;
+    if (grounded * 4 < labels.length * 3) return { drop: "grounding" };
+
+    const doseNums = numberSet(ctx.doseText);
+    if (!vizData(viz).every((d) => numbersCovered(d, doseNums))) return { drop: "grounding" };
+    const levelNums = numberSet(ctx.levelText);
+    const smallInLevel = (n: number) => Number.isInteger(n) && n <= 10 && levelNums.has(n);
+    for (const l of labels) {
+      if (!numberTokens(l, true).every((alts) => alts.some((n) => doseNums.has(n) || smallInLevel(n)))) return { drop: "grounding" };
+    }
+    return { viz };
+  } catch {
+    return { drop: "schema" };
+  }
+}
+
+/** Short plain-text rendering of a visual (fallback for text-only views, recap, tutor context). */
+export function vizText(v: Viz): string {
+  const cap = v.caption ? `${v.caption}: ` : "";
+  switch (v.type) {
+    case "timeline":
+      return cap + v.items.map((i) => `${i.when} — ${i.label}`).join("; ");
+    case "compare":
+      return cap + `${v.a} / ${v.b}: ` + v.rows.map((r) => `${r.k}: ${r.a} / ${r.b}`).join("; ");
+    case "cycle":
+      return cap + [...v.steps, v.steps[0]].join(" → ");
+    case "flow":
+      return cap + v.steps.join(" → ");
+    case "tree":
+      return cap + `${v.root}: ` + v.groups.map((g) => `${g.name} (${g.items.join(", ")})`).join("; ");
+    case "bars":
+      return cap + v.items.map((i) => `${i.label}: ${i.value}${v.unit ? ` ${v.unit}` : ""}`).join("; ");
+    case "numbers":
+      return cap + v.items.map((i) => `${i.value} — ${i.label}`).join("; ");
+  }
+}
+
+/**
+ * "Po ludzku" line that only repeats the dose body (4+ content words, at least 80% of them already in the body) —
+ * it should say the same thing in other words, so a copy adds nothing.
+ */
+export function realRepeatsBody(real: string, body: string): boolean {
+  const r = contentStems(real);
+  if (r.length < 4) return false;
+  const b = new Set(contentStems(body));
+  return r.filter((w) => b.has(w)).length >= r.length * 0.8;
+}
+
+/** Finalize one level's feed: copy dose fields explicitly, parse visuals, apply the ceil(feed / 2) cap. */
+function finalizeFeed(feedIn: GenFeed[], levelText: string | null, stats: VizDropStats): FeedItem[] {
+  const feed = feedIn.filter((f) => f.title && f.body);
+  const cap = Math.ceil(feed.length / 2);
+  let kept = 0;
+  return feed.map((f) => {
+    const real = f.real ? tidyPunctuation(f.real.trim()) : "";
+    const item: FeedItem = { title: f.title, body: f.body, real: real && !realRepeatsBody(real, f.body) ? real : undefined, mnemo: f.mnemo || undefined };
+    const r: ParseVizResult = levelText === null ? {} : parseViz(f.viz_type, f.viz, { levelText, doseText: `${f.body}\n${f.real ?? ""}` });
+    if (r.drop) stats[r.drop]++;
+    else if (r.viz) {
+      if (kept < cap) {
+        kept++;
+        item.viz = r.viz;
+      } else stats.cap++;
+    }
+    return item;
+  });
+}
+
 export interface FinalizeOptions {
   lang?: boolean;
   /** stamp every `src` with this materials row id (materials mode) */
   materialId?: string;
+  /** viz mode (`options.viz`): parse dose visuals; otherwise any `viz_type` / `viz` the model sent is ignored */
+  viz?: boolean;
 }
 
 /**
@@ -191,24 +500,30 @@ export interface FinalizeOptions {
  * instead of failing the whole generation. Keeps `games` and adds `tasks` (2.0).
  */
 export function finalizeGenerated(gen: GeneratedTopic, stage: Stage, opts: FinalizeOptions = {}): TopicContent {
+  return finalizeGeneratedWithStats(gen, stage, opts).content;
+}
+
+/** `finalizeGenerated` plus the visual stats: kept visuals and why the others were dropped. */
+export function finalizeGeneratedWithStats(gen: GeneratedTopic, stage: Stage, opts: FinalizeOptions = {}): { content: TopicContent; vizKept: number; vizDropped: VizDropStats } {
   const [accent, accent2] = paletteFor(gen.name);
+  const vizDropped: VizDropStats = { schema: 0, grounding: 0, cap: 0 };
   const levels = gen.levels
     .map((l, i) => {
       const tasks = (l.tasks ?? []).map((t) => convertTask(t, opts.materialId)).filter((t): t is Task => t !== null).slice(0, 20);
+      const hasViz = opts.viz === true && l.feed.some((f) => f.viz_type && f.viz_type !== "none");
       return {
         id: `l${i + 1}`,
         title: l.title.trim() || `Poziom ${i + 1}`,
         emoji: l.emoji || "📘",
         summary: l.summary || undefined,
-        feed: l.feed
-          .filter((f) => f.title && f.body)
-          .map((f) => ({ title: f.title, body: f.body, real: f.real || undefined, mnemo: f.mnemo || undefined })),
+        feed: finalizeFeed(l.feed, hasViz ? levelTextForViz(l) : null, vizDropped),
         flashcards: l.flashcards.filter((c) => c.t && c.d),
         quiz: l.quiz
           .filter((q) => q.q && q.a.length >= 2 && q.c >= 0 && q.c < q.a.length && q.e)
           .map((q) => {
             const src = sourceFrom(q.src_quote, q.src_page, opts.materialId);
-            const base: QuizQuestion = { q: q.q, a: q.a.slice(0, 5), c: Math.min(q.c, 4), e: q.e };
+            const a = q.a.slice(0, 5);
+            const base: QuizQuestion = { q: q.q, a, c: Math.min(q.c, 4), e: tidyPunctuation(resolveOptionLetters(q.e, a)) };
             if (src) base.src = src;
             return shuffleAnswers(base);
           }),
@@ -230,7 +545,9 @@ export function finalizeGenerated(gen: GeneratedTopic, stage: Stage, opts: Final
     info: gen.info_html || "",
     levels: levels.length ? levels : [{ id: "l1", title: "Poziom 1", emoji: "📘", feed: [], flashcards: [], quiz: [], games: [] }],
   };
-  return TopicContentSchema.parse(content) as TopicContent;
+  const parsed = TopicContentSchema.parse(content) as TopicContent;
+  const vizKept = parsed.levels.reduce((n, l) => n + l.feed.filter((f) => f.viz).length, 0);
+  return { content: parsed, vizKept, vizDropped };
 }
 
 /** Flatten helpers shared by both UIs. */
