@@ -1421,6 +1421,8 @@ Uwagi:
 
 **W skrócie:** Apka 3.0 jest zbudowana i zarchiwizowana jako build 6, ale nie wysłana. Backend na produkcji to najnowsza wersja z drzewa roboczego (wdrożona 2026-10-07). Cały nowy kod (apka i backend) jest niezacommitowany, co jest dziś największym ryzykiem.
 
+**Pełny audyt z 2026-10-14** (P0/P1/P2, decyzje dla właściciela, plan Build 7): [`docs/AUDYT.md`](AUDYT.md).
+
 ### 10.1 Co jest wdrożone
 
 | Element | Stan |
