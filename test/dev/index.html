@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Cramfox — dev (atrapa backendu)</title>
+<link rel="stylesheet" href="../../styles.css">
+</head>
+<body>
+<div id="app"></div>
+<!-- jak /index.html, ale najpierw atrapa backendu (podmienia fetch: Supabase i API nie wychodzą do sieci). Kolejność ma znaczenie. -->
+<script src="mock-backend.js"></script>
+<script src="../../cloud-config.js"></script>
+<script src="../../cloud.js"></script>
+<script src="../../engine.js"></script>
+<script src="../../cloud-ui.js"></script>
+</body>
+</html>

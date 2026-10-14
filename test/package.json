@@ -1,0 +1,13 @@
+{
+  "name": "cramfox-test",
+  "private": true,
+  "description": "Narzędzia deweloperskie Cramfoxa: atrapa backendu (dev/mock-backend.js) i zrzuty ekranów (dev/shoot.mjs). Nie wchodzi do build/ ani do apki.",
+  "type": "module",
+  "scripts": {
+    "serve": "cd .. && python3 -m http.server 8765",
+    "shoot": "node dev/shoot.mjs"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}
