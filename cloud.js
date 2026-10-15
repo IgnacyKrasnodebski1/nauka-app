@@ -9,7 +9,7 @@
 const CFG=window.CRAMFOX_CONFIG||{};
 
 /* ---------- storage (iOS potrafi rzucać) ---------- */
-const LS=(()=>{try{const s=globalThis['localStorage'];s.setItem('__cf','1');s.removeItem('__cf');return s;}catch(e){const m={};return {getItem:k=>k in m?m[k]:null,setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];},key:i=>Object.keys(m)[i]||null,get length(){return Object.keys(m).length;}};}})();
+const LS=(()=>{try{const s=globalThis['localStorage'];s.setItem('__cf','1');s.removeItem('__cf');return s;}catch(e){const m={};return {volatile:true,getItem:k=>k in m?m[k]:null,setItem:(k,v)=>{m[k]=String(v);},removeItem:k=>{delete m[k];},key:i=>Object.keys(m)[i]||null,get length(){return Object.keys(m).length;}};}})();
 const jget=(k,d)=>{try{const v=LS.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}};
 const jset=(k,v)=>{try{LS.setItem(k,JSON.stringify(v));return true;}catch(e){return false;}};
 const lset=(k,v)=>{try{LS.setItem(k,String(v));}catch(e){}};
@@ -45,16 +45,19 @@ const isNative=()=>!!(window.Capacitor&&typeof window.Capacitor.isNativePlatform
 const apiBase=()=>(/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(location.origin)&&!CFG.apiDirect)?location.origin:CFG.apiUrl;
 
 /* ---------- auth (GoTrue) ---------- */
-async function authPost(path,body,tok){
+async function authPost(path,body,tok,timeout){
   const h={apikey:CFG.anonKey,'Content-Type':'application/json'};if(tok)h.Authorization='Bearer '+tok;
-  const r=await http(CFG.supabaseUrl+'/auth/v1'+path,{method:'POST',headers:h,body});
+  const r=await http(CFG.supabaseUrl+'/auth/v1'+path,{method:'POST',headers:h,body,timeout});
   if(r.status>=400)throw errOf(r);return r.data;
 }
+const SEENK='cf_seen'; // na tym urządzeniu ktoś już się logował — ekran logowania otwiera się na „Zaloguj się” (bez danych konta)
 function saveSession(d){
   if(!d||!d.access_token||!d.user)throw new CloudError(0,'no_session','Serwer nie zwrócił sesji');
   session={access_token:d.access_token,refresh_token:d.refresh_token,expires_at:d.expires_at||Math.floor(Date.now()/1000)+(d.expires_in||3600),user:{id:d.user.id,email:d.user.email||''}};
-  jset(SKEY,session);return session;
+  jset(SKEY,session);lset(SEENK,'1');return session;
 }
+if(session)lset(SEENK,'1'); // zalogowani w starszych wersjach też (po wylogowaniu albo wygaśnięciu sesji: zakładka „Zaloguj się”)
+const knownDevice=()=>{try{if(LS.getItem(SEENK))return true;for(let i=0;i<LS.length;i++){const k=LS.key(i);if(k&&k.startsWith('nauka_progress_v1:'))return true;}}catch(e){}return false;};
 async function signUp(email,password){
   const d=await authPost('/signup',{email,password,data:{age16:true,client:'cramfox'}}); // client → okres próbny tylko dla kont z Cramfoxa (trigger handle_new_user)
   if(!d||!d.access_token)throw new CloudError(0,'needs_confirm','Konto wymaga potwierdzenia e-maila');
@@ -66,7 +69,10 @@ async function refresh(force){
   if(!session)throw new CloudError(401,'no_session','Zaloguj się');
   if(!force&&session.expires_at-60>Date.now()/1000)return session.access_token;
   if(!refreshing)refreshing=(async()=>{
-    try{saveSession(await authPost('/token?grant_type=refresh_token',{refresh_token:session.refresh_token}));}
+    const t0=Date.now();
+    try{for(let i=0;;i++){ // zgubiona odpowiedź: serwer mógł już wymienić token — stary działa jeszcze ok. 10 s (reuse interval GoTrue), więc 1–2 ponowienia w tym oknie
+      try{saveSession(await authPost('/token?grant_type=refresh_token',{refresh_token:session.refresh_token},null,8000));break;}
+      catch(e){if(e.code!=='network'||i>=2||Date.now()-t0>6000||!session||navigator.onLine===false)throw e;await sleep(1200);}}}
     catch(e){if(e.status===400||e.status===401){session=null;LS.removeItem(SKEY);emit('signedout',e);}throw e;} // sesja odwołana → logowanie (dane lokalne zostają); brak sieci → działamy dalej na starym tokenie
     finally{refreshing=null;}
     return session.access_token;})();
@@ -81,7 +87,7 @@ async function signOut(o){ // o.force: wyloguj mimo niewysłanych postępów (UI
   o=o||{};clearTimeout(pushT);
   if(!o.force){
     for(let i=0;i<2&&!syncOff&&LS.getItem(DIRTYK);i++){try{if(pending)await applyPending(()=>true);else if(!pulled)await pull(()=>true);await push();}catch(e){break;}} // druga próba: po konflikcie push scala i wysyła jeszcze raz
-    if(LS.getItem(DIRTYK))throw new CloudError(0,'unsynced','Część postępów nie jest jeszcze zapisana na koncie',{reason:syncOff?'off':'network'});
+    if(LS.getItem(DIRTYK))throw new CloudError(0,'unsynced','Część postępów nie jest jeszcze zapisana na koncie',{reason:syncOff?'off':storeFull?'full':'network'});
   }
   const tok=session&&session.access_token;
   if(tok){try{await authPost('/logout?scope=local',{},tok);}catch(e){}} // tylko to urządzenie — inne zostają zalogowane
@@ -152,11 +158,11 @@ async function storageRemove(paths){for(let i=0;i<paths.length;i+=100)await stor
 
 /* ---------- API na Vercelu: natywnie (bez CORS), w przeglądarce przez lokalne proxy; 401 → odśwież token i ponów raz (serwer sprawdza sesję przed limitem) ---------- */
 async function api(path,o){
-  o=o||{};const url=apiBase()+path;
+  o=o||{};const url=apiBase()+path,tmo=o.timeout||310000; // 310 s tylko dla generowania; /api/me krócej
   const H=isNative()&&window.Capacitor.Plugins&&window.Capacitor.Plugins.CapacitorHttp;
   const send=async tok=>{const headers={Authorization:'Bearer '+tok,'Content-Type':'application/json'};
-    if(!H)return http(url,{method:o.method||'GET',headers,body:o.body,timeout:310000});
-    let r;try{r=await H.request({url,method:o.method||'GET',headers,data:o.body,readTimeout:310000});} // tylko readTimeout: connectTimeout zabiłby 2-minutowe generowanie
+    if(!H)return http(url,{method:o.method||'GET',headers,body:o.body,timeout:tmo});
+    let r;try{r=await H.request({url,method:o.method||'GET',headers,data:o.body,readTimeout:tmo});} // tylko readTimeout: connectTimeout zabiłby 2-minutowe generowanie
     catch(e){throw new CloudError(0,'network','Brak połączenia z serwerem');}
     let d=r.data;if(typeof d==='string'){try{d=JSON.parse(d);}catch(e){}}
     return {status:r.status,data:d};};
@@ -187,17 +193,25 @@ const OK_TAGS=new Set(['b','i','em','strong','u','s','br','p','ul','ol','li','di
 const DROP_TAGS=new Set(['script','style','iframe','object','embed','svg','math','img','video','audio','source','link','meta','base','form','input','button','textarea','select','option','template','noscript','frame','frameset','canvas','picture','track','applet']);
 const VOID=new Set(['br','hr']);
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+/* emoji z treści AI (AUDYT P2-28, zasada „zero emoji w UI”): wszystko z bloku piktogramów U+1F000–1FAFF, znaki z domyślną prezentacją emoji
+   i znaki z wariantem emoji (FE0F), razem z łącznikami sekwencji. Zostają zwykłe symbole tekstowe (↔, ©, ™, ▶), które w treści coś znaczą. */
+const EMOJI_RE=/(?:[\u{1F000}-\u{1FAFF}]|\p{Emoji_Presentation}|\p{Extended_Pictographic}\uFE0F)[\uFE0F\u200D\u20E3\u{1F3FB}-\u{1F3FF}\u{E0020}-\u{E007F}]*|[\uFE0F\u20E3]/gu;
+function stripEmoji(s,tidy){ // tidy: zwykły tekst (nie węzeł HTML) — bez podwójnych spacji i spacji na brzegach po usunięciu
+  s=String(s);if(!EMOJI_RE.test(s))return s;EMOJI_RE.lastIndex=0;
+  let t=s.replace(EMOJI_RE,'');if(tidy)t=t.replace(/[ \t]{2,}/g,' ').trim();
+  return t.trim()?t:s; // napis z samych emoji zostaje (np. jedyna odpowiedź) — lepiej niż pusty element
+}
 function ser(node){let out='';node.childNodes.forEach(n=>{
-  if(n.nodeType===3){out+=esc(n.nodeValue);return;}
+  if(n.nodeType===3){out+=esc(stripEmoji(n.nodeValue));return;}
   if(n.nodeType!==1)return;
   const t=n.localName;if(DROP_TAGS.has(t))return;
   if(!OK_TAGS.has(t)){out+=ser(n);return;} // nieznany tag: zostaje sam tekst
   const cls=(n.getAttribute('class')||'').split(/\s+/).filter(c=>c==='zbox'||c==='gradetbl').join(' ');
   out+='<'+t+(cls?' class="'+cls+'"':'')+'>'+(VOID.has(t)?'':ser(n)+'</'+t+'>');});return out;}
 const TAG_RE=new RegExp('<(?!/?(?:'+[...OK_TAGS].join('|')+')(?:\\s+class\\s*=\\s*"[^"<>]*")?\\s*/?>)','gi'); // „<” niebędące dozwolonym znacznikiem (np. x1<x2) to tekst, nie początek tagu
-function clean(s){if(s==null)return '';s=String(s);if(!/[<>&"']/.test(s))return s;const tp=document.createElement('template');tp.innerHTML=s.replace(TAG_RE,'&lt;');return ser(tp.content);} // pola HTML
-const plain=s=>esc(s==null?'':s); // pola tekstowe: bez interpretacji HTML — "a<b" zostaje "a<b", a nie znacznikiem
-function deepEsc(v){if(typeof v==='string')return esc(v);if(Array.isArray(v))return v.map(deepEsc);if(v&&typeof v==='object'){const o={};for(const k in v)o[k]=deepEsc(v[k]);return o;}return v;}
+function clean(s){if(s==null)return '';s=stripEmoji(String(s));if(!/[<>&"']/.test(s))return s;const tp=document.createElement('template');tp.innerHTML=s.replace(TAG_RE,'&lt;');return ser(tp.content);} // pola HTML
+const plain=s=>esc(s==null?'':stripEmoji(s,true)); // pola tekstowe: bez interpretacji HTML — "a<b" zostaje "a<b", a nie znacznikiem; bez emoji (nazwy z AI)
+function deepEsc(v){if(typeof v==='string')return esc(stripEmoji(v,true));if(Array.isArray(v))return v.map(deepEsc);if(v&&typeof v==='object'){const o={};for(const k in v)o[k]=deepEsc(v[k]);return o;}return v;}
 const noEmoji=s=>String(s).replace(/[\p{Extended_Pictographic}️‍]/gu,'').replace(/\s+/g,' ').trim();
 
 /* ---------- mapper: przedmiot z bazy + jego tematy → przedmiot silnika ---------- */
@@ -283,7 +297,7 @@ function toEngine(){
       grading,info:tps.map(t=>clean(obj(t.content).info||'')).join(''),levels,topics:tps.map(t=>({id:t.id,name:plain(t.name),createdAt:t.created_at}))};
   });
 }
-const pickable=()=>DATA.subjects.map(s=>({id:s.id,name:String(s.name||''),stage:STAGE_FROM_DB[s.stage]||'inne',topics:DATA.topics.filter(t=>t.subject_id===s.id).length})); // surowe nazwy — UI wstawia je przez textContent
+const pickable=()=>DATA.subjects.map(s=>{const p=paletteFor(s);return {id:s.id,name:String(s.name||''),stage:STAGE_FROM_DB[s.stage]||'inne',topics:DATA.topics.filter(t=>t.subject_id===s.id).length,accent:p[0],onAccent:p[2]};}); // surowe nazwy — UI wstawia je przez textContent
 const subjectName=id=>{const s=DATA.subjects.find(x=>x.id===id);return s?String(s.name||''):'';};
 
 /* ---------- synchronizacja postępów (app_state) ----------
@@ -293,20 +307,43 @@ const subjectName=id=>{const s=DATA.subjects.find(x=>x.id===id);return s?String(
    Własny zapis, którego odpowiedź zginęła (sieć), rozpoznajemy po client_ts — nie liczymy go drugi raz.
    Gdy silnik jest w trakcie lekcji, zmiany z chmury czekają (pending) do bezpiecznego momentu. */
 const PK='nauka_progress_v1:'+UID,MK='nauka_meta_v1:'+UID,DIRTYK='cf_dirty:'+UID,REVK='cf_rev:'+UID,BASEK='cf_base:'+UID,SENTK='cf_sent:'+UID;
-let pulled=false,syncOff=false,pending=null,base=null,pushT=null,pushing=null,dseq=0;
+let pulled=false,syncOff=false,pending=null,pendingUnion=false,base=null,pushT=null,pushing=null,dseq=0,storeFull=false;
 let hooks={canApply:()=>true,apply:null};
 function bindEngine(canApply,apply){hooks={canApply:canApply||(()=>true),apply:apply||null};}
 const hasLocalState=()=>!!(LS.getItem(PK)||LS.getItem(MK));
 const localState=()=>({progress:obj(jget(PK,{})),meta:obj(jget(MK,{}))});
 const clone=v=>JSON.parse(JSON.stringify(v));
+/* pełny localStorage (np. zalegający cache cf_data albo dane innego konta): najpierw zwalniamy cache treści (da się pobrać ponownie), potem drugi zapis.
+   Nieudany zapis postępów z chmury = pulled=false i zero wysyłek — inaczej silnik ruszyłby od zera i nadpisał postępy konta na wszystkich urządzeniach. */
+function freeSpace(){const ks=[];try{for(let i=0;i<LS.length;i++){const k=LS.key(i);if(k&&k.startsWith('cf_data:'))ks.push(k);}}catch(e){}ks.forEach(k=>{try{LS.removeItem(k);}catch(e){}});return ks.length>0;}
+const jsetHard=(k,v)=>jset(k,v)||(freeSpace()&&jset(k,v));
+function setFull(v){if(storeFull!==v){storeFull=v;emit('store',{full:v});}}
 function loadBase(){if(!base){const b=jget(BASEK,null);if(b&&typeof b==='object')base={progress:obj(b.progress),meta:obj(b.meta)};}return base||{progress:{},meta:{}};}
-function setBase(b){base={progress:obj(b.progress),meta:obj(b.meta)};jset(BASEK,base);}
+function setBase(b){base={progress:obj(b.progress),meta:obj(b.meta)};if(jsetHard(BASEK,base))return true;try{LS.removeItem(BASEK);}catch(e){}return false;} // nieaktualna baza w pamięci telefonu byłaby gorsza niż żadna (bez bazy scalanie działa jak suma — nic nie ginie)
+/* strażnik: lokalny stan „zgubił” postępy względem ostatniego wspólnego stanu (uszkodzony albo niezapisany localStorage, silnik ruszył od zera).
+   Reset („Wyzeruj postępy”, „Zachowaj XP i poziomy”) zawsze PODNOSI epoch — więc wyższy lokalny epoch = zamierzony reset, a niższy (albo brak,
+   gdy baza ma epoch) = zgubiony stan. Taki stan nie trafia do chmury; zamiast tego pobieramy ją i scalamy jak sumę (nowszy epoch z chmury wygrywa). */
+const xpOf=p=>{let n=0;for(const k in p){const v=p[k];if(isObj(v)&&typeof v.xp==='number'&&v.xp>0)n+=v.xp;}return n;};
+function lostLocal(b,l){
+  const bp=obj(b.progress),lp=obj(l.progress),bm=obj(b.meta),lm=obj(l.meta);
+  const be=+bp.epoch||0,le=+lp.epoch||0;
+  if(le>be)return false; // reset na tym urządzeniu
+  if(le<be)return true; // epoch zniknął: lokalne postępy zgubione (np. uszkodzony nauka_progress_v1 na koncie, które kiedyś zerowało postępy)
+  const keys=(p,m)=>Object.keys(p).filter(k=>k!=='daily'&&k!=='epoch').concat(Object.keys(m).map(k=>'m:'+k));
+  const bk=keys(bp,bm),lk=new Set(keys(lp,lm));
+  const gone=bk.filter(k=>!lk.has(k)).length;
+  if(bk.length>=6&&gone*2>bk.length)return true; // zniknęła większość kluczy
+  const mk=Object.keys(bm),mg=mk.filter(k=>!(k in lm)).length; // sama META (seria, rekord, zamrożenia, zgoda) — przy wielu kluczach postępów jej utrata ginęła w sumie;
+  if(mk.length>=4&&mg*2>mk.length)return true; // wycofanie zgody usuwa 2 klucze, więc nigdy ponad połowę z ≥ 4
+  const bx=xpOf(bp);return bx>=50&&xpOf(lp)*2<bx; // albo ponad połowa XP
+}
 const missing=e=>e&&(e.status===404||e.code==='PGRST205'||e.code==='42P01'||e.code==='PGRST202'); // brak tabeli/funkcji — migracja 0004 jeszcze niewgrana
 function markDirty(){lset(DIRTYK,Date.now()+'.'+(++dseq));}
 function dirty(){if(!UID)return;markDirty();clearTimeout(pushT);pushT=setTimeout(()=>(pulled?push():pull()).catch(()=>{}),4000);} // przed pierwszym pobraniem najpierw pull (on potem wyśle)
 async function push(){
   if(!UID||!pulled||syncOff||pending||!LS.getItem(DIRTYK))return;
   if(pushing)return pushing;
+  if(lostLocal(loadBase(),localState())){emit('sync',{guard:true});return repairLost();}
   pushing=(async()=>{try{
     const mark=LS.getItem(DIRTYK),st=localState(),rev=+LS.getItem(REVK)||0,ts=Date.now()*1000+(dseq%1000),body={progress:st.progress,meta:st.meta,client_ts:ts};
     jset(SENTK,{ts,st});
@@ -365,11 +402,15 @@ function streakDays(m,frozen){ // dni aktywne serii (bez dni pokrytych zamrożen
   let d=m.lastDay,left=+m.streak;for(let i=0;left>0&&i<2000;i++){if(!frozen.has(d)){out.add(d);left--;}d=dplus(d,-1);}return out;
 }
 function mergeStreak(lm,cm,out){ // seria z obu urządzeń: suma dni aktywnych; liczymy wstecz od ostatniego dnia, zamrożone dni przechodzą bez liczenia
-  const frozen=new Set([].concat(arr(lm&&lm.frozenDays),arr(cm&&cm.frozenDays)).filter(d=>DAY.test(d)));
-  const days=new Set([...streakDays(lm,frozen),...streakDays(cm,frozen)]);if(!days.size)return;
+  // dni aktywne każdej strony liczone z JEJ zamrożeniami: zamrożenie na jednym urządzeniu (np. tablet po nocy w tle) nie kasuje dnia, w którym
+  // na drugim była nauka — inaczej seria cofała się do dnia sprzed zamrożenia i gasła na wszystkich urządzeniach
+  const fr=m=>new Set(arr(m&&m.frozenDays).filter(d=>DAY.test(d)));
+  const lf=fr(lm),cf=fr(cm),frozen=new Set([...lf,...cf]);
+  const days=new Set([...streakDays(lm,lf),...streakDays(cm,cf)]);if(!days.size)return;
   const last=[...days].sort().pop();let n=0,d=last;
   for(let i=0;i<4000;i++){if(days.has(d))n++;else if(!frozen.has(d))break;d=dplus(d,-1);}
-  out.lastDay=last;out.streak=n;out.best=Math.max(+out.best||0,n);
+  const end=[last,lm&&lm.lastDay,cm&&cm.lastDay].filter(x=>DAY.test(String(x||''))).sort().pop(); // lastDay = ostatni dzień objęty serią (aktywny albo zamrożony)
+  out.lastDay=end;out.streak=n;out.best=Math.max(+out.best||0,n);
 }
 function merge3(b,l,c){
   b=b||{progress:{},meta:{}};
@@ -395,23 +436,34 @@ async function pull(canApply,apply){ // zwraca true, gdy lokalny stan się zmien
   if(!row){pulled=true;pending=null;if(rev)LS.removeItem(REVK);if(hasLocalState()){markDirty();push().catch(()=>{});}return false;}
   if(sent&&+row.client_ts===+sent.ts){LS.removeItem(SENTK);lset(REVK,row.rev);setBase(sent.st);pulled=true;pending=null;if(LS.getItem(DIRTYK))push().catch(()=>{});return false;} // to nasz zapis (odpowiedź zginęła)
   if(+row.rev===rev){pulled=true;pending=null;if(LS.getItem(DIRTYK))push().catch(()=>{});return false;}
-  if(!hasLocalState()){ // świeże urządzenie: stan z chmury wprost
-    const st={progress:obj(row.progress),meta:obj(row.meta)};jset(PK,st.progress);jset(MK,st.meta);lset(REVK,row.rev);setBase(st);
+  if(!hasLocalState()){ // świeże urządzenie: stan z chmury wprost — tylko gdy na pewno się zapisał (inaczej silnik ruszyłby od zera, a push nadpisałby konto)
+    const st={progress:obj(row.progress),meta:obj(row.meta)};
+    if(!jsetHard(PK,st.progress)||!jsetHard(MK,st.meta)){try{LS.removeItem(PK);LS.removeItem(MK);}catch(e){}pulled=false;setFull(true);
+      throw new CloudError(0,'storage_full','Brak miejsca na postępy w pamięci aplikacji');}
+    setBase(st);lset(REVK,row.rev);setFull(false);
     pulled=true;pending=null;if(apply)try{apply();}catch(e){}return true;}
   return applyRow(row,canApply,apply);
 }
-function applyRow(row,canApply,apply){ // synchronicznie: sprawdzenie, zapis i przeładowanie silnika w jednym kroku — silnik nie zdąży nadpisać scalonego stanu
-  if(canApply&&!canApply()){pending=row;return false;}
-  const cl={progress:obj(row.progress),meta:obj(row.meta)};
-  const m=merge3(loadBase(),localState(),cl);
-  if(!jset(PK,m.progress)||!jset(MK,m.meta))return false;
-  lset(REVK,row.rev);setBase(cl);pulled=true;pending=null;LS.removeItem(SENTK);
+function applyRow(row,canApply,apply,union){ // synchronicznie: sprawdzenie, zapis i przeładowanie silnika w jednym kroku — silnik nie zdąży nadpisać scalonego stanu
+  if(canApply&&!canApply()){pending=row;pendingUnion=!!union;return false;}
+  const cl={progress:obj(row.progress),meta:obj(row.meta)},loc=localState();
+  if(!union&&lostLocal(loadBase(),loc)){union=true;emit('sync',{guard:true});} // brak klucza lokalnie ≠ usunięcie: bez bazy (suma), żeby zgubiony stan nie skasował postępów z chmury
+  const m=merge3(union?{progress:{},meta:{}}:loadBase(),loc,cl);
+  if(!jsetHard(PK,m.progress)||!jsetHard(MK,m.meta)){pulled=false;setFull(true);return false;} // bez zapisu: żadnej wysyłki, aż się uda (dirty() → pull)
+  lset(REVK,row.rev);setBase(cl);setFull(false);pulled=true;pending=null;pendingUnion=false;LS.removeItem(SENTK);
   if(same(m,cl))LS.removeItem(DIRTYK);else markDirty(); // przed apply(): zapisy silnika przy przeładowaniu oznaczą stan na nowo
   if(apply)try{apply();}catch(e){}
   if(LS.getItem(DIRTYK))setTimeout(()=>push().catch(()=>{}),0);
   return true;
 }
-async function applyPending(canApply,apply){if(!pending)return false;return applyRow(pending,canApply||hooks.canApply,apply===undefined?hooks.apply:apply);}
+async function repairLost(){ // push zatrzymany przez strażnika: pobierz chmurę i scal jak sumę (potem zwykły push scalonego stanu)
+  let rows;try{rows=await rest('app_state?select=progress,meta,rev,client_ts&user_id=eq.'+UID);}
+  catch(e){if(missing(e)){syncOff=true;emit('sync',{off:true});return;}throw e;}
+  const row=Array.isArray(rows)&&rows[0]||null;
+  if(!row){setBase(localState());return push();} // w chmurze nic nie ma — nie ma czego chronić
+  applyRow(row,hooks.canApply,hooks.apply,true);
+}
+async function applyPending(canApply,apply){if(!pending)return false;return applyRow(pending,canApply||hooks.canApply,apply===undefined?hooks.apply:apply,pendingUnion);}
 ['visibilitychange','pagehide','pause'].forEach(ev=>document.addEventListener(ev,()=>{if(ev!=='visibilitychange'||document.visibilityState==='hidden')flush().catch(()=>{});}));
 
 /* ---------- materiały i generowanie ---------- */
@@ -438,12 +490,19 @@ async function prepareFiles(files){ // przed utworzeniem przedmiotu: format i ro
     out.push({blob,mime,name:String(f.name||'').slice(0,120),size:blob.size||0});}
   return out;
 }
-async function createSubject(o){const pal=PALETTE[o.color|0]||PALETTE[0];const rows=await rest('subjects',{method:'POST',prefer:'return=representation',body:{owner_id:UID,name:String(o.name||'Nowy przedmiot').slice(0,60),emoji:'📘',stage:STAGE_TO_DB[o.stage]||'inne',accent:pal[0],accent2:pal[0],position:DATA.subjects.length}});
+const capHit=(e,name)=>!!e&&String(e.code)==='23514'&&new RegExp(name).test(String(e.message||'')+' '+JSON.stringify(e.data||'')); // trigger enforce_owner_caps (backend/0008)
+async function createSubject(o){const pal=PALETTE[o.color|0]||PALETTE[0];let rows;
+  try{rows=await rest('subjects',{method:'POST',prefer:'return=representation',body:{owner_id:UID,name:String(o.name||'Nowy przedmiot').slice(0,60),emoji:'📘',stage:STAGE_TO_DB[o.stage]||'inne',accent:pal[0],accent2:pal[0],position:DATA.subjects.length}});}
+  catch(e){if(capHit(e,'subject_limit'))throw new CloudError(e.status||400,'subject_limit','Za dużo przedmiotów na koncie',{});throw e;}
   const s=rows[0];DATA.subjects.push(s);await saveCache();return s;}
 async function updateSubject(id,patch){const body={};if(patch.name!=null)body.name=String(patch.name).slice(0,60);if(patch.color!=null&&PALETTE[patch.color]){body.accent=PALETTE[patch.color][0];body.accent2=PALETTE[patch.color][0];}
   const rows=await rest('subjects?id=eq.'+id,{method:'PATCH',prefer:'return=representation',body});const s=DATA.subjects.find(x=>x.id===id);if(s&&rows&&rows[0])Object.assign(s,rows[0]);await saveCache();emit('subjects');}
 function upFail(e){ // błąd wysyłki → kod dla UI; limit generacji jeszcze nietknięty
-  if(e.code==='network'||e.code==='file_too_big'||e.status===401||/^(no_session|upload_failed)$/.test(e.code))return e;
+  if(e.code==='network'||e.code==='file_too_big'||e.status===401||/^(no_session|upload_failed|upload_daily_limit)$/.test(e.code))return e;
+  // dzienny limit wysyłki na konto (backend/0008): Storage odmawia przez politykę RESTRICTIVE (403 „row-level security”; klient pisze zawsze do własnego folderu,
+  // więc inna przyczyna nie wchodzi w grę), a wiersz materiału — triggerem 23514 materials_daily_limit
+  if((e.status===400||e.status===403)&&/row-level security|row level security/i.test(String(e.message||'')+' '+JSON.stringify(e.data||''))||capHit(e,'materials_daily_limit'))
+    return new CloudError(429,'upload_daily_limit','Dzienny limit wysyłania plików',{});
   if(e.status===413||/maximum (allowed )?size|too large|entity_too_large/i.test(String(e.message||'')+' '+String(e.code||'')))return new CloudError(413,'file_too_big','Plik jest za duży',{});
   return new CloudError(e.status||0,'upload_failed',e.message,e.data);
 }
@@ -459,21 +518,33 @@ async function uploadMaterial(p,onProgress){ // p z prepareFiles; onProgress(wys
 async function discard(o){ // sprzątanie po nieudanej próbie (generowanie na pewno nie ruszyło albo skończyło się błędem): pliki, wiersze materiałów, pusty nowy przedmiot
   const ms=arr(o.materials);
   if(ms.length){try{await rest('materials?id=in.('+ms.map(m=>m.id).join(',')+')',{method:'DELETE'});}catch(e){}try{await storageRemove(ms.map(m=>m.path));}catch(e){}}
-  if(o.subjectId&&!DATA.topics.some(t=>t.subject_id===o.subjectId)){try{await rest('subjects?id=eq.'+o.subjectId,{method:'DELETE'});DATA.subjects=DATA.subjects.filter(s=>s.id!==o.subjectId);await saveCache();emit('subjects');}catch(e){}}
+  if(o.subjectId&&!DATA.topics.some(t=>t.subject_id===o.subjectId)){try{
+    const t=await rest('topics?select=id&subject_id=eq.'+o.subjectId+'&limit=1');if(Array.isArray(t)&&t.length)return; // temat jednak powstał na serwerze (zapis tuż przed przerwaniem) — kaskada skasowałaby opłacony temat
+    await rest('subjects?id=eq.'+o.subjectId,{method:'DELETE'});DATA.subjects=DATA.subjects.filter(s=>s.id!==o.subjectId);await saveCache();emit('subjects');}catch(e){}} // bez odpowiedzi serwera nic nie kasujemy
 }
 const JOBK='cf_job:'+UID;
 const job=()=>jget(JOBK,null);
 async function addTopic(topicId){const rows=await rest('topics?select=id,subject_id,name,position,created_at,content&id=eq.'+topicId);const t=rows&&rows[0];if(!t)throw new CloudError(404,'not_found','Nie znaleziono lekcji');
   if(!DATA.topics.some(x=>x.id===t.id))DATA.topics.push(t);const s=DATA.subjects.find(x=>x.id===t.subject_id);
-  if(s&&/^Nowy przedmiot$/.test(s.name)&&t.content&&t.content.name){try{await updateSubject(s.id,{name:t.content.name});}catch(e){}} // nazwa z AI, gdy nie podano własnej
+  const aiName=t.content&&t.content.name?noEmoji(t.content.name):'';
+  if(s&&/^Nowy przedmiot$/.test(s.name)&&aiName){try{await updateSubject(s.id,{name:aiName});}catch(e){}} // nazwa z AI (bez emoji), gdy nie podano własnej
   await saveCache();emit('subjects');return t;}
-async function generate(o){ // o={subjectId, materialIds, text, hint, stage, subjectName}; bez automatycznego ponawiania — każde wywołanie zjada limit
+async function generate(o){ // o={subjectId, materialIds, text, hint, stage, subjectName, consentV}; bez automatycznego ponawiania — każde wywołanie zjada limit
+  meC=null; // licznik limitu zaraz się zmieni
   let prev=null,prevOk=false;try{const g=await rest('generations?select=id,created_at&subject_id=eq.'+o.subjectId+'&order=created_at.desc&limit=1');prevOk=true;if(g&&g[0])prev=g[0].created_at;}catch(e){if(e.code==='network')throw e;}
-  jset(JOBK,{subjectId:o.subjectId,startedAt:Date.now(),materialIds:o.materialIds||[],prevAt:prev||null,prevOk,created:o.created||null,materials:arr(o.materials)}); // created/materials: do posprzątania, gdy odzyskanie skończy się błędem
+  // dziennik MUSI się zapisać przed POST: bez niego zerwane połączenie skończyłoby się discard() w trakcie generowania (opłacona próba bez przedmiotu)
+  const known=DATA.topics.filter(t=>t.subject_id===o.subjectId).map(t=>t.id); // tematy sprzed tej próby (odzyskiwanie nie weźmie ich za nowy)
+  if(!jsetHard(JOBK,{subjectId:o.subjectId,startedAt:Date.now(),materialIds:o.materialIds||[],prevAt:prev||null,prevOk,created:o.created||null,materials:arr(o.materials),known})) // created/materials: do posprzątania, gdy odzyskanie skończy się błędem
+    throw new CloudError(0,'storage_full','Brak miejsca w pamięci aplikacji na dziennik generowania',{});
   const r=await api('/api/generate',{method:'POST',body:{subjectId:o.subjectId,materialIds:o.materialIds||[],text:o.text||undefined,
-    options:{stage:STAGE_TO_DB[o.stage]||'inne',subjectName:o.subjectName==null?undefined:String(o.subjectName).slice(0,80),mode:'materials',levels:4,locale:'pl',hint:o.hint||undefined,viz:true}}}); // viz: ta wersja rysuje wizualizacje w czacie (starsze buildy go nie wysyłają → serwer daje stary format); sieć: dziennik zostaje → recoverJob
-  const d=obj(r.data);
-  if(r.status>=400||!d.topicId){LS.removeItem(JOBK);throw new CloudError(r.status,String(d.code||(r.status>=500?'generation_failed':'bad_request')),String(d.error||''),d);}
+    options:{stage:STAGE_TO_DB[o.stage]||'inne',subjectName:o.subjectName==null?undefined:String(o.subjectName).slice(0,80),mode:'materials',levels:4,locale:'pl',hint:o.hint||undefined,viz:true,
+      aiConsentV:+o.consentV>0?+o.consentV:undefined}}}); // viz: ta wersja rysuje wizualizacje w czacie (starsze buildy go nie wysyłają → serwer daje stary format); aiConsentV: wersja zaakceptowanej zgody (do generations.options); sieć: dziennik zostaje → recoverJob
+  const d=obj(r.data),isJson=!!r.data&&typeof r.data==='object';
+  if(r.status>=400||!d.topicId){
+    // ≥500 bez JSON-a (HTML 504 Vercela po zabiciu funkcji, ucięta odpowiedź) albo 2xx bez tematu = wynik nieznany: serwer mógł już pobrać limit i zapisać temat.
+    // Dziennik zostaje, UI uruchamia recoverJob (sprawdza tabelę generations) — nigdy discard() na ślepo.
+    if(r.status<400||(r.status>=500&&!isJson))throw new CloudError(r.status,'unknown_outcome','Nie wiadomo, czy lekcja powstała',{});
+    LS.removeItem(JOBK);throw new CloudError(r.status,String(d.code||(r.status>=500?'generation_failed':'bad_request')),String(d.error||''),d);}
   jset(JOBK,{...job(),topicId:d.topicId});
   let t;try{t=await addTopic(d.topicId);}catch(e){throw new CloudError(0,'network_after_post',e.message);} // temat jest na serwerze — dziennik zostaje, recoverJob go dociągnie
   LS.removeItem(JOBK);return {topic:t,demo:!!d.demo};
@@ -491,23 +562,39 @@ async function recoverJob(){ // po powrocie apki / starcie: czy przerwana genera
     if(g&&g.status==='done'&&g.topic_id){jset(JOBK,{...j,topicId:g.topic_id});const t=await addTopic(g.topic_id);LS.removeItem(JOBK);emit('job',{state:'done',topic:t});return t;}
     if(g&&g.status==='failed'){LS.removeItem(JOBK);emit('job',{state:'failed',error:g.error});throw new CloudError(500,'generation_failed','',{});}
     if(!g&&age>90){LS.removeItem(JOBK);emit('job',{state:'lost'});throw new CloudError(0,'not_started','Generowanie nie ruszyło',{});} // POST nie dotarł do serwera — limit bez zmian
-    if(age>330){LS.removeItem(JOBK);emit('job',{state:'lost'});throw new CloudError(504,'lost','Generowanie nie dokończyło się');}
+    if(age>330){ // wiersz wisi jako running (funkcja zabita): temat mógł się jednak zapisać tuż przed przerwaniem — wtedy go bierzemy, zamiast zgłaszać porażkę
+      // tylko temat TEJ generacji (topics.generation_id, ustawiane przez serwer) — nie poprzedni materiał dodany do tego samego przedmiotu chwilę wcześniej
+      const skip=arr(j.known).filter(x=>/^[0-9a-f-]{36}$/i.test(String(x)));
+      let t=null;try{const rows=await rest('topics?select=id&subject_id=eq.'+j.subjectId+'&generation_id=eq.'+encodeURIComponent(g.id)+(skip.length?'&id=not.in.('+skip.join(',')+')':'')+'&order=created_at.desc&limit=1');t=rows&&rows[0]||null;}
+      catch(e){if(e.code==='network'&&age<900){emit('job',{state:'offline',age});await sleep(8000);continue;}}
+      if(t){jset(JOBK,{...j,topicId:t.id});const tt=await addTopic(t.id);LS.removeItem(JOBK);emit('job',{state:'done',topic:tt});return tt;}
+      LS.removeItem(JOBK);emit('job',{state:'lost'});throw new CloudError(504,'lost','Generowanie nie dokończyło się');}
     emit('job',{state:'running',age});await sleep(8000);
   }
 }
-async function me(){const r=await api('/api/me');if(r.status>=400)throw errOf(r);let trial=null;try{const p=await rest('profiles?select=trial_until&id=eq.'+UID);trial=p&&p[0]&&p[0].trial_until||null;}catch(e){}return {...obj(r.data),trialUntil:trial};}
+let meC=null; // ostatnia odpowiedź /api/me (limit przed dodaniem materiału) — {at, v}
+async function me(o){
+  o=o||{};if(meC&&o.maxAge!=null&&Date.now()-meC.at<o.maxAge)return meC.v;
+  const r=await api('/api/me',{timeout:15000});if(r.status>=400)throw errOf(r);let trial=null;try{const p=await rest('profiles?select=trial_until&id=eq.'+UID);trial=p&&p[0]&&p[0].trial_until||null;}catch(e){}
+  const v={...obj(r.data),trialUntil:trial};meC={at:Date.now(),v};return v;}
+const meCached=maxAge=>meC&&(maxAge==null||Date.now()-meC.at<maxAge)?meC.v:null;
 
 /* ---------- usunięcie konta: sprawdzenie na serwerze → pliki → RPC (kaskada w bazie) → dane lokalne ---------- */
 async function deleteAccount(){
-  await rest('rpc/delete_my_account',{method:'POST',body:{p_dry_run:true}}); // odmowa (np. aktywna subskrypcja) albo brak funkcji → nic jeszcze nie skasowaliśmy
+  await rest('rpc/delete_my_account',{method:'POST',body:{p_dry_run:true}}); // odmowa serwera (AUDYT P1-25) albo brak funkcji → nic jeszcze nie skasowaliśmy
   const files=await storageListAll(UID);if(files.length)await storageRemove(files);
   await rest('rpc/delete_my_account',{method:'POST',body:{p_dry_run:false}});
-  clearTimeout(pushT);syncOff=true;await wipeLocal(UID);
+  clearTimeout(pushT);syncOff=true;await wipeLocal(UID);try{LS.removeItem(SEENK);}catch(e){}
 }
 
-window.NAUKA_CLOUD={CloudError,on,uid:UID,email:()=>session&&session.user.email||'',signedIn:()=>!!session,
+/* linki prawne i kontakt z cloud-config.js: tylko https:// i poprawny adres e-mail; puste = wiersze ukryte */
+const httpsUrl=u=>{try{const x=new URL(String(u||''));return x.protocol==='https:'?x.href:'';}catch(e){return '';}};
+const LINKS=Object.freeze({privacy:httpsUrl(CFG.privacyUrl),terms:httpsUrl(CFG.termsUrl),
+  email:/^[^\s@<>"'?&#%/\\]+@[^\s@<>"'?&#%/\\]+\.[a-z]{2,}$/i.test(String(CFG.supportEmail||''))?String(CFG.supportEmail):''});
+
+window.NAUKA_CLOUD={CloudError,on,uid:UID,email:()=>session&&session.user.email||'',signedIn:()=>!!session,knownDevice,links:LINKS,storageVolatile:()=>LS.volatile===true,
   signUp,signIn,signOut,token,loadCache,fetchAll,toEngine,pickable,subjectName,clean,plain,esc,
-  dirty,flush,pull,bindEngine,hasLocalState,hasPending:()=>!!pending,applyPending,syncAvailable:()=>!syncOff,
-  prepareFiles,createSubject,updateSubject,uploadMaterial,discard,generate,job,recoverJob,me,deleteAccount,PALETTE,OK_MIME,PPTX_MIME,mimeOf,vizText,
-  _merge3:merge3,_mapViz:mapViz};
+  dirty,flush,pull,bindEngine,hasLocalState,hasPending:()=>!!pending,applyPending,syncAvailable:()=>!syncOff,storeFull:()=>storeFull,
+  prepareFiles,createSubject,updateSubject,uploadMaterial,discard,generate,job,recoverJob,me,meCached,deleteAccount,PALETTE,OK_MIME,PPTX_MIME,mimeOf,vizText,
+  _merge3:merge3,_mapViz:mapViz,_lostLocal:lostLocal,_stripEmoji:stripEmoji,_upFail:upFail};
 })();

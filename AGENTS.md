@@ -12,19 +12,22 @@ cloud.js         # chmura bez UI: sesja, REST do Supabase, Storage, API (Capacit
 engine.js        # silnik (jedno IIFE): router, Dziś, ścieżka, lekcja, zadania, fiszki, egzamin, gamifikacja, lis, szop
 cloud-ui.js      # UI chmury: start z konta, logowanie, karta „Konto”, dodawanie materiału, generowanie, „przedmiot gotowy”
 styles.css       # style (tokeny z design/tokens.css), bez gradientów i kół w tle
-index.html       # wersja dev — ładuje 4 skrypty przez <script src> (kolejność ma znaczenie)
-build.js         # `node build.js` → build/nauka-all.html (+ CSP z hashami skryptów)
+fonts/           # wbudowane fonty (TTF, OFL) + fonts.css — bez Google Fonts; build.js wkleja je jako WOFF w data:
+index.html       # wersja dev — ładuje fonts/fonts.css i 4 skrypty przez <script src> (kolejność ma znaczenie)
+build.js         # `node build.js` → build/nauka-all.html (+ CSP z hashami skryptów, fonty w data:)
 backend/         # migracje SQL do Supabase (wgrywane przez CLI)
 native/          # Capacitor iOS: `npm run sync` kopiuje build do Xcode
 design/          # handoff designu 2.0 (DESIGN.md, tokens.css, makiety)
 test/fixtures/   # tematy w formacie backendu do testów (w tym próby XSS)
+test/dev/        # atrapa backendu, shoot.mjs (zrzuty wszystkich ekranów) i checks/ (regresje Build 7) — patrz test/dev/README.md
 docs/            # BIBLIA.md = pełna dokumentacja projektu (czytaj przed większą zmianą); plan-wyklady.md = plan Etapu 2
 ```
 
 ## Backend (istniejący, z gałęzi `origin/claude/peaceful-hamilton-jy11e3`)
 - **Supabase** `zhgxhdsnizujzygpcyfl` (eu-central-1): konta e-mail + hasło (bez potwierdzania maila), tabele `subjects`, `topics` (JSONB `TopicContent`), `materials`, `generations`, `profiles`, `usage`; bucket `materials` (`{uid}/{uuid}.ext`). Tabela `app_state` (postępy Cramfoxa jako jeden blob) i RPC `delete_my_account()` — z `backend/0004_cramfox.sql`.
 - **API** `https://nauka-jet.vercel.app`: `POST /api/generate` (synchronicznie ~2 min), `GET /api/me`. **API nie ma CORS** — na iOS wołamy je natywnie przez `Capacitor.Plugins.CapacitorHttp` (tylko `readTimeout`, bez `connectTimeout`!), w przeglądarce przez lokalne proxy.
-- Nowe konto: 30 dni planu Pro (trigger `handle_new_user`), potem free: 3 generacje/mies. Globalny bezpiecznik: 300 generacji/dobę.
+- Nowe konto: 30 dni planu Pro (trigger `handle_new_user`), potem free: 3 generacje/mies. Bezpieczniki: 20 generacji/dobę na konto, 300/dobę globalnie, jedna generacja naraz (409 `busy`).
+- Build 7 (niewdrożony): RPC `reserve_generation` / `finish_generation` i sweeper (`backend/0007_generation_guards.sql`), limity konta na Storage i wiersze (`backend/0008_account_limits.sql`). Kolejność: 0007 → backend → 0008 → apka.
 
 ## Jak to działa (ważne reguły)
 - Kolejność skryptów: `cloud-config` → `cloud` (ustawia `window.NAUKA_UID`) → `engine` → `cloud-ui` (`window.NAUKA_BOOT` startuje silnik po wczytaniu przedmiotów z konta).
@@ -36,7 +39,7 @@ docs/            # BIBLIA.md = pełna dokumentacja projektu (czytaj przed więks
 ## Workflow przy zmianach
 1. Edytuj pliki źródłowe (nie `build/`).
 2. `node build.js`, potem `cd native && npm run sync` (iOS).
-3. Testy: jsdom z atrapą backendu (patrz README → Testy); symulator iOS na prawdziwym backendzie.
+3. Testy: atrapa backendu w przeglądarce (`cd test && node dev/shoot.mjs`, `node dev/checks/*.mjs` — patrz test/dev/README.md); symulator iOS na prawdziwym backendzie.
 4. Migracje: nowy plik `backend/000N_*.sql` (idempotentny), wgrywany przez Supabase CLI.
 
 ## Konwencje
@@ -47,6 +50,8 @@ docs/            # BIBLIA.md = pełna dokumentacja projektu (czytaj przed więks
 ## Czego NIE robić
 - Nie dodawać frameworków ani bundlera (jeden plik HTML dla Capacitora).
 - Nie zmieniać nazw kluczy localStorage bez migracji (utrata postępów).
-- Nie wstawiać treści z bazy do DOM bez `clean()` / `esc()`.
+- Nie ustawiać ani nie zmieniać `server.iosScheme`, `server.hostname` ani `appId` w `native/capacitor.config.json` bez migracji danych (dziś domyślne: `capacitor://localhost`): to origin WebView, a localStorage i IndexedDB są przypisane do originu — zmiana = utrata postępów i sesji na telefonach.
+- Nie ładować niczego z zewnątrz w apce (fonty, skrypty, style) — CSP pozwala tylko na nasze skrypty, Supabase, API i `data:`.
+- Nie wstawiać treści z bazy do DOM bez `clean()` / `esc()` (`clean()` i mapper w `cloud.js` usuwają też emoji z treści AI).
 - Nie ponawiać automatycznie `POST /api/generate` (każde wywołanie zjada limit użytkownika).
 - Nie wspominać w UI o płatnościach ani planie Pro (App Store 3.1.1) — zakupy w aplikacji dojdą osobno.

@@ -422,41 +422,41 @@ Każda pozycja: czego dotyczy, opcje i moja rekomendacja. Pozycje D1–D11 dotyc
 Build 7 to wszystkie P0 i P1 bez decyzji o wysiłku S lub M, plus zatwierdzone już „Powiedz prościej”. Kolejność wdrożeń: **migracje addytywne (nowe RPC, kolumny) → backend, który ich używa → zaostrzenia polityk w bazie (po sprawdzeniu, że build 6 dalej działa) → build apki.** Szacunek: S ≈ pół dnia, M ≈ 2 dni.
 
 **A. Backend (najpierw)**
-1. P0-1 `reserve_generation` w jednej transakcji (M, migracja).
-2. P1-1 wyłączenie `/api/tutor` w produkcji (S).
-3. P1-29, część bez decyzji: `levels` z klienta ignorowane (4, maks. 6), `countTokens` przed rezerwacją (S).
-4. P1-2 rozłożenie startu wywołań, żeby cache był czytany (S).
-5. P1-3 kolumny kosztu i jakości (S, migracja).
-6. P1-4 termin 270 s, `maxRetries`, sweeper w pg_cron, zapis tematu i `done` w jednym RPC (M, migracja).
-7. P1-5 limity dzienne na Storage (polityka RESTRICTIVE), `CHECK` na `topics`, limit przedmiotów (M, migracja zaostrzająca, wgrać po wdrożeniu).
+1. P0-1 `reserve_generation` w jednej transakcji (M, migracja). **[zrobione w Build 7]** — plus `generation_ledger` (limit globalny przeżywa usunięcie konta) i naliczenie najpóźniej 75 s po starcie żądania (przegląd).
+2. P1-1 wyłączenie `/api/tutor` w produkcji (S). **[zrobione w Build 7]** (410 `tutor_disabled`, gdy `TUTOR_ENABLED !== '1'`).
+3. P1-29, część bez decyzji: `levels` z klienta ignorowane (4, maks. 6), `countTokens` przed rezerwacją (S). **[zrobione w Build 7]**
+4. P1-2 rozłożenie startu wywołań, żeby cache był czytany (S). **[zrobione w Build 7]**
+5. P1-3 kolumny kosztu i jakości (S, migracja). **[zrobione w Build 7]** — od 0008 niewidoczne dla kluczy użytkowników (przegląd).
+6. P1-4 termin 270 s, `maxRetries`, sweeper w pg_cron, zapis tematu i `done` w jednym RPC (M, migracja). **[zrobione w Build 7]** — plus odpowiedź 200, gdy zginie tylko odpowiedź `finish_generation`, i sprzątanie ograniczone do startu + 285 s (przegląd).
+7. P1-5 limity dzienne na Storage (polityka RESTRICTIVE), `CHECK` na `topics`, limit przedmiotów (M, migracja zaostrzająca, wgrać po wdrożeniu). **[zrobione w Build 7]** — polityka Storage jest ostatnią sekcją 0008 (przegląd).
 
 **B. Apka: dane użytkownika**
 
-8. P1-6 strażnik przed wyzerowaniem postępów (S).
-9. P1-7 edycja pytania w przeglądzie egzaminu (S).
-10. P1-8 zamrożenie i zmiana dnia po powrocie z tła (S).
-11. P1-4, część kliencka: odpowiedź ≥500 bez JSON-a = wynik nieznany, odzyskiwanie zamiast `discard` (S).
+8. P1-6 strażnik przed wyzerowaniem postępów (S). **[zrobione w Build 7]** — plus zgubiony `epoch` i utrata samej META (przegląd).
+9. P1-7 edycja pytania w przeglądzie egzaminu (S). **[zrobione w Build 7]**
+10. P1-8 zamrożenie i zmiana dnia po powrocie z tła (S). **[zrobione w Build 7]** — zmiana dnia dopiero po `pull`, scalanie serii z zamrożeniami każdej strony osobno (przegląd).
+11. P1-4, część kliencka: odpowiedź ≥500 bez JSON-a = wynik nieznany, odzyskiwanie zamiast `discard` (S). **[zrobione w Build 7]** — plus odzyskiwanie po 330 s tylko po `generation_id` i dziennik zapisany przed POST (przegląd).
 
 **C. Apka: najboleśniejsze UX i formalności w kodzie**
 
-12. P1-9 pasek „Brak sieci” (S).
-13. P1-23 toasty (S).
-14. P1-24 kontrast (S).
-15. P1-10 „Wyjaśnij inaczej” plus pole `real` jako „Powiedz prościej” (S).
-16. P1-11 przerwanie i wznowienie lekcji (M).
-17. P1-17 fiszka dopiero po odwróceniu (S).
-18. P1-12 limit widoczny przed przygotowaniem materiału, szkic zachowany (S).
-19. P1-15 pełne nazwy przedmiotów (S).
-20. P1-22 ekran tworzenia lekcji: teksty, faza wysyłki, klikalny toast, wiersz „Tworzę lekcję…”, „ZACZNIJ NAUKĘ” do poziomu 1 (S).
-21. P1-21 hasło, część tymczasowa (S).
-22. P1-25 komunikat przy usuwaniu konta (S).
-23. P1-26 wersja i wycofanie zgody na AI (S).
-24. P1-27 fonty w buildzie (S).
-25. P0-3 i P0-4 w apce: linki „Polityka prywatności”, „Regulamin”, „Pomoc i kontakt” w Ustawieniach i na ekranie logowania (S; adresy z [D2](#d2)).
+12. P1-9 pasek „Brak sieci” (S). **[zrobione w Build 7]** — także pasek pełnej pamięci z `cloud-ui` (przegląd).
+13. P1-23 toasty (S). **[zrobione w Build 7]** — plus cisza na „Dodaj materiał” i „Tworzę lekcję”, toast z akcją 8 s (przegląd).
+14. P1-24 kontrast (S). **[zrobione w Build 7]**
+15. P1-10 „Wyjaśnij inaczej” plus pole `real` jako „Powiedz prościej” (S). **[zrobione w Build 7]** — plus pytania wprost o pojęcie z fiszki (przegląd).
+16. P1-11 przerwanie i wznowienie lekcji (M). **[zrobione w Build 7]** — X przy otwartym panelu dobrze/źle zapisuje następne pytanie (przegląd).
+17. P1-17 fiszka dopiero po odwróceniu (S). **[zrobione w Build 7]**
+18. P1-12 limit widoczny przed przygotowaniem materiału, szkic zachowany (S). **[zrobione w Build 7]** — przygaszone kafle [+] przy wyczerpanym limicie (przegląd).
+19. P1-15 pełne nazwy przedmiotów (S). **[zrobione w Build 7]**
+20. P1-22 ekran tworzenia lekcji: teksty, faza wysyłki, klikalny toast, wiersz „Tworzę lekcję…”, „ZACZNIJ NAUKĘ” do poziomu 1 (S). **[zrobione w Build 7]** — podpis wiersza według fazy i wiersz „Lekcja gotowa” na Dziś (przegląd).
+21. P1-21 hasło, część tymczasowa (S). **[zrobione w Build 7]**
+22. P1-25 komunikat przy usuwaniu konta (S). **[zrobione w Build 7]**
+23. P1-26 wersja i wycofanie zgody na AI (S). **[zrobione w Build 7]** — TWÓRZ sprawdza zgodę także po „WRÓĆ DO MATERIAŁU” (przegląd).
+24. P1-27 fonty w buildzie (S). **[zrobione w Build 7]**
+25. P0-3 i P0-4 w apce: linki „Polityka prywatności”, „Regulamin”, „Pomoc i kontakt” w Ustawieniach i na ekranie logowania (S; adresy z [D2](#d2)). **[zrobione w Build 7 w kodzie]** — adresy w `cloud-config.js` są puste (czekają na D1/D2), więc wiersze są ukryte; uzupełnić przed zgłoszeniem.
 
 **Kreska minimum.** Jeśli trzeba wydać szybciej, A + B + C to minimum przed szerszym TestFlightem i zgłoszeniem do App Store; D może wyjść jako build 7.1.
 
-**D. Apka: warstwa „po utworzeniu” i nauka**
+**D. Apka: warstwa „po utworzeniu” i nauka** *(nie wchodzi do Build 7 — osobny build po decyzjach właściciela)*
 
 26. P1-13 usuwanie i zmiana nazwy przedmiotu i materiału (M).
 27. P1-14 nagłówki materiałów na ścieżce i jeden bieżący węzeł (M).
@@ -465,9 +465,11 @@ Build 7 to wszystkie P0 i P1 bez decyzji o wysiłku S lub M, plus zatwierdzone j
 30. P1-19 lokalne przypomnienia (M; nowy plugin, `npm run sync`, test na urządzeniu).
 31. P1-20 DOCX, wiele zdjęć, większe pole tekstu (M; migracja MIME po wdrożeniu backendu).
 
-**Przy okazji (P2 po kilka minut, warto dorzucić do C):** kolizja `.cram` (P2 57), nagłówek czatu przy 360 px (59), konfetti przy ograniczonym ruchu (9), „Pytamy o zgodę” i inne poprawki tekstów (27), `color-scheme: dark` (56), litera u bossa (12), 400 przy odświeżeniu → logowanie (43), klucze storyboardu (47).
+**Przy okazji (P2 po kilka minut, warto dorzucić do C):** kolizja `.cram` (P2 57), nagłówek czatu przy 360 px (59), konfetti przy ograniczonym ruchu (9), „Pytamy o zgodę” i inne poprawki tekstów (27), `color-scheme: dark` (56), litera u bossa (12), 400 przy odświeżeniu → logowanie (43), klucze storyboardu (47). **[zrobione w Build 7]** — teksty z P2 27 domknięte w przeglądzie (m.in. „Popraw pytanie”, „Tak czy nie”, „Bossowi zostało N żyć”, „ze sobą”, bez udawanych segmentów w podsumowaniu tygodnia); klucze storyboardu (47) wymagają jeszcze testu na iOS 16.4.
 
 **Szacunek:** A ok. 7–8 dni, B ok. 2 dni, C ok. 7 dni, D ok. 12 dni. Do kreski ok. 3 tygodnie pracy jednej osoby, całość ok. 5–6 tygodni. Z agentami piszącymi kod wąskim gardłem będą przegląd zmian, testy w symulatorze i wdrożenia.
+
+**Przegląd Build 7 (2026-10-15).** Trzy przeglądy (backend, dane klienta, UX) zgłosiły 24 problemy; przyjęte i poprawione: naliczenie najpóźniej 75 s po starcie żądania (sprawdzane też po wgraniu do Files API), `generation_ledger` (limit globalny przeżywa usunięcie konta), okno `busy` 5,5 min, 0008 z polityką Storage na końcu i pełnymi sprawdzeniami, sprzątanie i zapis porażki do startu + 285 s, 200 po zgubionej odpowiedzi `finish_generation`, kolumny kosztu ukryte przed klientem, testy SECURITY DEFINER pod rolą bez superusera; w apce: zgubiony `epoch` i utrata META w strażniku, zmiana dnia po `pull` i scalanie serii, X przy panelu odpowiedzi, odzyskiwanie po `generation_id`, zgoda przy TWÓRZ, dziennik przed POST, pasek pełnej pamięci, „Wyjaśnij inaczej” dla pytań o pojęcie, cisza toastów na ekranach dodawania, podpis i wiersz „Lekcja gotowa” na Dziś, przygaszony [+] przy limicie, poprawki tekstów. Odłożone: lekki wpis „zajęty” przed pobraniem plików (seria równoległych żądań jednego konta nadal wgrywa pliki do Files API przed odmową; nic nie kosztuje, dołączyć do P2 42/49) i odrzucanie nagród starszych niż 10 s (zgubiłoby nagrody z lekcji).
 
 **Weryfikacja Build 7:** `node test/dev/shoot.mjs` (wszystkie scenariusze, zero błędów konsoli, jeden POST na próbę, pasek offline znika), test regresji dla P1-7 i P1-6 (uprzęże z audytu), smoke test na urządzeniu według BIBLIA §9.5, kontrola regexem z BIBLIA §12.1 na `build/nauka-all.html`, otagowanie commita jako build 7.
 

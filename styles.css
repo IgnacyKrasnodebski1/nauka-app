@@ -4,7 +4,7 @@
    Zasada: płaskie kolory, grube cienie pod spodem, duże promienie, zero gradientów.
    Motyw przedmiotu: engine.js ustawia --accent i --accent2 (hex z konta, cloud.js);
    --accent-dark i --on-accent są liczone z --accent poniżej.
-   Fonty: bez @import (blokował render przy pierwszym uruchomieniu offline) — engine.js dokłada <link> w tle, do tego czasu systemowe fallbacki z --font-*.
+   Fonty: wbudowane — fonts/fonts.css (@font-face; dev: <link> w index.html, build.js wkleja je jako WOFF w data:). Bez Google Fonts i bez @import (AUDYT P1-27).
    Minimalny iOS apki to 16.4 (projekt Xcode) — color-mix(), :has(), dvh i overflow-wrap:anywhere działają natywnie.
    Proste wartości przed color-mix i blok @supports not (color:color-mix(…)) to tylko zapas dla starszych przeglądarek przy podglądzie w sieci.
    ============================================================ */
@@ -27,8 +27,8 @@
   --txt:#F4F2FF;
   --txt-2:#D6D2F0;
   --muted:#9B95C9;
-  --muted-2:#6E67A8;
-  --muted-3:#4E4778;
+  --muted-2:#8680BE;     /* P1-24: tekst pomocniczy 4,75–5,37:1 (dawniej #6E67A8, 3,4–3,8:1) */
+  --muted-3:#4E4778;     /* tylko ramki, kreski i ikony — nigdy tekst (2,0–2,3:1) */
 
   /* akcenty */
   --acid:#B4FF3A;   --acid-dark:#7FC400;   --on-acid:#14210A;
@@ -157,6 +157,9 @@
   --amber-soft:color-mix(in srgb, var(--amber) 55%, var(--txt));
   --violet-soft:color-mix(in srgb, var(--violet) 40%, var(--txt));
   --violet-shadow:color-mix(in srgb, var(--violet) 12%, var(--bg));
+  /* P1-24: mały tekst w kolorze przedmiotu — akcent rozjaśniony tekstem (fiolet 4,3:1 → 6,4:1 na karcie) */
+  --accent-ink:color-mix(in srgb, var(--accent) 70%, var(--txt));
+  color-scheme:dark; /* P2-56: natywne kontrolki (data, chipy, autofill, checkbox) w ciemnym stylu */
 }
 
 /* ---------- BAZA ---------- */
@@ -219,7 +222,7 @@ h1,h2,h3,.logo,.ftitle,.qq,.term,.exq{font-family:var(--font-display);font-weigh
 .nodebtn .stars{position:absolute;bottom:-12px;left:50%;transform:translateX(-50%);font-size:13px;white-space:nowrap}
 .nodelabel{font-size:12.5px;font-weight:800;text-align:center;max-width:180px;line-height:1.2;color:var(--txt)}
 .nodelabel small{display:block;color:var(--muted);font-weight:700;font-size:11.5px;margin-top:2px}
-.node-lock+.nodelabel,.pathnode:has(.node-lock) .nodelabel{color:var(--muted-3)}
+.node-lock+.nodelabel,.pathnode:has(.node-lock) .nodelabel{color:var(--muted-2)} /* P1-24: nazwy zablokowanych poziomów czytelne (było --muted-3, 2,0:1) */
 .pathnode:has(.node-open) .nodelabel{color:var(--acid)}
 .connector{width:5px;height:16px;background:var(--line);border-radius:3px}
 .connector.done{background:var(--accent)}
@@ -335,12 +338,17 @@ h1,h2,h3,.logo,.ftitle,.qq,.term,.exq{font-family:var(--font-display);font-weigh
 .lessonfoot{padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
 
 .nav{position:absolute;bottom:0;left:0;right:0;display:flex;background:var(--surface-2);border-top:2px solid var(--line);padding:8px 6px calc(8px + env(safe-area-inset-bottom));z-index:40}
-.nav button{flex:1;background:none;border:none;color:var(--muted-2);font-size:10.5px;font-weight:800;letter-spacing:.4px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;border-radius:var(--r-sm);font-family:var(--font-body)}
+.nav button{flex:1;background:none;border:none;color:var(--muted-2);font-size:11.5px;font-weight:800;letter-spacing:.4px;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0;cursor:pointer;border-radius:var(--r-sm);font-family:var(--font-body)}
 .nav button .ic{font-size:21px;line-height:1}
 .nav button.active{color:var(--acid)}
 
-.toast{position:absolute;top:64px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--surface);border:2px solid var(--line);padding:10px 18px;border-radius:var(--r-chip);font-weight:800;font-size:14px;z-index:90;opacity:0;transition:.3s;pointer-events:none;white-space:nowrap;box-shadow:0 var(--drop) 0 var(--shadow)}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* P1-23: toast nad dolnym paskiem (przy otwartym arkuszu engine.js podnosi go nad arkusz), zawija się zamiast ucinać, czas zależny od długości (engine.js) */
+.toast{position:absolute;left:50%;top:auto;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(14px);width:max-content;max-width:calc(100% - 32px);
+  background:var(--surface);border:2px solid var(--line);padding:10px 18px;border-radius:20px;font-weight:800;font-size:14px;line-height:1.35;text-align:center;white-space:normal;overflow-wrap:anywhere;
+  z-index:90;opacity:0;visibility:hidden;transition:opacity .3s,transform .3s,visibility 0s linear .3s;pointer-events:none;box-shadow:0 var(--drop) 0 var(--shadow)}
+.toast.show{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0);transition:opacity .3s,transform .3s}
+.toast.act{pointer-events:auto;cursor:pointer;border-color:var(--tint-gold-line)}
+.toast.act:active{transform:translateX(-50%) translateY(2px)}
 .swipehint{position:absolute;bottom:80px;left:0;right:0;text-align:center;color:var(--muted);font-size:13px;font-weight:700;animation:dcBob 1.6s ease-in-out infinite;pointer-events:none;z-index:20}
 
 /* ---------- ĆWICZENIA (wpisywanie, klocki, pary, speed) ---------- */
@@ -427,15 +435,15 @@ svg.ic{display:inline-block;flex:none;vertical-align:-.2em}
    Tylko dopisane reguły; kolory przez tokeny i color-mix, ruch przez .a-* z tokens.css.
    ============================================================ */
 /* motyw na kontenerze: --accent inline (z data/*.js), pochodne liczone lokalnie (na :root nie przeliczają się dla dzieci) */
-.themed{--accent-tint:color-mix(in srgb,var(--accent) 14%,var(--surface));--accent-tint-line:color-mix(in srgb,var(--accent) 36%,var(--surface));
+.themed{--accent-ink:color-mix(in srgb,var(--accent) 70%,var(--txt));--accent-tint:color-mix(in srgb,var(--accent) 14%,var(--surface));--accent-tint-line:color-mix(in srgb,var(--accent) 36%,var(--surface));
         --accent-shadow:color-mix(in srgb,var(--accent) 10%,var(--bg));--accent-dark:color-mix(in srgb,var(--accent) 68%,var(--ink))}
 /* iOS < 16.2 bez color-mix(): zmienna z color-mix przechodzi parsowanie, a przy użyciu daje „invalid at computed-value time” (właściwość = unset),
    więc fallback przed nią nie działa — stałe wartości tylko tam, gdzie color-mix nie istnieje (także dla .themed, które liczy tinty z --accent kafla);
    blok stoi PO .themed i :root z color-mix — przy tej samej specyficzności wygrywa późniejsza deklaracja */
 @supports not (color: color-mix(in srgb, red, blue)){
-  :root{--accent-dark:var(--acid-dark);--accent-tint:var(--surface-2);--accent-tint-line:var(--line);--accent-shadow:var(--shadow);
+  :root{--accent-ink:var(--accent);--accent-dark:var(--acid-dark);--accent-tint:var(--surface-2);--accent-tint-line:var(--line);--accent-shadow:var(--shadow);
     --red-soft:#FA94AB;--acid-soft:#A6C589;--amber-soft:#FAC586;--violet-soft:#D6B3FC;--violet-shadow:#201536}
-  .themed{--accent-tint:var(--surface-2);--accent-tint-line:var(--line);--accent-shadow:var(--shadow);--accent-dark:var(--shadow)}
+  .themed{--accent-ink:var(--accent);--accent-tint:var(--surface-2);--accent-tint-line:var(--line);--accent-shadow:var(--shadow);--accent-dark:var(--shadow)}
 }
 html.reduce-motion *{animation:none !important;transition:none !important}
 #app{overflow:hidden}
@@ -491,7 +499,7 @@ button.minitile:active{transform:translateY(2px)}
 .plan-row.done .t{color:var(--muted-2);text-decoration:line-through}
 .plan-row .s{font-size:12px;font-weight:600;color:var(--muted-2);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .plan-row.cur .s{color:var(--txt-2);color:color-mix(in srgb,var(--accent) 30%,var(--txt-2))}
-.plan-row .rw{font-size:12px;font-weight:800;color:var(--muted-3);flex:none}
+.plan-row .rw{font-size:12px;font-weight:800;color:var(--muted-2);flex:none}
 .plan-row .chev{color:var(--muted-3)}
 .plan-row.cur .chev{color:var(--txt-2);color:color-mix(in srgb,var(--accent) 30%,var(--txt-2))}
 
@@ -516,7 +524,7 @@ button.minitile:active{transform:translateY(2px)}
 
 /* dolna nawigacja: 4 cele po 44+ px, aktywny w kolorze akcji */
 .nav{justify-content:space-around;padding:10px 8px calc(10px + env(safe-area-inset-bottom))}
-.nav button{flex:0 0 68px;gap:4px;padding:4px 0;min-height:48px;font-size:10.5px}
+.nav button{flex:0 0 68px;gap:4px;padding:4px 0;min-height:48px;font-size:11.5px}
 .nav button .ic{transition:transform .08s}
 .nav button:active .ic{transform:translateY(2px)}
 
@@ -554,7 +562,7 @@ button.setrow{cursor:pointer}
 .toggle.on i{background:var(--on-acid);transform:translateX(20px)}
 .pill.danger{background:var(--red);color:var(--on-red);box-shadow:0 var(--drop-btn) 0 var(--red-dark)}
 .pill.danger:active{box-shadow:0 0 0 var(--red-dark)}
-.version{font-size:12px;font-weight:600;color:var(--muted-3);padding:4px}
+.version{font-size:12px;font-weight:600;color:var(--muted-2);padding:4px}
 
 /* seria: bursztynowa górna strefa, płomień, licznik, kropki tygodnia */
 .streakbg{position:absolute;top:0;left:0;right:0;height:420px;background:var(--tint-amber)}
@@ -570,7 +578,7 @@ button.setrow{cursor:pointer}
 .week .eyebrow{font-size:10.5px;letter-spacing:1.2px}
 .days{display:flex;justify-content:space-between;margin-top:14px}
 .day{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:11.5px;font-weight:800;color:var(--muted)}
-.day.future{color:var(--muted-3)}
+.day.future{color:var(--muted-2)}
 .day.today,.day.todaydone{color:var(--txt);color:color-mix(in srgb,var(--amber) 25%,var(--txt))}
 .dot{width:38px;height:38px;border-radius:50%;background:var(--line-2);display:flex;align-items:center;justify-content:center;color:var(--on-amber)}
 .day.done .dot{background:var(--flame)}
@@ -746,6 +754,8 @@ button.setrow{cursor:pointer}
 
 /* konfetti (kolor i rozmiar kawałka przez --c / --s, ustawiane inline z tokenów) */
 .confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:3}
+html.reduce-motion .confetti{display:none} /* P2-9: bez ruchu kawałki zostawały jako kolorowe kwadraty na pytaniach */
+@media (prefers-reduced-motion: reduce){.confetti{display:none}}
 .confetti i{position:absolute;display:block;width:var(--s,10px);height:var(--s,10px);border-radius:3px;background:var(--c,var(--acid))}
 .confetti i.round{border-radius:50%}
 
@@ -831,7 +841,7 @@ button.setrow{cursor:pointer}
 /* uzupełnij zdanie (TaskFill.html): karta zdania ze slotami, bank kafelków, podpowiedź */
 .fillcard{background:var(--surface);border:2px solid var(--line);border-radius:26px;padding:22px 20px;box-shadow:0 6px 0 var(--shadow)}
 .filltxt{font-size:17px;font-weight:700;line-height:2.1;color:var(--txt-2)}
-.slot{display:inline-flex;align-items:center;justify-content:center;min-width:96px;min-height:36px;padding:5px 12px;margin:0 2px;border-radius:12px;background:var(--surface-2);border:2px dashed var(--muted-3);color:var(--muted-3);font-family:var(--font-body);font-size:15px;font-weight:800;line-height:1.3;vertical-align:middle;cursor:pointer}
+.slot{display:inline-flex;align-items:center;justify-content:center;min-width:96px;min-height:36px;padding:5px 12px;margin:0 2px;border-radius:12px;background:var(--surface-2);border:2px dashed var(--muted-3);color:var(--muted-2);font-family:var(--font-body);font-size:15px;font-weight:800;line-height:1.3;vertical-align:middle;cursor:pointer}
 .slot.filled{background:var(--tint-acid);border:2px solid var(--acid);color:var(--txt);color:color-mix(in srgb,var(--acid) 25%,var(--txt))}
 .slot.ok{border-color:var(--tint-acid-line)}
 .slot.bad{background:var(--tint-red);border:2px solid var(--red);color:var(--txt);color:color-mix(in srgb,var(--red) 20%,var(--txt))}
@@ -1121,6 +1131,7 @@ svg.chart{width:100%;height:auto;display:block;font-family:var(--font-body)}
 .qatile.cyan{background:var(--tint-cyan);border-color:var(--tint-cyan-line)}.qatile.cyan .ic{color:var(--cyan)}
 .qatile .t{font-size:14px;font-weight:800}
 .qatile .s{font-size:11.5px;font-weight:600;color:var(--muted);margin-top:3px;line-height:1.35}
+.qatile.off,.qabig.off{opacity:.5;box-shadow:none} /* limit nowych lekcji wykorzystany (cloud-ui addSheet): dotknięcie pokazuje arkusz limitu */
 .qalink{background:none;border:none;cursor:pointer;font-family:var(--font-body);text-align:center;font-size:13px;font-weight:800;color:var(--muted);padding:6px;min-height:44px}
 /* „Skąd wziąć materiał?” jako arkusz informacyjny: opis, ramka offline, 3 kroki z README */
 .sp{font-size:13.5px;font-weight:600;color:var(--muted);line-height:1.45}
@@ -1215,7 +1226,7 @@ svg.chart{width:100%;height:auto;display:block;font-family:var(--font-body)}
 .badge .ic{display:block;margin:0 auto 6px}
 .badge.gold{background:var(--tint-gold);border-color:var(--tint-gold-line);color:var(--gold);color:color-mix(in srgb,var(--gold) 55%,var(--txt))}.badge.gold .ic{color:var(--gold)}
 .badge.amber{background:var(--tint-amber);border-color:var(--tint-amber-line);color:var(--amber);color:color-mix(in srgb,var(--amber) 55%,var(--txt))}.badge.amber .ic{color:var(--flame)}
-.badge.lock{background:var(--surface-2);border:2px dashed var(--line-dash);color:var(--muted-3)}.badge.lock .ic{color:var(--muted-3)}
+.badge.lock{background:var(--surface-2);border:2px dashed var(--line-dash);color:var(--muted-2)}.badge.lock .ic{color:var(--muted-3)}
 .profile .sechdr{min-height:40px}
 .rvrun .blob{background:var(--bg);background:color-mix(in srgb,var(--cyan) 12%,var(--bg))}
 .rvrun .flip,#subjscreen .flip{touch-action:pan-y}
@@ -1248,7 +1259,7 @@ svg.chart{width:100%;height:auto;display:block;font-family:var(--font-body)}
 .egrow.on .box{background:var(--acid);border-color:var(--acid)}
 .egrow .t{flex:1;min-width:0;font-size:13.5px;font-weight:700}
 .egrow.all .t{font-weight:800}
-.egrow .n{font-size:12px;font-weight:800;color:var(--muted-3)}
+.egrow .n{font-size:12px;font-weight:800;color:var(--muted-2)}
 .egrow.on .n{color:var(--muted-2)}
 .egchips{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:4px}
 .egchip{min-height:40px;padding:0 14px;border-radius:var(--r-chip);background:var(--surface-2);border:2px solid var(--line);color:var(--muted);font-size:12.5px;font-weight:800;cursor:pointer;font-family:var(--font-body)}
@@ -1453,9 +1464,9 @@ svg.chart{width:100%;height:auto;display:block;font-family:var(--font-body)}
 .tprow.tp-missed .t{color:var(--muted)}
 .tprow.tp-missed .s{color:var(--red-soft)}
 .tprow.tp-rest{background:var(--surface-2);border-style:dashed;cursor:default}
-.tprow.tp-rest .dy small{color:var(--muted-3)}
+.tprow.tp-rest .dy small{color:var(--muted-2)}
 .tprow.tp-rest .dy b,.tprow.tp-rest .t{color:var(--muted)}
-.tprow.tp-rest .s,.tprow.tp-rest .ico{color:var(--muted-3)}
+.tprow.tp-rest .s{color:var(--muted-2)}.tprow.tp-rest .ico{color:var(--muted-3)}
 .tprow.tp-rest.tp-now{background:var(--tint-acid);border-style:solid}
 .tprow.tp-exam{background:var(--tint-red);border-color:var(--red);box-shadow:0 4px 0 var(--red-dark);cursor:default}
 .tprow.tp-exam .dy small{color:var(--red)}
@@ -1770,13 +1781,18 @@ button.rsrc .chev{color:var(--muted-3)}
 .eglast .ico.violet{background:var(--violet);color:var(--on-violet)}
 .eglast.cram .s{color:var(--violet-soft)}
 
-/* pasek offline nad aplikacją (poza #app) */
+/* pasek offline nad aplikacją (poza #app). P1-9: #app zjeżdża o wysokość widocznego paska (body.bar-on, --barh z engine.js barLayout) — pasek niczego nie zasłania; jedna linia */
 .netbar{position:fixed;top:0;left:0;right:0;margin:0 auto;max-width:560px;z-index:120;display:none;align-items:center;gap:8px;padding:9px 16px;background:var(--tint-amber);border-bottom:2px solid var(--tint-amber-line);color:var(--amber-soft);font-size:12px;font-weight:800;line-height:1.3}
+.netbar .grow{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .netbar.on{display:flex}
 .netbar .ic{color:var(--amber);flex:none}
 /* „postępy się nie zapisują” (STORE w pamięci): ten sam pasek z krzyżykiem; gdy offline, pokazuje się tylko pasek sieci */
 .storebar{padding-right:6px}
-.storebar .grow{flex:1;min-width:0}
+.storebar .sbwhy{display:none}
+.storebar.open{align-items:flex-start}
+.storebar.open .grow{white-space:normal}
+.storebar.open .sbwhy{display:block;font-weight:600;margin-top:3px}
+.storebar .sbm{flex:none;min-height:36px;margin:-6px 0;padding:0 8px;border:none;border-radius:10px;background:none;color:var(--amber);font:800 12px var(--font-body);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 .storebar .sbx{flex:none;width:36px;height:36px;margin:-6px 0;border:none;border-radius:50%;background:none;color:var(--amber-soft);cursor:pointer;display:flex;align-items:center;justify-content:center}
 .netbar.on~.storebar{display:none}
 
@@ -1897,10 +1913,6 @@ button.rsrc .chev{color:var(--muted-3)}
 .wkblob.two{top:auto;right:auto;bottom:80px;left:-120px;width:300px;height:300px;background:var(--violet);background:color-mix(in srgb,var(--violet) 88%,var(--on-violet))}
 .wk{display:flex;flex-direction:column;gap:16px;padding:18px 20px 30px;min-height:100%}
 .wk>*{flex:none}
-.wksegs{display:flex;gap:6px}
-.wksegs i{flex:1;height:5px;border-radius:3px;background:var(--violet);background:color-mix(in srgb,var(--violet) 70%,var(--txt));overflow:hidden;display:block}
-.wksegs i.on{background:var(--on-violet)}
-.wksegs i b{display:block;height:100%;width:60%;background:var(--on-violet)}
 .wkhead{display:flex;align-items:center;justify-content:space-between;font-size:16px;font-weight:800}
 .wkclose{width:44px;height:44px;border-radius:50%;border:none;background:var(--violet);background:color-mix(in srgb,var(--violet) 80%,var(--on-violet));color:var(--on-violet);display:flex;align-items:center;justify-content:center;cursor:pointer}
 .wkbody{display:flex;flex-direction:column;gap:12px;padding:6px 4px 0}
@@ -1913,22 +1925,22 @@ button.rsrc .chev{color:var(--muted-3)}
 .wkbar i{display:block;width:100%;border-radius:12px;background:var(--violet);background:color-mix(in srgb,var(--violet) 70%,var(--on-violet));min-height:6px}
 .wkcol.best .wkbar i{background:var(--on-violet)}
 .wkcol.future .wkbar i{opacity:.35}
-.wkcol span{font-size:12.5px;font-weight:800;color:var(--on-violet);color:color-mix(in srgb,var(--on-violet) 75%,var(--violet))}
+.wkcol span{font-size:12.5px;font-weight:800;color:var(--on-violet)} /* P1-24: 4,7:1 (było 3,5:1) */
 .wkcol.today span{color:var(--on-violet);text-decoration:underline;text-underline-offset:3px}
-.wkbest{font-size:14.5px;font-weight:800;color:var(--on-violet);color:color-mix(in srgb,var(--on-violet) 85%,var(--violet));line-height:1.4}
+.wkbest{font-size:14.5px;font-weight:800;color:var(--on-violet);line-height:1.4}
 .wkgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
-.wkstat{display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:var(--violet);background:color-mix(in srgb,var(--violet) 78%,var(--bg));border-radius:18px;padding:12px 11px;color:var(--on-violet);min-height:44px}
+.wkstat{display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:var(--violet);background:color-mix(in srgb,var(--violet) 75%,var(--txt));border-radius:18px;padding:12px 11px;color:var(--on-violet);min-height:44px}
 .wkstat .ic{color:var(--on-violet);opacity:.8}
 .wkstat b{font-family:var(--font-display);font-size:22px;font-weight:800;line-height:1;margin-top:2px}
-.wkstat span{font-size:10.5px;font-weight:800;line-height:1.25;color:var(--on-violet);color:color-mix(in srgb,var(--on-violet) 80%,var(--violet))}
+.wkstat span{font-size:10.5px;font-weight:800;line-height:1.25;color:var(--on-violet)} /* P1-24: kafel jaśniejszy od tła ekranu, tekst --on-violet: 6,6:1 (było 2,6:1) */
 .wkfoot{margin-top:auto;display:flex;flex-direction:column;gap:6px;padding-top:8px}
 .pill.dark{background:var(--on-violet);color:var(--txt);box-shadow:0 var(--drop-btn) 0 var(--bg);min-height:60px;border-radius:20px}
 .pill.dark:active{box-shadow:0 0 0 var(--bg)}
 .pill.text.dark{background:transparent;box-shadow:none;min-height:0;color:var(--on-violet)}
 
 /* noc przed egzaminem (Cram.html): gwiazdki mrugają, księżyc, bloki numerowane w tintach, sesja z zegarem bloku, ekran „Idź spać” */
-.cram{display:flex;flex-direction:column;gap:12px;padding-top:8px;position:relative}
-.cram>*{flex:none}
+.scroll.cram{display:flex;flex-direction:column;gap:12px;padding-top:8px;position:relative} /* P2-57: tylko ekran nocy (shell cls) — nie karta „Egzamin jutro?” (.eglast.cram) ani pasek .egdrain.cram */
+.scroll.cram>*{flex:none}
 .cramstar{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--violet-soft);pointer-events:none}
 .cramstar:nth-of-type(1){top:24px;left:22px}.cramstar:nth-of-type(2){top:60px;right:40px}.cramstar:nth-of-type(3){top:150px;left:60px;width:4px;height:4px}
 .cramstar:nth-of-type(4){top:110px;right:110px;width:4px;height:4px}.cramstar:nth-of-type(5){top:200px;right:30px}
@@ -1978,7 +1990,7 @@ button.rsrc .chev{color:var(--muted-3)}
 .sheet.edit>*{flex:none}
 .ssub{font-size:12.5px;font-weight:700;color:var(--muted);margin-top:3px}
 .edlbl{font-size:11px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:var(--muted-2);margin-top:4px}
-.edta{width:100%;resize:vertical;background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:12px 14px;color:var(--txt);font-family:var(--font-body);font-size:15px;font-weight:700;line-height:1.4;outline:none;min-height:56px}
+.edta{width:100%;resize:none;background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:12px 14px;color:var(--txt);font-family:var(--font-body);font-size:15px;font-weight:700;line-height:1.4;outline:none;min-height:56px}
 .edta:focus{border-color:var(--acid)}
 .edopts{display:flex;flex-direction:column;gap:8px}
 .edopt{display:flex;align-items:center;gap:10px;background:var(--surface);border:2px solid var(--line);border-radius:16px;padding:6px 10px 6px 8px;min-height:54px}
@@ -2066,6 +2078,9 @@ button.cmstep:active{transform:translateY(4px);box-shadow:0 0 0 var(--shadow)}
 body{padding-top:env(safe-area-inset-top)}
 #app{height:calc(100vh - env(safe-area-inset-top));height:calc(100dvh - env(safe-area-inset-top));padding-bottom:env(safe-area-inset-bottom)}
 .netbar{top:env(safe-area-inset-top)}
+/* P1-9: widoczny pasek sieci / pamięci przesuwa całe #app (z nakładkami lekcji i arkuszy) w dół o swoją wysokość */
+body.bar-on{padding-top:calc(env(safe-area-inset-top) + var(--barh,0px))}
+body.bar-on #app{height:calc(100vh - env(safe-area-inset-top) - var(--barh,0px));height:calc(100dvh - env(safe-area-inset-top) - var(--barh,0px))}
 
 /* ============================================================ MASKOTKA — lis Cramfox (fox() w engine.js). Części .fx-* animowane osobno;
    nastrój = klasa na <svg> (idle/happy/oops/fire/sleep), losowe akcje act-* dodaje foxLive(). Ogranicz animacje wyłącza wszystko (html.reduce-motion *). */
@@ -2428,6 +2443,8 @@ body{padding-top:env(safe-area-inset-top)}
 .cfthumb-x{position:absolute;top:6px;right:6px;width:28px;height:28px;border-radius:50%;border:none;background:var(--bg);color:var(--txt);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:1}
 .cfmore{display:flex;gap:8px;flex-wrap:wrap}
 .cfmore .chip{display:inline-flex;align-items:center;gap:6px;min-height:44px}
+button.chip{background:var(--surface);border:2px solid var(--line);color:var(--txt);cursor:pointer;font-family:var(--font-body);box-shadow:0 4px 0 var(--shadow)} /* „+ Zdjęcie / + Plik / + Tekst”: bez natywnego (szarego) wyglądu przycisku — P2-56 */
+button.chip:active{transform:translateY(4px);box-shadow:none}
 .cfwhere{display:flex;flex-direction:column;gap:10px}
 /* stopka przypięta jak .egfoot: cloud-ui.js dokłada ją do .screen (obok .scroll), więc nie przewija się z treścią; .scroll ma zapas na jej wysokość */
 .cfadd-foot{position:absolute;left:0;right:0;bottom:0;z-index:5;padding:12px 18px 16px;background:var(--bg);border-top:2px solid var(--line-2);display:flex;flex-direction:column;gap:6px}
@@ -2618,7 +2635,8 @@ body{padding-top:env(safe-area-inset-top)}
 .lessonbody.chatbody{overflow-y:auto;-webkit-overflow-scrolling:touch;padding-top:0;overscroll-behavior:contain}
 .chattop{position:sticky;top:0;z-index:3;display:flex;align-items:center;gap:10px;padding:8px 0 10px;background:var(--bg);border-bottom:2px solid var(--line-2)}
 .chatfox{flex:none;width:56px;height:60px;display:flex;align-items:flex-end;justify-content:center}
-.chatname{font-family:var(--font-display);font-weight:800;font-size:16px;letter-spacing:-.2px}
+.chattop .grow{flex:1;min-width:0} /* P2-59: licznik pojęć zostaje na ekranie przy 360 px */
+.chatname{font-family:var(--font-display);font-weight:800;font-size:16px;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chatsub{font-size:12.5px;font-weight:700;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .chatterms{flex:none;display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:13px;background:var(--tint-gold);border:2px solid var(--tint-gold-line);color:var(--gold);font-size:13.5px;font-weight:800}
 .chatterms.pop{animation:cPop .45s cubic-bezier(.3,1.6,.5,1)}
@@ -2793,3 +2811,58 @@ body{padding-top:env(safe-area-inset-top)}
   .vz-cmpr .vz-ca,.vz-cmpr .vz-cb{font-size:14px}
 }
 @supports not (color: color-mix(in srgb, red, blue)){.vz-bt i{background:var(--muted-2)}}
+
+/* ============================================================ BUILD 7 (engine.js): „Prościej” w czacie, powrót do przerwanej lekcji, fiszka po odwróceniu,
+   pełne nazwy przedmiotów, kontrast, natywne kontrolki, ograniczony ruch. Dopisane na końcu, żeby wygrywały z wcześniejszymi warstwami. */
+
+/* P1-10 / „Powiedz prościej”: pole real dawki pod jej tekstem — mały przycisk „Prościej”, stuknięcie rozwija (BIBLIA §10.3) */
+.creal{align-self:flex-start;max-width:88%;display:flex;flex-direction:column;align-items:flex-start;gap:8px;margin:0 0 2px 4px}
+.crealbtn{position:relative;display:inline-flex;align-items:center;gap:6px;min-height:34px;padding:6px 12px;border-radius:999px;background:var(--tint-cyan);border:2px solid var(--tint-cyan-line);
+  color:var(--cyan);color:color-mix(in srgb,var(--cyan) 55%,var(--txt));font:800 12.5px var(--font-body);letter-spacing:.3px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.crealbtn::before{content:"";position:absolute;inset:-6px -4px} /* cel dotyku ≥ 44 px przy małym przycisku */
+.crealbtn .chev{transition:transform .15s}
+.creal.open .crealbtn .chev{transform:rotate(180deg)}
+.crealtx{padding:11px 14px;border-radius:16px;border-top-left-radius:6px;background:var(--tint-cyan);border:2px solid var(--tint-cyan-line);font-size:15.5px;line-height:1.45;font-weight:600;color:var(--txt);overflow-wrap:anywhere}
+.crealtx[hidden]{display:none}
+.exbox .lbl+*{overflow-wrap:anywhere}
+
+/* P1-11: przerwana lekcja — dymek „DOKOŃCZ” na węźle (także zaliczonym), arkusz „Dokończyć lekcję?”, „Przeczytaj jeszcze raz” przy powtórce poziomu */
+.bubble.resume{background:var(--cyan);color:var(--on-cyan);box-shadow:0 4px 0 var(--cyan-dark)}
+.bubble.resume::after{background:var(--cyan)}
+.pathnode.resume{padding-top:52px}
+.sheet.ask.resume{border-top-color:var(--cyan)}
+.sheet.ask.resume .sp b{color:var(--txt);font-weight:800}
+.lreread{align-self:center;flex:none;min-height:44px;margin:0 0 8px;color:var(--cyan);color:color-mix(in srgb,var(--cyan) 60%,var(--txt))}
+.lreread .ic{color:var(--cyan)}
+
+/* P1-17: ocena fiszki dopiero po odwróceniu — przyciski przygaszone, stuknięcie odwraca kartę */
+.fbtn{transition:transform .08s,box-shadow .08s,opacity .2s}
+.fbtns.wait .fbtn{opacity:.42;box-shadow:none}
+.fbtns.wait .fbtn:active{transform:none}
+
+/* P1-15: pełne nazwy przedmiotów w kaflach i wierszach (do 2 linii); monogram z dwóch liter */
+.subjtile .name{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;text-align:center}
+.cfwhere .obopt .t.nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;line-height:1.25} /* „Gdzie dodać?”: pełna nazwa przedmiotu w 2 liniach (P1-15) */
+.setrow .t.nm,.rvrow .t.nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere;line-height:1.3}
+.bname span{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:normal;word-break:normal;font-size:15px;line-height:1.15;letter-spacing:-.2px} /* ciasny pas nagłówka: dwie linie bez łamania słów (pełny układ nagłówka to P2-55) */
+.mono{letter-spacing:-.6px}
+@media (max-width:430px){.bname .mono{display:none}} /* telefon: pas nagłówka ma ok. 85 px na nazwę — monogram zabierał 34 px i „Polityka” nie mieściła się w linii */
+.cbdue .lb{width:100px}
+.tpchip,.albchip{max-width:230px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* P1-24: mały tekst w kolorze przedmiotu przez --accent-ink (fiolet 4,3:1 → 6,4:1); duże cyfry i nagłówki zostają w pełnym akcencie */
+.tag.accent,.cbub .lbl,.cbub.ccheck .lbl,.cdhead .cdn,.csub,.vz-again,.vz-when,.vz-gn,.vz-step.end em,.blank,.cterm,.real .lbl,.zbox h3,.deftxt b{color:var(--accent-ink)}
+
+/* P2-56: własny checkbox (16+ przy rejestracji), autofill w ciemnym stylu, bez uchwytu zmiany rozmiaru pól */
+.cfcheck input{-webkit-appearance:none;appearance:none;width:24px;height:24px;flex:none;margin:0;border-radius:8px;border:2px solid var(--line-dash);background:var(--surface);cursor:pointer}
+.cfcheck input:checked{border-color:var(--acid);background:var(--acid) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2314210A' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/17px no-repeat}
+.cfcheck input:focus-visible{outline:2px solid var(--acid);outline-offset:2px}
+input:-webkit-autofill,input:-webkit-autofill:hover,input:-webkit-autofill:focus{-webkit-text-fill-color:var(--txt);-webkit-box-shadow:0 0 0 1000px var(--surface) inset;box-shadow:0 0 0 1000px var(--surface) inset;caret-color:var(--txt);transition:background-color 9999s}
+textarea{resize:none}
+
+/* P2-9: ograniczony ruch — fiszka przenika zamiast obrotu 3D */
+html.reduce-motion .flip .flipinner{transform:none !important}
+html.reduce-motion .flip .face{-webkit-backface-visibility:visible;backface-visibility:visible;transition:opacity .2s !important}
+html.reduce-motion .flip .face.back{transform:none;opacity:0;pointer-events:none}
+html.reduce-motion .flip.flipped .face.back{opacity:1;pointer-events:auto}
+html.reduce-motion .flip.flipped .face.front{opacity:0;pointer-events:none}

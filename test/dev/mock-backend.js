@@ -13,9 +13,16 @@
      login=0|1                seeded: od razu zalogowany (domyślnie 1)
      away=N                   seeded: ostatnia nauka N dni temu (ekran powrotu przy N ≥ 3)
      extra=viz,xss,krypto4    seeded: dodatkowe przedmioty z fixtures (viz = wszystkie schematy + próby XSS, xss = topic-xss.json)
-     gen=ok|slow[:s]|demo|err:KOD[:used]|drop[:s]|dropfail[:s]|html504
+     gen=ok|slow[:s]|demo|err:KOD[:used|:reason]|drop[:s]|dropfail[:s]|html504
                               /api/generate: sukces (1,5 s) | wolno (domyślnie 25 s) | tryb demo | błąd z kodem serwera |
                               zerwane połączenie po wysłaniu (temat powstaje po s sekundach) | j.w., ale generowanie się nie udaje | 504 bez JSON (Vercel)
+                              err:limit_reached:N → used=N; przy innych kodach trzeci człon to `reason` jak w backendzie Build 7:
+                              err:lost:ai_timeout (termin 270 s, po naliczeniu), err:reserve_failed:ai_upload, err:download_failed:slow_intake.
+                              err:busy = 409 (generacja w toku); err:too_long = 400 przed naliczeniem z tokens/maxTokens.
+                              Bez err: 409 busy, gdy konto ma generację running młodszą niż 7 min (np. po gen=drop) — jak RPC reserve_generation.
+     cap=storage|materials|subjects  limity konta z backend/0008: Storage odmawia (RLS „row-level security”, 403), wiersz materials
+                              albo przedmiot → 23514 materials_daily_limit / subject_limit. Bez cap limity liczą się naprawdę (100 plików i 500 MB na dobę,
+                              100 wierszy materials na dobę, 200 przedmiotów).
      genfx=makro|viz|xss|krypto  z czego powstaje temat (domyślnie makro: 4 poziomy z topic-makro.json + schematy w czacie)
      plan=free|pro, used=N    /api/me: plan i zużycie w tym miesiącu (free: 3 / mies.)
      upload=slow|413|500      Storage: wolna wysyłka (1,2 s na żądanie / kawałek TUS) albo błąd
@@ -73,6 +80,7 @@ const cfg={
   lang:P.get('lang')==='1',
   trial:P.has('trial')?+P.get('trial'):23,
   weekly:P.get('weekly')==='1',
+  cap:P.get('cap')||'',
   log:P.get('log')==='1'
 };
 const MB=1048576;
@@ -313,6 +321,7 @@ async function rest(u,m,h,b){
     for(const raw of list){
       const row=Object.assign({},raw);
       if(row[own]!==uid)return perr(403,'42501','new row violates row-level security policy for table "'+table+'"');
+      const cap=capErr(table,uid);if(cap)return cap;
       if(table==='subjects')Object.assign(row,{id:row.id||uuid(),created_at:iso(),exam_date:row.exam_date??null,exam_label:row.exam_label??null,position:row.position??0,emoji:row.emoji??'📘',stage:row.stage||'inne'});
       if(table==='materials'){
         if(!new RegExp('^'+uid+'/[0-9a-f-]{36}\\.[a-z0-9]{1,10}$','i').test(String(row.storage_path||'')))return perr(400,'23514','new row for relation "materials" violates check constraint "materials_path_owner"');
@@ -344,6 +353,18 @@ async function rest(u,m,h,b){
     save();return rep?res(200,clone(rows)):res(204);
   }
   return perr(405,'PGRST117','Unsupported HTTP method');
+}
+const DAY_MS=86400000;
+function capErr(table,uid){ // backend/0008: trigger BEFORE INSERT → 23514 z nazwą limitu w message (PostgREST 400)
+  const recent=r=>r.owner_id===uid&&Date.parse(r.created_at)>now()-DAY_MS;
+  if(table==='subjects'&&(cfg.cap==='subjects'||DB.t.subjects.filter(r=>r.owner_id===uid).length>=200))return perr(400,'23514','subject_limit',{details:'Najwyżej 200 przedmiotów na konto.'});
+  if(table==='materials'&&(cfg.cap==='materials'||DB.t.materials.filter(recent).length>=100))return perr(400,'23514','materials_daily_limit',{details:'Najwyżej 100 nowych materiałów na dobę.'});
+  return null;
+}
+function storageCapHit(uid){ // polityka RESTRICTIVE „materials upload daily cap”: obiekty z ostatniej doby, które nadal istnieją
+  if(cfg.cap==='storage')return true;
+  const mine=Object.keys(DB.objects).filter(k=>k.startsWith(uid+'/')&&Date.parse(DB.objects[k].at)>now()-DAY_MS);
+  return mine.length>=100||mine.reduce((a,k)=>a+(+DB.objects[k].size||0),0)>=500*MB;
 }
 function stateTooBig(r){return JSON.stringify(r.progress||{}).length+JSON.stringify(r.meta||{}).length>=2000000;}
 function rpc(fn,uid,args){
@@ -377,7 +398,7 @@ async function storage(u,m,h,b,signal){
     const path=decodeURIComponent(mt[1]),size=bodySize(b),mime=(h.get('Content-Type')||'').split(';')[0].trim();
     if(cfg.upload==='413')return serr(413,'Payload too large','The object exceeded the maximum allowed size');
     if(cfg.upload==='500')return serr(500,'internal','Internal Server Error');
-    if(!owns(path))return serr(403,'Unauthorized','new row violates row-level security policy');
+    if(!owns(path)||storageCapHit(uid))return serr(403,'Unauthorized','new row violates row-level security policy');
     if(size>50*MB)return serr(413,'Payload too large','The object exceeded the maximum allowed size');
     if(!BUCKET_MIME.test(mime))return serr(415,'invalid_mime_type','mime type '+mime+' is not supported');
     if(DB.objects[path]&&h.get('x-upsert')!=='true')return serr(409,'Duplicate','The resource already exists');
@@ -387,7 +408,7 @@ async function storage(u,m,h,b,signal){
     const len=+h.get('Upload-Length'),meta={};String(h.get('Upload-Metadata')||'').split(',').forEach(kv=>{const [k,v]=kv.trim().split(' ');if(k)meta[k]=v?decodeURIComponent(escape(atob(v))):'';});
     if(cfg.upload==='413'||len>50*MB)return serr(413,'Payload too large','The object exceeded the maximum allowed size');
     if(cfg.upload==='500')return serr(500,'internal','Internal Server Error');
-    if(meta.bucketName!=='materials'||!owns(meta.objectName||''))return serr(403,'Unauthorized','new row violates row-level security policy');
+    if(meta.bucketName!=='materials'||!owns(meta.objectName||'')||storageCapHit(uid))return serr(403,'Unauthorized','new row violates row-level security policy');
     if(!BUCKET_MIME.test(meta.contentType||''))return serr(415,'invalid_mime_type','mime type '+meta.contentType+' is not supported');
     if(DB.objects[meta.objectName]&&h.get('x-upsert')!=='true')return serr(409,'Duplicate','The resource already exists');
     const id=rnd();DB.tus[id]={path:meta.objectName,mime:meta.contentType,len,off:0,uid};save();
@@ -423,11 +444,13 @@ async function api(u,m,h,b,signal){
   if(p==='/api/generate'&&m==='POST')return generate(uid,bodyJson(b),signal);
   return aerr(404,'not_found','mock: brak trasy '+m+' '+p);
 }
-const ERRS={ // kod → [status, czy liczy się do limitu (generationId), dodatkowe pola]
+const ERRS={ // kod → [status, czy liczy się do limitu (generationId), dodatkowe pola] — jak backend Build 7 (packages/ai/src/pipeline.ts)
   limit_reached:[402,false],too_many_files:[400,false],file_too_big:[400,false],too_much_material:[400,false,{maxMb:150}],bad_materials:[400,false],
   bad_pptx:[400,false],pptx_protected:[400,false],pptx_empty:[400,false],download_failed:[500,false],reserve_failed:[500,false],
-  no_input:[400,true],too_long:[400,true],generation_failed:[500,true],refusal:[500,true],invalid_output:[500,true],api:[500,true],
+  busy:[409,false],no_input:[400,false],too_long:[400,false,{tokens:412000,maxTokens:150000}], // przed naliczeniem: count_tokens > 150k
+  generation_failed:[500,true],refusal:[500,true],invalid_output:[500,true],api:[500,true],lost:[500,true],
   not_found:[404,false],unauthorized:[401,false],no_config:[503,false],bad_request:[400,false]};
+const BUSY_MS=7*60000; // reserve_generation: generacja queued/running młodsza niż 7 min = busy
 async function generate(uid,d,signal){
   if(!uid)return aerr(401,'unauthorized','Wymagane logowanie');
   if(!d||typeof d!=='object'||!UUID.test(String(d.subjectId||''))||!Array.isArray(d.materialIds||[])||(d.materialIds||[]).length>50)return aerr(400,'bad_request','Nieprawidłowe body');
@@ -449,15 +472,19 @@ async function generate(uid,d,signal){
     if(/^(file_too_big|bad_pptx|pptx_protected|pptx_empty|bad_materials)$/.test(code))extra.name=(mats[0]&&mats[0].name)||'notatki.pdf';
     if(code==='file_too_big')extra.maxMb=lim.maxFileMb;
     if(code==='too_many_files')extra.max=lim.filesPerGeneration;
+    if(code!=='limit_reached'&&arg2)extra.reason=arg2; // lost:ai_timeout, reserve_failed:ai_upload, download_failed:slow_intake
     if(e[1]){us.generations++;const gid=uuid();DB.t.generations.push({id:gid,owner_id:uid,subject_id:subj.id,status:'failed',error:'mock: '+code,material_ids:ids,stage:o.stage||null,options:o,created_at:iso(),finished_at:iso()});extra.generationId=gid;save();}
-    await sleep(code==='api'||code==='generation_failed'?2500:600,signal);
+    await sleep(code==='api'||code==='generation_failed'||code==='lost'?2500:600,signal);
     return aerr(e[0],code,code==='api'?'AI: 529 overloaded':'mock: '+code,extra);
   }
   if(mode==='html504'){us.generations++;DB.t.generations.push({id:uuid(),owner_id:uid,subject_id:subj.id,status:'running',error:null,material_ids:ids,created_at:iso()});save();
     await sleep(3000,signal);return res(504,'<!DOCTYPE html><html><body>An error occurred with your deployment\n\nFUNCTION_INVOCATION_TIMEOUT</body></html>',{'Content-Type':'text/html'});}
-  // limit: miesięczny (plan) i dobowy (20 / konto) — jak increment_usage
-  if(usedOf(uid)>=lim.generationsPerMonth)return aerr(402,'limit_reached',`Wykorzystano ${usedOf(uid)}/${lim.generationsPerMonth} generacji w tym miesiącu`,{used:usedOf(uid),limit:lim.generationsPerMonth});
+  // rezerwacja jak RPC reserve_generation (0007): busy → dobowy (20 / konto) → miesięczny (plan), wszystko przed podbiciem licznika
+  lazyGenerations();
+  if(DB.t.generations.some(x=>x.owner_id===uid&&(x.status==='running'||x.status==='queued')&&Date.parse(x.created_at)>now()-BUSY_MS))
+    return aerr(409,'busy','Trwa już tworzenie innej lekcji. Poczekaj, aż się skończy, i spróbuj ponownie.');
   if(DB.t.generations.filter(x=>x.owner_id===uid&&Date.parse(x.created_at)>now()-86400000).length>=20)return aerr(402,'limit_reached','Dzienny limit',{used:999999,limit:lim.generationsPerMonth});
+  if(usedOf(uid)>=lim.generationsPerMonth)return aerr(402,'limit_reached',`Wykorzystano ${usedOf(uid)}/${lim.generationsPerMonth} generacji w tym miesiącu`,{used:usedOf(uid),limit:lim.generationsPerMonth});
   us.generations++;
   const gid=uuid(),gen={id:gid,owner_id:uid,subject_id:subj.id,status:'running',error:null,topic_id:null,material_ids:ids,stage:o.stage||null,options:o,hint:o.hint||null,created_at:iso(),finished_at:null};
   DB.t.generations.push(gen);save();

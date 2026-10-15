@@ -18,8 +18,7 @@
    ============================================================ */
 (function(){
 "use strict";
-// fonty bez blokowania: <link media=print> dokładany w tle, po wczytaniu przełączany na all (offline pierwsze uruchomienie nie czeka na timeout @import); do tego czasu systemowe fallbacki z --font-*
-try{const l=document.createElement('link');l.rel='stylesheet';l.media='print';l.onload=()=>{l.media='all';};l.href='https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap';document.head.appendChild(l);}catch(e){}
+// fonty są wbudowane: fonts/fonts.css (dev: <link> w index.html; build.js wkleja je jako data: WOFF) — bez Google Fonts, działa offline i nie wysyła IP (AUDYT P1-27)
 // natywna apka (Capacitor / WKWebView) — część tekstów i funkcji różni się od podglądu w przeglądarce
 const NATIVE=!!(window.Capacitor&&window.Capacitor.isNativePlatform&&window.Capacitor.isNativePlatform());
 /* tekst ↔ HTML: esc = zwykły tekst do innerHTML / atrybutu (ten sam escaper co cloud.js); txt = napis escapowany (albo HTML) → surowy tekst
@@ -76,6 +75,7 @@ function fixProgress(){
   if(P.theme!=null&&!own(GLASSES,P.theme))delete P.theme;
   if(P.themes!=null)P.themes=Array.isArray(P.themes)?P.themes.filter(t=>own(GLASSES,t)):[];
   const H=objOr('history');if(H)Object.keys(H).forEach(k=>{if(!isDate(k)||!isObj(H[k]))delete H[k];});
+  if(P.lessonSave!=null&&(typeof P.lessonSave!=='string'||P.lessonSave.length>40000))delete P.lessonSave; // P1-11: przerwane lekcje (napis JSON, wpisy sprawdza lessonLoad)
 }
 /* poprawka pytania (PROGRESS.overrides) — surowy tekst wpisany przez użytkownika; z synchronizacji niezaufana, więc kształt sprawdzany przy każdym użyciu */
 function ovOk(o){return !!o&&typeof o==='object'&&typeof o.q==='string'&&Array.isArray(o.a)&&o.a.length>=2&&o.a.length<=5&&o.a.every(x=>typeof x==='string')&&Number.isInteger(o.c)&&o.c>=0&&o.c<o.a.length&&(o.e==null||typeof o.e==='string');}
@@ -108,6 +108,7 @@ function streakDisplay(){ if(!META.lastDay)return 0; const d=dayDiff(META.lastDa
 function touchStreak(){
   const t=todayStr();
   if(META.lastDay===t)return false; // już policzone dzisiaj
+  applyFreeze(); // P1-8: WebView przeżył w tle dzień przerwy — zamrożenie musi zadziałać przed pierwszym XP dnia, nie dopiero przy starcie
   if(META.lastDay){const d=dayDiff(META.lastDay,t); META.streak=(d===1)?(META.streak||0)+1:1;}
   else META.streak=1;
   META.bestWas=META.best||0; META.lastDay=t; META.best=Math.max(META.bestWas,META.streak); saveMeta();
@@ -525,11 +526,26 @@ function msAward(){const n=META.streak|0,m=msToday(n);if(!m)return;if(!META.ms||
 function msNextBar(n){const nx=STREAK_MS.find(x=>x.d>n);if(!nx)return '';const prev=[...STREAK_MS].reverse().find(x=>x.d<=n);const from=prev?prev.d:0;
   const what=[nx.gems?'+'+nx.gems+' gemów':'',nx.freezes?'+'+nx.freezes+' '+pl(nx.freezes,'zamrożenie','zamrożenia','zamrożeń'):'',nx.item?nx.name:'',nx.badge?'odznaka':''].filter(Boolean).join(' · ');
   return `<div class="msnext"><div class="t"><span>Następny kamień: <b>${nx.d} dni</b></span><span>zostało ${nx.d-n}</span></div><div class="bar"><i class="a-grow" style="width:${Math.round((n-from)/(nx.d-from)*100)}%"></i></div><div class="s">czeka: ${what}</div></div>`;}
-/* monogram zamiast emoji z danych: pierwsza litera/cyfra nazwy w kafelku w kolorze --accent */
+/* monogram zamiast emoji z danych: pierwsze litery nazwy w kafelku w kolorze --accent (initials niżej) */
 /* tytuły z danych bez emoji (zero emoji w UI; treść HTML roladki/Info zostaje) */
 function noEmoji(t){return String(t||'').replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu,'').replace(/\s+/g,' ').trim();}
-function initial(str){const m=txt(str).match(/[\p{L}\p{N}]/u);return m?m[0].toUpperCase():'?';} // z tekstu zdekodowanego (nazwa jest escapowana: „&amp;…”)
 function mono(label,cls){return '<div class="mono'+(cls?' '+cls:'')+'" aria-hidden="true">'+label+'</div>';}
+/* P1-15: nazwy przedmiotów. Kafle i wiersze pokazują pełną nazwę (s.name, obcięcie do 2 linii w CSS); skrót tylko tam, gdzie miejsca brak (chipy, etykiety),
+   i bez kolizji: w grupie przedmiotów z tym samym skrótem wspólny początek nazwy skraca się do inicjałów („P. cywilne” / „P. karne”).
+   Monogram z pierwszych liter dwóch pierwszych słów (bez krótkich spójników): „Prawo cywilne” → PC, „Prawo karne” → PK. */
+const nameTxt=s=>noEmoji(txt(s&&s.name));
+function initials(s){const ws=nameTxt(s).split(' ').map(w=>w.replace(/[^\p{L}\p{N}]/gu,'')).filter(Boolean);const pick=[ws[0],...ws.slice(1).filter(w=>w.length>2)].filter(Boolean).slice(0,2);
+  return esc(pick.length?pick.map(w=>w.charAt(0)).join('').toUpperCase():'?');}
+function shortCand(s){const t=nameTxt(s);if(t.length<=16)return t;const sh=txt(s.short||'').replace(/\s+/g,' ').trim();return sh&&sh.length<t.length?sh:t.split(' ')[0];}
+function sshort(s){
+  const t=nameTxt(s);if(t.length<=16&&!SUBJECTS.some(x=>x!==s&&x.id!==s.id&&fold(shortCand(x))===fold(t)))return esc(t);
+  const mine=shortCand(s),grp=SUBJECTS.filter(x=>x===s||x.id===s.id||fold(shortCand(x))===fold(mine));
+  if(grp.length<2)return esc(mine);
+  const ws=grp.map(x=>nameTxt(x).split(' ')),w=t.split(' ');let k=0; // wspólny początek nazw w grupie kolizji
+  while(ws.every(a=>a.length>k+1&&fold(a[k])===fold(ws[0][k])))k++;
+  if(!k)return esc(t);
+  return esc(w.slice(0,k).map(x=>x.charAt(0).toUpperCase()+'.').join(' ')+' '+w.slice(k).join(' '));
+}
 /* 3 gwiazdki: zdobyte = pełne złote, reszta = kontur */
 function starRow(nStars,size){return [0,1,2].map(i=>icon('star',{size:size||12,fill:i<nStars,stroke:2,cls:i<nStars?'ic-gold':'ic-dim'})).join('');}
 /* duży kafel wyniku (.result .big): gold/hot/ok/fail albo '' = kolor przedmiotu */
@@ -545,10 +561,51 @@ const LBL={
 };
 const TOAST_TONE={check:'acid',flame:'flame',close:'red','x-circle':'red',lock:'muted',info:'cyan',trophy:'gold',bolt:'gold',heart:'red',gem:'cyan',snow:'cyan',cards:'cyan',star:'gold',boss:'violet',calendar:'gold',map:'acid',clock:'cyan',alert:'red',refresh:'cyan',palette:'violet',chest:'gold'};
 
+/* toasty (P1-23): kolejka zamiast nadpisywania.
+   toast(t, ic, anim, {go}) = odpowiedź na gest użytkownika — od razu (zastępuje bieżący; nagroda przerwana zaraz po pokazaniu wraca do kolejki).
+   notify(t, ic, anim, {go}) = nagroda / zdarzenie w tle — czeka w kolejce i w „ciszy” (otwarty arkusz, trwające pytania lekcji, egzaminu, bossa,
+   powtórki, cramu) aż do ekranu wyniku albo zamknięcia arkusza; potem po kolei. Czas: 1,5 s + 40 ms na znak, maks. 5 s.
+   Pozycja nad dolnym paskiem (styles.css), a przy otwartym arkuszu nad nim. {go} = toast klikalny (akcja). */
 let toastBox=null; // jeden trwały #toast: shell() wstawia go z powrotem, więc komunikat przeżywa przerysowanie ekranu
+const toastQ=[];let toastCur=null,toastTimer=null,toastWake=null;
+const TOAST_AVOID='.nav,.lesson.open .lessonfoot,.egfoot,.cfadd-foot,.today.empty .efoot,#subjscreen .fbtns,.quizview .qcheck:not(.hide)';
 function toastEl(){if(!toastBox){toastBox=el('div','toast','');toastBox.id='toast';}return toastBox;}
-function toast(t,ic,anim){const ph=document.getElementById('toast');if(!ph)return;const box=toastEl();if(ph!==box)ph.replaceWith(box);box.innerHTML=ic?icon(ic,{size:16,cls:'ic-'+(TOAST_TONE[ic]||'acid')+(anim?' '+anim:'')}):'';const s=document.createElement('span');s.textContent=t;box.appendChild(s);box.classList.add('show');clearTimeout(box._t);box._t=setTimeout(()=>box.classList.remove('show'),1500);}
-function addXP(id,n){const s=subjState(id);if(n>0&&boostActive())n*=2;s.xp+=n;const d=daily();d.xp+=n;if(n>0)histAdd('xp',n);else if(n<0){const h=histDay();h.xp=Math.max(0,(h.xp|0)+n);}saveProgress();const ext=touchStreak();updateXP();updateStreakUI();updateGoalUI();if(n>0)missionEvent('xp',n);if(ext&&META.streak>1)setTimeout(()=>toast('Seria: '+META.streak+' dni z rzędu','flame'),1600);return n;} // zwraca faktycznie dodane XP (po boostcie)
+function toastMs(t,act){return act?8000:Math.min(5000,1500+40*String(t).length);} // z akcją (np. „Lekcja gotowa — dotknij”) dłużej: to często jedyna droga do ekranu
+function toastQuiet(){return !!(document.getElementById('sheet')||(lessonState&&!lessonState.done)||exState||bossState||rvState||(cramState&&!cramState.done)||view==='cfadd'||view==='cfgen');} // „Dodaj materiał” / „Tworzę lekcję”: klikalna nagroda wyprowadzała ze szkicu bez pytania
+function toastShow(it){
+  const ph=document.getElementById('toast');if(!ph)return false;const box=toastEl();if(ph!==box)ph.replaceWith(box);
+  box.innerHTML=it.ic?icon(it.ic,{size:16,cls:'ic-'+(TOAST_TONE[it.ic]||'acid')+(it.anim?' '+it.anim:'')}):'';const s=document.createElement('span');s.textContent=it.t;box.appendChild(s);
+  box.classList.toggle('act',!!it.go);box.onclick=it.go?()=>{toastHide();it.go();}:null;
+  if(it.go){box.setAttribute('role','button');box.tabIndex=0;}else{box.setAttribute('role','status');box.removeAttribute('tabindex');}
+  toastPlace();
+  box.classList.remove('show');void box.offsetWidth;box.classList.add('show');
+  toastCur={...it,at:Date.now()};clearTimeout(toastTimer);toastTimer=setTimeout(toastHide,toastMs(it.t,!!it.go));return true;
+}
+function toastPlace(){ // nad arkuszem albo nad najwyższym przyciskiem przy dole ekranu (stopka lekcji, ocena fiszki, nawigacja) — nie na nich
+  const box=toastBox;if(!box)return;box.style.bottom='';if(!app||!box.parentNode)return;
+  const ar=app.getBoundingClientRect(),sh=document.getElementById('sheet');let top=Infinity;
+  if(sh){const t=sh.offsetParent===app?ar.top+sh.offsetTop:sh.getBoundingClientRect().top;if(sh.offsetHeight&&t>ar.top+80)top=t;} // offsetTop: bez przesunięcia z animacji wjazdu
+  else document.querySelectorAll(TOAST_AVOID).forEach(e=>{const r=e.getBoundingClientRect();if(r.height&&r.top>ar.top+ar.height*.45&&r.top<top)top=r.top;});
+  if(top<Infinity)box.style.bottom=Math.round(ar.bottom-top+12)+'px';
+}
+function toastHide(){clearTimeout(toastTimer);if(toastBox)toastBox.classList.remove('show');toastCur=null;clearTimeout(toastWake);toastWake=setTimeout(toastPump,320);}
+function toastPump(){
+  clearTimeout(toastWake);toastWake=null;if(toastCur||!toastQ.length)return;
+  if(toastQuiet()){toastWake=setTimeout(toastPump,500);return;} // nagrody czekają na ekran wyniku / zamknięcie arkusza
+  const it=toastQ.shift();if(!toastShow(it)){toastQ.unshift(it);toastWake=setTimeout(toastPump,400);}
+}
+function toast(t,ic,anim,o){
+  const it={t:String(t),ic,anim,go:o&&typeof o.go==='function'?o.go:null};
+  const cur=toastCur;
+  if(toastShow(it)&&cur&&cur.soft&&Date.now()-cur.at<1200&&!toastQ.includes(cur))toastQ.unshift({...cur}); // nagroda ledwo widoczna — pokaże się jeszcze raz po tym komunikacie
+}
+function notify(t,ic,anim,o){
+  const it={t:String(t),ic,anim,go:o&&typeof o.go==='function'?o.go:null,soft:true};
+  if((toastCur&&toastCur.t===it.t)||toastQ.some(x=>x.t===it.t))return; // bez powtórek tego samego komunikatu
+  toastQ.push(it);if(toastQ.length>8)toastQ.splice(0,toastQ.length-8);
+  if(!toastCur&&!toastWake)toastPump();
+}
+function addXP(id,n){const s=subjState(id);if(n>0&&boostActive())n*=2;s.xp+=n;const d=daily();d.xp+=n;if(n>0)histAdd('xp',n);else if(n<0){const h=histDay();h.xp=Math.max(0,(h.xp|0)+n);}saveProgress();const ext=touchStreak();updateXP();updateStreakUI();updateGoalUI();if(n>0)missionEvent('xp',n);if(ext&&META.streak>1)notify('Seria: '+META.streak+' dni z rzędu','flame');return n;} // zwraca faktycznie dodane XP (po boostcie)
 function updateGoalUI(){const d=PROGRESS.daily;if(!d)return;const g=d.goal||goalXP();document.querySelectorAll('.goalrow').forEach(r=>{const i=r.querySelector('.bar i');if(i)i.style.width=Math.min(100,d.xp/g*100)+'%';const sp=r.querySelector('span');if(sp)sp.textContent=d.xp+' / '+g+' XP';});}
 function updateXP(){const x=document.getElementById('xpNum');if(x&&current)x.textContent=subjState(current.id).xp;}
 function updateStreakUI(){const n=streakDisplay();document.querySelectorAll('[id="streakNum"]').forEach(e=>e.textContent=n);}
@@ -598,7 +655,7 @@ function fmtNum(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,' ');}
 function totalXP(){return SUBJECTS.reduce((a,s)=>a+(((PROGRESS[s.id]||{}).xp)||0),0);} // nie Object.values — PROGRESS.daily też ma xp
 function subjLevel(s){return LEVEL_NAME[s.level]?s.level:'inne';} // etap przedmiotu (z konta: stage) — plan dnia i kolejność kafli
 function hasProgress(s){const st=PROGRESS[s.id];return !!st&&(((st.xp||0)>0)||Object.values(st.levels||{}).some(l=>l&&l.done));}
-function applyMotion(){document.documentElement.classList.toggle('reduce-motion',!!META.reduceMotion);}
+function applyMotion(){let sys=false;try{sys=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);}catch(e){}document.documentElement.classList.toggle('reduce-motion',!!META.reduceMotion||sys);} // P2-9: przełącznik w apce albo ustawienie telefonu
 
 /* --- plan dnia: PROGRESS.daily = {date, goal, xp, tasks:[{id, done, need?, prog?}]} (DESIGN.md §4.3, ten sam klucz) --- */
 const REWARD={lesson:15,review:20,quiz:25,exam:40,weak:20};
@@ -635,7 +692,7 @@ function taskInfo(t){
   const parts=t.id.split(':');const sid=parts[0],kind=parts[1],lvId=parts[2];
   const s=SUBJECTS.find(x=>x.id===sid);if(!s)return null;
   const lv=lvId?s.levels.find(l=>l.id===lvId):null;
-  const short=s.short||s.name;const base={t,s,kind,reward:REWARD[kind]||0};
+  const short=sshort(s);const base={t,s,kind,reward:REWARD[kind]||0};
   const openAt=(tab,setup)=>()=>openSubject(sid,tab,setup);
   if(kind==='lesson'){if(!lv)return null;const nf=(lv.feed||[]).length,nq=(lv.quiz||[]).length,nt=(lv.tasks||[]).filter(t=>t&&TASKS[t.type]).length;
     return {...base,icon:'book',title:'Roladka — '+noEmoji(lv.title),sub:`${nf} ${pl(nf,'dawka','dawki','dawek')} · ${nq} ${pl(nq,'pytanie','pytania','pytań')}${nt?` · ${nt} ${pl(nt,'zadanie','zadania','zadań')}`:''} · +15`,go:openAt('path')};}
@@ -658,7 +715,7 @@ function completeDaily(sid,kind,lvId){
   if(!t)return false;
   t.done=true;saveProgress();
   const r=REWARD[kind]||0;if(r)addXP(sid,r);
-  setTimeout(()=>toast('Plan dnia: +'+r+' XP','bolt'),3200);
+  notify('Plan dnia: +'+r+' XP','bolt');
   planCheck(d); // krok 8: cały plan zrobiony → +5 gemów, misja „plan”
   return true;
 }
@@ -702,6 +759,8 @@ function shell(active,o){
 }
 /* arkusz „Dodaj materiał” (QuickAdd.html): zdjęcie strony / plik / tekst → przepływ w cloud-ui.js (hooki addPhoto/addFile/addText) */
 function openQuickAdd(){
+  const into=current?current.id:null; // z widoku przedmiotu: domyślnie dokładamy do niego
+  if(hook('addOpen',into))return null; // cloud-ui.js: trwa tworzenie lekcji → ekran postępu zamiast arkusza
   const s=openSheet('quickadd',`<div class="shandle"></div>
     <div class="shead"><div class="st2">Dodaj materiał</div><button class="backbtn sclose" id="qaclose" aria-label="Zamknij">${icon('close',{size:18,stroke:3})}</button></div>
     <button class="qabig a-pop" id="qa-photo"><div class="ico a-bob">${icon('camera',{size:32,stroke:2.4})}</div><div class="grow"><div class="t">Zrób zdjęcie</div><div class="s">strona z podręcznika, zeszyt, tablica</div></div></button>
@@ -713,10 +772,10 @@ function openQuickAdd(){
   sheetBack();document.getElementById('sheetback').onclick=closeSheet;
   s.querySelector('#qaclose').onclick=closeSheet;
   s.querySelector('#qa-test').onclick=()=>{if(!SUBJECTS.length){toast('Najpierw dodaj materiał — plan układa się z poziomów','info');return;}openTestSheet(current?current.id:null);}; // krok 7
-  const into=current?current.id:null; // z widoku przedmiotu: domyślnie dokładamy do niego
   s.querySelector('#qa-photo').onclick=()=>{closeSheet();hook('addPhoto',into);};
   s.querySelector('#qa-file').onclick=()=>{closeSheet();hook('addFile',into);};
   s.querySelector('#qa-text').onclick=()=>{closeSheet();hook('addText',into);};
+  hook('addSheet',s); // cloud-ui.js: ile nowych lekcji zostało w tym miesiącu (P1-12)
   return s;
 }
 /* siatka kafli przedmiotów (Main.html): tint przedmiotu, monogram na pełnym akcencie, pasek poziomów */
@@ -727,7 +786,7 @@ function subjectGrid(list,withAdd){
     const done=s.levels.filter(l=>(st.levels[l.id]||{}).done).length;const pct=total?Math.round(done/total*100):0;
     const t=el('button','subjtile themed');
     t.style.setProperty('--accent',s.accent);if(s.onAccent)t.style.setProperty('--on-accent',s.onAccent);
-    t.innerHTML=`${mono(initial(s.short||s.name),'solid')}<div class="name">${s.short||s.name}</div>
+    t.innerHTML=`${mono(initials(s),'solid')}<div class="name">${noEmoji(s.name)}</div>
       <div class="bar"><i class="a-grow d${Math.min(6,i+2)}" style="width:${pct}%"></i></div><small>${done}/${total} ${pl(total,'poziom','poziomy','poziomów')}</small>`;
     t.setAttribute('aria-label',txt(s.name)+', '+done+' z '+total+' poziomów');
     t.onclick=()=>openSubject(s.id);
@@ -768,6 +827,7 @@ function renderToday(){
   const d=daily();const items=tests().map(testTodayItem).filter(Boolean).concat(d.tasks.map(taskInfo).filter(Boolean)); // krok 7: wiersz „Do sprawdzianu” na górze
   const done=items.filter(x=>x.t.done).length,total=items.filter(x=>!x.info).length;
   scroll.appendChild(el('div','todayhead',`<div class="eyebrow">${dateHeader()}</div><h1>Plan na dziś</h1><div class="todayfox">${fox('idle',66)}</div>`));liveFoxes(scroll);
+  hook('todayTop',scroll); // cloud-ui.js: wiersz „Tworzę lekcję…” albo karta nieudanej próby (P1-22)
   scroll.appendChild(el('div','planbar',`<div class="bar"><i class="a-grow" style="width:${total?done/total*100:0}%"></i></div><span>${done} z ${total}</span>`));
   const g=d.goal||goalXP(); // krok 9: cel dzienny XP (Onboarding) — pasek pod planem, tap = zmiana celu
   const gr=el('button','goalrow a-up d1',icon('bolt',{size:15,cls:'ic-gold'})+`<div class="bar"><i class="a-grow d2" style="width:${Math.min(100,d.xp/g*100)}%"></i></div><span>${d.xp} / ${g} XP</span>`);
@@ -830,7 +890,7 @@ function renderProfile(){
   started.forEach((s,i)=>{
     if(i)card.appendChild(el('div','setsep'));
     const r=el('button','setrow themed');r.style.setProperty('--accent',s.accent);if(s.onAccent)r.style.setProperty('--on-accent',s.onAccent);
-    r.innerHTML=`${mono(initial(s.short||s.name),'solid xs')}<span class="t grow">${s.short||s.name}</span><span class="v">${fmtNum(subjState(s.id).xp)} xp</span>${icon('chevron-right',{size:18,cls:'chev'})}`;
+    r.innerHTML=`${mono(initials(s),'solid xs')}<span class="t grow nm">${noEmoji(s.name)}</span><span class="v">${fmtNum(subjState(s.id).xp)} xp</span>${icon('chevron-right',{size:18,cls:'chev'})}`;
     r.onclick=()=>openSubject(s.id);card.appendChild(r);
   });
   if(!started.length)card.appendChild(el('div','setrow','<span class="t grow muted">Jeszcze nic — zacznij od planu na dziś.</span>'));
@@ -882,7 +942,8 @@ function renderSettings(){
   // Nauka
   scroll.appendChild(el('div','eyebrow sec','Nauka'));
   const c1=card('d2');
-  const rm=el('div','setrow','<div class="grow"><div class="t">Ogranicz animacje</div><div class="s">własny przełącznik, niezależny od ustawień telefonu</div></div>');
+  let sysRM=false;try{sysRM=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);}catch(e){}
+  const rm=el('div','setrow','<div class="grow"><div class="t">Ogranicz animacje</div><div class="s">'+(sysRM?'telefon ma włączone ograniczenie ruchu — animacje są ograniczone zawsze':'działa też wtedy, gdy telefon ma animacje włączone')+'</div></div>');
   rm.appendChild(toggleBtn(!!META.reduceMotion,'Ogranicz animacje',v=>{META.reduceMotion=v;saveMeta();applyMotion();}));c1.appendChild(rm);c1.appendChild(sep());
   const h=hearts();const eta=heartEta();
   const hr=el('button','setrow',icon('heart',{size:20,cls:'ic-red'})+`<div class="grow"><div class="t">Życia</div><div class="s">${h.n} z ${HEARTS_MAX} · jedno wraca co 30 min${eta?' · następne za '+etaText(eta):''} · ${HEART_REV} fiszek = +1</div></div>`);
@@ -894,7 +955,7 @@ function renderSettings(){
   SUBJECTS.forEach((s,i)=>{
     if(i)c3.appendChild(sep());
     const r=el('button','setrow themed');r.style.setProperty('--accent',s.accent);if(s.onAccent)r.style.setProperty('--on-accent',s.onAccent);
-    r.innerHTML=`${mono(initial(s.short||s.name),'solid xs')}<span class="t grow">${s.short||s.name}</span>${icon('chevron-right',{size:18,cls:'chev'})}`;
+    r.innerHTML=`${mono(initials(s),'solid xs')}<span class="t grow nm">${noEmoji(s.name)}</span>${icon('chevron-right',{size:18,cls:'chev'})}`;
     r.onclick=()=>openSubject(s.id);c3.appendChild(r);
   });
   if(SUBJECTS.length)c3.appendChild(sep());
@@ -918,6 +979,7 @@ function renderSettings(){
   scroll.appendChild(el('div','eyebrow sec','O aplikacji'));
   const c5=card('d5');
   c5.appendChild(el('div','setrow',icon('info',{size:20,stroke:2.4})+`<div class="grow"><div class="t">Cramfox ${VERSION}</div><div class="s">konto w chmurze, nauka działa też bez internetu</div></div>`));
+  hook('settingsAbout',c5); // cloud-ui.js: pomoc i kontakt, polityka prywatności, regulamin, licencje (każdy wiersz z własnym separatorem)
   c5.appendChild(sep());
   const wn=el('button','setrow',icon('list',{size:20,stroke:2.4})+'<div class="grow"><div class="t">Co nowego</div><div class="s">zmiany w aplikacji</div></div>'+icon('chevron-down',{size:18,cls:'chev'}));wn.id='set-whatsnew';
   const log=el('div','changelog');log.hidden=true;
@@ -953,7 +1015,7 @@ function renderStreak(){
   scroll.appendChild(close);
   const n=streakDisplay(),best=Math.max(META.best||0,n);
   const left=best-n+1;
-  const msg=n===0?'Zrób dziś jedno zadanie z planu i seria startuje.':(n>=best?'To twój rekord. Nie przerywaj.':`Rekord to ${best}. Jeszcze ${left} ${pl(left,'dzień','dni','dni')} i bijesz swój wynik.`);
+  const msg=n===0?'Zrób dziś jedno zadanie z planu i seria startuje.':(n>=best?'To Twój rekord. Nie przerywaj.':`Rekord to ${best}. Jeszcze ${left} ${pl(left,'dzień','dni','dni')} i bijesz swój wynik.`);
   scroll.appendChild(el('div','streakhero',`<div class="streakfox">${fox('fire',150)}</div><div class="streakn a-pop">${n}</div><div class="streakt">${n===1?'dzień z rzędu':'dni z rzędu'}</div><div class="streakp">${msg}</div>`));
   scroll.appendChild(el('div','a-up d2',msNextBar(n)));
   const week=el('div','week');
@@ -973,12 +1035,14 @@ function renderStreak(){
 /* ============================================================ PUSTY STAN (EmptyState.html) — nowe konto bez przedmiotów; część ekranu Dziś, z dolną nawigacją */
 function renderEmpty(){
   const scroll=shell('today',{cls:'today empty'});
-  const steps=[['Dodajesz zdjęcia, pliki i notatki','strona z podręcznika, PDF, wklejony tekst'],['Powstają poziomy, fiszki i pytania','możesz wszystko poprawić przed startem'],['Uczysz się po 10 minut dziennie','materiał wraca tuż przed zapomnieniem']];
+  const steps=[['Dodajesz zdjęcia, pliki i notatki','strona z podręcznika, PDF, wklejony tekst'],['Powstają poziomy, fiszki i pytania','pytania poprawisz w trakcie nauki'],['Uczysz się po 10 minut dziennie','materiał wraca tuż przed zapomnieniem']];
   scroll.innerHTML=`<div class="emptyfox">${fox('idle',150)}</div>
     <div class="a-up d1"><h1>Zacznij od pierwszego przedmiotu</h1><p>Dodaj materiały z zajęć. Reszta powstanie sama.</p></div>
+    <div id="emptytop"></div>
     <div class="steps">${steps.map((s,i)=>`<div class="step a-up d${i+2}"><div class="num">${i+1}</div><div><div class="t">${s[0]}</div><div class="s">${s[1]}</div></div></div>`).join('')}</div>
     <div class="efoot"><button class="pill a-glow" id="eadd">Dodaj materiał</button></div>`;
   document.getElementById('eadd').onclick=()=>openQuickAdd();
+  const top=document.getElementById('emptytop');hook('todayTop',top);if(!top.children.length)top.remove(); // pierwsza lekcja w trakcie albo nieudana — też na pustym Dziś
   liveFoxes(scroll);
 }
 
@@ -1000,7 +1064,7 @@ function gainHeart(n){const h=hearts();h.n=Math.min(HEARTS_MAX,h.n+(n||1));if(h.
 function heartEta(){const h=hearts();return (h.n>=HEARTS_MAX||!h.refillAt)?0:Math.max(0,h.refillAt-Date.now());}
 function etaText(ms){const m=Math.max(1,Math.ceil(ms/60000));return m>=60?`${Math.floor(m/60)} h ${m%60} min`:`${m} ${pl(m,'minutę','minuty','minut')}`;}
 /* „serce za N fiszek”: zadanie odzyskania życia (z panelu Koniec żyć), liczone w renderFiszki */
-function heartReview(){const h=hearts();if(!h.quest)return;h.quest--;if(h.quest<=0){delete h.quest;gainHeart();setTimeout(()=>toast('Życie odzyskane: +1','heart'),350);}saveProgress();}
+function heartReview(){const h=hearts();if(!h.quest)return;h.quest--;if(h.quest<=0){delete h.quest;gainHeart();notify('Życie odzyskane: +1','heart');}saveProgress();}
 /* pigułka serc (przycisk: tap = kiedy wraca życie); .n aktualizowane przez updateHearts() */
 function heartsPill(o){
   o=o||{};const h=hearts();
@@ -1023,6 +1087,7 @@ function advOk(){const t=Date.now();if(t-lastAdv<350)return false;lastAdv=t;retu
 const CONF=['pink','cyan','gold','acid'];
 function confetti(n){
   const c=el('div','confetti');c.setAttribute('aria-hidden','true');
+  if(calmMotion())return c; // P2-9: przy ograniczonym ruchu bez kawałków (inaczej zostają jako kolorowe kwadraty na pytaniach i tytułach)
   for(let i=0;i<n;i++){const p=el('i','a-fall'+(i%7?' d'+(i%7):'')+(i%3===1?' round':''));p.style.cssText=`left:${(i*37+11)%92}%;top:${(i*53+40)%300}px;--c:var(--${CONF[i%4]});--s:${7+(i*5)%7}px`;c.appendChild(p);}
   return c;
 }
@@ -1031,11 +1096,11 @@ function confetti(n){
 function openSheet(kind,html){
   closeSheet();
   const s=el('div','sheet a-rise '+kind,html);s.id='sheet';s.setAttribute('role','dialog');
-  app.appendChild(s);
+  app.appendChild(s);if(toastCur)requestAnimationFrame(toastPlace); // widoczny toast przeskakuje nad arkusz
   keyFn=e=>{if(e.key==='Enter'||e.key===' '){const b=s.querySelector('[data-primary]');if(b){e.preventDefault();b.click();}}};
   return s;
 }
-function closeSheet(){const s=document.getElementById('sheet');if(s)s.remove();const b=document.getElementById('sheetback');if(b)b.remove();clearInterval(nhInt);keyFn=null;}
+function closeSheet(){const s=document.getElementById('sheet');if(s)s.remove();const b=document.getElementById('sheetback');if(b)b.remove();clearInterval(nhInt);keyFn=null;if(s&&toastCur)toastPlace();}
 function sheetBack(){if(!document.getElementById('sheetback')){const b=el('div','sheetback');b.id='sheetback';app.appendChild(b);}}
 /* potwierdzenie w stylu aplikacji zamiast confirm()/alert() (na iOS systemowe okno ma angielskie „Cancel”/„OK”).
    ask({title, text, ok='OK', cancel='Anuluj', danger=false}) → Promise<boolean>; cancel:null = tylko jeden przycisk (zamiast alert()).
@@ -1068,16 +1133,16 @@ function sheetOk(q,o){
 }
 /* źle: „Nie tym razem”, poprawna litera, wyjaśnienie, [WYJAŚNIJ INACZEJ] DALEJ. o={onNext, onCards?, sub?, subj?, lv?} */
 function sheetBad(q,o){
-  const ex=q.q?explainFor(q,o.subj,o.lv):{},canEx=!!(ex.card||ex.frag); // „Wyjaśnij inaczej” tylko, gdy jest coś pewnego do pokazania
+  const ex=q.q?explainFor(q,o.subj,o.lv):{},canEx=!!(ex.card||ex.frag||ex.real); // „Wyjaśnij inaczej” tylko, gdy jest coś pewnego do pokazania
   const sub=o.sub!=null?o.sub:(q.c!=null&&q.a&&q.a[q.c]!=null?'Dobra odpowiedź: '+q.a[q.c]:''); // treść, nie litera — odpowiedzi są tasowane
   const s=openSheet('bad',`<div class="sfox">${fox('oops',84)}</div><div class="srow"><div class="sico">${icon('close',{size:24,stroke:3.6})}</div>
     <div class="grow"><div class="st">Nie tym razem</div>${sub?`<div class="ss">${sub}</div>`:''}</div></div>
     ${q.e?`<div class="sbox"><div class="lbl">Dlaczego</div><div>${q.e}</div>${srcLine(q)}</div>`:srcLine(q)}
     <div class="sbtns">${canEx?'<button class="pill ghost red" id="sexpl">WYJAŚNIJ INACZEJ</button>':''}<button class="pill red" id="snext" data-primary>DALEJ</button></div>
-    ${q.q&&o.subj&&o.lv&&o.qi!=null?`<button class="pill text sm" id="sedit">${icon('edit',{size:15})} Zgłoś / popraw pytanie</button>`:''}`);
+    ${q.q&&o.subj&&o.lv&&o.qi!=null?`<button class="pill text sm" id="sedit">${icon('edit',{size:15})} Popraw pytanie</button>`:''}`);
   s.querySelector('#snext').onclick=()=>{if(!advOk())return;closeSheet();o.onNext();};
   const x=s.querySelector('#sexpl');if(x)x.onclick=()=>openExplain(q,o);
-  const ed=s.querySelector('#sedit');if(ed)ed.onclick=()=>openEditContent(o.subj,o.lv,o.qi,{onBack:()=>sheetBad(q,o),onSaved:()=>sheetBad({...q,...qOf(o.subj,o.lv,o.qi,q.pm)},o)}); // krok 9: EditContent (ten sam układ odpowiedzi co na ekranie)
+  const ed=s.querySelector('#sedit');if(ed)ed.onclick=()=>openEditContent(o.subj,o.lv,o.qi,{onBack:()=>sheetBad(q,o),onSaved:()=>sheetBad({...q,...qOf(o.subj,o.lv,o.qi,q.pm||q.a.map((_,k)=>k))},o)}); // krok 9: EditContent (ten sam układ odpowiedzi co na ekranie)
   wireSrc(s,q,o,()=>sheetBad(q,o)); // krok 9: „Źródło” → arkusz SourceView
   sheetFox(s,[['sigh',1],['scratch',1],['nod',.6]]);
   return s;
@@ -1086,8 +1151,10 @@ function sheetBad(q,o){
 function srcLine(q){const src=q&&q.src;if(!src)return '';const parts=[src.material?'materiał '+src.material:'',src.page?'s. '+src.page:''].filter(Boolean).join(' · ');
   return `<button class="rsrc" type="button">${icon('file',{size:14})}<span>${parts?'<b>Źródło:</b> '+parts:'<b>Źródło</b>'}${src.quote?' — „'+src.quote+'”':''}</span>${icon('chevron-right',{size:14,cls:'chev'})}</button>`;}
 function wireSrc(sheet,q,o,back){const b=sheet.querySelector('.rsrc');if(b)b.onclick=()=>openSourceView(q,{s:o.subj,lv:o.lv,qi:o.qi},back);}
-/* „Wyjaśnijmy inaczej” (Explain.html) — z Twoich materiałów: poprawna odpowiedź, fiszka z tym hasłem i fragment lekcji z tego poziomu, w którym było to pojęcie (bez „prościej”/„zapamiętaj” z AI),
-   dopasowane do poprawnej odpowiedzi (hasło fiszki musi w niej być; samo wspólne imię nie wystarczy). Nic pewnego → przycisk się nie pokazuje. */
+/* „Wyjaśnijmy inaczej” (Explain.html) — z Twoich materiałów, bez AI: poprawna odpowiedź, „Prościej” (pole real najlepiej pasującej dawki — zatwierdzone
+   „Powiedz prościej”, BIBLIA §10.3), fiszka z tym hasłem i fragment lekcji z tego poziomu. P1-10: dopasowanie ostrzejsze — hasło fiszki z ≤ 2 słowami
+   kluczowymi musi mieć w odpowiedzi wszystkie, dłuższe ≥ 2 i ≥ 2/3; rdzenie obecne w ponad 25% haseł przedmiotu („polityka”, „społeczna”) się nie liczą.
+   Nic pewnego → przycisk się nie pokazuje. */
 const STOP=new Set(['jest','jak','czym','ktore','ktory','ktora','jaki','jaka','jakie','oraz','albo','lub','nie','tak','dla','sie','przez','tego','tym','ten','czy','ile','kto','gdzie','kiedy','moze','jego','jej','ich','tylko','bardzo','oznacza','polega','rozni','przyklad','wedlug','miedzy','pod','nad','przy','bez','jako','tzw','jakiego','jakiej','jakim','wobec','ktorych','ktorym','czego','czemu','dlaczego','zawsze','nigdy','wszystkie','wszystkich','nazywa','nazywamy','ktora','byla','byly','beda','bedzie','jednak','wtedy','niz','ktorego','robi','ma','ile','sa']);
 function words(str){return fold(txt(String(str||'').replace(/<[^>]+>/g,' '))).split(' ').filter(w=>w.length>=4&&!STOP.has(w));}
 function stem(w){return w.length>6?w.slice(0,w.length-2):w.length>4?w.slice(0,w.length-1):w;} // prosty rdzeń: obcina końcówkę fleksyjną
@@ -1097,26 +1164,48 @@ const ANT=[['zwieksz','zmniejsz'],['wzrost','spad'],['wiecej','mniej'],['wyzsz',
 function sides(str){const f=' '+fold(txt(String(str||'')))+' ';return ANT.map(([a,b])=>(f.includes(' '+a)?1:0)|(f.includes(' '+b)?2:0));}
 function explainFor(q,subj,lv){ // tylko rzeczy naprawdę związane z poprawną odpowiedzią — jedno wspólne słowo (np. imię) to za mało
   const s=subj||current;if(!s||q.c==null||!q.a||q.a[q.c]==null)return {};
-  const aw=[...new Set(keyWords(q.a[q.c]))];if(!aw.length)return {};
+  const cards=s.levels.flatMap(l=>l.flashcards||[]),df=new Map(); // rdzenie wspólne dla wielu haseł przedmiotu (ponad ok. 25%) nie odróżniają pojęć
+  cards.forEach(c=>new Set(keyWords(c.t)).forEach(w=>df.set(w,(df.get(w)||0)+1)));
+  const common=new Set(cards.length>=4?[...df].filter(([,n])=>n/cards.length>.25).map(([w])=>w):[]);
+  const awAll=[...new Set(keyWords(q.a[q.c]))],aw=awAll.filter(w=>!common.has(w));if(!aw.length)return {};
+  const apos=words(q.a[q.c]).map(stem); // kolejność słów odpowiedzi
   const qw=new Set(keyWords(q.q));
-  const dw=new Set(q.a.flatMap((x,i)=>i===q.c?[]:keyWords(x)).filter(w=>!aw.includes(w)&&!qw.has(w))); // słowa tylko z błędnych opcji
+  const dw=new Set(q.a.flatMap((x,i)=>i===q.c?[]:keyWords(x)).filter(w=>!awAll.includes(w)&&!qw.has(w)&&!common.has(w))); // słowa tylko z błędnych opcji
   const as=sides(q.a[q.c]),aNeg=/(^| )(nie|bez|brak)( |$)/.test(fold(txt(q.a[q.c])));
   const lvOrder=lv?[lv].concat(s.levels.filter(l=>l!==lv)):s.levels;
-  let card=null,cs=0; // fiszka: jej hasło musi w większości siedzieć w odpowiedzi
-  lvOrder.forEach(l=>(l.flashcards||[]).forEach(c=>{const tw=[...new Set(keyWords(c.t))];if(!tw.length)return;const hit=tw.filter(w=>aw.includes(w)).length;if(hit/tw.length>=.5&&hit>cs){cs=hit;card=c;}}));
-  let frag=null,fs=0;const key=card?fold(txt(card.t)):''; // fragment lekcji (tylko z tego poziomu): punkt listy albo zdanie z hasłem fiszki albo z co najmniej połową słów odpowiedzi
+  let card=null,cs=0; // fiszka: hasło krótkie (≤ 2 słowa kluczowe) — wszystkie w odpowiedzi; dłuższe — co najmniej 2 i 2/3
+  const variants=t=>{const v=txt(t).replace(/\s+/g,' ').trim(),m=v.match(/^(.+?)\s*\(([^()]+)\)\s*$/);return m?[v,m[1],m[2]]:[v];}; // „Seed phrase (BIP-39)”: nawias to drugi zapis hasła
+  // druga droga (przegląd Build 7): pytanie wprost o pojęcie z fiszki („Co to dekomodyfikacja?”, „Czym jest deficit bias?”) — wszystkie słowa hasła są
+  // w pytaniu, a definicja mówi to samo co poprawna odpowiedź (≥ 2 wspólne rzadkie słowa, bez słów z błędnych opcji i bez przeciwnego kierunku);
+  // nie przy pytaniach z przeczeniem („Co NIE jest cechą…”), gdzie definicja pojęcia nie tłumaczy wybranej opcji
+  const qNeg=/(^| )(nie|bez|brak)( |$)/.test(fold(txt(q.q))),need=Math.min(2,aw.length);
+  const defOk=d=>{const dws=new Set(keyWords(d));if([...dws].some(w=>dw.has(w)))return 0;const ps=sides(d);if(ps.some((v,i)=>v&&as[i]&&!(v&as[i])))return 0;const sh=aw.filter(w=>dws.has(w)).length;return sh>=need&&sh>=1?sh:0;};
+  lvOrder.forEach(l=>(l.flashcards||[]).forEach(c=>variants(c.t).forEach(t=>{const tw=[...new Set(keyWords(esc(t)))].filter(w=>!common.has(w));if(!tw.length)return;const hits=tw.filter(w=>aw.includes(w)),hit=hits.length;
+    const rare=Math.min(...tw.map(w=>df.get(w)||0)),ord=hits.map(w=>apos.indexOf(w)); // dłuższe hasło: trafione też najrzadsze słowo i w tej samej kolejności („Społeczna Gospodarka Rynkowa” ≠ „gospodarką … społeczna”)
+    const pass=tw.length<=2?hit===tw.length:(hit>=2&&hit/tw.length>=2/3&&hits.some(w=>(df.get(w)||0)===rare)&&ord.every((p,i)=>!i||p>ord[i-1]));if(pass&&hit>cs){cs=hit;card=c;return;}
+    if(pass||qNeg||!tw.every(w=>qw.has(w)))return;const sh=defOk(c.d);if(sh&&sh>cs){cs=sh;card=c;}})));
+  let frag=null,fs=0,fdose=null;const key=card?fold(txt(card.t)):''; // fragment lekcji (tylko z tego poziomu): punkt listy albo zdanie z hasłem fiszki (tylko tej, która przeszła) albo z co najmniej połową słów odpowiedzi
+  const fits=t=>{const pw=new Set(keyWords(t));if([...pw].some(w=>dw.has(w)))return null; // mówi o błędnej opcji — mógłby ją „potwierdzić”
+    const ps=sides(t);if(ps.some((v,i)=>v&&as[i]&&!(v&as[i])))return null; // odpowiedź „zwiększa”, tekst „zmniejsza”
+    const hit=aw.filter(w=>pw.has(w)).length,hasKey=!!key&&fold(t).includes(key);return (hasKey||hit>=Math.max(2,Math.ceil(aw.length*.5)))?hit+(hasKey?2:0):null;};
   (lv?[lv]:s.levels).forEach(l=>(l.feed||[]).forEach(f=>doseChunks(f).forEach(h=>h.split(/\s*•\s*|(?<=[.!?])\s+(?=(?:<[a-z0-9]+>)*[A-ZĄĆĘŁŃÓŚŹŻÁÉÍÓÚÑ¿¡„"])/).forEach(p=>{
-    const pt=txt(p).trim();if(pt.length<4||pt.length>260)return;const pw=new Set(keyWords(pt)),hit=aw.filter(w=>pw.has(w)).length,hasKey=!!key&&fold(pt).includes(key);
-    if([...pw].some(w=>dw.has(w)))return; // fragment mówi o błędnej opcji — mógłby ją „potwierdzić”
-    const ps=sides(pt);if(ps.some((v,i)=>v&&as[i]&&!(v&as[i])))return; // odpowiedź „zwiększa”, fragment „zmniejsza”
+    const pt=txt(p).trim();if(pt.length<4||pt.length>260)return;
     if(aNeg&&!/(^| )(nie|bez|brak)( |$)/.test(fold(pt)))return; // odpowiedź z przeczeniem, fragment bez niego
-    const sc=hit+(hasKey?2:0);if((hasKey||hit>=Math.max(2,Math.ceil(aw.length*.5)))&&sc>fs){fs=sc;frag=p.trim();}}))));
-  return {card,frag};
+    const sc=fits(pt);if(sc!=null&&sc>fs){fs=sc;frag=p.trim();fdose=f;}}))));
+  // „Prościej”: pole real dawki, z której jest fragment, a bez fragmentu — dawki najlepiej pasującej do odpowiedzi (tekst dawki + real + schemat);
+  // samo real nie może mówić o błędnej opcji ani mieć przeciwnego kierunku („zmniejsza” przy „zwiększa”)
+  const realSafe=r=>{const rt=txt(r||'').trim();if(!rt)return false;const pw=new Set(keyWords(rt));if([...pw].some(w=>dw.has(w)))return false;const ps=sides(rt);return !ps.some((v,i)=>v&&as[i]&&!(v&as[i]));};
+  let real=fdose&&realSafe(fdose.real)?fdose.real:null;
+  if(!real){let rs=0;(lv?[lv]:s.levels).forEach(l=>(l.feed||[]).forEach(f=>{if(!f||!realSafe(f.real))return;
+    const rw=new Set(keyWords(f.real));if(!aw.some(w=>rw.has(w)))return; // bez fragmentu: samo real też musi dotyczyć odpowiedzi (choć jedno słowo kluczowe)
+    const sc=fits(txt(f.body||'')+' '+txt(f.real)+' '+txt(vizPlain(f.viz)));if(sc!=null&&sc>rs){rs=sc;real=f.real;}}));}
+  return {card,frag,real};
 }
 function openExplain(q,o){
-  const {card,frag}=explainFor(q,o.subj,o.lv);
+  const {card,frag,real}=explainFor(q,o.subj,o.lv);
   const parts=[];
   if(q.c!=null&&q.a)parts.push(`<span class="lbl">Poprawna odpowiedź</span><b>${q.a[q.c]}</b>`);
+  if(real)parts.push(`<span class="lbl">Prościej</span>${real}`); // P1-10: „Powiedz prościej” na pierwszym miejscu wśród wyjaśnień
   if(card)parts.push(`<span class="lbl">Fiszka</span><b>${card.t}</b> — ${card.d}`);
   if(frag)parts.push(`<span class="lbl">W lekcji było</span>${frag}`);
   const s=openSheet('explain',`<div class="exhead"><div class="ico a-pop">${icon('bulb',{size:24,stroke:2.6})}</div><div class="grow"><div class="st2">Wyjaśnijmy inaczej</div></div></div>
@@ -1148,6 +1237,7 @@ function showNoHearts(o){
 /* fiszki przefiltrowane do poziomu (z lekcji: zamyka ją bez wyniku) */
 function goCards(lv){
   const L=document.getElementById('lesson');if(L)L.classList.remove('open');
+  if(lessonState)chatStop(lessonState.chat);clearInterval(ghostInt); // miejsce w lekcji zostaje w PROGRESS.lessonSave — powrót z węzła (P1-11)
   lessonState=null;fState={subj:current.id,lvl:lv?lv.id:'all',idx:0,flipped:false};curTab='fiszki';renderSubject();
 }
 
@@ -1164,7 +1254,6 @@ function sessionChips(o,word){
 /* pytanie ABCD: odpowiedzi w losowej kolejności (data-i = indeks w q.a, litera = pozycja na ekranie).
    AI lubi robić poprawną odpowiedź najdłuższą — gdy wyraźnie odstaje długością, pytanie idzie jako „prawda czy fałsz” z jedną propozycją. */
 function lengthCue(q){const L=q.a.map(x=>txt(x).trim().length),c=L[q.c],rest=L.filter((_,i)=>i!==q.c);if(rest.length<2)return false;const mx=Math.max(...rest),mn=Math.min(...rest);return (c>mx*1.3&&c-mx>=12)||(c<mn*.7&&mn-c>=12);}
-function permQ(q){const o=shuffle(q.a.map((_,i)=>i));return {...q,a:o.map(i=>q.a[i]),c:o.indexOf(q.c)};}
 function quizBlock(q,o){
   if(!o.noTf&&q.a.length>=3&&lengthCue(q))return quizTf(q,o);
   const order=shuffle(q.a.map((_,i)=>i));
@@ -1194,7 +1283,7 @@ function quizBlock(q,o){
 function quizTf(q,o){
   const others=q.a.map((_,i)=>i).filter(i=>i!==q.c),isTrue=Math.random()<.5,cand=isTrue?q.c:others[Math.floor(Math.random()*others.length)];
   const body=el('div','quiz qtf');
-  body.innerHTML=`<div class="qchips">${sessionChips(o,'Prawda czy fałsz')}</div><div class="qq a-up">${q.q}</div>
+  body.innerHTML=`<div class="qchips">${sessionChips(o,'Tak czy nie')}</div><div class="qq a-up">${q.q}</div>
     <div class="qtfcand a-up d2"><span class="lbl">Czy to dobra odpowiedź?</span><div class="t">${q.a[cand]}</div></div>
     <div class="qtfbtns a-up d3"><button class="qopt tfno" data-v="0"><span class="k">${icon('close',{size:17,stroke:3.6})}</span><span class="t">Nie</span></button><button class="qopt tfyes" data-v="1"><span class="k">${icon('check',{size:18,stroke:3.6})}</span><span class="t">Tak</span></button></div>`;
   const btn=el('button','pill qcheck','SPRAWDŹ');btn.disabled=true;btn.id='qcheck';
@@ -1294,7 +1383,7 @@ function chartSvg(kind,xs,ys,fmtV){
 /* sesja poziomu: pytania quizu (max 6, losowo) i zadania w jednym strumieniu — pierwsze zawsze pytanie, zadania rozłożone równo między resztę */
 function levelSession(lv){
   const qs=shuffle((lv.quiz||[]).map((q,qi)=>({kind:'quiz',q:qOf(current,lv,qi),qi}))).slice(0,Math.min(6,(lv.quiz||[]).length)); // krok 9: z poprawkami
-  const ts=shuffle((lv.tasks||[]).filter(t=>t&&TASKS[t.type])).map(task=>({kind:'task',task}));
+  const ts=shuffle((lv.tasks||[]).map((task,ti)=>({kind:'task',task,ti})).filter(x=>x.task&&TASKS[x.task.type])); // ti = indeks w lv.tasks (zapis przerwanej lekcji)
   if(!ts.length||!qs.length)return qs.concat(ts);
   const out=[qs[0]],rest=qs.slice(1);let qi=0,ti=0;
   while(qi<rest.length||ti<ts.length){
@@ -1709,8 +1798,8 @@ function renderReview(){
     bySubj.forEach(({s,mine},i)=>{
       const lv=[...new Set(mine.map(x=>noEmoji(x.lv.title)))];
       const r=el('button','rvrow themed a-up d'+Math.min(6,i+1));r.style.setProperty('--accent',s.accent);if(s.onAccent)r.style.setProperty('--on-accent',s.onAccent);
-      r.innerHTML=`${mono(initial(s.short||s.name),'solid')}<div class="grow"><div class="t">${s.short||s.name}</div><div class="s">${lv.slice(0,2).join(' · ')}${lv.length>2?' · +'+(lv.length-2):''}</div></div><span class="n">${mine.length}</span>`;
-      r.setAttribute('aria-label',txt(s.short||s.name)+': '+mine.length+' do powtórki');
+      r.innerHTML=`${mono(initials(s),'solid')}<div class="grow"><div class="t nm">${noEmoji(s.name)}</div><div class="s">${lv.slice(0,2).join(' · ')}${lv.length>2?' · +'+(lv.length-2):''}</div></div><span class="n">${mine.length}</span>`;
+      r.setAttribute('aria-label',txt(s.name)+': '+mine.length+' do powtórki');
       r.onclick=()=>startReview(mine);rows.appendChild(r);
     });
     scroll.appendChild(rows);
@@ -1758,24 +1847,25 @@ function renderReviewSession(){
     // karta w kolorze przedmiotu (Flashcards.html): tap = odwróć, przeciągnięcie w lewo = jeszcze nie, w prawo = umiem
     const flip=el('div','flip themed a-up'+(rv.flipped?' flipped':''));flip.style.setProperty('--accent',it.s.accent);if(it.s.onAccent)flip.style.setProperty('--on-accent',it.s.onAccent);
     flip.innerHTML=`<div class="flipinner">
-      <div class="face front"><span class="tag accent">${it.s.short||it.s.name} · ${noEmoji(it.lv.title)}</span><div class="term">${c.t}</div><div class="tapomat">dotknij, żeby odwrócić</div></div>
+      <div class="face front"><span class="tag accent">${sshort(it.s)} · ${noEmoji(it.lv.title)}</span><div class="term">${c.t}</div><div class="tapomat">dotknij, żeby odwrócić</div></div>
       <div class="face back"><span class="tag">odpowiedź</span><div class="deftxt">${c.d}</div><div class="tapomat">dotknij, żeby wrócić</div></div></div>`;
-    let swiped=false;
-    flip.onclick=()=>{if(swiped){swiped=false;return;}rv.flipped=!rv.flipped;flip.classList.toggle('flipped');};
+    let swiped=false,g=null;
+    flip.onclick=()=>{if(swiped){swiped=false;return;}rv.flipped=!rv.flipped;flip.classList.toggle('flipped');if(rv.flipped&&g)g.seen();};
     body.appendChild(flip);
     body.appendChild(el('div','swipehint3',`<span class="l">${icon('back',{size:16,stroke:2.8,cls:'a-bob'})}w lewo = jeszcze nie</span><span class="r">w prawo = umiem${icon('chevron-right',{size:16,stroke:2.8,cls:'a-bob d2'})}</span>`));
     const foot=el('div','lessonfoot');const btns=el('div','fbtns');
     const no=el('button','fbtn no',icon('refresh',{size:18,stroke:2.8})+' jeszcze nie'),yes=el('button','fbtn yes',icon('check',{size:18,stroke:3.4})+' umiem');
     no.id='rvno';yes.id='rvyes';
-    const ans=ok=>{if(!advOk())return;rvAnswer(it,ok,ok?2:0);rv.flipped=false;rv.idx++;renderReviewSession();};
-    no.onclick=()=>ans(false);yes.onclick=()=>ans(true);
+    const ans=ok=>{if(rvState!==rv||!advOk())return;rvAnswer(it,ok,ok?2:0);rv.flipped=false;rv.seenAt=null;rv.idx++;renderReviewSession();};
+    g=cardGate(rv,flip,btns,ans);
+    no.onclick=()=>g.ask(false);yes.onclick=()=>g.ask(true);
     let x0=null;flip.onpointerdown=e=>{x0=e.clientX;};
-    flip.onpointerup=e=>{if(x0==null)return;const dx=e.clientX-x0;x0=null;if(Math.abs(dx)>80){swiped=true;ans(dx>0);}};
+    flip.onpointerup=e=>{if(x0==null)return;const dx=e.clientX-x0;x0=null;if(Math.abs(dx)>80){swiped=true;g.ask(dx>0);}};
     btns.appendChild(no);btns.appendChild(yes);foot.appendChild(btns);L.appendChild(foot);
-    keyFn=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();flip.click();}else if(e.key==='ArrowLeft'||e.key==='1')ans(false);else if(e.key==='ArrowRight'||e.key==='2')ans(true);};
+    keyFn=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();flip.click();}else if(e.key==='ArrowLeft'||e.key==='1')g.ask(false);else if(e.key==='ArrowRight'||e.key==='2')g.ask(true);};
   }else{
     const q=it.q;
-    const blk=quizBlock(q,{n:rv.idx+1,total:rv.items.length,tag:it.s.short||it.s.name,onAnswer:(i,ok)=>{
+    const blk=quizBlock(q,{n:rv.idx+1,total:rv.items.length,tag:sshort(it.s),onAnswer:(i,ok)=>{
       rvAnswer(it,ok,ok?3:0);
       const next=()=>{rv.idx++;renderReviewSession();};
       if(ok){body.appendChild(confetti(4));sheetOk(q,{xp:3,mult:1,combo:0,onNext:next,subj:it.s,lv:it.lv,qi:it.idx});}
@@ -1802,7 +1892,7 @@ function finishReview(L){
   if(!L){app.innerHTML='';L=el('div','lesson open rvrun');app.appendChild(L);app.appendChild(el('div','toast',''));app.lastChild.id='toast';}else L.innerHTML='';
   const body=el('div','lessonbody done');if(pct>=50)body.appendChild(confetti(6));
   const done=rv.items.slice(0,rv.idx);const cards=done.filter(x=>x.kind==='card').length,qs=done.length-cards; // tylko to, co przejrzane (sesję można przerwać)
-  const subsTxt=[...rv.subs].map(id=>{const s=SUBJECTS.find(x=>x.id===id);return s?(s.short||s.name):'';}).filter(Boolean).join(' · ');
+  const subsTxt=[...rv.subs].map(id=>{const s=SUBJECTS.find(x=>x.id===id);return s?sshort(s):'';}).filter(Boolean).join(' · ');
   const R=52,C=Math.round(2*Math.PI*R*10)/10;const nd=nextDueText();const n=streakDisplay();
   const lc=el('div','lc');
   lc.innerHTML=`<div class="rvring a-pop"><svg viewBox="0 0 124 124" aria-hidden="true"><circle class="ring-bg" cx="62" cy="62" r="${R}"/><circle class="ring-fg" cx="62" cy="62" r="${R}" style="stroke-dasharray:${C};stroke-dashoffset:${Math.round(C*(1-pct/100)*10)/10}"/></svg><div class="rvpct"><b>${pct}%</b><span>umiem</span></div></div>
@@ -1837,7 +1927,7 @@ function renderCardsHub(){
     if(i)card.appendChild(el('div','setsep'));
     const nc=allCards(s).length,nd=due.filter(x=>x.s.id===s.id).length;
     const r=el('button','setrow themed');r.style.setProperty('--accent',s.accent);if(s.onAccent)r.style.setProperty('--on-accent',s.onAccent);
-    r.innerHTML=`${mono(initial(s.short||s.name),'solid xs')}<div class="grow"><div class="t">${s.short||s.name}</div><div class="s">${nc} ${pl(nc,'fiszka','fiszki','fiszek')}${nd?' · '+nd+' do powtórki':''}</div></div>${icon('chevron-right',{size:18,cls:'chev'})}`;
+    r.innerHTML=`${mono(initials(s),'solid xs')}<div class="grow"><div class="t nm">${noEmoji(s.name)}</div><div class="s">${nc} ${pl(nc,'fiszka','fiszki','fiszek')}${nd?' · '+nd+' do powtórki':''}</div></div>${icon('chevron-right',{size:18,cls:'chev'})}`;
     r.onclick=()=>openSubject(s.id,'fiszki');card.appendChild(r);
   });
   scroll.appendChild(card);
@@ -1852,6 +1942,13 @@ function openSubject(id,tab,setup){
   if(setup)setup();
   renderSubject();
 }
+/* cloud-ui.js „ZACZNIJ NAUKĘ” (P1-22): ścieżka przedmiotu i od razu ten poziom — tylko gdy jest odblokowany (inaczej sama ścieżka) */
+function openLevel(sid,lid){
+  const s=SUBJECTS.find(x=>x.id===sid);if(!s)return go('today');
+  openSubject(sid,'path');
+  const i=s.levels.findIndex(l=>l.id===lid);
+  if(i>=0&&current===s&&levelUnlocked(s,i))startLesson(s.levels[i]);
+}
 function renderSubject(){
   const s=current;const st=subjState(s.id);
   try{clearInterval(cwInt);clearInterval(exInt);}catch(e){}
@@ -1861,7 +1958,7 @@ function renderSubject(){
   const band=el('div','band');
   const row=el('div','brow');
   const back=el('button','backbtn',icon('back',{size:20,stroke:3}));back.setAttribute('aria-label','Wróć do planu dnia');back.onclick=()=>go('today');row.appendChild(back);
-  row.appendChild(el('div','bmeta',`<div class="bname">${mono(initial(s.short||s.name),'xs solid')}<span>${s.short||s.name}</span></div>
+  row.appendChild(el('div','bmeta',`<div class="bname">${mono(initials(s),'xs solid')}<span>${noEmoji(s.name)}</span></div>
     <div class="bprog"><div class="bar"><i class="a-grow" style="width:${pct}%"></i></div><span>${done}/${total} · <b id="xpNum">${st.xp}</b> xp</span></div>`));
   const info=el('button','infobtn'+(curTab==='info'?' active':''),icon('info',{size:19}));info.setAttribute('aria-label','Zasady zaliczenia');info.onclick=()=>{curTab='info';renderSubject();};row.appendChild(info);
   row.appendChild(gemPill());row.appendChild(heartsPill({iconBeat:true})); // krok 8: gemy w pasie przedmiotu
@@ -1931,6 +2028,7 @@ function renderPath(sc){
   items.push({boss:true});
   const xOf=k=>PATH_OFF[k%PATH_OFF.length];
   const chests=st.chests||(st.chests={});
+  const saves=lsaves(); // P1-11: poziomy z przerwaną lekcją — dymek DOKOŃCZ
   const chestOpen=it=>s.levels.slice(Math.max(0,it.after-2),it.after+1).every(isDone);
   const doneOf=it=>it.chest?!!chests[String(it.after)]:it.boss?!!brec.done:isDone(it.lv);
   items.forEach((it,k)=>{
@@ -1955,10 +2053,11 @@ function renderPath(sc){
       node.appendChild(btn);node.appendChild(el('div','nodelabel'+(beaten?'':open?' cur':' lock'),beaten?'Boss pokonany':'Boss rozdziału'));
     }else{
       const lv=it.lv,i=it.i;const unlocked=levelUnlocked(s,i),done=isDone(lv),stars=(st.levels[lv.id]||{}).stars||0;
-      const cur=unlocked&&!done;
-      if(cur){node.classList.add('cur');node.appendChild(el('div','bubble a-bob','ZACZNIJ'));const pf=el('div','pathfox',fox('idle',86));pf.style.setProperty('--fx',(x<0?118:-118)+'px');node.appendChild(pf);}
+      const cur=unlocked&&!done,saved=unlocked&&!!lessonLoad(s,lv,saves);
+      if(cur){node.classList.add('cur');node.appendChild(el('div','bubble a-bob'+(saved?' resume':''),saved?'DOKOŃCZ':'ZACZNIJ'));const pf=el('div','pathfox',fox('idle',86));pf.style.setProperty('--fx',(x<0?118:-118)+'px');node.appendChild(pf);}
+      else if(saved){node.classList.add('resume');node.appendChild(el('div','bubble resume a-bob','DOKOŃCZ'));}
       const btn=el('button','nodebtn '+(done?'node-done':cur?'node-open a-pulse':'node-lock'),done?icon('check',{size:34,stroke:3.4}):cur?icon('bolt',{size:40}):icon('lock',{size:28}));
-      btn.setAttribute('aria-label',(done?'Powtórz: ':cur?'Zacznij: ':'Zablokowane: ')+txt(noEmoji(lv.title)));
+      btn.setAttribute('aria-label',(saved?'Dokończ: ':done?'Powtórz: ':cur?'Zacznij: ':'Zablokowane: ')+txt(noEmoji(lv.title)));
       if(done)btn.innerHTML+=`<span class="stars">${starRow(stars,12)}</span>`;
       btn.onclick=unlocked?()=>startLesson(lv):()=>toast('Najpierw zalicz poprzedni poziom','lock');
       node.appendChild(btn);
@@ -2150,6 +2249,27 @@ function chatTerm(C,t,term){
   if(def){const d=el('div','cbub fox cdef a-pop',`<span class="lbl">${icon('bookmark',{size:14})}${esc(term)}</span>${def}`);d.dataset.k=k;host.after(d);}
   if(C.fox)foxAct(C.fox,fresh?(def?'wink':'nod'):'nod');
 }
+/* „Powiedz prościej” (BIBLIA §10.3, P1-10): pole real dawki jako mały, zwinięty „Prościej” pod jej tekstem — stuknięcie rozwija; bez przycisków w stopce.
+   Tylko gdy real nie jest pusty i nie powtarza dawki. Liczby, które są tylko w real (nie w tekście dawki), zawsze widoczne: wtedy „Prościej” jest nawet przy
+   podobnym tekście, a gdy opiera się na nich schemat (vizText) — od razu rozwinięte (kontrola ugruntowania schematów przyjmuje liczby z real). */
+const numsIn=t=>new Set((String(t).match(/\d+(?:[.,]\d+)?/g)||[]).map(x=>x.replace(',','.')));
+function nearCopy(real,body){const r=fold(txt(real)),b=fold(txt(body));if(!r||b.includes(r))return true;const rw=[...new Set(words(real).map(stem))];if(rw.length<3)return false;const bw=new Set(words(body).map(stem));return rw.filter(w=>bw.has(w)).length/rw.length>=.8;}
+function doseReal(f){
+  const r=f&&f.real;if(!r||typeof r!=='string'||!txt(r).trim())return null;
+  const rn=numsIn(txt(r)),bn=numsIn(txt(f.body||'')),vn=numsIn(vizPlain(f.viz));
+  const only=[...rn].filter(x=>!bn.has(x));
+  if(!only.length&&nearCopy(r,f.body||''))return null;
+  return {h:r,open:[...vn].some(x=>rn.has(x)&&!bn.has(x))};
+}
+function chatReal(C,rl){
+  if(!chatAlive(C))return false;
+  const box=el('div','creal a-up'+(rl.open?' open':''));
+  const b=el('button','crealbtn',`${icon('bulb',{size:14,stroke:2.6})}<span>Prościej</span>${icon('chevron-down',{size:14,stroke:2.8,cls:'chev'})}`);b.type='button';b.setAttribute('aria-expanded',String(!!rl.open));
+  const tx=el('div','crealtx',rl.h);tx.hidden=!rl.open;
+  b.onclick=e=>{e.stopPropagation();const o=box.classList.toggle('open');tx.hidden=!o;b.setAttribute('aria-expanded',String(o));if(o){chatShow(C,tx);if(C.fox)foxAct(C.fox,'nod');}};
+  box.appendChild(b);box.appendChild(tx);chatBox(C).appendChild(box);chatShow(C,box);
+  return true;
+}
 function chatHead(C){const L=C.L,h=L.querySelector('.lessonhead');if(h)h.replaceWith(lessonHead(C.ls));}
 async function chatDose(C){
   const ls=C.ls,lv=ls.lv,i=ls.feedIdx,f=lv.feed[i],n=lv.feed.length;
@@ -2159,6 +2279,7 @@ async function chatDose(C){
   sec.appendChild(head);C.list.appendChild(sec);C.cur=sec;chatShow(C,head,true);
   await chatWait(C,500);
   for(const h of feedChunks(f.body)){if(!txt(h).trim())continue;if(!await chatPut(C,chunkView(h)))return;} // pusty kawałek (np. dawka z samą wizualizacją) — bez pustego dymka
+  const rl=doseReal(f);if(rl&&!chatReal(C,rl))return; // „Prościej” pod tekstem dawki (zwinięte)
   if(vizOk(f.viz)&&!await chatViz(C,f.viz))return;
   chatOffer(C);
 }
@@ -2178,40 +2299,115 @@ async function chatCheck(C,ck){
 async function chatNext(C){
   const ls=C.ls;if(C.cur){C.cur.classList.add('done');C.cur.classList.remove('open');}C.cur=null; // przerobiona część zwija się do jednej linii
   ls.feedIdx++;
-  if(ls.feedIdx<ls.lv.feed.length)return chatDose(C);
+  if(ls.feedIdx<ls.lv.feed.length){lessonSave(ls);return chatDose(C);} // P1-11: miejsce w czacie zapisane po każdej części
   ls.feedIdx=ls.lv.feed.length-1;chatHead(C);chatFoot(C,null);
   const has=ls.items.length;
   if(!await chatSay(C,has?'To wszystko na start. Sprawdźmy, co zostało w głowie.':'To wszystko w tym poziomie. Dobra robota!'))return;
   if(C.fox)foxAct(C.fox,'wave');
-  chatFoot(C,[[has?'CZAS NA PYTANIA':'ZAKOŃCZ',()=>{chatStop(C);if(has){ls.phase='quiz';renderLesson();}else finishLesson();},true]]);
+  chatFoot(C,[[has?'CZAS NA PYTANIA':'ZAKOŃCZ',()=>{chatStop(C);if(has){ls.phase='quiz';ls.replay=false;lessonSave(ls);renderLesson();}else finishLesson();},true]]);
 }
 function startChat(ls,L,body){
-  const C={ls,L,body,list:el('div','chat'),foot:el('div','lessonfoot chatfoot'),t:[],terms:new Set(),cur:null,fox:null};ls.chat=C;
+  const C={ls,L,body,list:el('div','chat'),foot:el('div','lessonfoot chatfoot'),t:[],terms:new Set(Array.isArray(ls.terms)?ls.terms:[]),cur:null,fox:null};ls.chat=C;
   const all=new Set();(ls.lv.feed||[]).forEach(f=>{boldTerms(f.body).forEach(x=>all.add(fold(x)));feedChunks(f.body).forEach(h=>{const v=chunkView(h);if(v.k==='vocab')v.items.forEach(it=>{if(it.lt)all.add(fold(it.lt));});});});C.allTerms=all.size;
   const top=el('div','chattop',`<div class="chatfox">${fox('idle',56)}</div><div class="grow"><div class="chatname">Lis tłumaczy</div><div class="chatsub">${noEmoji(ls.lv.title)}</div></div>`+
-    (C.allTerms?`<div class="chatterms" id="chatterms" title="Zebrane pojęcia">${icon('bookmark',{size:15})}<b>0/${C.allTerms}</b></div>`:''));
+    (C.allTerms?`<div class="chatterms" id="chatterms" title="Zebrane pojęcia">${icon('bookmark',{size:15})}<b>${Math.min(C.terms.size,C.allTerms)}/${C.allTerms}</b></div>`:''));
   body.classList.add('chatbody');body.appendChild(top);body.appendChild(C.list);L.appendChild(C.foot);
   body.onclick=e=>{if(C.skip&&!e.target.closest('button,.cterm'))C.skip();}; // stuknięcie w czat = szybciej
   liveFoxes(top);C.fox=top.querySelector('svg.fx');
-  if(C.allTerms)C.list.appendChild(el('div','chint a-up',icon('bookmark',{size:15})+'<span>Stuknij słówko albo <b class="cterm demo">wyróżnione pojęcie</b>, kiedy już je pamiętasz — trafi do licznika.</span>'));
+  if(ls.feedIdx>0)C.list.appendChild(el('div','cdiv a-up',`<span>${icon('bookmark',{size:14})}</span>Wracamy od części ${ls.feedIdx+1} z ${(ls.lv.feed||[]).length}`)); // P1-11: wznowiona lekcja
+  else if(C.allTerms)C.list.appendChild(el('div','chint a-up',icon('bookmark',{size:15})+'<span>Stuknij słówko albo <b class="cterm demo">wyróżnione pojęcie</b>, kiedy już je pamiętasz — trafi do licznika.</span>'));
   chatDose(C);
+}
+/* ---------- PRZERWANA LEKCJA (P1-11): zapis miejsca w czacie / pytaniach, powrót z węzła ścieżki ----------
+   PROGRESS.lessonSave = napis JSON {"<sid>:<lid>": {v:1, at, sig, phase, feedIdx, items:["q3","t0",…], qIdx, score, combo, maxCombo, broken, xp,
+   bad:[indeksy kroków], run:[[ms,0|1]], el, terms:[…], replay}} — opcjonalne (stare zapisy go nie mają). Napis, bo scalanie w cloud.js bierze
+   tekst w całości (obiekt scalałby się pole po polu i mieszał kolejność pytań z dwóch urządzeń). Najwyżej LS_MAX przerwanych lekcji; wpis znika
+   po wyniku poziomu, przy „Od nowa” i gdy treść poziomu się zmieniła (sig). Każdy wpis jest sprawdzany przy odczycie (dane z synchronizacji). */
+const LS_MAX=6;
+function lsaves(){try{const o=JSON.parse(typeof PROGRESS.lessonSave==='string'?PROGRESS.lessonSave:'{}');return o&&typeof o==='object'&&!Array.isArray(o)?o:{};}catch(e){return {};}}
+function lsavesPut(o){
+  const ks=Object.keys(o).filter(k=>o[k]&&typeof o[k]==='object').sort((a,b)=>(+o[b].at||0)-(+o[a].at||0)).slice(0,LS_MAX);
+  if(!ks.length)delete PROGRESS.lessonSave;else{const out={};ks.forEach(k=>{out[k]=o[k];});PROGRESS.lessonSave=JSON.stringify(out);}
+  saveProgress();
+}
+function lvSig(lv){return [(lv.feed||[]).length,(lv.quiz||[]).length,(lv.tasks||[]).length].join('.');}
+function lessonDrop(sid,lid){const all=lsaves(),k=sid+':'+lid;if(all[k]){delete all[k];lsavesPut(all);}}
+/* zapis bieżącej lekcji; q = indeks następnego pytania (po odpowiedzi: qIdx+1). Bez postępu (pierwsza część czatu, powtórka przed pierwszą odpowiedzią) — bez wpisu */
+function lessonSave(ls,q){
+  if(!current||!ls||ls.done)return false;
+  q=q==null?(ls.phase==='quiz'&&ls.answered?ls.qIdx+1:ls.qIdx):q;const k=current.id+':'+ls.lv.id; // X przy otwartym „Dobrze!”/„Nie tym razem”: odpowiedź już policzona → następne pytanie
+  const worth=ls.phase==='feed'?ls.feedIdx>0:(q>0||(!ls.replay&&(ls.lv.feed||[]).length>0)); // pytania po przeczytanym czacie też się liczą
+  const all=lsaves();
+  if(!worth){if(all[k]){delete all[k];lsavesPut(all);}return false;}
+  const terms=ls.chat?[...ls.chat.terms]:(ls.terms||[]);
+  all[k]={v:1,at:Date.now(),sig:lvSig(ls.lv),phase:ls.phase,feedIdx:ls.feedIdx,items:ls.items.map(it=>it.kind==='quiz'?'q'+it.qi:'t'+it.ti),qIdx:q,
+    score:ls.score,combo:ls.combo,maxCombo:ls.maxCombo,broken:!!ls.broken,xp:ls.xp,bad:ls.marks.map((m,i)=>m==='bad'?i:-1).filter(i=>i>=0),
+    run:ls.run.map(r=>[Math.max(0,Math.round(r.t)),r.correct?1:0]),el:ls.t0!=null?Math.max(0,Date.now()-ls.t0):null,terms:terms.filter(x=>typeof x==='string').slice(0,200),replay:!!ls.replay};
+  lsavesPut(all);return true;
+}
+/* odczyt zapisu poziomu: pełna walidacja (indeksy pytań i zadań muszą istnieć, liczby w zakresie) — zły wpis = brak wpisu */
+function lessonLoad(s,lv,all){
+  const sv=(all||lsaves())[s.id+':'+lv.id];if(!sv||typeof sv!=='object'||sv.v!==1||sv.sig!==lvSig(lv))return null;
+  const I=v=>Number.isInteger(v)&&v>=0,nf=(lv.feed||[]).length;
+  if(!Array.isArray(sv.items)||sv.items.length>60||(sv.phase!=='feed'&&sv.phase!=='quiz'))return null;
+  const items=[];
+  for(const r of sv.items){if(typeof r!=='string')return null;const n=+r.slice(1);if(!I(n))return null;
+    if(r[0]==='q'){if(!(lv.quiz||[])[n])return null;items.push({kind:'quiz',q:qOf(s,lv,n),qi:n});}
+    else if(r[0]==='t'){const t=(lv.tasks||[])[n];if(!t||!TASKS[t.type])return null;items.push({kind:'task',task:t,ti:n});}
+    else return null;}
+  if(!I(sv.qIdx)||sv.qIdx>items.length||!I(sv.feedIdx)||(nf?sv.feedIdx>=nf:sv.feedIdx!==0))return null;
+  if(sv.phase==='feed'&&!nf)return null;if(sv.phase==='quiz'&&!items.length)return null;
+  const num0=v=>I(v)?v:0;
+  const run=Array.isArray(sv.run)?sv.run.filter(x=>Array.isArray(x)&&num(x[0])&&x[0]>=0).slice(0,items.length).map(x=>({t:x[0],correct:!!x[1]})):[];
+  return {phase:sv.phase,feedIdx:sv.feedIdx,items,qIdx:sv.qIdx,score:Math.min(num0(sv.score),sv.qIdx),combo:num0(sv.combo),maxCombo:num0(sv.maxCombo),broken:!!sv.broken,
+    xp:num0(sv.xp),bad:Array.isArray(sv.bad)?sv.bad.filter(I):[],run,el:num(sv.el)&&sv.el>=0?sv.el:null,
+    terms:Array.isArray(sv.terms)?sv.terms.filter(x=>typeof x==='string'&&x.length<=80).slice(0,200):[],replay:!!sv.replay};
+}
+function lessonGhost(ls){const g=ghosts()[ghostKey(ls.lv)];if(g){ls.ghost=Array.isArray(g)?g:g.run;ls.ghostAt=Array.isArray(g)?null:g.at;}} // krok 8: duch = najlepszy przebieg tego poziomu
+/* arkusz „Dokończyć lekcję?” z węzła: DOKOŃCZ wraca do zapisanego miejsca, „Od nowa” kasuje wpis */
+function openResume(lv,sv){
+  const n=sv.items.length,nf=(lv.feed||[]).length;
+  const where=sv.phase==='feed'?`Lekcja przerwana na części ${sv.feedIdx+1} z ${nf}.`:sv.qIdx>=n?'Wszystkie pytania za Tobą — zostało podsumowanie.':
+    `Lekcja przerwana na pytaniu ${sv.qIdx+1} z ${n}${sv.qIdx?` · dobrze ${sv.score} z ${sv.qIdx}`:''}.`;
+  const sh=openSheet('ask resume',`<div class="shandle"></div><div class="shead"><div class="st2">Dokończyć lekcję?</div></div>
+    <p class="sp"><b>${noEmoji(lv.title)}</b><br>${where}</p>
+    <div class="sbtns"><button class="pill ghost" id="rsnew">Od nowa</button><button class="pill" id="rsgo" data-primary>DOKOŃCZ</button></div>`);
+  sh.setAttribute('aria-modal','true');sheetBack();document.getElementById('sheetback').onclick=closeSheet;
+  sh.querySelector('#rsgo').onclick=()=>{if(!advOk())return;closeSheet();resumeLesson(lv,sv);};
+  sh.querySelector('#rsnew').onclick=()=>{if(!advOk())return;closeSheet();lessonDrop(current.id,lv.id);startLesson(lv,{fresh:true});};
+  const kf=keyFn;keyFn=e=>{if(e.key==='Escape'){e.preventDefault();closeSheet();}else if(kf)kf(e);};
+}
+function resumeLesson(lv,sv){
+  if(hearts().n<=0){showNoHearts({inLesson:false,lv});return;}
+  const ls={lv,phase:sv.phase,feedIdx:sv.feedIdx,items:sv.items,qIdx:sv.qIdx,score:sv.score,answered:false,combo:sv.combo,maxCombo:Math.max(sv.maxCombo,sv.combo),broken:sv.broken,
+    xp:sv.xp,marks:[],run:sv.run,t0:sv.el!=null?Date.now()-sv.el:null,replay:sv.replay,terms:sv.terms,resumed:true};
+  sv.bad.forEach(i=>{ls.marks[i]='bad';});
+  lessonState=ls;lessonGhost(ls);
+  const L=document.getElementById('lesson');L.classList.add('open');
+  renderLesson();
 }
 /* ---------- LEKCJA: nauka w czacie -> quiz z panelem dobrze/źle, życiami i combo -> LevelComplete ---------- */
 let lessonState=null;
-function startLesson(lv){
+function startLesson(lv,o){
+  o=o||{};
   if(hearts().n<=0){showNoHearts({inLesson:false,lv});return;} // bez życia nie zaczynasz
-  lessonState={lv,phase:(lv.feed||[]).length?'feed':'quiz',feedIdx:0,items:levelSession(lv),qIdx:0,score:0,answered:false,combo:0,maxCombo:0,broken:false,xp:0,marks:[],run:[],t0:null};
-  const g=ghosts()[ghostKey(lv)];if(g){lessonState.ghost=Array.isArray(g)?g:g.run;lessonState.ghostAt=Array.isArray(g)?null:g.at;} // krok 8: duch = najlepszy przebieg tego poziomu
+  if(!o.fresh){const sv=lessonLoad(current,lv);if(sv)return openResume(lv,sv);} // przerwana wcześniej → „Dokończyć lekcję?”
+  const items=levelSession(lv),nf=(lv.feed||[]).length;
+  const replay=!!(subjState(current.id).levels[lv.id]||{}).done&&nf>0&&items.length>0; // powtórka zaliczonego poziomu: od pytań, czat pod „Przeczytaj jeszcze raz”
+  lessonState={lv,phase:nf&&!replay?'feed':'quiz',feedIdx:0,items,qIdx:0,score:0,answered:false,combo:0,maxCombo:0,broken:false,xp:0,marks:[],run:[],t0:null,replay};
+  lessonGhost(lessonState);
   const L=document.getElementById('lesson');L.classList.add('open');
   renderLesson();
 }
 function closeLesson(){closeSheet();keyFn=null;taskCleanup();if(lessonState)chatStop(lessonState.chat);clearInterval(bossInt);clearInterval(ghostInt);lessonState=null;bossState=null;const L=document.getElementById('lesson');if(L)L.classList.remove('open');renderSubject();}
+/* X w lekcji: miejsce jest zapisane na bieżąco, więc bez pytania — zamyka i mówi, że da się wrócić */
+function leaveLesson(){const ls=lessonState;const kept=!!ls&&!ls.done&&lessonSave(ls);closeLesson();if(kept)toast('Miejsce zapisane — dokończysz z węzła na ścieżce','bookmark');}
 /* nagłówek lekcji: zamknij, pasek segmentowy (krok = dawka albo pytanie; zły = czerwony), serca */
 function lessonHead(ls){
   const totalFeed=(ls.lv.feed||[]).length,steps=totalFeed+ls.items.length;
   const cur=ls.phase==='feed'?ls.feedIdx:totalFeed+ls.qIdx;
   const head=el('div','lessonhead');
-  const x=el('button','x',icon('close',{size:18,stroke:3}));x.setAttribute('aria-label','Zamknij lekcję');x.onclick=closeLesson;head.appendChild(x);
+  const x=el('button','x',icon('close',{size:18,stroke:3}));x.setAttribute('aria-label','Zamknij lekcję');x.onclick=leaveLesson;head.appendChild(x);
   const seg=el('div','segbar');seg.setAttribute('aria-label',`krok ${Math.min(cur+1,steps)} z ${steps}`);
   for(let i=0;i<steps;i++)seg.appendChild(el('i',i<cur?(ls.marks[i]==='bad'?'bad':'on'):''));
   head.appendChild(seg);
@@ -2235,6 +2431,9 @@ function renderLesson(){
     const stepIdx=totalFeed+ls.qIdx;
     if(ls.t0==null)ls.t0=Date.now(); // krok 8: czas przebiegu liczony od pierwszego pytania (duch)
     clearInterval(ghostInt);
+    if(ls.replay&&ls.qIdx===0&&!ls.run.length){ // powtórka zaliczonego poziomu zaczyna się od pytań; czat na życzenie
+      const rr=el('button','pill text sm lreread',icon('book',{size:16})+'<span>Przeczytaj jeszcze raz</span>');rr.id='lreread';
+      rr.onclick=()=>{if(!advOk())return;ls.phase='feed';ls.feedIdx=0;ls.replay=false;ls.t0=null;clearInterval(ghostInt);renderLesson();};body.appendChild(rr);}
     if(ls.ghost){body.appendChild(ghostCard(ls));ghostInt=setInterval(ghostTick,400);setTimeout(ghostTick,0);}
     const onAnswer=(ok,fb)=>{ // fb = {e, sub} — dla pytania quizu to samo pytanie (e + litera z c)
       if(lessonState!==ls)return; // lekcja zamknięta, zanim zadanie skończyło się z opóźnieniem
@@ -2247,13 +2446,15 @@ function renderLesson(){
         if(it.kind==='task'&&it.task.type==='tf'&&it.task.seconds)missionEvent('tftime',1);
         const m=comboMult(ls.combo),xp=(it.kind==='task'?TASK_XP:QUIZ_XP)*m;ls.xp+=addXP(s.id,xp);
         body.appendChild(confetti(4));
+        lessonSave(ls,ls.qIdx+1); // P1-11: odpowiedź zapisana — po powrocie następne pytanie
         sheetOk(fb,{xp,mult:m,combo:ls.combo,onNext:next,subj:s,lv,qi:it.kind==='quiz'?it.qi:null});
       }else{
         ls.broken=ls.combo>=2;ls.combo=0;ls.marks[stepIdx]='bad';okRun(false);
         loseHeart();
         const hp=L.querySelector('.hearts');if(hp){hp.classList.add('a-beat');hp.appendChild(el('span','minus a-blink','−1'));}
         const seg=L.querySelectorAll('.segbar i')[stepIdx];if(seg)seg.className='bad';
-        sheetBad(fb,{sub:fb.sub,subj:s,lv,qi:it.kind==='quiz'?it.qi:null,onNext:()=>{if(hearts().n<=0&&ls.qIdx+1<ls.items.length)showNoHearts({inLesson:true,lv,onContinue:next});else next();},onCards:()=>goCards(lv)}); // krok 9: qi → „popraw pytanie”
+        lessonSave(ls,ls.qIdx+1);
+        sheetBad(fb,{sub:fb.sub,subj:s,lv,qi:it.kind==='quiz'?it.qi:null,onNext:()=>{if(hearts().n<=0&&ls.qIdx+1<ls.items.length)showNoHearts({inLesson:true,lv,onContinue:next});else next();}}); // krok 9: qi → „popraw pytanie”; bez „Do fiszek” w lekcji (P1-11: wyglądało jak pomoc, a zamykało lekcję)
       }
     };
     const o={n:ls.qIdx+1,total:ls.items.length,combo:ls.combo,broken:ls.broken};
@@ -2300,6 +2501,7 @@ function showStreakCeleb(onDone){
 }
 function finishLesson(){
   const s=current;const ls=lessonState;const lv=ls.lv;
+  ls.done=true;lessonDrop(s.id,lv.id); // P1-11: próba skończona — zapis miejsca znika; ekran wyniku pokazuje zaległe toasty z nagrodami
   const pct=ls.items.length?Math.round(ls.score/ls.items.length*100):100;
   const stars = pct>=90?3:(pct>=70?2:(pct>=50?1:0));
   const passed = ls.items.length?pct>=50:true;
@@ -2325,7 +2527,7 @@ function finishLesson(){
   const lc=el('div','lc');
   lc.innerHTML=`<div class="lcstars">${bigStar(stars>=1,0,.15)}${bigStar(stars>=2,1,.35)}${bigStar(stars>=3,2,.55)}</div>
     <div class="lcfox">${fox(passed?'happy':'oops',140)}</div>
-    <div class="lctxt"><div class="lct lcpop">${passed?'Poziom zaliczony!':'Poziom niezaliczony'}</div><div class="lcs">${s.short||s.name} · ${noEmoji(lv.title)}</div></div>
+    <div class="lctxt"><div class="lct lcpop">${passed?'Poziom zaliczony!':'Poziom niezaliczony'}</div><div class="lcs">${noEmoji(s.name)} · ${noEmoji(lv.title)}</div></div>
     <div class="lcstats"><div class="lcstat a-pop" style="animation-delay:.85s"><div class="k">XP</div><div class="v gold" data-count="${ls.xp+bonus}" data-pre="+" data-delay="950">+${ls.xp+bonus}</div></div>
       <div class="lcstat a-pop" style="animation-delay:.95s"><div class="k">Celność</div><div class="v acid" data-count="${pct}" data-suf="%" data-delay="1050">${pct}%</div></div>
       <div class="lcstat a-pop" style="animation-delay:1.05s"><div class="k">Combo</div><div class="v pink" data-count="${ls.maxCombo}" data-pre="x" data-delay="1150" data-dur="500">x${ls.maxCombo}</div></div></div>
@@ -2343,13 +2545,31 @@ function finishLesson(){
 }
 
 /* ---------- FISZKI (cały przedmiot, filtr po poziomach) ---------- */
+/* P1-17: fiszkę ocenia się dopiero po odwróceniu i chwili na przeczytanie odwrotu (RATE_MS). „Umiem / jeszcze nie” albo przesunięcie
+   nieodwróconej karty ją odwraca; stuknięcie tuż po odwróceniu czeka, aż minie RATE_MS (bez zgubionego dotyku). Do tego czasu przyciski są
+   wyszarzone (.fbtns.wait). Tak liczą się tylko przeczytane karty: SRS, XP, misja, plan dnia i „serce za fiszki”. st = stan karty {flipped, seenAt}. */
+const RATE_MS=900;
+function cardGate(st,flip,btns,rate){
+  const ready=()=>!!st.seenAt&&Date.now()-st.seenAt>=RATE_MS;
+  const paint=()=>{const r=ready();btns.classList.toggle('wait',!r);btns.querySelectorAll('.fbtn').forEach(b=>b.setAttribute('aria-disabled',String(!r)));};
+  let pend=null;
+  const seen=()=>{if(st.seenAt)return;st.seenAt=Date.now();setTimeout(()=>{if(flip.isConnected)paint();},RATE_MS+30);};
+  if(st.flipped&&!st.seenAt)st.seenAt=Date.now()-RATE_MS; // karta odwrócona przed przerysowaniem
+  const ask=ok=>{
+    if(!st.seenAt){if(!st.flipped){st.flipped=true;flip.classList.add('flipped');}seen();return;} // najpierw odwrót
+    const wait=st.seenAt+RATE_MS-Date.now();clearTimeout(pend);
+    if(wait>0){pend=setTimeout(()=>{if(flip.isConnected)rate(ok);},wait);return;}
+    rate(ok);};
+  paint();
+  return {ask,seen};
+}
 let fState=null;
 function renderFiszki(sc){
   const s=current;
   if(!fState||fState.subj!==s.id)fState={subj:s.id,lvl:'all',idx:0,flipped:false};
   const wrap=el('div','scroll');
   const chips=el('div','chips');
-  const mk=(id,name)=>{const c=el('div','chip'+(fState.lvl===id?' active':''),name);c.onclick=()=>{fState.lvl=id;fState.idx=0;fState.res=[];fState.only=null;renderFiszki(sc);};return c;};
+  const mk=(id,name)=>{const c=el('div','chip'+(fState.lvl===id?' active':''),name);c.onclick=()=>{fState.lvl=id;fState.idx=0;fState.res=[];fState.only=null;fState.flipped=false;fState.seenAt=null;renderFiszki(sc);};return c;}; // nowa talia od przodu karty
   chips.appendChild(mk('all','Wszystko'));
   s.levels.filter(l=>(l.flashcards||[]).length).forEach(l=>chips.appendChild(mk(l.id,noEmoji(l.title))));
   wrap.appendChild(chips);
@@ -2364,20 +2584,21 @@ function renderFiszki(sc){
   flip.innerHTML=`<div class="flipinner">
     <div class="face front"><span class="tag">${c.lvl||''}</span><div class="term">${c.t}</div><div class="tapomat">dotknij, żeby odwrócić</div></div>
     <div class="face back"><span class="tag">odpowiedź</span><div class="deftxt">${c.d}</div><div class="tapomat">dotknij, żeby wrócić</div></div></div>`;
-  let swiped=false;flip.onclick=()=>{if(swiped){swiped=false;return;}fState.flipped=!fState.flipped;flip.classList.toggle('flipped');};
+  let swiped=false,g=null;flip.onclick=()=>{if(swiped){swiped=false;return;}fState.flipped=!fState.flipped;flip.classList.toggle('flipped');if(fState.flipped&&g)g.seen();};
   let x0=null;flip.onpointerdown=e=>{x0=e.clientX;}; // przeciągnięcie jak w Powtórce: w prawo = umiem, w lewo = jeszcze nie
-  flip.onpointerup=e=>{if(x0==null)return;const dx=e.clientX-x0;x0=null;if(Math.abs(dx)>80){swiped=true;next(dx>0);}};
+  flip.onpointerup=e=>{if(x0==null)return;const dx=e.clientX-x0;x0=null;if(Math.abs(dx)>80){swiped=true;if(g)g.ask(dx>0);}};
   wrap.appendChild(flip);
   wrap.appendChild(el('div','swipehint3',`<span class="l">${icon('back',{size:16,stroke:2.8,cls:'a-bob'})}w lewo = jeszcze nie</span><span class="r">w prawo = umiem${icon('chevron-right',{size:16,stroke:2.8,cls:'a-bob d2'})}</span>`));
   const btns=el('div','fbtns');
   const no=el('button','fbtn no',icon('refresh',{size:18,stroke:2.8})+' jeszcze nie');const yes=el('button','fbtn yes',icon('check',{size:18,stroke:3.4})+' umiem');
   const next=(known)=>{if(!list.length||!advOk())return; // advOk: double-tap nie ocenia kolejnej, niewidzianej karty
     const pe=srs()[s.id+':'+c.lid+':'+c.i],xp=known&&(!pe||pe.due<=todayStr())?2:0; // XP tylko za kartę do powtórki (jak pudełko w srsTouch)
-    srsTouch(s.id,c.lid,c.i,known);if(xp){addXP(s.id,xp);toast('+2 XP','check');}tickDaily(s.id,'review',1);missionEvent('review',1);heartReview();fState.flipped=false;
+    srsTouch(s.id,c.lid,c.i,known);if(xp){addXP(s.id,xp);toast('+2 XP','check');}tickDaily(s.id,'review',1);missionEvent('review',1);heartReview();fState.flipped=false;fState.seenAt=null;
     (fState.res=fState.res||[]).push({c,ok:known,xp});
     if(fState.idx+1>=list.length&&!hearts().quest)return fiszkiDone(sc); // „Powtórz 10 fiszek” (Koniec żyć): krótsza talia leci w kółko, aż wróci serce
     fState.idx=(fState.idx+1)%list.length;renderFiszki(sc);};
-  no.onclick=()=>next(false);yes.onclick=()=>next(true);
+  g=cardGate(fState,flip,btns,next);
+  no.onclick=()=>g.ask(false);yes.onclick=()=>g.ask(true);
   btns.appendChild(no);btns.appendChild(yes);wrap.appendChild(btns);
   sc.innerHTML='';sc.appendChild(wrap);
 }
@@ -2392,7 +2613,7 @@ function fiszkiDone(sc){
   const wrap=el('div','scroll fdone');if(pct>=50)wrap.appendChild(confetti(6));
   const lc=el('div','lc');
   lc.innerHTML=`<div class="rvring a-pop"><svg viewBox="0 0 124 124" aria-hidden="true"><circle class="ring-bg" cx="62" cy="62" r="${R}"/><circle class="ring-fg" cx="62" cy="62" r="${R}" style="stroke-dasharray:${C};stroke-dashoffset:${Math.round(C*(1-pct/100)*10)/10}"/></svg><div class="rvpct"><b>${pct}%</b><span>umiem</span></div></div>
-    <div class="lctxt a-up d2"><div class="lct">Talia skończona</div><div class="lcs">${s.short||s.name}${lv?' · '+noEmoji(lv.title):''} · ${n} ${pl(n,'pojęcie','pojęcia','pojęć')}</div></div>
+    <div class="lctxt a-up d2"><div class="lct">Talia skończona</div><div class="lcs">${noEmoji(s.name)}${lv?' · '+noEmoji(lv.title):''} · ${n} ${pl(n,'pojęcie','pojęcia','pojęć')}</div></div>
     <div class="lcstats a-up d3"><div class="lcstat acid"><div class="v">${ok}</div><div class="k under">umiem</div></div><div class="lcstat red"><div class="v">${wrong.length}</div><div class="k under">do powtórki</div></div><div class="lcstat gold"><div class="v">+${xp}</div><div class="k under">XP</div></div></div>
     ${wrong.length?'<div class="setcard rvlist a-up d4"><div class="eyebrow sec">Wracają dziś</div>'+wrong.slice(0,3).map(c=>`<div class="setrow"><i class="rdot red"></i><span class="t grow">${c.t}</span><span class="v">${(srs()[s.id+':'+c.lid+':'+c.i]||{}).seen||1}. raz</span></div>`).join('<div class="setsep"></div>')
       +(wrong.length>3?`<div class="setsep"></div><div class="setrow"><span class="t muted">i ${wrong.length-3} ${pl(wrong.length-3,'kolejne','kolejne','kolejnych')}</span></div>`:'')+'</div>':''}`;
@@ -2524,7 +2745,8 @@ function beginExam(){
   const pool=shuffle(exQuizFor(s,cfg.levels));const N=cfg.n==='all'?pool.length:Math.min(cfg.n,pool.length);
   if(!N){toast('Brak pytań w tym zakresie','alert');return;}
   const lim=cfg.lim*60;
-  exState={pool:pool.slice(0,N).map(permQ),idx:0,pick:new Array(N).fill(null),flags:new Array(N).fill(false),limit:lim,left:lim,started:Date.now(),levels:cfg.levels.slice()};
+  // P1-7: bez drugiego tasowania (dawne permQ gubiło pm) — kolejność odpowiedzi z mixQ (qOf), więc przegląd po poprawce rysuje te same pozycje, a wybór (indeks na ekranie) dalej wskazuje tę samą odpowiedź
+  exState={pool:pool.slice(0,N),idx:0,pick:new Array(N).fill(null),flags:new Array(N).fill(false),limit:lim,left:lim,started:Date.now(),levels:cfg.levels.slice()};
   clearInterval(exInt);
   if(lim)exInt=setInterval(()=>{const ex=exState;if(!ex)return clearInterval(exInt);ex.left--;exTick();if(ex.left<=0){clearInterval(exInt);examFinish(true);}},1000);
   renderExamQ();
@@ -2619,7 +2841,7 @@ function examFinish(auto){
   saveProgress();planCheck(d);checkBadges(); // krok 8
   exState=null;
   renderExamResult({s,pool:ex.pool,correct,blank,wrong,pct,grade,pass,passed,used,M,auto,newBest,deck});
-  if(auto)setTimeout(()=>toast('Czas minął — egzamin zakończony','clock'),400);
+  if(auto)notify('Czas minął — egzamin zakończony','clock');
 }
 function ringSvg(pct,R){const C=Math.round(2*Math.PI*R*10)/10;return `<svg viewBox="0 0 124 124" aria-hidden="true"><circle class="ring-bg" cx="62" cy="62" r="${R}"/><circle class="ring-fg" cx="62" cy="62" r="${R}" style="stroke-dasharray:${C};stroke-dashoffset:${Math.round(C*(1-Math.max(0,Math.min(100,pct))/100)*10)/10}"/></svg>`;}
 function renderExamResult(r){
@@ -2637,8 +2859,8 @@ function renderExamResult(r){
   const byLv={};r.pool.forEach((q,i)=>{const k=q.lid;if(!byLv[k])byLv[k]={t:q.lvl||k,n:0,ok:0};byLv[k].n++;if(!r.wrong.some(w=>w.i===i))byLv[k].ok++;});
   const lvRows=Object.values(byLv).map(x=>({...x,pct:Math.round(x.ok/x.n*100)})).sort((a,b)=>a.pct-b.pct);
   const lvCard=lvRows.length>1?`<div class="egcard a-up d3"><div class="eglbl">Gdzie tracisz punkty</div><div class="eglv">${lvRows.map((x,i)=>`<div class="eglvrow ${x.pct<50?'red':x.pct<75?'gold':'acid'}"><span class="lb">${x.t}</span><div class="bar"><i class="a-grow d${Math.min(6,i+1)}" style="width:${x.pct}%"></i></div><span class="p">${x.pct}%</span></div>`).join('')}</div></div>`:'';
-  // krok 9: każde pytanie ma przycisk „Zgłoś / popraw” (EditContent) i klikalne źródło (SourceView); poprawione = plakietka
-  const editBtn=(q,i)=>`<button class="egedit" type="button" data-i="${i}">${icon('edit',{size:14})}<span>${q.edited?'Poprawione · edytuj':'Zgłoś / popraw'}</span></button>`;
+  // krok 9: każde pytanie ma przycisk „Popraw pytanie” (EditContent) i klikalne źródło (SourceView); poprawione = plakietka
+  const editBtn=(q,i)=>`<button class="egedit" type="button" data-i="${i}">${icon('edit',{size:14})}<span>${q.edited?'Poprawione · edytuj':'Popraw pytanie'}</span></button>`;
   const items=r.wrong.map(w=>`<div class="egitem bad a-up" data-i="${w.i}"><div class="qh"><span class="num">${w.i+1}</span><span>${w.q.q}</span></div>
       <div class="rbad">Twoja: ${w.sel==null?'bez odpowiedzi':keys[w.sel]+'. '+w.q.a[w.sel]}</div><div class="rgood">Dobra: ${keys[w.q.c]}. ${w.q.a[w.q.c]}</div>
       ${w.q.e?`<div class="re">${w.q.e}</div>`:''}${srcLine(w.q)}${editBtn(w.q,w.i)}</div>`)
@@ -2664,7 +2886,7 @@ function renderExamResult(r){
   // krok 9: popraw pytanie / źródło z przeglądu; po zapisie przegląd rysuje się na nowo z poprawką (bez toastu wyniku)
   lc.querySelectorAll('.egitem').forEach(item=>{
     const i=+item.dataset.i;const q=r.pool[i];const lv=s.levels.find(l=>l.id===q.lid);const ctx={s,lv,qi:q.qi};
-    const redraw=()=>{const nq={...q,...qOf(s,lv,q.qi,q.pm)};r.pool[i]=nq;const w=r.wrong.find(x=>x.i===i);if(w)w.q=nq;
+    const redraw=()=>{const nq={...q,...qOf(s,lv,q.qi,q.pm||q.a.map((_,k)=>k))};r.pool[i]=nq;const w=r.wrong.find(x=>x.i===i);if(w)w.q=nq;
       // poprawiony klucz liczy się od razu: wynik, ocena, rekord, talia błędów (zaznaczona = w.sel, a przy dobrej = stare q.c)
       const sel=w?w.sel:q.c,ok=sel!=null&&sel===nq.c;
       if(ok===!!w){const k=s.id+':'+nq.lid+':q'+nq.qi;const rec=examRec(s.id);const was=r.passed;
@@ -2679,7 +2901,7 @@ function renderExamResult(r){
         saveProgress();checkBadges();}
       renderExamResult({...r,quiet:true});};
     const eb=item.querySelector('.egedit');if(eb)eb.onclick=()=>openEditContent(s,lv,q.qi,{onBack:()=>{closeSheet();},onSaved:redraw});
-    const sb=item.querySelector('.rsrc');if(sb)sb.onclick=()=>openSourceView(q,ctx,()=>closeSheet());
+    const sb=item.querySelector('.rsrc');if(sb)sb.onclick=()=>openSourceView(q,{...ctx,onSaved:redraw},()=>closeSheet()); // „Pytanie jest złe” → po zapisie ten sam przelicznik co „Popraw”
   });
   if(r.quiet)return;
   if(r.passed)toast('Zdane, ocena '+txt(gMain),'trophy');else toast('Niezaliczone','x-circle');
@@ -2753,7 +2975,7 @@ function testDone(sid,kind,lvId){
   const t=testFor(sid);if(!t)return false;const r=(t.plan||[]).find(x=>x.date===todayStr());
   if(!r||r.done||r.kind!==kind)return false;
   if(kind==='learn'&&r.lv){const st=subjState(sid);if(!r.lv.every(id=>(st.levels[id]||{}).done))return false;}
-  r.done=true;saveProgress();setTimeout(()=>toast('Plan do sprawdzianu: dzień zaliczony','calendar'),4400);return true;
+  r.done=true;saveProgress();notify('Plan do sprawdzianu: dzień zaliczony','calendar');return true;
 }
 function tpTitle(t,r){
   const s=testSubject(t);
@@ -2790,7 +3012,7 @@ function testAction(t,r){
 /* wiersz planu na Dziś: „Do sprawdzianu: …” (dzień sprawdzianu = powodzenia) */
 function testTodayItem(t){
   const s=testSubject(t);if(!s)return null;const today=todayStr();const N=dayDiff(today,t.date);if(N<0)return null;
-  const short=s.short||s.name;
+  const short=sshort(s);
   if(N===0)return {t:{id:'test:'+t.id,done:false},s,kind:'test',info:true,reward:0,icon:'calendar',title:'Sprawdzian dziś — powodzenia',sub:short+' · plan zrobiony, teraz spokojnie',go:()=>openTestPlan(t.id)};
   const r=(t.plan||[]).find(x=>x.date===today);if(!r)return null;
   return {t:{id:'test:'+t.id,done:!!r.done},s,kind:'test',reward:0,icon:TP_ICON[r.kind],title:'Do sprawdzianu — '+tpTitle(t,r),sub:`${short} · ${inDays(N)} · ${tpSub(r,t)}`,go:()=>r.done?openTestPlan(t.id):testAction(t,r)};
@@ -2810,7 +3032,7 @@ function openTestSheet(sid){
   const subBox=s.querySelector('#tpsub'),lvBox=s.querySelector('#tplv'),sum=s.querySelector('#tpsum'),inp=s.querySelector('#tpdate'),inEl=s.querySelector('#tpin');
   const draw=()=>{
     const subj=SUBJECTS.find(x=>x.id===sel);const all=subj.levels.map(l=>l.id);const lv=levels||all;
-    subBox.innerHTML='';SUBJECTS.forEach(x=>{const c=el('button','tpchip themed'+(x.id===sel?' on':''),mono(initial(x.short||x.name),'solid')+(x.short||x.name));c.style.setProperty('--accent',x.accent);if(x.onAccent)c.style.setProperty('--on-accent',x.onAccent);c.onclick=()=>{sel=x.id;levels=null;draw();};subBox.appendChild(c);});
+    subBox.innerHTML='';SUBJECTS.forEach(x=>{const c=el('button','tpchip themed'+(x.id===sel?' on':''),mono(initials(x),'solid')+sshort(x));c.style.setProperty('--accent',x.accent);if(x.onAccent)c.style.setProperty('--on-accent',x.onAccent);c.onclick=()=>{sel=x.id;levels=null;draw();};subBox.appendChild(c);});
     lvBox.innerHTML='';
     const allC=el('button','tpchip'+(lv.length===all.length?' on':''),'wszystkie');allC.onclick=()=>{levels=null;draw();};lvBox.appendChild(allC);
     subj.levels.forEach(l=>{const on=lv.indexOf(l.id)>=0;const c=el('button','tpchip'+(on?' on':''),noEmoji(l.title));c.setAttribute('aria-pressed',String(on));
@@ -2837,7 +3059,7 @@ function renderTestPlan(){
   const ready=Math.round(((total?done/total:0)*0.6+((rec.best?rec.best.pct:0)/100)*0.4)*100);
   const d=dateOf(t.date);const scope=total===s.levels.length?'cały przedmiot':t.levels.map(id=>{const l=s.levels.find(x=>x.id===id);return l?noEmoji(l.title):'';}).filter(Boolean).join(', ');
   scroll.appendChild(el('div','tphero a-up',`<div class="rvring a-pop">${ringSvg(ready,48)}<div class="rvpct"><b>${ready}%</b><span>gotowość</span></div></div>
-    <div class="grow"><div class="s">${s.short||s.name} · ${scope}</div><div class="d">${DAYS[d.getDay()].toLowerCase()}, ${d.getDate()} ${MONTHS_S[d.getMonth()]}</div><div class="in a-blink">${inDays(N)}</div></div>`));
+    <div class="grow"><div class="s">${noEmoji(s.name)} · ${scope}</div><div class="d">${DAYS[d.getDay()].toLowerCase()}, ${d.getDate()} ${MONTHS_S[d.getMonth()]}</div><div class="in a-blink">${inDays(N)}</div></div>`));
   const rows=el('div','tprows');
   const todayRow=(t.plan||[]).find(r=>r.date===today);
   (t.plan||[]).forEach((r,i)=>{
@@ -2873,7 +3095,7 @@ function scaleRows(s){const sc=exScale(s).slice().sort((a,b)=>b[0]-a[0]);const r
 function renderInfo(sc){
   const s=current;const wrap=el('div','scroll info');
   const rec=examRec(s.id);const last=rec.last;const t=testFor(s.id);
-  wrap.appendChild(el('div','infhead a-up',`<div class="eyebrow">Zasady zaliczenia</div><h2>${s.name}</h2>${s.tagline?`<p>${s.tagline}</p>`:''}`));
+  wrap.appendChild(el('div','infhead a-up',`<div class="eyebrow">Zasady zaliczenia</div><h2>${noEmoji(s.name)}</h2>${s.tagline?`<p>${s.tagline}</p>`:''}`));
   const blocks=infoBlocks(s);
   if(blocks){blocks.forEach((b,i)=>{
     wrap.appendChild(el('div',`inftile ${b.tone} a-up d${Math.min(6,i+1)}`,`<div class="infh">${icon(b.icon,{size:18,stroke:2.6})}<span>${b.title||'Informacje'}</span></div><div class="infb">${b.html}</div>`));});}
@@ -2978,7 +3200,7 @@ function cwRenderTyping(sc){
   const wrap=el('div','scroll');
   wrap.appendChild(el('div','progressrow',`<div class="bar"><i style="width:${cw.idx/cw.list.length*100}%"></i></div><div class="counter">${cw.idx+1}/${cw.list.length}</div>`));
   const card=el('div','qcard');
-  card.innerHTML=`<span class="tag">${it.lvl||''}</span><div class="exprompt">Przetłumacz albo wpisz</div><div class="exq">${it.prompt}</div>
+  card.innerHTML=`<span class="tag">${it.lvl||''}</span><div class="exprompt">${current&&current.lang?'Przetłumacz albo wpisz':'Wpisz pojęcie'}</div><div class="exq">${it.prompt}</div>
     <input class="winput" id="win" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="wpisz odpowiedź…">
     <div class="exfb" id="wfb"></div>
     <button class="pill qnext" id="wnext" style="margin-top:14px">${LBL.check}</button>`;
@@ -3079,7 +3301,7 @@ function cwRenderSpeed(sc){
 const GEM={level:10,stars3:5,chest:10,plan:5,boss:25};
 function gems(){if(typeof PROGRESS.gems!=='number'||!isFinite(PROGRESS.gems))PROGRESS.gems=0;return PROGRESS.gems;}
 function addGems(n,why){gems();PROGRESS.gems=Math.max(0,PROGRESS.gems+n);saveProgress();updateGems();
-  if(why)setTimeout(()=>toast((n>0?'+':'')+n+' '+pl(Math.abs(n),'gem','gemy','gemów')+(why===true?'':' · '+why),'gem','a-pop'),n>0?400:0);}
+  if(why)notify((n>0?'+':'')+n+' '+pl(Math.abs(n),'gem','gemy','gemów')+(why===true?'':' · '+why),'gem','a-pop');}
 function updateGems(){document.querySelectorAll('[id="gemNum"]').forEach(e=>{e.textContent=fmtNum(gems());e.classList.remove('a-pop');void e.offsetWidth;e.classList.add('a-pop');});}
 function gemPill(o){o=o||{};const b=el('button','streak gems'+(o.cls?' '+o.cls:''),icon('gem',{size:16,cls:'ic-cyan'})+`<span id="gemNum">${fmtNum(gems())}</span>`);b.setAttribute('aria-label','Gemy: '+gems()+'. Otwórz plecak');b.onclick=()=>go('shop');return b;}
 function stats(){const s=PROGRESS.stats;if(!s||typeof s!=='object')PROGRESS.stats={missions:0,maxCombo:0,planDays:0,bosses:0};return PROGRESS.stats;}
@@ -3091,7 +3313,7 @@ function planCheck(d){
   d=d||daily();const ts=d.tasks.filter(t=>taskInfo(t)); // tylko widoczne: bez zadań przedmiotów z innego pliku i pustej talii błędów
   if(d.planDone||!ts.length||!ts.every(t=>t.done))return false;
   d.planDone=true;stats().planDays++;saveProgress();addGems(GEM.plan);missionEvent('plan',1);
-  setTimeout(()=>toast('Plan dnia zrobiony: +'+GEM.plan+' gemów','gem'),4800);checkBadges();return true;
+  notify('Plan dnia zrobiony: +'+GEM.plan+' gemów','gem');checkBadges();return true;
 }
 
 /* ---------- PLECAK (Shop.html): zamrożenie serii, uzupełnienie serc, podwójne XP, motyw ---------- */
@@ -3123,7 +3345,7 @@ function renderShop(){
     const row=el('div',`shoprow ${it.tone} a-up d${i+1}`);row.id='shop-'+it.id;
     row.innerHTML=`<div class="ico ${it.anim}">${icon(it.icon,{size:28,stroke:2.6})}</div><div class="grow"><div class="t">${it.name}</div><div class="s">${it.sub()}</div></div>`;
     const b=el('button','buy'+(can?(afford?'':' short'):' owned'),can?icon('gem',{size:14})+`<span>${it.price}</span>`:icon('check',{size:16,stroke:3.4}));
-    b.setAttribute('aria-label',can?`Kup: ${it.name} za ${it.price} gemów`:it.name+': masz komplet');
+    b.setAttribute('aria-label',can?`Wymień ${it.price} gemów na: ${it.name}`:it.name+': masz komplet');
     b.onclick=()=>{ // stan z chwili tapu, nie z renderu (ekran przerysowuje się dopiero po 700 ms)
       if(!it.can())return toast('Masz już komplet','check');
       const g=gems();if(g<it.price){const br=it.price-g;return toast(`Brakuje ${br} ${pl(br,'gema','gemów','gemów')}`,'gem');}
@@ -3182,7 +3404,7 @@ function missionEvent(kind,n){
   m.daily.forEach(x=>{if(x.id===kind&&MISSION_POOL[x.id])bump(x,MISSION_POOL[x.id]);});
   const W=WEEKLY_POOL[m.weekly.id];if(W&&W.ev===kind)bump(m.weekly,W);
   if(ch)saveProgress();
-  if(ready.length)setTimeout(()=>toast('Misja gotowa — odbierz nagrodę','star','a-pop'),2400);
+  if(ready.length)notify('Misja gotowa — odbierz nagrodę','star','a-pop',{go:()=>go('missions')});
   const tile=document.getElementById('missionTile');if(tile)tile.textContent=missionLabel();
 }
 /* „N poprawnych bez pomyłki”: dzienny licznik z rzędu w PROGRESS.missions.run, przechodzi między lekcjami; błąd zeruje */
@@ -3205,7 +3427,7 @@ function missionRow(x,P,d,weekly){
   return row;
 }
 function renderMissions(){
-  const scroll=shell(null,{cls:'missions',title:'Misje',pills:false,back:()=>go('today'),right:gemPill()});
+  const scroll=shell(null,{cls:'missions',title:'Misje',pills:false,back:()=>goBack('today'),right:gemPill()}); // wstecz tam, skąd przyszedł (np. z toastu „Misja gotowa”)
   const m=missions();
   const now=new Date();const left=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)-now;
   scroll.appendChild(el('div','sechdr msh a-up',`<span class="eyebrow sec">Dzienne</span><span class="msleft">${icon('clock',{size:14,stroke:2.6})}<b class="a-blink">zostało ${etaText(left)}</b></span>`));
@@ -3224,7 +3446,7 @@ function applyFreeze(){
   if(fz<missed||!(META.streak|0))return false;
   META.freezes=fz-missed;const days=[];for(let i=1;i<=missed;i++)days.push(addDays(META.lastDay,i));
   META.frozenDays=(META.frozenDays||[]).concat(days).slice(-14);META.lastDay=addDays(t,-1);saveMeta();
-  setTimeout(()=>toast(missed===1?'Zamrożenie uratowało serię':`Zamrożenia uratowały serię (${missed})`,'snow','a-pop'),900);
+  notify(missed===1?'Zamrożenie uratowało serię':`Zamrożenia uratowały serię (${missed})`,'snow','a-pop');
   return true;
 }
 const DAY_IN=['w niedzielę','w poniedziałek','we wtorek','w środę','w czwartek','w piątek','w sobotę'],DAY_OF=['niedzieli','poniedziałku','wtorku','środy','czwartku','piątku','soboty'];
@@ -3247,7 +3469,7 @@ function renderComeBack(){
     <div class="cbtxt a-up d1"><h1>Nie było cię ${d} ${pl(d,'dzień','dni','dni')}</h1><p>Bez dramatu — wracamy od małego kroku. Pięć minut dziś znaczy więcej niż godzina kiedyś.</p></div>`;
   if(old>0)scroll.appendChild(el('div','cbstreak a-up d2',icon('flame',{size:42})+`<div class="grow"><div class="t">Seria zaczyna się od nowa</div><div class="nums"><span class="old">${old}</span>${icon('chevron-right',{size:16,stroke:2.8})}<span class="new a-pop d3">0</span></div></div>`));
   const box=el('div','cbdue a-up d3');
-  if(bySub.length){const max=bySub[0].n;box.innerHTML=`<div class="hd"><span class="eyebrow sec">Czeka na powtórkę</span><b>${due.length} ${pl(due.length,'pojęcie','pojęcia','pojęć')}</b></div>`+bySub.map((x,i)=>`<div class="row r${i+1}"><span class="lb">${x.s.short||x.s.name}</span><div class="bar"><i class="a-grow d${i+2}" style="width:${Math.round(x.n/max*100)}%"></i></div><span class="n">${x.n}</span></div>`).join('');}
+  if(bySub.length){const max=bySub[0].n;box.innerHTML=`<div class="hd"><span class="eyebrow sec">Czeka na powtórkę</span><b>${due.length} ${pl(due.length,'pojęcie','pojęcia','pojęć')}</b></div>`+bySub.map((x,i)=>`<div class="row r${i+1}"><span class="lb">${sshort(x.s)}</span><div class="bar"><i class="a-grow d${i+2}" style="width:${Math.round(x.n/max*100)}%"></i></div><span class="n">${x.n}</span></div>`).join('');}
   else box.innerHTML=`<div class="hd"><span class="eyebrow sec">Nic nie przepadło</span></div><p class="sp">Pojęcia wrócą do powtórki we właściwym dniu. Zacznij od planu na dziś.</p>`;
   scroll.appendChild(box);
   const warm=el('div','cbwarm a-up d4',`<div class="ico a-pulse">${icon('bolt',{size:24})}</div><div class="grow"><div class="t">Zacznij od 5 minut</div><div class="s">${due.length?`${Math.min(15,due.length)} ${pl(Math.min(15,due.length),'pojęcie','pojęcia','pojęć')} z powtórki — bez nowych rzeczy`:first?first.title:'jedno zadanie z planu dnia'}</div></div>`);
@@ -3267,7 +3489,7 @@ function albumCheck(sid,lid,item,e){
   const lv=(subjState(sid).levels||{})[lid]||{};
   const rarity=lv.done&&(lv.stars|0)>=3?'epic':(e.lapses|0)===0?'rare':'common';
   A[k]={rarity,at:todayStr()};histAdd('cards',1); // krok 9: dziennik dnia
-  const r=srsResolve(k);setTimeout(()=>toast('Do albumu: '+(r?txt(r.c.t):'nowe pojęcie'),'cards','a-pop'),1000);
+  const r=srsResolve(k);notify('Do albumu: '+(r?txt(r.c.t):'nowe pojęcie'),'cards','a-pop',{go:()=>go('album')});
   checkBadges();
 }
 function albumCount(sid){const A=album();let n=0,m=0;SUBJECTS.forEach(s=>{if(sid&&s.id!==sid)return;const cards=allCards(s);m+=cards.length;cards.forEach(c=>{if(A[s.id+':'+c.lid+':'+c.i])n++;});});return {n,m};}
@@ -3280,7 +3502,7 @@ function renderAlbum(){
   const chips=el('div','albchips a-up d1');
   const mk=(id,name,s)=>{const c=el('button','albchip'+(albumFilter===id?' on':'')+(s?' themed':''),name);if(s){c.style.setProperty('--accent',s.accent);if(s.onAccent)c.style.setProperty('--on-accent',s.onAccent);}c.setAttribute('aria-pressed',String(albumFilter===id));c.onclick=()=>{albumFilter=id;renderAlbum();};return c;};
   chips.appendChild(mk('all','Wszystkie'));
-  SUBJECTS.forEach(s=>{const c=albumCount(s.id);chips.appendChild(mk(s.id,(s.short||s.name)+(c.n?' · '+c.n:''),s));});
+  SUBJECTS.forEach(s=>{const c=albumCount(s.id);chips.appendChild(mk(s.id,sshort(s)+(c.n?' · '+c.n:''),s));});
   scroll.appendChild(chips);
   const subs=albumFilter==='all'?SUBJECTS:SUBJECTS.filter(s=>s.id===albumFilter);
   const got=[],lock=[];
@@ -3341,8 +3563,8 @@ function renderBoss(){
       const bar=L.querySelector('#bosshp'),n=L.querySelector('#bosshpn');if(bar)bar.style.width=(bs.hp/bs.max*100)+'%';if(n)n.textContent=bs.hp+' / '+bs.max;
       addXP(s.id,QUIZ_XP);body.appendChild(confetti(3));}
     else{bs.miss++;loseHeart();const av=L.querySelector('#bossav');if(av)av.innerHTML=raccoon('laugh',124);const hp=L.querySelector('.hearts');if(hp){hp.classList.add('a-beat');hp.appendChild(el('span','minus a-blink','−1'));}
-      if(fb&&fb.e)body.appendChild(el('div','bossexp a-up',`<b>Zapamiętaj:</b> ${fb.sub?fb.sub+'. ':''}${fb.e}`));}
-    setTimeout(()=>{if(!bossState)return;bs.idx++;renderBoss();},ok?900:(fb&&fb.e?2300:1100));
+      if(fb&&(fb.e||fb.sub))body.appendChild(el('div','bossexp a-up',`<b>Zapamiętaj:</b> ${fb.sub?fb.sub+(fb.e?'. ':''):''}${fb.e||''}`));}
+    setTimeout(()=>{if(!bossState)return;bs.idx++;renderBoss();},ok?900:(fb&&(fb.e||fb.sub)?2300:1100));
   };
   const o={n:bs.n,total:bs.max,combo:0,broken:false,tag:it.kind==='quiz'?(it.q.lvl||''):(it.task.lvl||'')};
   const blk=it.kind==='task'?taskBlock(it.task,{...o,onAnswer}):quizBlock(it.q,{...o,onAnswer:(i,ok)=>onAnswer(ok,it.q)});
@@ -3350,7 +3572,8 @@ function renderBoss(){
   body.appendChild(blk.body);
   const foot=el('div','lessonfoot');foot.appendChild(blk.foot);foot.appendChild(el('div','bossnote',`Dobra odpowiedź = cios. Zła = tracisz serce. Boss ma ${bs.max} ${pl(bs.max,'życie','życia','żyć')}.`));L.appendChild(foot);
   if(timed){let left=BOSS_SEC;bossInt=setInterval(()=>{if(!bossState||answered)return clearInterval(bossInt);left--;const t=L.querySelector('#bosstime');if(t){t.querySelector('b').textContent=fmt(Math.max(0,left));t.classList.toggle('warn',left<=5);t.classList.toggle('a-blink',left<=5);}
-    if(left<=0){clearInterval(bossInt);blk.body.querySelectorAll('.qopt').forEach(b=>{b.disabled=true;if(+b.dataset.i===it.q.c)b.classList.add('correct','a-glow');else b.classList.add('dim');});blk.foot.classList.add('hide');onAnswer(false,{e:it.q.e,sub:'Czas minął. Poprawna: odpowiedź '+keys[it.q.c]});}},1000);}
+    // P2-12: treść dobrej odpowiedzi zamiast litery (litery na ekranie są przetasowane; w trybie prawda/fałsz nie ma kafla z tą odpowiedzią)
+    if(left<=0){clearInterval(bossInt);blk.body.querySelectorAll('.qopt').forEach(b=>{b.disabled=true;if(b.dataset.i!=null&&+b.dataset.i===it.q.c)b.classList.add('correct','a-glow');else b.classList.add('dim');});blk.foot.classList.add('hide');keyFn=null;onAnswer(false,{e:it.q.e,sub:'Czas minął. Dobra odpowiedź: '+it.q.a[it.q.c]});}},1000);}
 }
 function finishBoss(win){
   clearInterval(bossInt);closeSheet();keyFn=null;taskCleanup();
@@ -3362,10 +3585,10 @@ function finishBoss(win){
   const body=el('div','lessonbody done');if(win)body.appendChild(confetti(20));
   const lc=el('div','lc');
   lc.innerHTML=`<div class="lcfox">${raccoon(win?'dizzy':'win',150)}</div>
-    <div class="lctxt"><div class="lct a-up d2">${win?'Boss pokonany':'Boss wygrał tym razem'}</div><div class="lcs">${bossName(s)} · ${s.short||s.name}</div></div>
+    <div class="lctxt"><div class="lct a-up d2">${win?'Boss pokonany':'Boss wygrał tym razem'}</div><div class="lcs">${bossName(s)} · ${noEmoji(s.name)}</div></div>
     <div class="lcstats"><div class="lcstat a-up d3"><div class="k">Ciosy</div><div class="v acid">${bs.hits}</div></div><div class="lcstat a-up d4"><div class="k">Pudła</div><div class="v ${bs.miss?'pink':'acid'}">${bs.miss}</div></div><div class="lcstat a-up d5"><div class="k">Czas</div><div class="v gold">${fmt(used)}</div></div></div>
     ${win?`<div class="lcrewards a-up d5">${xp?`<span class="lcreward gold">${icon('bolt',{size:15})}+${xp} XP</span>`:''}${first?`<span class="lcreward cyan">${icon('gem',{size:15})}+${GEM.boss} gemów</span><span class="lcreward violet">${icon('boss',{size:16})}odznaka</span>`:'<span class="lcreward">powtórka walki · bez gemów</span>'}</div>`
-        :`<p class="lcp">${hearts().n<=0?'Skończyły się życia. Odzyskaj je (powtórka fiszek albo plecak) i spróbuj ponownie.':'Boss został z '+bs.hp+' życia. Przejrzyj fiszki z tego przedmiotu i wróć.'}</p>`}`;
+        :`<p class="lcp">${hearts().n<=0?'Skończyły się życia. Odzyskaj je (powtórka fiszek albo plecak) i spróbuj ponownie.':'Bossowi '+pl(bs.hp,'zostało','zostały','zostało')+' '+bs.hp+' '+pl(bs.hp,'życie','życia','żyć')+'. Przejrzyj fiszki z tego przedmiotu i wróć.'}</p>`}`;
   body.appendChild(lc);L.appendChild(body);
   const foot=el('div','lessonfoot col');
   const main=el('button','pill a-glow',win?'WRACAM NA ŚCIEŻKĘ':'SPRÓBUJ PONOWNIE');main.id='bossmain';
@@ -3373,7 +3596,7 @@ function finishBoss(win){
   const alt=el('button','pill text',win?'JESZCZE RAZ':'WRÓĆ NA ŚCIEŻKĘ');alt.id='bossalt';alt.onclick=win?startBoss:closeLesson;
   foot.appendChild(main);foot.appendChild(alt);L.appendChild(foot);
   keyFn=e=>{if(e.key==='Enter')main.click();};
-  if(win)setTimeout(()=>toast(first?'Boss pokonany: +'+GEM.boss+' gemów':'Boss pokonany ponownie','boss','a-pop'),300);
+  if(win)notify(first?'Boss pokonany: +'+GEM.boss+' gemów':'Boss pokonany ponownie','boss','a-pop');
 }
 
 /* ---------- DUCH (Ghost.html): najlepszy przebieg poziomu w PROGRESS.ghost; przy powtórce wyścig z własnym czasem ---------- */
@@ -3409,7 +3632,7 @@ function ghostTick(){
 function ghostFinish(ls,passed){
   const s=current;const lv=ls.lv;const run=ls.run||[];if(!run.length||!ls.items.length)return null;
   const G=ghosts();const k=ghostKey(lv);const old=G[k];
-  if(!old){if(!passed)return null;G[k]={run,at:todayStr()};saveProgress();return {kind:'saved',t:'Przebieg zapisany jako duch',s:'Następnym razem ścigasz się z sobą — z '+ls.score+' z '+ls.items.length+' w '+fmt(Math.round(runTime(run)/1000))+'.'};}
+  if(!old){if(!passed)return null;G[k]={run,at:todayStr()};saveProgress();return {kind:'saved',t:'Przebieg zapisany jako duch',s:'Następnym razem ścigasz się ze sobą — z '+ls.score+' z '+ls.items.length+' w '+fmt(Math.round(runTime(run)/1000))+'.'};}
   const oldRun=Array.isArray(old)?old:old.run;
   if(ghostBetter(run,oldRun)){G[k]={run,at:todayStr()};saveProgress();const gx=addXP(s.id,10);return {kind:'win',xp:gx,t:'Pokonany duch: +'+gx+' XP',s:`${ls.score} z ${ls.items.length} w ${fmt(Math.round(runTime(run)/1000))} — poprzednio ${runScore(oldRun)} w ${fmt(Math.round(runTime(oldRun)/1000))}. Ten przebieg jest nowym duchem.`};}
   const dt=Math.round((runTime(run)-runTime(oldRun))/1000);
@@ -3437,7 +3660,7 @@ function checkBadges(){
   const B=badges();const fresh=[];
   BADGES.forEach(b=>{if(B[b.id])return;let on=false;try{on=!!b.test();}catch(e){}if(on){B[b.id]=todayStr();fresh.push(b);}});
   if(!fresh.length)return;
-  saveProgress();fresh.forEach((b,i)=>setTimeout(()=>toast('Odznaka: '+b.name,b.icon,'a-pop'),2800+i*1700));
+  saveProgress();fresh.forEach(b=>notify('Odznaka: '+b.name,b.icon,'a-pop'));
   const g=document.getElementById('badgegrid');if(g)g.replaceWith(badgeGrid());
 }
 function badgeGrid(){
@@ -3449,7 +3672,7 @@ function badgeGrid(){
 /* ============================================================ KROK 9: PIERWSZE URUCHOMIENIE (LevelPick.html → Onboarding.html)
    META.level ("liceum"|"studia"|"inne"; stare "podstawowka" = w wyborze jak "inne", apka jest 16+) i META.goal ("sprawdziany"|"matura-p"|"matura-r"|"olimpiada"|"sesja"|"wlasny") w nauka_meta_v1;
    cel dzienny w PROGRESS.goal (+ PROGRESS.daily.goal). Oba ekrany wracają z Ustawień (obFrom='settings') i z paska celu na Dziś. */
-const LEVELS=[['liceum','Liceum lub technikum','klasy 1–5','book','acid'],['studia','Studia','licencjat, magisterka','cap','pink'],['inne','Coś innego','języki, kursy, certyfikaty','globe','cyan']];
+const LEVELS=[['liceum','Liceum lub technikum','klasy 1–5','book','acid'],['studia','Studia','licencjat, magisterka','cap','pink'],['inne','Coś innego','kursy, certyfikaty, nauka na własną rękę','globe','cyan']];
 const GOALS=[['sprawdziany','Kartkówki i sprawdziany',['liceum','inne']],['matura-p','Matura podstawowa',['liceum']],['matura-r','Matura rozszerzona',['liceum']],['olimpiada','Olimpiada',['liceum']],['sesja','Sesja i kolokwia',['studia']],['wlasny','Własny cel',['liceum','studia','inne']]];
 const GOAL_DEFAULT={podstawowka:'sprawdziany',liceum:'matura-r',studia:'sesja',inne:'wlasny'};
 let obFrom='first';
@@ -3527,7 +3750,7 @@ function renderWeekly(){
   const cur=weekStats(weekRange(last?-1:0)),prev=weekStats(weekRange(last?-2:-1));
   app.innerHTML='';const sc=el('div','screen active weekly');
   const scroll=el('div','scroll wk');sc.appendChild(scroll);app.appendChild(sc);app.appendChild(el('div','toast',''));app.lastChild.id='toast';
-  scroll.appendChild(el('div','wksegs','<i class="on"></i><i class="on"></i><i><b class="a-grow"></b></i><i></i><i></i>'));
+  // P2-27: bez udawanego paska „relacji” (5 segmentów przy jednym ekranie)
   const head=el('div','wkhead',`<span>${last?'Twój tydzień':'Ten tydzień'}</span>`);
   const x=el('button','wkclose',icon('close',{size:20,stroke:3.4}));x.setAttribute('aria-label','Zamknij podsumowanie');x.id='wk-close';x.onclick=()=>go(last?'today':'profile');head.appendChild(x);scroll.appendChild(head);
   const diff=prev.xp>0?Math.round((cur.xp-prev.xp)/prev.xp*100):null;
@@ -3582,13 +3805,13 @@ function renderCram(){
   for(let i=0;i<5;i++)scroll.appendChild(el('i','cramstar a-blink d'+(i%6+1)));
   const now=new Date();const toMid=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)-now;
   const total=blocks.length*5;
-  scroll.appendChild(el('div','cramhero a-up',`${icon('moon',{size:64,cls:'ic-moon'})}<div class="eyebrow">${s.short||s.name} · ${t?'sprawdzian '+inDays(dayDiff(todayStr(),t.date)):'ostatnia powtórka przed egzaminem'}</div><div class="cramtime a-blink">${total} min</div><div class="crams">do północy ${etaText(toMid)} — potem sen utrwala to, co dziś powtórzysz</div>`));
+  scroll.appendChild(el('div','cramhero a-up',`${icon('moon',{size:64,cls:'ic-moon'})}<div class="eyebrow">${sshort(s)} · ${t?'sprawdzian '+inDays(dayDiff(todayStr(),t.date)):'ostatnia powtórka przed egzaminem'}</div><div class="cramtime a-blink">${total} min</div><div class="crams">do północy ${etaText(toMid)} — potem sen utrwala to, co dziś powtórzysz</div>`));
   scroll.appendChild(el('div','eyebrow sec','Plan na '+total+' minut'));
   const list=el('div','cramrows');
   blocks.forEach((b,i)=>list.appendChild(el('div',`cramrow ${CRAM_TONE[b.id]} a-up d${i+1}`,`<div class="num"><span>${i+1}</span></div><div class="grow"><div class="t">${b.t}</div><div class="s">${b.s}</div></div><span class="min">5 min</span>`)));
   if(!blocks.length)list.appendChild(el('div','sp','Brak fiszek i pytań w tym przedmiocie.'));
   scroll.appendChild(list);
-  scroll.appendChild(el('div','cramnote a-up d5',icon('info',{size:18,stroke:2.4})+'<span>Blok kończy się po 5 minutach albo gdy przejrzysz wszystko. Potem idź spać — sen utrwala to, czego się właśnie nauczyłeś.</span>'));
+  scroll.appendChild(el('div','cramnote a-up d5',icon('info',{size:18,stroke:2.4})+'<span>Blok kończy się po 5 minutach albo gdy przejrzysz wszystko. Potem idź spać — sen utrwala to, czego się właśnie uczysz.</span>'));
   const foot=el('div','cramfoot');const b=el('button','pill violet a-glow','ZACZYNAM');b.id='cram-start';b.disabled=!blocks.length;
   b.onclick=()=>{cramState={s,blocks,bi:0,ii:0,left:CRAM_BLOCK,ok:0,bad:0,xp:0,flipped:false,marks:[],t0:Date.now()};cramTimer();cramRender();};
   foot.appendChild(b);scroll.appendChild(foot);
@@ -3598,7 +3821,7 @@ function cramTimer(){clearInterval(cramInt);cramInt=setInterval(()=>{const cs=cr
   const t=document.getElementById('cramleft');if(t){t.textContent=fmt(Math.max(0,cs.left));t.parentElement.classList.toggle('warn',cs.left<=30);t.parentElement.classList.toggle('a-blink',cs.left<=30);}
   const bar=document.getElementById('cramdrain');if(bar)bar.style.width=Math.max(0,cs.left/CRAM_BLOCK*100)+'%';
   if(cs.left<=0)cramNextBlock('Czas na ten blok minął');},1000);}
-function cramNextBlock(msg){const cs=cramState;if(!cs)return;closeSheet();cs.bi++;cs.ii=0;cs.left=CRAM_BLOCK;cs.marks=[];cs.flipped=false;
+function cramNextBlock(msg){const cs=cramState;if(!cs)return;closeSheet();cs.bi++;cs.ii=0;cs.left=CRAM_BLOCK;cs.marks=[];cs.flipped=false;cs.seenAt=null;
   if(cs.bi>=cs.blocks.length)return cramFinish();cramRender();toast(msg||'Blok gotowy','check');}
 function cramAnswer(it,ok,xp){const cs=cramState;cs.marks[cs.ii]=ok?'on':'bad';srsTouch(it.s.id,it.lv.id,it.kind==='quiz'?'q'+it.idx:String(it.idx),ok);
   if(ok){cs.ok++;if(xp){cs.xp+=addXP(it.s.id,xp);}}else cs.bad++;missionEvent('review',1);}
@@ -3621,14 +3844,15 @@ function cramRender(){
     const flip=el('div','flip themed a-up'+(cs.flipped?' flipped':''));flip.style.setProperty('--accent',it.s.accent);if(it.s.onAccent)flip.style.setProperty('--on-accent',it.s.onAccent);
     flip.innerHTML=`<div class="flipinner"><div class="face front"><span class="tag accent">${noEmoji(it.lv.title)}</span><div class="term">${c.t}</div><div class="tapomat">dotknij, żeby odwrócić</div></div>
       <div class="face back"><span class="tag">odpowiedź</span><div class="deftxt">${c.d}</div><div class="tapomat">dotknij, żeby wrócić</div></div></div>`;
-    let swiped=false;flip.onclick=()=>{if(swiped){swiped=false;return;}cs.flipped=!cs.flipped;flip.classList.toggle('flipped');};body.appendChild(flip);
+    let swiped=false,g=null;flip.onclick=()=>{if(swiped){swiped=false;return;}cs.flipped=!cs.flipped;flip.classList.toggle('flipped');if(cs.flipped&&g)g.seen();};body.appendChild(flip);
     const foot=el('div','lessonfoot');const btns=el('div','fbtns');
     const no=el('button','fbtn no',icon('refresh',{size:18,stroke:2.8})+' jeszcze nie'),yes=el('button','fbtn yes',icon('check',{size:18,stroke:3.4})+' umiem');no.id='rvno';yes.id='rvyes';
-    const ans=ok=>{if(!advOk())return;cramAnswer(it,ok,ok?2:0);cs.flipped=false;next();};
-    no.onclick=()=>ans(false);yes.onclick=()=>ans(true);
-    let x0=null;flip.onpointerdown=e=>{x0=e.clientX;};flip.onpointerup=e=>{if(x0==null)return;const dx=e.clientX-x0;x0=null;if(Math.abs(dx)>80){swiped=true;ans(dx>0);}};
+    const ans=ok=>{if(cramState!==cs||!advOk())return;cramAnswer(it,ok,ok?2:0);cs.flipped=false;cs.seenAt=null;next();};
+    g=cardGate(cs,flip,btns,ans);
+    no.onclick=()=>g.ask(false);yes.onclick=()=>g.ask(true);
+    let x0=null;flip.onpointerdown=e=>{x0=e.clientX;};flip.onpointerup=e=>{if(x0==null)return;const dx=e.clientX-x0;x0=null;if(Math.abs(dx)>80){swiped=true;g.ask(dx>0);}};
     btns.appendChild(no);btns.appendChild(yes);foot.appendChild(btns);L.appendChild(foot);
-    keyFn=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();flip.click();}else if(e.key==='ArrowLeft'||e.key==='1')ans(false);else if(e.key==='ArrowRight'||e.key==='2')ans(true);};
+    keyFn=e=>{if(e.key===' '||e.key==='Enter'){e.preventDefault();flip.click();}else if(e.key==='ArrowLeft'||e.key==='1')g.ask(false);else if(e.key==='ArrowRight'||e.key==='2')g.ask(true);};
   }else{
     const q=it.q;
     const blk=quizBlock(q,{n:cs.ii+1,total:b.items.length,tag:noEmoji(it.lv.title),onAnswer:(i,ok)=>{
@@ -3648,7 +3872,7 @@ function cramFinish(){
   const body=el('div','lessonbody done');if(pct>=50)body.appendChild(confetti(5));
   const lc=el('div','lc');
   lc.innerHTML=`<div class="lcbig moon a-pop">${icon('moon',{size:64})}</div>
-    <div class="lctxt a-up d2"><div class="lct">Idź spać</div><div class="lcs">${s.short||s.name} · ${cs.bi+(cs.ii>0?1:0)>cs.blocks.length?cs.blocks.length:Math.min(cs.blocks.length,cs.bi+(cs.ii>0?1:0))} z ${cs.blocks.length} ${pl(cs.blocks.length,'bloku','bloków','bloków')} · ${fmt(Math.round((Date.now()-cs.t0)/1000))}</div></div>
+    <div class="lctxt a-up d2"><div class="lct">Idź spać</div><div class="lcs">${noEmoji(s.name)} · ${cs.bi+(cs.ii>0?1:0)>cs.blocks.length?cs.blocks.length:Math.min(cs.blocks.length,cs.bi+(cs.ii>0?1:0))} z ${cs.blocks.length} ${pl(cs.blocks.length,'bloku','bloków','bloków')} · ${fmt(Math.round((Date.now()-cs.t0)/1000))}</div></div>
     <div class="lcstats a-up d3"><div class="lcstat acid"><div class="v">${cs.ok}</div><div class="k under">umiem</div></div><div class="lcstat red"><div class="v">${cs.bad}</div><div class="k under">do rana</div></div><div class="lcstat gold"><div class="v">+${cs.xp}</div><div class="k under">XP</div></div></div>`;
   const card=el('div','setcard rvlist a-up d4');
   card.innerHTML='<div class="eyebrow sec">Plan na jutro</div>'+[['clock','Rano: 5 minut',cs.bad?cs.bad+' '+pl(cs.bad,'pojęcie, które','pojęcia, które','pojęć, które')+' dziś nie weszło — wracają w powtórce':'tylko fiszki z najsłabszych, bez nowych rzeczy'],['close','Przed egzaminem: nic nowego','przejrzyj notatki, nie ucz się nowych rzeczy'],t?['calendar','Sprawdzian: '+fmtDate(t.date),inDays(dayDiff(todayStr(),t.date))+' · powodzenia']:['moon','Teraz sen','7–8 godzin robi więcej niż kolejna godzina nauki']].map(([ic,tt,ss])=>`<div class="setrow">${icon(ic,{size:18,stroke:2.6})}<div class="grow"><div class="t">${tt}</div><div class="s">${ss}</div></div></div>`).join('<div class="setsep"></div>');
@@ -3656,7 +3880,7 @@ function cramFinish(){
   const foot=el('div','lessonfoot col');const main=el('button','pill violet a-glow','DOBRANOC');main.id='cram-done';main.onclick=()=>go('today');
   const alt=el('button','pill text','WRÓĆ DO EGZAMINU');alt.id='cram-alt';alt.onclick=()=>openSubject(s.id,'egzamin');foot.appendChild(main);foot.appendChild(alt);L.appendChild(foot);
   cramState=null;keyFn=e=>{if(e.key==='Enter')main.click();};
-  setTimeout(()=>toast('Powtórka zapisana — dobranoc','moon'),400);
+  notify('Powtórka zapisana — dobranoc','moon');
 }
 
 /* ============================================================ KROK 9: POPRAW PYTANIE (EditContent.html) — arkusz; PROGRESS.overrides["sid:lid:qi"]={q,a,c,e}
@@ -3668,7 +3892,7 @@ function openEditContent(s,lv,qi,o){
   const ovRaw=overrides()[ovKey(s.id,lv.id,qi)];const ov=ovOk(ovRaw)?ovRaw:null;const cur=ov?{q:ov.q,a:ov.a.slice(),c:ov.c,e:ov.e||''}:{q:B.q,a:B.a.slice(),c:B.c,e:B.e};
   let c=cur.c;
   const sh=openSheet('edit',`<div class="shandle"></div>
-    <div class="shead"><div><div class="st2">Popraw pytanie</div><div class="ssub">${s.short||s.name} · ${noEmoji(lv.title)} · pytanie ${qi+1} z ${(lv.quiz||[]).length}</div></div><button class="backbtn sclose" id="edclose" aria-label="Zamknij">${icon('close',{size:18,stroke:3})}</button></div>
+    <div class="shead"><div><div class="st2">Popraw pytanie</div><div class="ssub">${noEmoji(s.name)} · ${noEmoji(lv.title)} · pytanie ${qi+1} z ${(lv.quiz||[]).length}</div></div><button class="backbtn sclose" id="edclose" aria-label="Zamknij">${icon('close',{size:18,stroke:3})}</button></div>
     <div class="infobox a-up">${icon('edit',{size:18})}<span>${ov?'To pytanie ma już Twoją poprawkę.':'Poprawka zapisze się razem z Twoimi postępami.'} Zastąpi pytanie w lekcji, quizie, egzaminie i powtórce.</span></div>
     <label class="edlbl a-up d1" for="edq">Treść pytania</label><textarea class="edta" id="edq" rows="2">${esc(cur.q)}</textarea>
     <div class="edlbl a-up d2">Odpowiedzi — zaznacz poprawną</div>
@@ -3705,7 +3929,7 @@ function openSourceView(q,ctx,onBack){
   sheetBack();
   const back=()=>{closeSheet();if(onBack)onBack();};
   sh.querySelector('#srcclose').onclick=back;sh.querySelector('#srcok').onclick=back;document.getElementById('sheetback').onclick=back;
-  const bad=sh.querySelector('#srcbad');if(bad)bad.onclick=()=>openEditContent(ctx.s,ctx.lv,ctx.qi,{onBack:onBack,onSaved:onBack});
+  const bad=sh.querySelector('#srcbad');if(bad)bad.onclick=()=>openEditContent(ctx.s,ctx.lv,ctx.qi,{onBack:onBack,onSaved:typeof ctx.onSaved==='function'?ctx.onSaved:onBack});
   return sh;
 }
 
@@ -3730,38 +3954,91 @@ function renderErrorView(){
   app.appendChild(el('div','toast',''));app.lastChild.id='toast';
   keyFn=e=>{if(e.key==='Enter'){const p=foot.querySelector('.a-glow');if(p)p.click();}};
 }
-/* pasek „Brak sieci” nad aplikacją (poza #app — nie kasuje go żaden render); navigator.onLine + zdarzenia offline/online */
+/* pasek „Brak sieci” nad aplikacją (poza #app — nie kasuje go żaden render); navigator.onLine + zdarzenia offline/online.
+   P1-9: pasek jest w przepływie — #app zjeżdża o jego wysokość (barLayout), więc nie zasłania „Wróć” ani pigułek; jedna linia przy 375 px.
+   Dopóki jest offline, stan sprawdzany co 5 s (iOS nie zawsze wysyła „online”); po powrocie sieci pasek znika i krótki toast. */
+let netInt=null,netWas=false;
 function netbar(){
   let b=document.getElementById('netbar');
-  if(!b){b=el('div','netbar',icon('wifi',{size:16})+'<span>Brak sieci — nauka działa dalej'+(STORE.volatile===true?'':', postępy trafią na konto po powrocie połączenia')+'</span>');b.id='netbar';b.setAttribute('role','status');document.body.appendChild(b);}
+  if(!b){b=el('div','netbar',icon('wifi',{size:16})+'<span class="grow">'+(STORE.volatile===true?'Brak sieci — nauka działa dalej':'Brak sieci — postępy wyślą się później')+'</span>');b.id='netbar';b.setAttribute('role','status');document.body.insertBefore(b,document.body.firstChild);}
   const off=navigator.onLine===false;b.classList.toggle('on',off);b.classList.toggle('a-up',off);
+  if(off&&!netInt)netInt=setInterval(netbar,5000);else if(!off&&netInt){clearInterval(netInt);netInt=null;}
+  if(netWas&&!off)toast('Sieć wróciła','wifi');netWas=off;
+  barLayout();
 }
-/* storage niedostępny (STORE w pamięci: iOS file://, zablokowane dane witryn) → pasek ostrzeżenia; ===true, bo na prawdziwym localStorage .volatile to ewentualny wpis (tekst) */
+/* wysokość widocznego paska (sieć albo pamięć) → --barh na <html> i body.bar-on: styles.css przesuwa #app w dół o tyle samo */
+function barLayout(){
+  let h=0;document.querySelectorAll('.netbar').forEach(x=>{if(getComputedStyle(x).display!=='none')h=Math.max(h,x.offsetHeight);});
+  document.documentElement.style.setProperty('--barh',h+'px');document.body.classList.toggle('bar-on',h>0);
+  const p=document.querySelector('.path');if(p)requestAnimationFrame(()=>drawTrail(p));
+}
+/* storage niedostępny (STORE w pamięci: iOS file://, zablokowane dane witryn) → pasek ostrzeżenia; ===true, bo na prawdziwym localStorage .volatile to ewentualny wpis (tekst).
+   P1-9: zwinięty do jednej linii; „Więcej” rozwija wyjaśnienie, krzyżyk zamyka. */
 function storebar(){
   if(STORE.volatile!==true||document.getElementById('storebar'))return;
-  const b=el('div','netbar storebar on a-up',icon('alert',{size:16})+'<span class="grow">'+(NATIVE?'Postępy nie zapisują się na tym urządzeniu. Uruchom aplikację ponownie.':'Postępy nie zapisują się na tym urządzeniu — przeglądarka blokuje zapis (tryb prywatny albo podgląd pliku). Otwórz stronę w Safari lub Chrome.')+'</span>');
+  const why=NATIVE?'Uruchom aplikację ponownie — zwykle to wystarcza.':'Przeglądarka blokuje zapis (tryb prywatny albo podgląd pliku). Otwórz stronę w Safari lub Chrome.';
+  const b=el('div','netbar storebar on a-up',icon('alert',{size:16})+`<span class="grow"><b>Postępy się nie zapisują</b><span class="sbwhy">Postępy nie zapisują się na tym urządzeniu. ${why}</span></span>`);
   b.id='storebar';b.setAttribute('role','status');
-  const x=el('button','sbx',icon('close',{size:14,stroke:3}));x.setAttribute('aria-label','Zamknij ostrzeżenie');x.onclick=()=>b.remove();b.appendChild(x);
-  document.body.appendChild(b);
+  const more=el('button','sbm','Więcej');more.type='button';more.setAttribute('aria-expanded','false');
+  more.onclick=()=>{const o=b.classList.toggle('open');more.textContent=o?'Mniej':'Więcej';more.setAttribute('aria-expanded',String(o));barLayout();};
+  const x=el('button','sbx',icon('close',{size:14,stroke:3}));x.setAttribute('aria-label','Zamknij ostrzeżenie');x.onclick=()=>{b.remove();barLayout();};
+  b.appendChild(more);b.appendChild(x);
+  const nb=document.getElementById('netbar');if(nb&&nb.parentNode)nb.after(b);else document.body.insertBefore(b,document.body.firstChild); // po #netbar: CSS chowa go, gdy pasek sieci jest widoczny
+  barLayout();
 }
 
 /* ---------- INIT ---------- */
 document.addEventListener('DOMContentLoaded',()=>{
   app=document.getElementById('app');
   applyMotion();
-  netbar();storebar();window.addEventListener('offline',netbar);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')netbar();});document.addEventListener('resume',netbar); // iOS potrafi wysłać „offline” w tle i nie wysłać „online” po powrociewindow.addEventListener('resize',()=>{const p=document.querySelector('.path');if(p)drawTrail(p);});window.addEventListener('online',()=>{netbar();toast('Sieć wróciła','wifi');}); // krok 9
+  try{const mq=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)');if(mq&&mq.addEventListener)mq.addEventListener('change',applyMotion);}catch(e){} // P2-9: zmiana w ustawieniach telefonu w trakcie
+  netbar();storebar();
+  // P1-9: pasek „Brak sieci” — offline/online i ponowne sprawdzenie po powrocie z tła (iOS potrafi wysłać „offline” w tle i nie wysłać „online” po powrocie)
+  window.addEventListener('offline',netbar);
+  window.addEventListener('online',netbar);
+  window.addEventListener('focus',netbar);window.addEventListener('pageshow',netbar);
+  window.addEventListener('resize',()=>{const p=document.querySelector('.path');if(p)drawTrail(p);barLayout();});
+  // P1-8: powrót z tła (iOS trzyma WebView przez noc) i północ przy otwartej apce → nowy dzień: zamrożenia, plany, misje, ekran główny od nowa
+  const back=()=>{netbar();dayCheckSynced();};
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')back();});
+  document.addEventListener('resume',back);window.addEventListener('focus',dayCheckSynced);
+  setInterval(()=>{if(document.visibilityState!=='hidden')dayCheckSynced();},60000);
   // klawiatura (lekcja, quiz, panele): jeden nasłuch, widok podstawia keyFn; pola tekstowe (ćwiczenia) pomijane
   document.addEventListener('keydown',e=>{if(!keyFn)return;const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'))return;keyFn(e);});
   window.NAUKA_BOOT?window.NAUKA_BOOT(start):start(); // cloud-ui.js: logowanie → przedmioty z konta → start
 });
 /* start silnika: przedmioty są już w SUBJECTS (setSubjects), postępy wczytywane od nowa (mogły przyjść z chmury) */
-let booted=false;
+let booted=false,dayNow=null;
+/* P1-8: zmiana dnia bez nowego startu (WebView przeżył noc w tle, nauka przez północ). Dane od razu (zamrożenia przed pierwszym XP, plany do sprawdzianu,
+   misje dnia); ekran przerysowany tylko na ekranie głównym i bez otwartej lekcji / arkusza — wtedy też ekran powrotu albo podsumowanie tygodnia. */
+const DAY_HOME=/^(today|review|cards|subjects|profile|settings|streak|missions|album|shop|testplan)$/;
+function dayCheck(){
+  if(!booted)return;const t=todayStr();if(dayNow===t)return;const was=dayNow;dayNow=t;if(!was)return;
+  try{applyFreeze();syncTests();missions();}catch(e){}
+  if(current||lessonState||rvState||exState||bossState||cramState||document.getElementById('sheet')||!DAY_HOME.test(view))return; // nie przerywamy nauki ani formularza
+  if(!META.level)return;
+  if(needComeBack())return go('comeback');
+  if(needWeekly())return openWeekly('last');
+  go(view,true);
+}
+/* nowy dzień dopiero PO pobraniu zmian z chmury (hook „resume” w cloud-ui.js zwraca obietnicę pull, maks. 5 s czekania): applyFreeze na nieaktualnej
+   serii zużywał zamrożenie za dzień, w którym drugie urządzenie się uczyło, a scalenie cofało potem serię na wszystkich urządzeniach.
+   Hook woła się tylko przy faktycznej zmianie dnia. reload() po scaleniu ustawia dayNow — przywracamy poprzedni, żeby kroki nowego dnia (misje,
+   ekran powrotu, tydzień) i tak się wykonały (applyFreeze jest idempotentne). */
+let dayWait=null;
+function dayCheckSynced(){
+  if(!booted||dayWait||dayNow===todayStr())return;
+  let p=null;try{p=hook('resume');}catch(e){}
+  if(!p||typeof p.then!=='function')return dayCheck();
+  const was=dayNow;
+  dayWait=Promise.race([Promise.resolve(p).catch(()=>{}),new Promise(r=>setTimeout(r,5000))]).then(()=>{dayWait=null;dayNow=was;dayCheck();});
+}
 /* przeładowanie stanu po zmianach z innego urządzenia — bez zmiany ekranu (start() zawsze wraca na Dziś) */
-function reload(){PROGRESS=loadProgress();META=loadMeta();try{fixProgress();syncTests();applyFreeze();applyMotion();}catch(e){return start();}if(!META.level||!booted)return start();go(view,true);}
+function reload(){PROGRESS=loadProgress();META=loadMeta();try{fixProgress();syncTests();applyFreeze();applyMotion();dayNow=todayStr();}catch(e){return start();}if(!META.level||!booted)return start();go(view,true);}
 function start(){
   PROGRESS=loadProgress();META=loadMeta();
   try{
-    fixProgress();booted=true;
+    fixProgress();booted=true;dayNow=todayStr();
     syncTests(); // krok 7: plany do sprawdzianu — usuń po terminie, przelicz od dziś
     applyFreeze(); // krok 8: opuszczone dni pokryte zamrożeniami → seria zostaje
     // krok 9: pierwsze uruchomienie (bez etapu) → LevelPick → Onboarding; poniedziałek → podsumowanie tygodnia (raz); ≥ 3 dni przerwy → ComeBack (krok 8)
@@ -3784,7 +4061,7 @@ function start(){
 // po starcie: nowy przedmiot z konta może mieć postępy z synchronizacji, których start() jeszcze nie sprawdził → fixProgress (idempotentne)
 function setSubjects(list){SUBJECTS.splice(0,SUBJECTS.length,...(list||[]).filter(s=>s&&s.id&&s.name&&Array.isArray(s.levels)&&s.levels.length));if(booted)try{fixProgress();}catch(e){}}
 function upsertSubject(s){if(!s||!s.id||!Array.isArray(s.levels)||!s.levels.length)return;const i=SUBJECTS.findIndex(x=>x.id===s.id);if(i>=0)SUBJECTS[i]=s;else SUBJECTS.push(s);if(booted)try{fixProgress();}catch(e){}}
-window.NaukaEngine={_explainFor:explainFor,_viz:{ok:vizOk,html:vizHtml,text:vizPlain,chunks:doseChunks},reload,el,icon,fox,liveFoxes,foxAct,toast,openSheet,closeSheet,sheetBack,ask,shell,obShell,go,goBack,openSubject,openTestSheet,openQuickAdd,renderError,pl,noEmoji,todayStr,esc,txt,native:NATIVE,
+window.NaukaEngine={_explainFor:explainFor,_viz:{ok:vizOk,html:vizHtml,text:vizPlain,chunks:doseChunks},_notify:notify,_real:doseReal,subjShort:sshort,subjInitials:initials,barLayout,reload,el,icon,fox,liveFoxes,foxAct,toast,notify,openSheet,closeSheet,sheetBack,ask,shell,obShell,go,goBack,openSubject,openLevel,openTestSheet,openQuickAdd,renderError,pl,noEmoji,todayStr,esc,txt,native:NATIVE,
   registerView:(k,fn)=>{VIEWS[k]=fn;},setSubjects,upsertSubject,subjects:()=>SUBJECTS,meta:()=>META,saveMeta,
   get view(){return view;},get current(){return current;}};
 })();

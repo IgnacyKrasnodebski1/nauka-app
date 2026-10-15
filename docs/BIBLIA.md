@@ -23,6 +23,7 @@ Plan nagrywania wykładów (Etap 2) jest osobno: [`docs/plan-wyklady.md`](plan-w
 3. **Build 6 czeka na wysłanie do TestFlight** (Xcode → Organizer → Distribute App; wysyłka z CLI padła na „Failed to Use Accounts”, czyli wygasłe logowanie Apple ID w Xcode). Backend z viz, PPTX i poprawkami jakości jest wdrożony (2026-10-07, Vercel `dpl_5QrNpisiG54A42B1dnjsLutQuBET`), a migracja `0006_pptx.sql` wgrana tego samego dnia, więc build 6 można rozesłać. Zasada na przyszłość: **najpierw backend, potem migracja, na końcu build apki** (stary backend pobierał limit, zanim sprawdził typ pliku).
 4. **Wylogowanie kasuje lokalne postępy z telefonu** (po próbie synchronizacji). To celowe, ale warto o tym pamiętać przy testach.
 5. **Nieudana generacja nadal zjada limit.** Nie ponawiaj `POST /api/generate` automatycznie.
+6. **Build 7 (AUDYT §6.1, sekcje A–C, plus poprawki z przeglądu) jest w drzewach roboczych, niewdrożony.** Kolejność: `backend/0007_generation_guards.sql` → wdrożenie backendu → sprawdzenie, że build 6 dalej tworzy lekcje → `backend/0008_account_limits.sql` (cały plik; potem sprawdzenie wszystkich 4 sekcji) → build 7 apki. Nowy backend bez 0007 odpowiada na każdą generację 500 `reserve_failed` (bez naliczenia). Szczegóły i wycofanie: `nauka-backend/docs/DEPLOY.md` („Build 7”). Opisy oznaczone niżej „Build 7” dotyczą kodu, nie produkcji, dopóki to nie zostanie wdrożone.
 
 ---
 
@@ -279,6 +280,8 @@ Cały plan dnia zrobiony: +5 gemów raz dziennie (`planCheck`, `:3090`).
 
 **`startLesson(lv)`** (`:2201`). Bez serc lekcja się nie zaczyna. Najpierw faza `feed` (czat), potem `quiz` (pytania i zadania). Bez `feed` czat jest pomijany.
 
+**Przerwanie i wznowienie (Build 7, P1-11).** Miejsce w lekcji zapisuje się na bieżąco w `PROGRESS.lessonSave` (po każdej części czatu, przy „CZAS NA PYTANIA” i po każdej odpowiedzi; `lessonSave` / `lessonLoad`). X zamyka lekcję bez pytania i pokazuje toast „Miejsce zapisane — dokończysz z węzła na ścieżce”; X przy otwartym „Dobrze!” / „Nie tym razem” zapisuje już następne pytanie (przegląd Build 7: wcześniej DOKOŃCZ powtarzało pytanie razem z XP, celem dnia i SRS). Arkusz wznowienia: „Lekcja przerwana na pytaniu N z M”. Węzeł z zapisem ma dymek **DOKOŃCZ**; stuknięcie otwiera arkusz „Dokończyć lekcję?” (Od nowa / DOKOŃCZ). Zapis znika po ekranie wyniku. Powtórka **zaliczonego** poziomu zaczyna się od pytań, z linkiem „Przeczytaj jeszcze raz” nad pierwszym pytaniem. Arkusze w lekcji nie mają już przycisku przenoszącego do fiszek (zamykał lekcję bez wyniku).
+
 **Skład pytań** (`levelSession`, `:1295`): najwyżej 6 losowych pytań quizu oraz wszystkie obsługiwane zadania, potasowane. Pierwsze zawsze jest pytanie, zadania są rozłożone równo.
 
 **Czat** (`startChat`, `:2188`):
@@ -305,12 +308,13 @@ Cały plan dnia zrobiony: +5 gemów raz dziennie (`planCheck`, `:3090`).
 
 ### 3.6 Quiz, panele „dobrze / źle”, „Wyjaśnij inaczej”, poprawki
 
-- **Tasowanie:** odpowiedzi są tasowane w danych (`mixQ`, Fisher–Yates, `qOf`, `:133`) i jeszcze raz na ekranie (`quizBlock`, `:1168`). `data-i` to indeks w danych, litera to pozycja na ekranie.
+- **Tasowanie:** odpowiedzi są tasowane raz, w danych (`mixQ`, Fisher–Yates, `qOf`, `:133`); `quizBlock` pokazuje je w tej kolejności. `data-i` to indeks w danych, litera to pozycja na ekranie. (Do Build 7 egzamin tasował drugi raz w `permQ` bez aktualizacji `pm`, więc zapis pytania w przeglądzie egzaminu psuł wynik — P1-7, naprawione: `permQ` usunięte, przegląd i „Pytanie jest złe” przeliczają wynik w kolejności z ekranu.)
 - **Tryb prawda/fałsz** (`quizTf`): gdy pytanie ma co najmniej 3 odpowiedzi, a poprawna wyraźnie odstaje długością (`lengthCue`, `:1166`; warunek w `:1169`), pytanie pokazuje jedną propozycję (50% szans, że poprawną) z przyciskami Tak/Nie. Chroni to przed zgadywaniem „najdłuższa jest dobra”. Flaga `noTf` jest martwa (nikt jej nie ustawia).
 - **Klawiatura:** 1–5 albo A–E wybiera, Enter sprawdza.
 - **„Dobrze!”** (`sheetOk`, `:1058`): combo, XP, „Dlaczego” (pole `e`), źródło.
-- **„Nie tym razem”** (`sheetBad`, `:1070`): treść poprawnej odpowiedzi, „Dlaczego”, przycisk **WYJAŚNIJ INACZEJ** (tylko gdy jest co pokazać) i „Zgłoś / popraw pytanie”.
-- **„Wyjaśnij inaczej”** (`explainFor`, `:1098`; `openExplain`, `:1116`): działa offline, bez AI. Szuka fiszki, której hasło pasuje do poprawnej odpowiedzi, i fragmentu dawki z bieżącego poziomu. Odrzuca fragmenty zawierające słowa z błędnych odpowiedzi, przeciwieństwa i niepasujące przeczenia. Notka: „To wyjaśnienia z Twoich materiałów”.
+- **„Nie tym razem”** (`sheetBad`, `:1070`): treść poprawnej odpowiedzi, „Dlaczego”, przycisk **WYJAŚNIJ INACZEJ** (tylko gdy jest co pokazać) i „Popraw pytanie” (Build 7: wcześniej „Zgłoś / popraw” — nic nie jest nikomu zgłaszane).
+- **„Wyjaśnij inaczej”** (`explainFor`, `openExplain`): działa offline, bez AI. Szuka fiszki, której hasło pasuje do poprawnej odpowiedzi, i fragmentu dawki z bieżącego poziomu. Odrzuca fragmenty zawierające słowa z błędnych odpowiedzi, przeciwieństwa i niepasujące przeczenia. Notka: „To wyjaśnienia z Twoich materiałów”. **Build 7 (P1-10):** hasła z ≤2 słowami kluczowymi muszą trafić wszystkie, dłuższe ≥2 trafienia i ≥2/3 pokrycia (plus najrzadsze słowo hasła); rdzenie obecne w >25% haseł przedmiotu są pomijane; bonus za fragment tylko dla karty, która przeszła; na pierwszym miejscu pole `real` najlepiej pasującej dawki. Przycisk znika, gdy nic nie pasuje. **Przegląd Build 7:** druga droga dla pytań wprost o pojęcie („Co to dekomodyfikacja?”) — wszystkie słowa hasła są w pytaniu, a definicja fiszki ma z poprawną odpowiedzią ≥2 wspólne rzadkie słowa (przy jednowyrazowej odpowiedzi 1), bez słów z błędnych opcji i bez przeciwnego kierunku; nie przy pytaniach z przeczeniem. Na atrapie „Polityka makroekonomiczna”: przycisk przy 24 z 78 pytań (wcześniej 13).
+- **„Powiedz prościej” (Build 7):** pod tekstem dawki w czacie zwinięty przycisk „Prościej” z polem `real` (`doseReal`, `chatReal`), gdy `real` nie jest prawie kopią dawki. Jeśli `real` ma liczby, których nie ma w dawce, przycisk jest zawsze; jeśli schemat używa tych liczb, `real` jest od razu rozwinięte.
 - **Poprawki użytkownika** (`openEditContent`, `:3664`): użytkownik może poprawić pytanie (2–5 odpowiedzi, wybór poprawnej, wyjaśnienie). Zapis w `PROGRESS.overrides["sid:lid:qi"]`. „Przywróć oryginał” usuwa poprawkę.
 - **Źródło** (`openSourceView`, `:3697`): strona i cytat z `src`, przycisk „Pytanie jest złe”. Pole `src.material` jest zawsze puste (backend go nie wypełnia).
 
@@ -349,7 +353,7 @@ Gdzie występują: lekcja (serce za błąd, 8 XP × combo), boss, Ćwiczenia →
 - Interwały `SRS_INT = [0, 1, 3, 7, 21]` dni. Dobrze: pudełko +1 i nowy termin, **ale tylko gdy termin minął** (albo karta jest nowa). Dobra odpowiedź przed terminem zwiększa tylko `seen`, więc pudełko rośnie najwyżej raz na termin (flaga `early`, `:1677–1679`). Źle: pudełko 0 i `lapses` +1 (zawsze).
 - Do SRS zapisują: zakładka fiszek, pytania w lekcji, zakładka Quiz, powtórka i cram. Egzamin i boss nie zapisują.
 
-**Fiszki** (`renderFiszki`, `:2347`): przeciągnięcie ±80 px albo przyciski. +2 XP tylko za „umiem” przy karcie z terminem na dziś lub wcześniej **albo jeszcze nigdy niewidzianej** (`:2375`). Zadanie „10 fiszek = +1 serce” (`heartReview`).
+**Fiszki** (`renderFiszki`, `:2347`): przeciągnięcie ±80 px albo przyciski. +2 XP tylko za „umiem” przy karcie z terminem na dziś lub wcześniej **albo jeszcze nigdy niewidzianej** (`:2375`). Zadanie „10 fiszek = +1 serce” (`heartReview`). **Build 7 (P1-17):** ocena dopiero po odwróceniu karty (`cardGate`; w Fiszkach, powtórce i cramie): przycisk albo przesunięcie nieodwróconej karty tylko ją odwraca, ocena działa ok. 0,9 s po odwróceniu (wcześniejsze stuknięcie czeka), do tego czasu przyciski są wyszarzone.
 
 **Powtórka** (`:1729–1837`): bez serc i combo, fiszka +2 XP, pytanie +3 XP. Tryb talii błędów usuwa z `examDeck` trafione pytania.
 
@@ -476,6 +480,7 @@ Wszystkie klucze z postępami mają sufiks `:<uid>` (identyfikator konta). Bez k
 | `__nk_t` | localStorage | test zapisu |
 | `cf_session` | localStorage | sesja Supabase: `{access_token, refresh_token, expires_at, user:{id,email}}` |
 | `cf_legacy_cleared` | localStorage | znacznik jednorazowego sprzątania starych kluczy |
+| `cf_seen` | localStorage (bez uid) | Build 7: na tym urządzeniu ktoś się już logował → ekran logowania otwiera się na „Zaloguj się”. Zostaje po wylogowaniu (nie są to dane konta), kasowany przy usunięciu konta |
 | `cf_notice` | sessionStorage | komunikat po usunięciu konta |
 | `cf_dirty:<uid>` | localStorage | są zmiany do wysłania |
 | `cf_rev:<uid>` | localStorage | ostatnia znana wersja `app_state.rev` |
@@ -492,8 +497,9 @@ Wszystkie klucze z postępami mają sufiks `:<uid>` (identyfikator konta). Bez k
 - `history: {"rrrr-mm-dd": {xp, levels, cards, reviews, combo, missions}}`, maks. 120 dni
 - `overrides: {"sid:lid:qi": {q, a, c, e, at}}`
 - `examDeck: ["sid:lid:q<qi>"]`
+- `lessonSave` (Build 7, opcjonalne): **napis JSON** (scalanie synchronizacji traktuje go jako jedną wartość) z miejscem przerwanych lekcji — faza, indeksy, kolejność pytań, wynik, znaczniki; najwyżej 6 lekcji, walidowane przy odczycie i w `fixProgress`. Stare zapisy bez tego pola działają jak dotąd.
 
-**Kształt `META`** (`fixMeta`, `:89`): `level`, `goal`, `streak`, `best`, `bestWas`, `lastDay`, `streakCeleb`, `freezes`, `frozenDays` (maks. 14), `ms`, `comebackShown`, `weeklyShown`, `reduceMotion`, `aiConsent`.
+**Kształt `META`** (`fixMeta`, `:89`): `level`, `goal`, `streak`, `best`, `bestWas`, `lastDay`, `streakCeleb`, `freezes`, `frozenDays` (maks. 14), `ms`, `comebackShown`, `weeklyShown`, `reduceMotion`, `aiConsent`, `aiConsentV` (Build 7: wersja zaakceptowanego tekstu zgody; brak = 1, więc stare zgody zostają ważne; wysyłana w `options.aiConsentV` do `/api/generate`).
 
 ### 3.13 NaukaEngine i NAUKA_HOOKS
 
@@ -502,10 +508,12 @@ Wszystkie klucze z postępami mają sufiks `:<uid>` (identyfikator konta). Bez k
 | Grupa | Funkcje |
 |---|---|
 | Stan | `reload`, `setSubjects`, `upsertSubject`, `subjects()`, `meta()`, `saveMeta`, gettery `view` i `current` |
-| DOM i UI | `el`, `icon`, `fox`, `liveFoxes`, `foxAct`, `toast`, `openSheet`, `closeSheet`, `sheetBack`, `ask`, `shell`, `obShell`, `renderError` |
-| Nawigacja | `go`, `goBack`, `openSubject`, `openTestSheet`, `openQuickAdd`, `registerView(k, fn)` |
-| Pomocnicze | `pl`, `noEmoji`, `todayStr`, `esc`, `txt`, `native` |
-| Testy | `_explainFor`, `_viz{ok, html, text, chunks}` |
+| DOM i UI | `el`, `icon`, `fox`, `liveFoxes`, `foxAct`, `toast(t, ic, anim, {go})`, `notify(t, ic, anim, {go})`, `openSheet`, `closeSheet`, `sheetBack`, `ask`, `shell`, `obShell`, `renderError` |
+| Nawigacja | `go`, `goBack`, `openSubject`, `openLevel(sid, lid)` (Build 7: ścieżka i od razu ten poziom, gdy odblokowany), `openTestSheet`, `openQuickAdd`, `registerView(k, fn)` |
+| Pomocnicze | `pl`, `noEmoji`, `todayStr`, `esc`, `txt`, `native`, `subjShort(s)`, `subjInitials(s)` (Build 7, P1-15: skrót bez kolizji „P. cywilne / P. karne” i monogram z dwóch liter; oba zwracają tekst escapowany) |
+| Testy | `_explainFor`, `_viz{ok, html, text, chunks}`, `_notify`, `_real` |
+
+**Toasty (Build 7, P1-23):** `toast()` to odpowiedź na gest użytkownika — pokazuje się od razu. `notify(t, ic, anim, {go})` (nagrody i zdarzenia w tle; `cloud-ui` używa go dla „Lekcja gotowa” i nieudanej próby w tle) czeka w kolejce, gdy otwarty jest arkusz albo trwają pytania lekcji, egzaminu, bossa, powtórki lub cramu, i pokazuje się po kolei na ekranie wyniku; cisza także na ekranach „Dodaj materiał” i „Tworzę lekcję” (przegląd Build 7: klikalna nagroda wyprowadzała ze szkicu bez pytania „Porzucić materiał?”). Czas 1,5 s + 40 ms na znak, maks. 5 s; toast z akcją 8 s. Toast stoi nad dolnym paskiem, stopką lekcji albo otwartym arkuszem, zawija tekst. `{go}` robi z toastu przycisk (np. „Misja gotowa” → Misje, „Lekcja gotowa” → ekran „Gotowe”).
 
 - `setSubjects(list)` i `upsertSubject(s)` (`:3785–3786`) podmieniają zawartość tablicy przedmiotów w miejscu. Wpisy bez `id`, `name` albo z pustym `levels` odpadają.
 - `reload()` (`:3760`) przeładowuje stan po zmianach z innego urządzenia. `cloud-ui` woła go tylko wtedy, gdy jest bezpiecznie (`safeToRerender`, `cloud-ui.js:35`: ekran główny, bez otwartego przedmiotu, arkusza i lekcji).
@@ -518,19 +526,26 @@ Wszystkie klucze z postępami mają sufiks `:<uid>` (identyfikator konta). Bez k
 | `settingsTop(scroll)` | karta „Konto” na górze Ustawień |
 | `profileSub()` | podpis w Profilu; zwraca HTML, więc dostawca musi escapować (robi to `esc(email)`) |
 | `addPhoto(into)`, `addFile(into)`, `addText(into)` | z arkusza „Dodaj materiał”; `into` = id otwartego przedmiotu albo `null` |
+| `addOpen(into)` | Build 7: na początku `openQuickAdd`; `true` = obsłużone (trwa tworzenie lekcji → ekran postępu zamiast arkusza) |
+| `addSheet(sheet)` | Build 7: po otwarciu arkusza „Dodaj materiał”; `cloud-ui` dopisuje linię limitu („Możesz utworzyć jeszcze X z Y lekcji…”) |
+| `todayTop(scroll)` | Build 7: pod nagłówkiem Dziś (także pustego Dziś, `#emptytop`); wiersz „Tworzę lekcję…” (podpis zmienia się z fazą: „wysyłam pliki — nie zamykaj aplikacji” → „zwykle ok. 2 minuty…”), karta nieudanej próby albo „Lekcja gotowa · dotknij, żeby zacząć” (dopóki ekran gotowej lekcji nie zostanie otwarty) |
+| `resume()` | przegląd Build 7: przy zmianie dnia po powrocie z tła; `cloud-ui` zwraca obietnicę `pull`, silnik czeka na nią (maks. 5 s) przed zamrożeniem serii |
+| `settingsAbout(card)` | Build 7: w karcie „O aplikacji” po wierszu wersji; Pomoc i kontakt, Polityka prywatności, Regulamin (gdy skonfigurowane) i Licencje |
 
 Inne globalne: `window.NAUKA_UID`, `window.NAUKA_BOOT(start)`, `window.NAUKA_CLOUD` (w tym `vizText`), `window.SUBJECTS` (pozostałość, tylko w testach).
 
 ### 3.14 Pasek offline, ekran błędu, design
 
-- `netbar()` (`:3734`): pasek „Brak sieci — nauka działa dalej, postępy trafią na konto…”, wstawiony poza `#app`.
-- `storebar()`: ostrzeżenie, gdy zapis w localStorage nie działa.
+- `netbar()`: pasek „Brak sieci — postępy wyślą się później” (Build 7, P1-9: jedna linia; `body.bar-on` i `--barh` przesuwają cały `#app` w dół, więc pasek nie zasłania „Wróć” ani pigułek). Stan sieci sprawdzany przy `online`/`offline`, co 5 s offline, przy `focus` i `pageshow`; „Sieć wróciła” tylko po prawdziwej zmianie offline → online.
+- `storebar()`: ostrzeżenie, gdy zapis w localStorage nie działa (Build 7: jedna linia z „Więcej” i ×). Pasek pełnej pamięci z `cloud-ui` (`#cf-storebar`, gdy postępy z konta nie mieszczą się w localStorage) wygląda tak samo („Postępy się nie zapisują” · Więcej · ×) i po dodaniu lub zamknięciu woła `NaukaEngine.barLayout()`, więc `#app` zjeżdża pod pasek.
+- **Zmiana dnia w tle (Build 7, P1-8):** `dayCheckSynced` przy `visibilitychange`, `resume`, `focus` i co 60 s: przy faktycznej zmianie dnia najpierw hook `resume` (`cloud-ui`: `pull` z chmury), maks. 5 s czekania, dopiero potem `dayCheck`: zamrożenie serii, plany do sprawdzianów, misje; przerysowanie ekranu głównego (albo ekran powrotu / tygodnia) tylko, gdy nie jest otwarty przedmiot, lekcja, powtórka, egzamin, boss, cram ani arkusz. `applyFreeze()` woła też `touchStreak`. (Przegląd Build 7: bez czekania na `pull` tablet po nocy w tle zużywał zamrożenie za dzień, w którym telefon się uczył, a scalenie cofało serię na wszystkich urządzeniach.)
 - `renderError(o)`: wspólny ekran błędu dla startu silnika i `cloud-ui`.
 - **Design** (szczegóły w `design/DESIGN.md` i `design/tokens.css`):
   - tylko ciemny motyw (brak `prefers-color-scheme`);
   - tło `#0E0C1C`, karta `#1B1836`, kolor akcji `--acid #B4FF3A`;
   - promienie 13 / 18 / 22 / 28 px, cienie pod spodem 4 / 5 / 6 px;
-  - fonty Bricolage Grotesque 800 i Plus Jakarta Sans 500–800;
+  - fonty Bricolage Grotesque 700/800 i Plus Jakarta Sans 500–800, **wbudowane** (Build 7, P1-27): `fonts/*.ttf` + `fonts/fonts.css` (licencja OFL w `fonts/OFL.txt` i w arkuszu „Licencje”); `index.html` linkuje `fonts/fonts.css`, `build.js` wkleja je jako WOFF w `data:`. Bez Google Fonts;
+  - `color-scheme: dark`, `<meta name="theme-color" content="#0E0C1C">`, własny checkbox 16+, ciemny autofill (P2-56); kontrast tekstu ≥4,5:1: `--muted-2 #8680BE`, `--muted-3` tylko na ramki, kreski i ikony, `--accent-ink` do małego tekstu w kolorze przedmiotu (P1-24); ograniczony ruch z telefonu też wyłącza konfetti i obrót fiszki (P2-9);
   - kolory pochodne przez `color-mix()` z zapasem dla iOS <16,2 (`styles.css:433`);
   - **zero emoji** (`noEmoji()` czyści tytuły, `initial()` robi monogram), ikony to inline SVG (`ICONS`, `:151`);
   - bez gradientów i kół w tle.
@@ -540,15 +555,15 @@ Inne globalne: `window.NAUKA_UID`, `window.NAUKA_BOOT(start)`, `window.NAUKA_CLO
 
 | # | Co | Gdzie | Skutek |
 |---|---|---|---|
-| 1 | **Dwa nasłuchy wpadły do komentarza** (brak nowej linii po komentarzu o iOS) | `engine.js:3752` | Martwe `resize → drawTrail` i `online → netbar(); toast('Sieć wróciła')`. Pasek „Brak sieci” nie znika po powrocie sieci, dopóki nie przyjdzie `visibilitychange` lub `resume`; ścieżka nie przerysowuje się po zmianie rozmiaru. Naprawa: przenieść kod do nowej linii. |
-| 2 | **Zła litera u bossa po upływie czasu** | `engine.js:3353` | Komunikat „Poprawna: odpowiedź X” liczy literę z indeksu w danych, a opcje są tasowane na ekranie. W trybie prawda/fałsz żadna opcja nie dostaje podświetlenia. Lepiej pokazać treść odpowiedzi, jak `sheetBad`. |
+| 1 | ~~Dwa nasłuchy wpadły do komentarza~~ | | **Naprawione w Build 7** (P1-9): nasłuchy `online` i `resize` w osobnych liniach, pasek znika po powrocie sieci. |
+| 2 | ~~Zła litera u bossa po upływie czasu~~ | | **Naprawione w Build 7** (P2-12): po upływie czasu boss pokazuje treść poprawnej odpowiedzi. |
 | 3 | Seria liczy się tylko przez `addXP` | `:551` | `addXP` woła `touchStreak()` zawsze, także przy 0 albo ujemnym XP. Aktywność bez wywołania `addXP` (np. fiszka „jeszcze nie”) nie przedłuża serii; egzamin z 0 trafień przedłuża. |
 | 4 | Klucz skrzyń zależy od pozycji poziomu w przedmiocie | `:1937–1953` | Usunięcie tematu albo zmiana kolejności przesuwa skrzynie. |
 | 5 | Różne domyślne `examMin` | `engine.js:2457` (20) i `cloud.js:280` (10, gdy jest skala) | Niespójne limity czasu egzaminu. |
 | 6 | Osierocone postępy | `fixProgress`, `:51` | Dane usuniętego przedmiotu zostają w zapisie na zawsze (nie psują działania). |
-| 7 | Pola `real` i `mnemo` nie są wyświetlane | czat | AI je generuje, `cloud.js` je czyści, silnik ich nie pokazuje. Przy tym kontrola ugruntowania schematów przyjmuje liczby, które są tylko w `real` (`finalize.ts:394`), więc schemat może opierać się na tekście, którego użytkownik nie widzi. |
+| 7 | ~~Pole `real` nie jest wyświetlane~~ | czat | **Naprawione w Build 7**: `real` jako „Prościej” pod dawką i na pierwszym miejscu w „Wyjaśnij inaczej” ([3.6](#36-quiz-panele-dobrze--źle-wyjaśnij-inaczej-poprawki)). `mnemo` nadal niewyświetlane. |
 | 8 | Martwa opcja `noTf` | `:1169` | Tryb prawda/fałsz może się pojawić wszędzie poza egzaminem. |
-| 9 | Toasty się nadpisują | `:550` | Jeden `#toast` na 1500 ms; komunikaty z opóźnieniem (2400–4800 ms) zastępują poprzednie. |
+| 9 | ~~Toasty się nadpisują~~ | | **Naprawione w Build 7** (P1-23): kolejka `notify()`, cisza przy arkuszu i w trakcie pytań, czas zależny od długości ([3.13](#313-naukaengine-i-nauka_hooks)). |
 | 10 | Licznik „dni nauki” w misji tygodniowej | `wdays` | Liczy tylko dni z XP. |
 | 11 | Kopia tokenów w `styles.css` nie jest 1:1 | `styles.css:12–137` | Różnią się fallbacki fontów. |
 | 12 | `DESIGN.md` nie zgadza się z kodem | | Wiek (12 lat / podstawówka), nieistniejąca klasa `.a-drain`, „rozmyte koła w tle”, kształty grywalizacji, 59 vs 60 ekranów. |
@@ -564,9 +579,9 @@ Inne globalne: `window.NAUKA_UID`, `window.NAUKA_BOOT(start)`, `window.NAUKA_CLO
 
 - **Rejestracja** (`cloud.js:59`): `POST /auth/v1/signup` z `{email, password, data:{age16:true, client:'cramfox'}}`. Wartość `client:'cramfox'` sprawia, że trigger `handle_new_user` daje 30 dni planu pro (trial). Brak `access_token` w odpowiedzi → błąd `needs_confirm` („ta wersja jeszcze tego nie obsługuje”).
 - **Logowanie** (`:63`): `POST /auth/v1/token?grant_type=password`.
-- **Walidacja w UI** (`renderAuth`, `cloud-ui.js:70–104`): e-mail `^[^\s@]+@[^\s@]+\.[^\s@]+$`, hasło ≥6 znaków, przy rejestracji wymagany checkbox 16+. Domyślnie otwiera się zakładka rejestracji. Po sukcesie `location.reload()`.
+- **Walidacja w UI** (`renderAuth`): e-mail `^[^\s@]+@[^\s@]+\.[^\s@]+$`, hasło ≥6 znaków, przy rejestracji wymagany checkbox 16+. Po sukcesie `location.reload()`. **Build 7 (P1-21, część tymczasowa):** domyślna zakładka to „Zaloguj się”, gdy urządzenie jest znane (`cf_seen` albo jakikolwiek `nauka_progress_v1:*`), inaczej „Załóż konto”; przełącznik „Pokaż / Ukryj hasło”; przed założeniem konta arkusz „Sprawdź adres e-mail” z adresem; po złym logowaniu „Nie pamiętasz hasła? Napisz do nas” (mailto, tylko gdy `supportEmail` jest ustawiony); linki prawne pod formularzem. Przy zablokowanym localStorage komunikat zamiast pętli logowania (P2-44).
 - **Komunikaty** (`authMsg`, `:105–117`) dla kodów: `network`, `invalid_credentials`, `user_already_exists` / `email_exists`, `weak_password`, `over_request_rate_limit` / `over_email_send_rate_limit` / 429, `email_address_invalid`, `needs_confirm`, `signup_disabled`, ≥500 i domyślny.
-- **Odświeżanie tokenu** (`refresh`, `:65–74`): 60 s przed wygaśnięciem; równoległe wywołania czekają na jedno. 400/401 przy odświeżaniu → sesja usunięta, zdarzenie `signedout`, toast „Sesja wygasła — zaloguj się ponownie”, przeładowanie po 1,5 s. **Lokalne postępy zostają.** Przy błędzie sieci używany jest stary token.
+- **Odświeżanie tokenu** (`refresh`): 60 s przed wygaśnięciem; równoległe wywołania czekają na jedno. Build 7 (P2-43): błąd sieci przy odświeżaniu → 1–2 ponowienia w oknie ok. 10 s (odpowiedź mogła zginąć po wymianie tokenu); 400/401 → sesja usunięta, zdarzenie `signedout`, od razu ekran logowania z komunikatem „Sesja wygasła — zaloguj się ponownie.” (bez mignięcia „Serwer chwilowo nie odpowiada”). **Lokalne postępy zostają.** Przy dłuższym braku sieci używany jest stary token.
 - **Brakuje:** resetu hasła („Nie pamiętam hasła”, `/auth/v1/recover`) i potwierdzania maila (`enable_confirmations = false`).
 
 ### 4.2 Wylogowanie i usunięcie konta
@@ -587,25 +602,28 @@ Inne globalne: `window.NAUKA_UID`, `window.NAUKA_BOOT(start)`, `window.NAUKA_CLO
 
 Błędy: `active_subscription` (aktywna subskrypcja Stripe z weba), `network`, `files_remaining`, ogólny.
 
-**Uwaga (App Store 3.1.1):** komunikat dla `active_subscription` (`cloud-ui.js:184`) brzmi „Masz aktywną subskrypcję kupioną poza aplikacją — najpierw ją anuluj, potem usuń konto.” To **jedyne miejsce w UI ze słowem o płatnościach**. Widać je tylko przy usuwaniu konta z aktywną subskrypcją z weba, ale test R12 (wyrażenie z [12.1](#121-język-i-ton)) je złapie, a recenzent może je odczytać jako odesłanie do zakupu poza apką. Warto przeredagować przed zgłoszeniem do App Store.
+**App Store 3.1.1 (Build 7, P1-25):** przy `active_subscription` apka mówi „Nie możemy teraz usunąć tego konta automatycznie. Napisz do nas: <e-mail> — usuniemy je ręcznie.” (bez `supportEmail`: „…Spróbuj ponownie później.”). W UI nie ma już słowa o płatnościach ani subskrypcji; aria-label przycisku w Plecaku to „Wymień N gemów na: …”.
 
 ### 4.3 Karta „Konto” i prywatność
 
-**Karta „Konto”** (`settingsAccount`, `cloud-ui.js:145–160`):
+**Karta „Konto”** (`settingsAccount`):
 1. E-mail z dopiskiem „postępy zapisują się na koncie” (albo „zalogowano”, gdy synchronizacja jest wyłączona).
-2. „Nowe lekcje”: „X z Y w tym miesiącu” i dopisek „· na start większy limit, jeszcze N dni” (trial) albo „· odnawia się 1. dnia miesiąca”. **Bez słowa o planie Pro i płatnościach.**
-3. Twoje dane.
-4. Wyloguj.
-5. Usuń konto.
+2. „Nowe lekcje”: „X z Y w tym miesiącu” i dopisek „· na start większy limit, jeszcze N dni” (trial) albo „· odnawia się 1 <miesiąca>”. **Bez słowa o planie Pro i płatnościach.**
+3. „Zgoda na AI: udzielona dd.mm.rrrr · dotknij, żeby wycofać” (Build 7, P1-26; wycofanie czyści `aiConsent` i `aiConsentV`, arkusz zgody wraca przy następnym materiale — także przy TWÓRZ po „WRÓĆ DO MATERIAŁU”, a `aiConsentV` idzie w body tylko przy ważnej zgodzie) albo „nieudzielona — zapytamy przy pierwszym materiale”.
+4. Twoje dane.
+5. Wyloguj.
+6. Usuń konto.
 
-**Arkusz „Twoje dane”** (`openPrivacy`, `cloud-ui.js:118–132`), 7 punktów:
-1. konto: e-mail i hasło w Supabase EU (Frankfurt);
-2. materiały: w Supabase, dostęp tylko dla właściciela;
-3. AI: materiał idzie przez Vercel do Claude (Anthropic), po zgodzie;
+**„O aplikacji”** (Build 7, P0-3/P0-4 w apce): po wierszu wersji „Pomoc i kontakt” (mailto), „Polityka prywatności”, „Regulamin” (tylko gdy `supportEmail` / `privacyUrl` / `termsUrl` są ustawione w `cloud-config.js`; puste = wiersz ukryty, `build.js` ostrzega) i „Licencje” (fonty OFL, Capacitor MIT). Te same linki są pod formularzem logowania. Adresy czekają na decyzje D1/D2.
+
+**Arkusz „Twoje dane”** (`openPrivacy`), 6 punktów (Build 7):
+1. konto: e-mail i hasło w Supabase (UE, Frankfurt);
+2. materiały: na koncie w Supabase; „Dostęp do nich masz Ty; nasz serwer pobiera je tylko, żeby utworzyć lekcję”;
+3. AI: materiał idzie przez nasz serwer (Vercel) do modelu Claude firmy Anthropic (USA), po zgodzie, którą można wycofać w Ustawieniach;
 4. postępy: synchronizowane z kontem;
 5. usuwanie: Ustawienia → Usuń konto;
-6. fonty: Google Fonts widzi IP urządzenia;
-7. wiek: 16+.
+6. wiek: 16+.
+Punkt o Google Fonts zniknął razem z Google Fonts. Pod listą link do pełnej polityki i adres do pytań o dane (gdy skonfigurowane).
 
 ### 4.4 Komunikacja z serwerem
 
@@ -618,7 +636,7 @@ Błędy: `active_subscription` (aktywna subskrypcja Stripe z weba), `network`, `
 | Wysyłka pliku >6 MB (TUS 1.0.0) | `POST /storage/v1/upload/resumable`, kawałki po dokładnie 6 MB (`PATCH`, 180 s), do 3 ponowień po 1 / 3 / 7 s, przed ponowieniem `HEAD` po offset. Ponawiane: 0, 408, 409, 423, 429, 5xx. Adres z `Location` jest wymuszany na domenę Supabase (token nie wycieknie). |
 | API (iOS) | `CapacitorHttp.request` z samym `readTimeout: 310000`, **bez `connectTimeout`**. Błąd → `'Brak połączenia z serwerem'`. 401 → odśwież i raz ponów. |
 | API (przeglądarka) | `fetch` 310 s. Na `location.origin` (lokalne proxy) **tylko** gdy strona działa z `http://localhost` albo `http://127.0.0.1` i nie ustawiono `apiDirect` (`cloud.js:45`); każdy inny adres woła `apiUrl` wprost, co blokuje brak CORS. **Proxy nie istnieje** (`cloud-config.js:2` wspomina `node dev/proxy.js`, katalogu `dev/` nie ma), więc generowanie w przeglądarce nie działa. |
-| `me()` (`:498`) | `GET /api/me` i osobno `profiles?select=trial_until`. UI używa `limits.generationsPerMonth`, `limits.filesPerGeneration`, `limits.maxFileMb`, `usage.generations`. Licznik w karcie „Konto” jest przycinany do limitu (`min(used, lim)`, `cloud-ui.js:156`), bo serwer potrafi zapisać np. 4/3 ([7.5](#75-plany-i-limity)). |
+| `me()` | `GET /api/me` (Build 7: limit czasu 15 s, cache w pamięci do 60 s; P2-45) i osobno `profiles?select=trial_until`. Pobierane przy starcie, przy powrocie do apki i przy otwarciu [+], żeby limit był znany przed aparatem. UI używa `limits.generationsPerMonth`, `limits.filesPerGeneration`, `limits.maxFileMb`, `usage.generations`. Licznik w karcie „Konto” jest przycinany do limitu (`min(used, lim)`), bo stary serwer potrafił zapisać np. 4/3 ([7.5](#75-plany-i-limity)). |
 
 Cramfox woła tylko dwa endpointy API (`/api/generate` i `/api/me`) i jedno RPC (`rpc/delete_my_account`); resztę robi przez REST i Storage Supabase.
 
@@ -656,7 +674,9 @@ Cramfox woła tylko dwa endpointy API (`/api/generate` i `/api/me`) i jedno RPC 
 | Teksty | lokalny wygrywa |
 | `progress.epoch` (reset) | wyższy wygrywa **cały** `progress` |
 | `daily` tego samego nowego dnia na obu urządzeniach | liczone od zera |
-| Seria | przeliczana (`mergeStreak`, suma aktywnych dni) tylko, gdy zmieniła się po obu stronach |
+| Seria | przeliczana (`mergeStreak`, suma aktywnych dni) tylko, gdy zmieniła się po obu stronach. Przegląd Build 7: dni aktywne każdej strony liczone z **jej** `frozenDays` (zamrożony dzień jednego urządzenia nie kasuje dnia nauki na drugim), `lastDay` = najpóźniejszy dzień objęty serią z obu stron |
+
+**Strażnik przed wyzerowaniem postępów (Build 7, P1-6; `lostLocal`).** Przed każdym pushem i przy scalaniu: lokalny stan, który „zgubił” postępy względem bazy, nie trafia do chmury — zamiast tego apka pobiera chmurę i scala jak sumę (`repairLost`). Zgubiony = (a) lokalny `epoch` niższy niż w bazie albo go brak, gdy baza go ma (reset zawsze podnosi `epoch`; wyższy lokalny = zamierzony reset, bez strażnika), (b) przy ≥6 kluczach zniknęła ponad połowa kluczy postępów i META, (c) przy ≥4 kluczach META zniknęła ponad połowa samej META (wycofanie zgody usuwa 2, więc się nie łapie), (d) przy ≥50 XP lokalne XP spadło o ponad połowę. Świeże urządzenie z pełną pamięcią: zapis postępów z chmury musi się udać (`jsetHard`), inaczej `pulled=false`, pasek pamięci i zero pushy.
 
 **Ryzyko teoretyczne (dziś niemożliwe):** gdyby `PATCH` zwrócił `[]` przy niezmienionym `rev` na serwerze, `push` wołałby `pull`, który widzi ten sam `rev` i woła `push`: nieskończona pętla zapytań (`:318` ↔ `:397`). Dziś to nie zachodzi, bo jedna polityka `"app_state own"` jest `FOR ALL` (`0004_cramfox.sql:19`): `PATCH` nie może zwrócić `[]`, gdy `SELECT` widzi ten sam `rev`. Pętla wróciłaby, gdyby ktoś rozdzielił polityki i zapomniał o UPDATE.
 
@@ -673,37 +693,39 @@ Cramfox woła tylko dwa endpointy API (`/api/generate` i `/api/me`) i jedno RPC 
 **Na telefonie**
 
 1. **Wejście.** Przycisk „+” w dolnej nawigacji albo „Dodaj materiał” → arkusz z trzema drogami: zdjęcie, plik, tekst. Hooki `addPhoto`, `addFile`, `addText` wołają `startAdd` (`cloud-ui.js:191–274`).
-2. **Blokada równoległej pracy.** Jeśli trwa inna generacja (`busyGen()`), nowa się nie zaczyna.
-3. **Zgoda na AI** (`consent`, `:193–202`): tylko gdy `META.aiConsent` jest puste. Akceptacja zapisuje datę w `META` (więc synchronizuje się z kontem).
+2. **Blokada równoległej pracy.** Jeśli trwa inna generacja (`busyGen()`), [+] (hook `addOpen`) i wiersz „Tworzę lekcję…” na Dziś otwierają ekran postępu.
+2a. **Limit przed aparatem (Build 7, P1-12).** Arkusz „Dodaj materiał” pokazuje „Możesz utworzyć jeszcze X z Y lekcji w tym miesiącu · do N plików naraz” (hook `addSheet`). Przy 0 zamiast aparatu i pola tekstu jest arkusz „Limit na ten miesiąc wykorzystany” z datą odnowienia; w arkuszu [+] „Zrób zdjęcie”, „Wgraj plik” i „Wklej tekst” są wtedy przygaszone, pod aparatem „Nowe lekcje od 1 <miesiąca>”, a „Mam sprawdzian” działa normalnie (przegląd Build 7).
+3. **Zgoda na AI** (`consent`): tylko gdy nie ma ważnej zgody (`META.aiConsent` i `aiConsentV ≥ CONSENT_V`, brak `aiConsentV` = 1). Akceptacja zapisuje datę i wersję w `META` (więc synchronizuje się z kontem). Tekst wymienia „Claude firmy Anthropic (USA)” i miejsce wycofania.
 4. **Wybór plików** (`:203–209`):
    - zdjęcie: `accept=image/*`, `capture=environment`, jedno;
    - plik: wiele, `image/*`, PDF, `.txt`, `.md`, `.pptx`;
    - tekst: pole do 200 000 znaków, minimum 40 („Wklej trochę więcej…”).
-5. **Wstępne odrzucenia** (`addFiles`, `:219–230`):
-   - stare i biurowe formaty (`doc, docx, ppt, xls, xlsx, odt, pages, key`) → toast: dla `.ppt`/`.key` „zapisz jako PPTX lub PDF”, dla Worda, arkuszy i reszty tylko „zapisz jako PDF” (`cloud-ui.js:223`);
-   - typ spoza listy → odrzucony;
-   - plik (nie zdjęcie) >50 MB → toast i ostrzeżenie pod materiałem.
-6. **Ekran „Dodaj”** (`renderAdd`): miniatury, „+ Zdjęcie / + Plik / + Tekst”, „Gdzie dodać?” (istniejący przedmiot albo „Nowy przedmiot” z nazwą do 60 znaków), wskazówka do 300 znaków, przycisk **TWÓRZ LEKCJĘ**. Wyjście z niezapisanym materiałem pyta o potwierdzenie.
-7. **`runGeneration`** (`:279–305`):
-   1. `me()` (401 przerywa, inne błędy są ignorowane);
-   2. sprawdzenie limitu miesięcznego i liczby plików lokalnie;
+5. **Wstępne odrzucenia** (`addFiles`): komunikaty w treści ekranu „Dodaj materiał” (`#cfadd-err`), nie w znikającym toaście (Build 7, P1-23):
+   - stare i biurowe formaty (`doc, docx, ppt, xls, xlsx, odt, pages, key`) → z nazwą pliku: dla `.ppt`/`.key` „zapisz jako PPTX lub PDF”, dla Worda, arkuszy i reszty „zapisz jako PDF”;
+   - typ spoza listy → odrzucony z nazwą;
+   - plik (nie zdjęcie) >50 MB → odrzucony z rozmiarem;
+   - pliki ponad limit planu na lekcję → od razu pominięte z komunikatem (nie dopiero po TWÓRZ).
+6. **Ekran „Dodaj”** (`renderAdd`): linia limitu, „Materiał · x/5”, miniatury, „+ Zdjęcie / + Plik / + Tekst”, „Gdzie dodać?” (istniejące przedmioty z monogramem i pełną nazwą w 2 liniach albo „Nowy przedmiot” z nazwą do 60 znaków), wskazówka do 300 znaków, przycisk **TWÓRZ LEKCJĘ**. Wyjście z niezapisanym materiałem pyta o potwierdzenie.
+7. **TWÓRZ LEKCJĘ** → świeże `me()`; blokujące problemy (brak sieci, wygasła sesja, limit 0, za dużo plików) wychodzą w treści ekranu z zachowanym szkicem. Dopiero potem **`runGeneration`**:
+   1. (limity z `me()`; inny błąd `me()` niż sieć i 401 → limity sprawdzi serwer);
+   2. liczba plików wg planu;
    3. `prepareFiles`: zdjęcia zmniejszane do 1568 px, JPEG 0,82, na białym tle (usuwa EXIF); HEIC zamienia na JPEG **tylko tam, gdzie WebKit umie go zdekodować** (komentarz w kodzie: iOS 17+, `cloud.js:435`). Apka celuje w iOS 16.4, więc na iOS 16 `downscale()` zwraca `null` i plik HEIC kończy się `bad_type` z komunikatem „Zdjęcie w formacie HEIC” (`cloud.js:436`, `cloud-ui.js:350`). Zdjęcie nadal >5 MB → `file_too_big`;
    4. każdy plik ≤ `maxFileMb` (50 MB), razem ≤150 MB (tekst liczony w znakach);
-   5. nowy przedmiot: `createSubject` (nazwa „Nowy przedmiot”, w bazie domyślne emoji książki, którego apka nie pokazuje; kolor = liczba przedmiotów % 6). Etap: `META.level`, ale `podstawowka` jest wysyłana jako `inne` (`:214`);
-   6. wysyłka plików po kolei z postępem w bajtach (`uploadMaterial`, `cloud.js:450–458`): ścieżka `<uid>/<uuid>.<ext>`, TUS powyżej 6 MB, potem wiersz w `materials`. Gdy wiersz się nie zapisze, plik jest usuwany;
+   5. nowy przedmiot: `createSubject` (nazwa „Nowy przedmiot”, w bazie domyślne emoji książki, którego apka nie pokazuje; kolor = liczba przedmiotów % 6). Etap: `META.level`, ale `podstawowka` jest wysyłana jako `inne`. Build 7: trigger z `0008` (200 przedmiotów na konto) → `subject_limit`;
+   6. wysyłka plików po kolei z postępem w bajtach (`uploadMaterial`): ścieżka `<uid>/<uuid>.<ext>`, TUS powyżej 6 MB, potem wiersz w `materials`. Gdy wiersz się nie zapisze, plik jest usuwany. Build 7: dzienna blokada z `0008` (Storage RLS 403 „row-level security” albo 23514 `materials_daily_limit`) → `upload_daily_limit`;
    7. `generate()`;
-   8. **sprzątanie po błędzie:** każdy błąd poza zerwaniem połączenia po wysłaniu `POST` woła `discard()` (`cloud.js:459–463`, wywołanie w `cloud-ui.js:302`): usuwa wiersze `materials`, pliki ze Storage i nowo utworzony przedmiot, jeśli nie ma tematów.
+   8. **sprzątanie po błędzie:** każdy błąd poza zerwaniem połączenia po wysłaniu `POST` i poza wynikiem nieznanym woła `discard()`: usuwa wiersze `materials`, pliki ze Storage i nowo utworzony przedmiot — ale tylko gdy serwer potwierdzi, że przedmiot nie ma tematów (bez odpowiedzi serwera nic nie kasuje).
 8. **`generate()`** (`cloud.js:470–480`; `recoverJob` to `:481–497`):
    1. odczyt ostatniej generacji tego przedmiotu (do odzyskiwania);
-   2. **dziennik** `cf_job:<uid>` = `{subjectId, startedAt, materialIds, prevAt, prevOk, created, materials}`;
-   3. `POST /api/generate` z `{subjectId, materialIds, text?, options:{stage, subjectName?, mode:'materials', levels:4, locale:'pl', hint?, viz:true}}`;
-   4. błąd HTTP albo brak `topicId` → dziennik usunięty, błąd z kodem; odpowiedź bez `code` (np. HTML 504 Vercela) przy statusie ≥500 staje się `generation_failed`, inaczej `bad_request`;
+   2. **dziennik** `cf_job:<uid>` = `{subjectId, startedAt, materialIds, prevAt, prevOk, created, materials, known}` (`known` = id tematów przedmiotu sprzed próby, przegląd Build 7). Dziennik musi się zapisać (`jsetHard`); inaczej **bez POST** i błąd `storage_full` („Pełna pamięć aplikacji … Limit się nie zmienił”) — bez dziennika zerwane połączenie skończyłoby się `discard()` w trakcie opłaconej generacji;
+   3. `POST /api/generate` z `{subjectId, materialIds, text?, options:{stage, subjectName?, mode:'materials', levels:4, locale:'pl', hint?, viz:true, aiConsentV}}` (`levels` serwer Build 7 ignoruje; zostaje dla zgodności);
+   4. błąd HTTP z JSON-em → dziennik usunięty, błąd z kodem. **Build 7 (P1-4):** status ≥500 bez JSON-a (HTML 504 Vercela, ucięta odpowiedź) albo 2xx bez `topicId` = `unknown_outcome`: dziennik zostaje i rusza odzyskiwanie (nigdy `discard()` na ślepo);
    5. sukces → `topicId` do dziennika, `addTopic` (pobiera temat; jeśli przedmiot nazywa się dokładnie „Nowy przedmiot”, dostaje nazwę od AI);
    6. **bez automatycznego ponawiania.**
 
 **Na serwerze** (`nauka-backend/apps/web/src/app/api/generate/route.ts`)
 
-9. **Sprawdzenia przed kosztem** (route.ts i `packages/ai/src/intake.ts:54–91`), kolejno:
+9. **Sprawdzenia przed kosztem** (route.ts i `packages/ai/src/intake.ts`; od Build 7 całą sekwencję prowadzi `handleGenerationRequest()` w `packages/ai/src/pipeline.ts`), kolejno:
    1. konfiguracja → 503 `no_config`;
    2. sesja → 401 `unauthorized`;
    3. treść żądania (zod) → 400 `bad_request`;
@@ -715,21 +737,22 @@ Cramfox woła tylko dwa endpointy API (`/api/generate` i `/api/me`) i jedno RPC 
    9. pobranie plików z bucketu (po 3 naraz), prawdziwe rozmiary → `file_too_big` / `too_much_material`, błąd → 500 `download_failed`;
    10. rozpakowanie PPTX → `bad_pptx` / `pptx_protected` / `pptx_empty`;
    11. tekst łącznie >1 500 000 znaków → 400 `too_long`;
-   12. **pobranie limitu** (`increment_usage`) → 402 `limit_reached` albo 500 `reserve_failed`.
-10. **Wiersz `generations`** ze statusem `running`.
+   11a. **Build 7:** wgranie do Files API (błąd → 500 `reserve_failed` + `reason:"ai_upload"`) i `count_tokens` (>150 000 tokenów → 400 `too_long` z `tokens`, `maxTokens`) — wszystko **przed** naliczeniem. **Okno naliczenia:** najpóźniej 75 s po starcie żądania (`CHARGE_BY_MS`; sprawdzane przed wgraniem i drugi raz tuż przed naliczeniem), inaczej 500 `download_failed` + `reason:"slow_intake"` bez naliczenia. Powód: klient (build 6 i 7) uznaje brak wiersza `generations` po 90 s za „nie ruszyło” i sprząta przedmiot (jego zegar liczy też sieć i zimny start funkcji); AI ma wtedy co najmniej 195 s;
+   12. **pobranie limitu** — Build 7: RPC `reserve_generation` w jednej transakcji (blokada konta, potem globalna; 409 `busy`, gdy konto ma generację `queued`/`running` młodszą niż 5,5 min; limity dobowy 20, globalny 300 i miesięczny sprawdzane **przed** podbiciem licznika; globalny liczy większą z liczb: wiersze `generations` z doby albo `generation_ledger` — licznik bez powiązania z kontem, więc usuwanie kont go nie zeruje; wstawia wiersz `running`, wpis w `generation_ledger` i podbija `usage`) → 402 `limit_reached` albo 500 `reserve_failed`. Do Build 7: `increment_usage`, a wiersz `generations` dopiero potem.
+10. **Wiersz `generations`** ze statusem `running` (Build 7: wstawia go `reserve_generation`).
 11. **AI** (`packages/ai/src/generate.ts`):
     1. **Faza 0, pliki:** PDF zawsze przez Files API, zdjęcia przez Files API tylko, gdy razem >15 MB, tekst inline. Pliki w Anthropic wygasają po 2 h i są kasowane po generacji.
-    2. **Faza 1, plan (outline):** jedno wywołanie, maks. 8000 tokenów. Model dzieli materiał na poziomy (w trybie materiałów maks. `min(8, levels+2)`, czyli domyślnie 6) i każdemu przypisuje zakres (`scope`).
-    3. **Faza 2, poziomy:** wszystkie równolegle, po 2 wywołania na poziom: rdzeń (dawki, fiszki, quiz, gry; maks. 20 000 tokenów) i zadania (maks. 12 000). Nieudane zadania → `tasks: []`.
+    2. **Faza 1, plan (outline):** jedno wywołanie, maks. 8000 tokenów. Model dzieli materiał na poziomy (w trybie materiałów maks. `levels+2`; Build 7: `levels` zawsze 4, więc maks. 6) i każdemu przypisuje zakres (`scope`). Build 7: outline bez `cache_control` (nikt go nie czytał).
+    3. **Faza 2, poziomy:** po 2 wywołania na poziom: rdzeń (dawki, fiszki, quiz, gry; maks. 20 000 tokenów) i zadania (maks. 12 000). Build 7 (P1-2): najpierw rdzeń i zadania poziomu 1, pozostałe poziomy startują po pierwszych zdarzeniach ich strumieni (najwyżej 30 s), więc czytają wpisy cache zamiast pisać własne. Nieudane zadania → `tasks: []`.
     4. **Faza 3, review:** jedno wywołanie na poziom, równolegle, model `claude-sonnet-5`, 45 s, 8000 tokenów. Poprawia albo usuwa słabe pytania. Nigdy nie psuje generacji: przy błędzie zostaje oryginał.
-    5. **Faza 4, jakość:** statystyki pokrycia i jakości trafiają **tylko do logów**.
+    5. **Faza 4, jakość:** statystyki pokrycia i jakości trafiają do logów, a od Build 7 także do `generations.quality` (P1-3).
     6. **Faza 5, finalizacja:** id poziomów `l1..lN`, czyszczenie, tasowanie odpowiedzi, odrzucanie wadliwych elementów, schematy z kontrolą „ugruntowania” w tekście.
-12. **Zapis:** `TopicContentSchema.parse`, temat do `topics` (pozycja = liczba tematów przedmiotu), `generations` → `done` z modelem i tokenami. Odpowiedź `{generationId, topicId, topic, demo}`.
+12. **Zapis:** `TopicContentSchema.parse`, temat do `topics` (pozycja = liczba tematów przedmiotu), `generations` → `done` z modelem i tokenami. Build 7: temat i `done` w jednej transakcji (RPC `finish_generation`), z kolumnami kosztu (`opus_*`, `review_*`, `cost_usd`) i `quality`; błąd zapisu ma ogólny komunikat (szczegóły tylko w `generations.error`). Gdy `finish_generation` się zatwierdzi, a zginie tylko jego odpowiedź, trasa czyta wiersz `generations` (`done` + `topic_id`) i odpowiada 200 z tematem (przegląd Build 7). Sprzątanie Files API i zapis porażki dostają czas tylko do startu + 285 s (`RESPOND_BY_MS`), żeby JSON wyszedł przed 300 s. Odpowiedź `{generationId, topicId, topic, demo}`.
 
 **Znowu na telefonie**
 
-13. **Ekran postępu** (`renderGen` / `paintGen`, `cloud-ui.js:368–395`): pasek 4→20% w czasie wysyłki, potem `20 + 75·(1 − e^(−t/60))`; 5 etykiet kroków zmienianych co 24 s; odświeżanie co 900 ms; przycisk **DZIAŁAJ W TLE** wraca do Dziś.
-14. **Gotowe** (`renderReady`, `:399–421`): zmiana nazwy (z opóźnieniem 700 ms), 6 kolorów, lista nowych poziomów, **ZACZNIJ NAUKĘ** i „Mam z tego sprawdzian”. Przy trybie demo ostrzeżenie „tryb demo”.
+13. **Ekran postępu** (`renderGen` / `paintGen`): pasek 4→20% w czasie wysyłki, potem `20 + 75·(1 − e^(−t/60))`; 5 etykiet kroków zmienianych co 24 s; odświeżanie co 900 ms. **Build 7 (P1-22):** w fazie wysyłki „Nie zamykaj aplikacji, dopóki pliki się wysyłają.” i bez przycisku wyjścia; w fazie AI „Możesz zamknąć ten ekran — lekcja pojawi się na Dziś” i **WRÓĆ DO DZIŚ**; po 150 s „Duży materiał — jeszcze chwila · m:ss”. Na Dziś wiersz „Tworzę lekcję…” (hook `todayTop`) prowadzi z powrotem do ekranu postępu; nieudana próba poza ekranem postępu zostawia klikalny toast i kartę na Dziś z powodem i „WRÓĆ DO MATERIAŁU”.
+14. **Gotowe** (`renderReady`): zmiana nazwy (z opóźnieniem 700 ms), 6 kolorów, lista nowych poziomów, **ZACZNIJ NAUKĘ** (Build 7: od razu otwiera poziom 1 nowego materiału przez `openLevel`) i „Mam z tego sprawdzian”. Przy trybie demo ostrzeżenie „tryb demo”. Gotowa lekcja w tle → klikalny toast „Lekcja gotowa — dotknij, żeby zobaczyć” (8 s) i wiersz „Lekcja gotowa” na Dziś, dopóki ten ekran nie zostanie otwarty.
 15. **Nowy temat w istniejącym przedmiocie** dokleja poziomy na końcu ścieżki. Pierwszy z nich ma `chapter:true`, więc jest od razu odblokowany.
 
 ### 5.2 Odzyskiwanie przerwanej generacji
@@ -741,8 +764,9 @@ Gdy apka straci połączenie w trakcie albo zostanie zamknięta, dziennik `cf_jo
   - `done` z `topic_id` → `addTopic`, gotowe;
   - `failed` → `generation_failed`;
   - brak wiersza po 90 s → `not_started`;
-  - wiek >330 s → `lost`;
+  - wiek >330 s → Build 7: najpierw sprawdzenie, czy powstał temat **tej** generacji (`topics.generation_id` = id wiersza, z pominięciem tematów z `known`) — jeśli tak, jest brany; inaczej `lost`. (Przegląd Build 7: wcześniej brany był dowolny temat przedmiotu z ostatnich ~2 min, więc poprzedni materiał udawał nową lekcję.) Brak wiersza po 90 s pasuje do serwera, który nalicza najpóźniej 75 s po starcie żądania;
   - błędy sieci są tolerowane do 330 s (stan `offline`).
+  - Build 7: od strony serwera wiszące wiersze `running` starsze niż 8 min zamienia na `failed` sweeper w pg_cron (co 5 min), a termin 270 s sprawia, że funkcja odpowiada JSON-em, zanim Vercel ją zabije.
 
 Wyzwalacze: odświeżenie w tle, powrót do apki (`resume`, `visibilitychange`, maks. raz na 5 s), `online`.
 
@@ -755,8 +779,13 @@ Po `generation_failed`, `lost` i `not_started` z odzyskiwania UI woła `discard(
 | Limit | Wartość | Gdzie |
 |---|---|---|
 | Generacje na miesiąc | free 3, pro 150 (trial: pro przez 30 dni). Miesiąc kalendarzowy **UTC** (`monthKey`, `plans.ts:73–75`), więc odnawia się 1. dnia o 01:00 albo 02:00 czasu polskiego | `packages/shared/src/plans.ts:19–38`; RPC `increment_usage` |
-| Generacje na dobę, konto | 20 w **kroczącym oknie 24 h** (także dla pro; liczą się też nieudane), choć UI mówi „Spróbuj jutro” | `0004_cramfox.sql:103`; pre-check w route.ts:16 |
-| Generacje na dobę, cały serwer | 300 (też kroczące 24 h) | `0004_cramfox.sql:106` |
+| Generacje na dobę, konto | 20 w **kroczącym oknie 24 h** (także dla pro; liczą się też nieudane), choć UI mówi „Spróbuj jutro” | `0004_cramfox.sql:103`; Build 7: `reserve_generation` (0007), sprawdzane przed podbiciem licznika |
+| Generacje na dobę, cały serwer | 300 (też kroczące 24 h) | `0004_cramfox.sql:106`; Build 7: `reserve_generation` z blokadą globalną; liczy też `generation_ledger` (bez powiązania z kontem — usuwanie kont nie zeruje limitu) |
+| Równoległa generacja (Build 7) | najwyżej jedna `queued`/`running` młodsza niż 5,5 min (330 s) na konto → 409 `busy` (żądanie żyje ≤300 s, a klient ogłasza `lost` po 330 s) | `reserve_generation` (0007), `ACTIVE_GENERATION_WINDOW_MS` (`plan.ts`) |
+| Moment naliczenia (Build 7) | najpóźniej 75 s po starcie żądania, inaczej 500 `download_failed` + `slow_intake` bez naliczenia | `CHARGE_BY_MS`, `deadline.ts` |
+| Tokeny wejścia (Build 7) | ≤150 000 (`count_tokens` przed naliczeniem) → inaczej 400 `too_long` | `MAX_INPUT_TOKENS`, `generate.ts` |
+| Storage na konto (Build 7) | ≤100 nowych plików i ≤500 MB w kroczącej dobie (liczą się istniejące pliki) | polityka RESTRICTIVE, `0008_account_limits.sql` |
+| Wiersze na konto (Build 7) | 200 przedmiotów; 100 wierszy `materials` i 50 tematów na dobę; `topics.content` < 1 MB | triggery i CHECK, `0008_account_limits.sql` |
 | Pliki na generację | free 5, pro 20 | plan; klient i route.ts:65 |
 | `materialIds` w żądaniu | ≤50 | route.ts:23 (martwe, bo plan daje maks. 20) |
 | Rozmiar pliku | 50 MB | bucket (0005), plan, `MAX_FILE_MB` w `cloud-ui.js:13` |
@@ -767,8 +796,8 @@ Po `generation_failed`, `lost` i `not_started` z odzyskiwania UI woła `discard(
 | Obrazy na generację | 40 (20, gdy któreś zdjęcie >2000 px albo rozmiar nieznany), najpierw zdjęcia użytkownika | `materials.ts:221–223` |
 | Zdjęcia inline | do 15 MB razem; powyżej przez Files API | `materials.ts:18` |
 | PDF | >600 stron albo z hasłem → błąd API 4xx | komunikat w `failGen` |
-| Poziomy | klient prosi o 4; w trybie materiałów maks. `min(8, levels+2)` = 6 | `prompts.ts:83–86` |
-| Przedmioty | free 5 — **nigdzie nieegzekwowane** | `plans.ts`; `countOwnSubjects` nieużywane |
+| Poziomy | Build 7: zawsze 4 (`options.levels` ignorowane); w trybie materiałów maks. 6 | `GENERATION_LEVELS`, `prompts.ts` |
+| Przedmioty | free 5 — **nigdzie nieegzekwowane** (Build 7 ma tylko bezpiecznik 200 na konto) | `plans.ts`; `countOwnSubjects` nieużywane |
 
 **PPTX** (`packages/ai/src/pptx.ts`, `PPTX_LIMITS`, `:19–42`):
 
@@ -792,14 +821,18 @@ Ukryte slajdy są pomijane. Obrazy są deduplikowane (SHA-1). Czytane są tylko 
 |---|---|
 | Typowa generacja | ok. 2 min, synchronicznie |
 | Maks. czas funkcji `generate` na Vercelu | 300 s (`maxDuration`) |
-| Budżet całej generacji | `GENERATION_BUDGET_MS = 250 000` (**ogranicza tylko review**) |
+| Budżet całej generacji | do Build 7: `GENERATION_BUDGET_MS = 250 000` (**ogranicza tylko review**). **Build 7:** jeden termin `GENERATION_DEADLINE_MS = 270 000` od startu żądania jako `signal` każdego wywołania AI; `maxRetries` 1, gdy zostało >120 s, inaczej 0; generacja nie rusza (i nie nalicza) później niż 75 s po starcie żądania (`CHARGE_BY_MS`, czyli na AI zostaje ≥195 s; sprawdzane przed wgraniem do Files API i tuż przed naliczeniem). Po terminie: 500 `lost` + `reason:"ai_timeout"`. Sprzątanie i zapis porażki tylko do startu + 285 s (`RESPOND_BY_MS`) |
 | Review jednego poziomu | 45 s |
 | Klient czeka na odpowiedź API | 310 s (`readTimeout`) |
-| Klient Anthropic | timeout 10 min na próbę, `maxRetries: 2` (domyślne ponawianie SDK: 408, 409, 429, 5xx i błędy połączenia; `client.ts:12`). Jedno wywołanie może więc trwać dużo dłużej niż 300 s Vercela |
+| Klient Anthropic | do Build 7: timeout 10 min na próbę, `maxRetries: 2`, więc jedno wywołanie mogło trwać dużo dłużej niż 300 s Vercela. Build 7: czas próby = to, co zostało do terminu 270 s |
+| Rozgrzewka cache (Build 7) | pozostałe poziomy czekają na pierwsze zdarzenia strumieni poziomu 1 najwyżej 30 s (`WARM_UP_CAP_MS`) |
+| `count_tokens` (Build 7) | 20 s, 1 ponowienie |
+| Sweeper (Build 7) | pg_cron co 5 min: `running`/`queued` starsze niż 8 min → `failed` |
 | Pliki w Files API | wygasają po 7200 s |
 | Kasowanie plików z Files API | 10 s, 1 ponowienie |
 | Wysyłka do Storage | 180 s na żądanie albo kawałek TUS |
 | Odzyskiwanie | co 8 s; `not_started` po 90 s; `lost` po 330 s; dziennik ważny 24 h |
+| `/api/me` w kliencie (Build 7) | 15 s (wcześniej 310 s), cache do 60 s |
 
 ### 5.5 Modele i koszty
 
@@ -813,7 +846,7 @@ Parametry generowania (`callOnce`, `generate.ts:206–237`): beta `server-side-f
 
 **Liczba wywołań:** 1 + 3N (plan + rdzeń, zadania i review na poziom), czyli 13 przy 4 poziomach, 19 przy 6, 25 przy 8.
 
-**Koszt:** jedyna liczba w dokumentach to **ok. $0,15–0,40 za generację** (`nauka-backend/docs/DEPLOY.md:41`, 5 zdjęć, 4 poziomy). Pochodzi sprzed dwóch wywołań na poziom, review i większych limitów tokenów, więc jest **prawdopodobnie zaniżona — do sprawdzenia** w konsoli Anthropic. Kolumna `generations.input_tokens` sumuje tokeny z cache bez wag, więc nie nadaje się wprost do liczenia kosztu.
+**Koszt:** jedyna liczba w dokumentach to **ok. $0,15–0,40 za generację** (`nauka-backend/docs/DEPLOY.md:41`, 5 zdjęć, 4 poziomy). Pochodzi sprzed dwóch wywołań na poziom, review i większych limitów tokenów, więc jest **prawdopodobnie zaniżona — do sprawdzenia** w konsoli Anthropic. Kolumna `generations.input_tokens` sumuje tokeny z cache bez wag, więc nie nadaje się wprost do liczenia kosztu. **Build 7 (P1-3):** osobne kolumny `opus_input`, `opus_cache_write`, `opus_cache_read`, `opus_output`, `review_input`, `review_output`, `cost_usd` (z tabeli cen w `packages/ai/src/cost.ts`, z `usage.iterations`, gdy odpowiedział model zapasowy), zapisywane też przy `failed`; widok `generation_cost_daily`.
 
 **Tryb demo:** gdy na serwerze nie ma `ANTHROPIC_API_KEY` ani `ANTHROPIC_AUTH_TOKEN`, powstaje temat demo (model `"demo"`, `tagline` zaczyna się od „DEMO —”, `packages/ai/src/demo.ts:95`). Prefiks „DEMO · ” z `route.ts:126` dokleja się tylko, gdy w `tagline` nie ma „DEMO”, więc w praktyce się nie pojawia. Użytkownik widzi baner trybu demo na ekranie „Gotowe” (pole `demo`, `cloud-ui.js:404`). **Limit i tak jest pobierany.**
 
@@ -834,19 +867,19 @@ Parametry generowania (`callOnce`, `generate.ts:206–237`): beta `server-side-f
 
 **Nieudana generacja nie jest zwracana** (route.ts:148, celowo).
 
-**Twarde zabicie po 300 s.** `GENERATION_BUDGET_MS` ogranicza tylko review (`generate.ts:304`); plan i poziomy nie mają zegara. Gdy Vercel zabije funkcję:
+**Twarde zabicie po 300 s** (stan do Build 7; Build 7 ma termin 270 s, sweeper i odzyskiwanie po 504 — [5.4](#54-czasy), [5.2](#52-odzyskiwanie-przerwanej-generacji)). `GENERATION_BUDGET_MS` ogranicza tylko review; plan i poziomy nie mają zegara. Gdy Vercel zabije funkcję:
 - wiersz `generations` zostaje na zawsze `running`;
 - pliki w Files API nie są kasowane (wygasną po 2 h);
 - klient dostaje 504 bez JSON-a, zamienia go na `generation_failed` i **usuwa dziennik** (`cloud.js:476`), więc odzyskiwanie się nie uruchomi;
 - limit jest pobrany.
 
-**Dwie ścieżki błędu 500 bez `code`** (klient pokazuje je jako `generation_failed` z dopiskiem „Ta próba liczy się do miesięcznego limitu”):
+**Dwie ścieżki błędu 500 bez `code`** (do Build 7; w Build 7 pierwsza to `download_failed`, druga nie istnieje, bo wiersz wstawia `reserve_generation`; klient Build 7 dopisuje „liczy się do limitu” tylko przy `generationId`):
 - `route.ts:71`: błąd zapytania o `materials`, **przed** pobraniem limitu, więc dopisek jest tu nieprawdziwy;
 - `route.ts:120`: błąd wstawienia wiersza `generations`, **po** pobraniu limitu.
 
 ### 5.7 Kody błędów i co widzi użytkownik
 
-Komunikaty są w `failGen` (`cloud-ui.js:313–355`). „+limit” oznacza dopisek: „Ta próba liczy się do miesięcznego limitu.” Jeśli użytkownik nie jest na ekranie generowania, dostaje tylko toast „Nie udało się utworzyć lekcji — spróbuj ponownie”. Przycisk **WRÓĆ DO MATERIAŁU** jest wszędzie poza `limit_reached`, `unauthorized` i `no_session`.
+Komunikaty są w `failText` (`cloud-ui.js`). „+limit” oznacza dopisek: „Ta próba liczy się do miesięcznego limitu.” — od Build 7 tylko wtedy, gdy odpowiedź ma `generationId` (naliczenie potwierdzone przez serwer). Jeśli użytkownik nie jest na ekranie generowania, dostaje klikalny toast „Nie udało się utworzyć lekcji — dotknij, żeby zobaczyć” i kartę na Dziś. Przycisk **WRÓĆ DO MATERIAŁU** (szkic zachowany) jest wszędzie poza `unauthorized`, `no_session` i `unknown_outcome` — od Build 7 także przy `limit_reached`.
 
 | Kod | Skąd | Limit pobrany? | Tytuł w apce | Uwagi |
 |---|---|---|---|---|
@@ -857,31 +890,38 @@ Komunikaty są w `failGen` (`cloud-ui.js:313–355`). „+limit” oznacza dopis
 | `file_too_big` | klient, Storage 413, serwer 400 | nie | Plik jest za duży | z nazwą pliku i limitem MB |
 | `too_much_material` | klient albo serwer 400 | nie | Za dużo materiału naraz | „…do N MB…” (domyślnie 150) |
 | `upload_failed` | klient (Storage) | nie | Nie udało się wysłać pliku | |
+| `upload_daily_limit` | klient: Storage 403 „row-level security” albo 23514 `materials_daily_limit` (Build 7, `0008`) | nie | Na dziś wysłano już dużo plików | „…Spróbuj jutro albo dodaj mniej plików naraz. Limit lekcji się nie zmienił.” |
+| `subject_limit` | klient: 23514 `subject_limit` przy tworzeniu przedmiotu (Build 7, `0008`) | nie | Za dużo przedmiotów na koncie | „Dodaj ten materiał do jednego z istniejących przedmiotów.” |
+| `busy` | serwer 409 (Build 7) | nie | Tworzę już inną lekcję | „Poczekaj, aż skończę — zwykle ok. 2 minuty (mogła zacząć się na innym urządzeniu)…” |
 | `bad_type` | klient | nie | Nieobsługiwany format | wariant HEIC: „Zdjęcie w formacie HEIC” |
 | `bad_materials` | serwer 400 | nie | Nie mogę odczytać materiału | |
 | `no_input` | serwer 400 | tak (błąd z generowania) | Brak materiału | |
 | `bad_pptx` | serwer 400 | nie | Nie mogę otworzyć prezentacji | |
 | `pptx_protected` | serwer 400 | nie | Prezentacja jest zabezpieczona albo w starym formacie | |
 | `pptx_empty` | serwer 400 | nie | Prezentacja nie ma treści | |
-| `download_failed` | serwer 500 | nie | Nie udało się odczytać plików | |
-| `reserve_failed` | serwer 500 | nie | Serwer chwilowo nie działa | |
-| `too_long` | serwer 400 | zależy | Za dużo materiału na jedną lekcję | +limit, gdy odpowiedź ma `generationId`; inaczej „Limit się nie zmienił.” |
+| `download_failed` | serwer 500 | nie | Nie udało się odczytać plików | z `reason:"slow_intake"` (Build 7): „Przygotowanie materiału trwało za długo” (naliczenie później niż 75 s po starcie) |
+| `reserve_failed` | serwer 500 | nie | Serwer chwilowo nie działa | z `reason:"ai_upload"` (Build 7): „Nie udało się przekazać materiału do AI” |
+| `too_long` | serwer 400 | zależy | Za dużo materiału na jedną lekcję | Build 7: zwykle przed naliczeniem, z `tokens`/`maxTokens` → „To ok. N razy więcej, niż zmieści jedna lekcja. Podziel materiał na M części…” (przy przekroczeniu <1,5× „Materiał jest trochę za duży…”); +limit tylko z `generationId` |
 | `generation_failed` | serwer 500 albo odzyskiwanie | tak | AI nie dało rady z tym materiałem | +limit |
 | `refusal` | serwer 500 | tak | AI nie przetworzy tego materiału | +limit |
 | `invalid_output` | serwer 500 | tak | Nie dało się ułożyć lekcji | +limit |
 | `api` | serwer 500 | tak | Serwer AI jest przeciążony | +limit. Przy „AI: 4xx” (poza 429): „Tego materiału nie da się przetworzyć” (PDF >600 stron albo z hasłem) |
 | `not_started` | klient (odzyskiwanie) | nie (wyjątki niżej) | Lekcja nie zaczęła się tworzyć | Wiersz `generations` powstaje zaraz po pobraniu limitu (`route.ts:115`), więc brak wiersza zwykle znaczy, że limitu nie pobrano, i tekst „Limit się nie zmienił” (`cloud-ui.js:340`) jest prawdziwy. Wyjątki: nieudane wstawienie wiersza (`route.ts:120`, po pobraniu) i wyścig z [5.2](#52-odzyskiwanie-przerwanej-generacji) |
-| `lost` | klient (odzyskiwanie) | tak | Generowanie się nie dokończyło | +limit |
+| `lost` | klient (odzyskiwanie) albo serwer 500 (Build 7) | tak | Tworzenie lekcji się nie zakończyło | +limit. Z `reason:"ai_timeout"` (termin 270 s): „Tworzenie lekcji trwało za długo” |
+| `unknown_outcome` | klient (Build 7): ≥500 bez JSON-a albo 2xx bez `topicId` | nie wiadomo | Nie wiem, czy lekcja powstała | dziennik zostaje, rusza odzyskiwanie zamiast `discard()` |
+| `storage_full` | klient (przegląd Build 7): dziennik `cf_job` nie zapisał się w localStorage | nie | Pełna pamięć aplikacji | POST nie wychodzi; „…niczego nie wysłałem. Limit się nie zmienił. Uruchom aplikację ponownie…” |
 | `network`, `timeout` | klient | zależy od momentu | Brak połączenia | przy błędzie w trakcie `POST` dziennik zostaje i rusza odzyskiwanie |
 | `network_after_post` | klient | tak | | temat powstał, ale apka go nie pobrała; dziennik zostaje i odzyskiwanie go dociąga |
 | `not_found` | serwer 404 | nie | Nie ma już tego przedmiotu | |
 | `unauthorized`, `no_session` | serwer 401 / klient | nie | Sesja wygasła | |
 | `no_config` | serwer 503 | nie | Serwer chwilowo nie działa | |
 | `bad_request` | serwer 400 | nie | (domyślny) Coś poszło nie tak | |
-| nieznany, status ≥500 | | prawdopodobnie | Coś poszło nie tak po stronie serwera | +limit |
+| nieznany, status 402 | | nie | Limit wykorzystany | Build 7 |
+| nieznany, status 429 | | | Za dużo prób naraz | Build 7; +limit tylko z `generationId` |
+| nieznany, status ≥500 | | zależy | Coś poszło nie tak po stronie serwera | +limit tylko z `generationId` (Build 7) |
 | nieznany, inny | | | Coś poszło nie tak | |
 
-**Ukryty kontrakt:** apka rozpoznaje limit dzienny i globalny po wartościach `used` (999999 i 1999999). Zmiana tych liczb w backendzie wymaga zmiany w `cloud-ui.js:321–322`.
+**Ukryty kontrakt:** apka rozpoznaje limit dzienny i globalny po wartościach `used` (999999 i 1999999; w backendzie `DAILY_CAP_SENTINEL` i `GLOBAL_CAP_SENTINEL`, `pipeline.ts`). Zmiana tych liczb w backendzie wymaga zmiany w `failText` (`cloud-ui.js`). Atrapa backendu (`test/dev/mock-backend.js`) zna wszystkie kody Build 7 (`gen=err:KOD[:reason]`, `cap=storage|materials|subjects`).
 
 ---
 
@@ -1063,14 +1103,14 @@ Wspólne: autoryzacja `Authorization: Bearer <access_token z Supabase>` albo coo
 | `POST /api/generate` | Cramfox | 300 s | materiały → temat (sekcja [5](#5-tworzenie-przedmiotu-krok-po-kroku)) |
 | `GET /api/generate?id=` | (Cramfox odzyskuje inaczej, przez REST) | | `{status, topicId, error}`; 400 „Brak ?id”, 404 „Nie znaleziono” |
 | `GET /api/me` | Cramfox | | `{profile, plan, usage:{month, generations, tutorMessages}, limits, subscription}`. **`limits` zawiera ceny w PLN** — apka nie może ich pokazywać. `profile` (`lib/plan.ts:17`) ma `id, email, display_name, stage, plan, stripe_customer_id`, bez `trial_until`. |
-| `POST /api/tutor` | stary web | 60 s | czat z tutorem; limit free 30/dzień (jako 30 × dzień miesiąca). Konto na trialu przy limicie dostaje **500** zamiast 402 (wyjątek `tutor_cap`). Pobiera limit przed odpowiedzią, nie zwraca. |
+| `POST /api/tutor` | stary web | 60 s | czat z tutorem; limit free 30/dzień (jako 30 × dzień miesiąca). Konto na trialu przy limicie dostaje **500** zamiast 402 (wyjątek `tutor_cap`). Pobiera limit przed odpowiedzią, nie zwraca. **Build 7 (P1-1):** w produkcji 410 `tutor_disabled`, chyba że `TUTOR_ENABLED=1`. |
 | `POST /api/stripe/checkout` | stary web | | sesja Stripe Checkout; zły body → 500 zamiast 400 |
 | `POST /api/stripe/portal` | stary web | | portal rozliczeń; 400 `no_customer` |
 | `POST /api/stripe/webhook` | Stripe | | aktualizuje `subscriptions` i `profiles.plan`. Usunięcie subskrypcji konta na trialu od razu ustawia `free`. |
 
-**Treść `POST /api/generate`** (route.ts:20–31): `subjectId` (uuid), `materialIds` (≤50 uuid, domyślnie `[]`), `text?` (≤200 000), `options` (`stage` wymagane; `subjectName?` ≤80; `mode?` `materials|prompt`; `hint?` ≤2000; `levels?` 1–8; `lang?`; `locale?` `pl|en`; `viz?`). Tryb `materials` wymaga plików albo tekstu, tryb `prompt` wymaga `hint`.
+**Treść `POST /api/generate`** (route.ts:20–31): `subjectId` (uuid), `materialIds` (≤50 uuid, domyślnie `[]`), `text?` (≤200 000), `options` (`stage` wymagane; `subjectName?` ≤80; `mode?` `materials|prompt`; `hint?` ≤2000; `levels?` 1–8 — Build 7 ignoruje; `lang?`; `locale?` `pl|en`; `viz?`; `aiConsentV?` 1–999 — Build 7, tylko do `generations.options`, zła wartość pomijana bez błędu). Tryb `materials` wymaga plików albo tekstu, tryb `prompt` wymaga `hint`.
 
-**Odpowiedź 200:** `{generationId, topicId, topic, demo}`. **Błąd po pobraniu limitu:** `{error, code, generationId}`, HTTP 400 dla `no_input` i `too_long`, inaczej 500; wiersz `generations` dostaje `failed` z opisem do 2000 znaków.
+**Odpowiedź 200:** `{generationId, topicId, topic, demo}`. **Błąd po pobraniu limitu:** `{error, code, generationId}`, HTTP 400 dla `no_input` i `too_long`, inaczej 500; wiersz `generations` dostaje `failed` z opisem do 2000 znaków. **Nowe w Build 7:** 409 `busy` (bez naliczenia), 500 `lost` + `reason:"ai_timeout"` + `generationId` (termin 270 s), 400 `too_long` + `tokens`/`maxTokens` bez `generationId` (przed naliczeniem), 500 `reserve_failed` + `reason:"ai_upload"`, 500 `download_failed` + `reason:"slow_intake"` (oba bez naliczenia). Kształty dla buildu 6 bez zmian; pełna tabela: `nauka-backend/docs/API.md`.
 
 `proxy.ts` (middleware Next) odświeża cookie Supabase przy każdym żądaniu, także do API. Ma **otwarte przekierowanie** w `proxy.ts:39` (`/login?next=https://…`), ale dotyczy tylko weba.
 
@@ -1084,7 +1124,8 @@ Projekt Supabase `zhgxhdsnizujzygpcyfl` („nauka”), eu-central-1. Typy: `stag
 | `subjects` | owner_id, name, emoji, category, stage, accent, accent2, exam_date, exam_label, position | wszystko na swoich |
 | `topics` | subject_id (kaskada), owner_id, name, emoji, source (`materials`/`prompt`), **content jsonb**, generation_id, position | wszystko na swoich. **Klient może zapisać dowolny `content` bez walidacji**, dlatego `clean()` w apce jest obowiązkowe |
 | `materials` | owner_id, storage_path, mime, size_bytes (pisane przez klienta, niezaufane), name | wszystko na swoich; constraint `materials_path_owner` (`^<owner_id>/<uuid>.<ext>$`) jest **NOT VALID** (stare wiersze niesprawdzone) |
-| `generations` | owner_id, status, stage, hint, options, material_ids, subject_id, topic_id, error, model, input/output_tokens, created_at, finished_at | tylko SELECT swoich; pisze service role |
+| `generations` | owner_id, status, stage, hint, options, material_ids, subject_id, topic_id, error, model, input/output_tokens, created_at, finished_at; Build 7 (0007): `opus_input`, `opus_cache_write`, `opus_cache_read`, `opus_output`, `review_input`, `review_output`, `cost_usd`, `quality` | tylko SELECT swoich; pisze service role. Od 0008 klucz użytkownika czyta tylko kolumny `id, owner_id, status, stage, hint, options, material_ids, subject_id, topic_id, error, created_at, finished_at` (koszt, jakość, model i tokeny tylko dla serwera; `select=*` z kluczem użytkownika nie działa) |
+| `generation_ledger` (Build 7, 0007) | id, created_at — jeden wiersz na rezerwację, **bez** powiązania z kontem | RLS bez polityk, rolom API odebrane; liczy limit globalny 300/dobę (przeżywa usunięcie konta); wiersze >2 dni kasuje `reserve_generation` |
 | `usage` | (user_id, month `RRRR-MM`) PK, generations, tutor_messages | tylko SELECT; pisze tylko RPC `increment_usage` |
 | `app_state` (0004) | user_id PK, progress jsonb, meta jsonb, client_ts, rev, updated_at; CHECK rozmiar progress+meta < 2 000 000 B | wszystko na swoim (także DELETE) |
 | `subscriptions` | user_id PK, stripe_subscription_id, status, price_id, interval, current_period_end, cancel_at_period_end | SELECT swoje; pisze webhook |
@@ -1101,14 +1142,21 @@ Projekt Supabase `zhgxhdsnizujzygpcyfl` („nauka”), eu-central-1. Typy: `stag
 
 | RPC | Działanie | Dostęp |
 |---|---|---|
-| `increment_usage(p_user, p_month, p_field)` | `generations`: najpierw limity dobowe (≥20 wierszy `generations` konta w 24 h → zwraca **1000000**; ≥300 globalnie → **2000000**; licznik bez zmian), potem +1 i zwraca sumę miesięczną. Inne pole (tutor): na trialu bez subskrypcji przy ≥30 × dzień miesiąca → wyjątek `tutor_cap` | tylko service role |
+| `reserve_generation(...)` (Build 7, `0007`) | jedna transakcja: blokada doradcza konta, potem globalna; `busy` (generacja <5,5 min), limit dobowy 20, globalny 300 (większa z liczb: `generations` z doby albo `generation_ledger`) i miesięczny sprawdzane **przed** podbiciem; wstawia wiersz `running`, wpis w `generation_ledger`, potem `usage + 1` | tylko service role |
+| `finish_generation(...)` (Build 7) | temat do `topics` (pozycja max+1) i `generations` → `done` z kosztem i jakością w jednej transakcji; zwraca wiersz tematu | tylko service role |
+| `sweep_stale_generations()` (Build 7) | `running`/`queued` starsze niż 8 min → `failed` (bez zwrotu limitu — decyzja D4) | tylko service role / cron |
+| `materials_bucket_stats()` (Build 7) | rozmiar i liczba plików bucketu (alert) | tylko service role |
+| `materials_upload_allowed()` (Build 7, `0008`) | dla polityki RESTRICTIVE: <100 plików i <500 MB konta w 24 h | wołana przez politykę |
+| `increment_usage(p_user, p_month, p_field)` | (do Build 7 dla generacji; tutor nadal) `generations`: najpierw limity dobowe (≥20 wierszy `generations` konta w 24 h → zwraca **1000000**; ≥300 globalnie → **2000000**; licznik bez zmian), potem +1 i zwraca sumę miesięczną. Inne pole (tutor): na trialu bez subskrypcji przy ≥30 × dzień miesiąca → wyjątek `tutor_cap` | tylko service role |
 | `delete_my_account(p_dry_run)` | `not_authenticated`; `active_subscription` (active / trialing / past_due, także na próbę); `files_remaining` (pliki w `materials/<uid>/`, tylko na serio); potem `delete from auth.users` z kaskadą | tylko zalogowani |
 | `end_trials()` | pro → free po końcu `trial_until`, jeśli brak subskrypcji | nikt (tylko cron) |
 | `my_total_xp()`, `log_activity(...)`, `weekly_leaderboard(...)`, `my_weekly_rank()` | stara apka Recall | |
 
 **Wartości „sentinel”:** API zwraca 402 `limit_reached` z `used = wynik − 1`, czyli **999999** (limit konta) albo **1999999** (limit serwera). Apka rozpoznaje je po tych liczbach.
 
-**pg_cron:** jedno zadanie `cramfox-end-trials`, `15 * * * *` (co godzinę o :15), `select public.end_trials()`. Trial może więc trwać do ok. godziny dłużej.
+**pg_cron:** `cramfox-end-trials`, `15 * * * *` (co godzinę o :15), `select public.end_trials()` — trial może więc trwać do ok. godziny dłużej. Build 7: drugie zadanie `cramfox-sweep-generations` co 5 min (`sweep_stale_generations()`).
+
+**Triggery Build 7 (`0008`):** `cap_owner_rows` (BEFORE INSERT) na `subjects`, `materials`, `topics` → `enforce_owner_caps()`: 200 przedmiotów na konto, 100 wierszy `materials` i 50 tematów na dobę; błąd 23514 z nazwą limitu (`subject_limit`, `materials_daily_limit`, `topics_daily_limit`). CHECK `topics_content_size` (`pg_column_size(content) < 1000000`, NOT VALID). Polityka RESTRICTIVE `materials upload daily cap` na `storage.objects`. **Widok** `generation_cost_daily` (koszt dzienny, service role).
 
 ### 7.5 Plany i limity
 
@@ -1155,9 +1203,9 @@ Po stronie apki: `cloud-config.js` (URL Supabase, klucz anon, URL API; wszystko 
 
 ### 7.8 Znane problemy backendu
 
-1. **Brak zegara na planie i poziomach.** `GENERATION_BUDGET_MS` ogranicza tylko review, a SDK pozwala na 10 min na próbę i 2 ponowienia (także przy 408, 409 i błędach połączenia). Wolny plan albo poziom przekroczy 300 s Vercela: funkcja zostaje zabita, `finally` się nie wykona (pliki w Files API czekają 2 h), wiersz `generations` zostaje na zawsze `running`, a limit jest pobrany. Klient dostaje 504 bez JSON-a, kasuje dziennik i nie odzyskuje ([5.6](#56-co-psuje-generację-a-co-tylko-ją-zubaża)).
-2. Limit pobierany przed pracą, bez zwrotu (także w trybie demo).
-3. `quality` liczone, ale niezapisywane (tylko logi).
+1. **Brak zegara na planie i poziomach** (naprawione w Build 7: termin 270 s, sweeper, `finish_generation`; opis poniżej to stan buildu 6). `GENERATION_BUDGET_MS` ogranicza tylko review, a SDK pozwala na 10 min na próbę i 2 ponowienia (także przy 408, 409 i błędach połączenia). Wolny plan albo poziom przekroczy 300 s Vercela: funkcja zostaje zabita, `finally` się nie wykona (pliki w Files API czekają 2 h), wiersz `generations` zostaje na zawsze `running`, a limit jest pobrany. Klient dostaje 504 bez JSON-a, kasuje dziennik i nie odzyskuje ([5.6](#56-co-psuje-generację-a-co-tylko-ją-zubaża)).
+2. Limit pobierany przed pracą, bez zwrotu (także w trybie demo). Zwroty czekają na decyzję D4 (P1-33); outline `max_tokens` nadal 8000.
+3. ~~`quality` liczone, ale niezapisywane~~ — Build 7 zapisuje `generations.quality` i kolumny kosztu.
 4. `src.material` i `fromMaterial` nigdy niewypełniane.
 5. Komentarz o TTL plików mówi 1 h, wartość to 2 h; API.md mówi 3600.
 6. Branding „Recall” i emoji w etykietach ocen `inne`.
@@ -1167,7 +1215,10 @@ Po stronie apki: `cloud-config.js` (URL Supabase, klucz anon, URL API; wszystko 
 10. Limit 3 usunięć pytań na poziom tylko w prompcie.
 11. Martwy kod: `FIX_DISTRACTORS_PROMPT` (`prompts.ts:184`), `needsLengthFix` (`quiz-quality.ts:46`).
 12. Tutor: odpowiedź demo z emoji, prompt „luźno” (sprzeczne z tonem). Cramfox tutora nie używa.
-13. Dwie ścieżki 500 bez `code` (`route.ts:71` przed pobraniem limitu, `:120` po) i limit miesięczny sprawdzany po podbiciu licznika ([5.6](#56-co-psuje-generację-a-co-tylko-ją-zubaża), [7.5](#75-plany-i-limity)).
+13. Dwie ścieżki 500 bez `code` (`route.ts:71` przed pobraniem limitu, `:120` po) i limit miesięczny sprawdzany po podbiciu licznika ([5.6](#56-co-psuje-generację-a-co-tylko-ją-zubaża), [7.5](#75-plany-i-limity)) — naprawione w Build 7 (`download_failed`, `reserve_generation`).
+14. Build 7: stare tabele Recall (`progress`, `srs_cards` itd.) nadal bez limitów wierszy dla klienta — ryzyko rozmiaru bazy.
+15. Build 7: utworzenie polityki na `storage.objects` z `0008` przez CLI może się nie udać (rola nie jest właścicielem tabeli). Polityka jest ostatnią sekcją pliku; wtedy wkleić **cały** plik w SQL Editor (idempotentny) i sprawdzić wszystkie 4 sekcje zapytaniami z DEPLOY.md.
+16. Przegląd Build 7, odłożone: równoległe żądania jednego konta (skrypt) przechodzą pre-check `busy` i każde wgrywa pliki do Files API i liczy tokeny, zanim RPC zatrzyma wszystkie poza jednym. Nic nie kosztuje (wgranie i `count_tokens` są darmowe), ale seria może zużyć limity organizacji w Anthropic. Poprawka: lekki „zajęty” wpis przed pobraniem (razem z P2-42/P2-49).
 
 ---
 
@@ -1203,8 +1254,8 @@ Dodatkowo:
 |---|---|
 | `default-src` | `'none'` |
 | `script-src` | hashe sha256 czterech skryptów, **bez `unsafe-inline`** |
-| `style-src` | `'unsafe-inline' https://fonts.googleapis.com` |
-| `font-src` | `https://fonts.gstatic.com data:` |
+| `style-src` | `'unsafe-inline'` (Build 7: bez Google Fonts) |
+| `font-src` | `data:` (Build 7: fonty wbudowane jako WOFF w `data:`) |
 | `img-src` | `'self' data: blob:` |
 | `connect-src` | `'self'`, domena Supabase, domena API |
 | `base-uri`, `form-action`, `object-src` | `'none'` |
@@ -1215,7 +1266,7 @@ Dodatkowo:
 
 - Klucz anon jest publiczny; dostęp ogranicza RLS (każda tabela: tylko swoje wiersze). Wyjątek poza tabelami: stare RPC `weekly_leaderboard()` (Recall) jest `security definer` i pokazuje `display_name` i XP innych użytkowników, ale tylko tych z włączonym `show_on_leaderboard` (`0002_gamification.sql:49–65`).
 - `profiles`: użytkownik nie może sam zmienić `plan`, `stripe_customer_id` ani `trial_until` (polityka z 0004). **Ponowne uruchomienie 0001 albo 0002 na produkcji odtworzy politykę bez `trial_until`** ([9.4](#94-migracje-bazy)).
-- `usage`, `generations`: zapis tylko przez serwer.
+- `usage`, `generations`, `generation_ledger`: zapis tylko przez serwer. Od 0008 kolumny kosztu i jakości `generations` są niewidoczne dla kluczy użytkowników (uprawnienia kolumn).
 - `topics.content` można zapisać z klienta bez walidacji → ochroną jest `clean()`.
 - `materials.size_bytes` i `mime` pisze klient → serwer sprawdza prawdziwe rozmiary po pobraniu.
 - `materials_path_owner` jest NOT VALID, a API pobiera pliki kluczem service role. Plan wykładów (C9) zaleca dodatkowo sprawdzać w kodzie, że ścieżka zaczyna się od `uid/`.
@@ -1362,7 +1413,7 @@ Potem: Xcode → Window → Organizer → archiwum → Distribute App. Zapisz, k
   ```
 
 - Pułapki:
-  - migracje są w dwóch worktree (dwóch gałęziach) jednego repo: 0001–0003 w `nauka-backend/supabase/migrations/`, 0004–0006 w `nauka-app/backend/`. `supabase db push` z backendu **nie** da schematu Cramfoxa;
+  - migracje są w dwóch worktree (dwóch gałęziach) jednego repo: 0001–0003 w `nauka-backend/supabase/migrations/`, 0004–0008 w `nauka-app/backend/`. Build 7: **0007 (addytywna) przed backendem, 0008 (zaostrzająca) po sprawdzeniu buildu 6 na nowym backendzie** — kolejność i sprawdzenia w `nauka-backend/docs/DEPLOY.md`; lokalny test obu (`cd nauka-backend && npm run test:db`, tymczasowy Postgres); `supabase db push` z backendu **nie** da schematu Cramfoxa;
   - **nigdy nie uruchamiaj 0001–0003 ani `supabase db push` z `nauka-backend` na produkcji.** 0001 i 0002 odtwarzają politykę `"profiles self update"` bez sprawdzenia `trial_until` (`0001_init.sql:193–195`, `0002_gamification.sql:36–38`), więc użytkownik mógłby sam ustawić sobie trial do 2099 i zostać na pro. 0001 przywraca też `increment_usage` bez limitów 20/300 i bez `tutor_cap` (`0001_init.sql:233–249`) oraz `handle_new_user` bez triala. Po takim błędzie trzeba od razu wgrać ponownie 0004;
   - `0001_init.sql` został zmieniony na miejscu (limit 50 MB, PPTX). Baza, która już go wykonała, tego nie widzi; właściwą drogą są 0005 i 0006;
   - `reset_dev.sql` kasuje wszystko. **Nigdy na produkcji.**
@@ -1376,6 +1427,11 @@ Potem: Xcode → Window → Organizer → archiwum → Distribute App. Zapisz, k
 
 ### 9.5 Testy klienta
 
+- **Build 7: testy na atrapie backendu** (`test/dev/`, opis w `test/dev/README.md`; `cd test && npm install`):
+  - `node dev/shoot.mjs --out KATALOG` — wszystkie scenariusze i zrzuty (ok. 10 min), `INDEX.md` z problemami (błędy konsoli, emoji, przewijanie w poziomie, XSS, liczba `POST /api/generate` na próbę, pasek offline, żądania do Google Fonts);
+  - `node dev/checks/build7-engine.mjs` — regresje silnika Build 7 (egzamin P1-7, zmiana dnia P1-8, pasek offline, toasty, kontrast, „Wyjaśnij inaczej”, wznowienie lekcji, fiszki, nazwy);
+  - `node dev/checks/cloud-{auth,sync,gen,hooks,fonts,content}.mjs` — logowanie i linki prawne, strażnik synchronizacji (P1-6), generowanie i kody błędów (P1-4, P1-12, P1-22), hooki silnika, fonty i CSP w buildzie, emoji z treści AI i limity konta z `0008`.
+  Każdy skrypt sam stawia serwer plików i blokuje wszystko poza localhost.
 - **Harness jsdom opisany w README („Testy”) nie istnieje** (nigdzie w repo; jsdom był tylko w `node_modules` scratchpadu jednej sesji). Brak `harness.js`, `mockcloud.js`, `mkbuild.js`, brak `package.json` w katalogu głównym. W `test/` są tylko fixtures: `topic-viz.json`, `topic-makro.json`, `topic-krypto.json`, `topic-xss.json`. Opis w README jest historyczny.
 - Plan (C22 w planie wykładów): zbudować harness od zera w `test/`, z jsdom jako devDependency w `test/package.json`, poza `build.js`, z atrapą backendu i `CapacitorHttp`.
 - Do tego czasu: ręczne testy w symulatorze na prawdziwym backendzie. Lista z README:
@@ -1455,9 +1511,10 @@ Dodatkowo `design/nauka-2-0` ma 1 niewypchnięty commit.
 | Zabezpieczyć kod (commit i push obu worktree) | [9.6](#96-zabezpieczenie-kodu-zrób-to-jako-pierwsze) |
 | Wysłać build 6 do TestFlight | Organizer → Distribute App (najpierw Xcode → Settings → Accounts: zalogować Apple ID ponownie) |
 | Obejrzeć pierwszą prawdziwą generację po zmianach | schematy w czacie, liczba poziomów przy długim PDF-ie, jakość pytań i „Dlaczego” |
-| „Powiedz prościej” | **zatwierdzone przez właściciela, do zrobienia w buildzie 7:** pokazywać pole `real` (do 25 słów, innymi słowami niż dawka, bez nowych faktów) jako mały tekst do rozwinięcia pod dawką w czacie — nie jako osobny przycisk (stare przyciski „Prościej, proszę” / „Jak to zapamiętać?” zostały usunięte, bo irytowały). Przy okazji rozwiązuje to problem schematów opartych na liczbach tylko z `real` ([3.15](#315-znane-błędy-i-niespójności-w-silniku), pkt 7). |
+| „Powiedz prościej” | **zrobione w kodzie Build 7** (niewdrożone; [3.6](#36-quiz-panele-dobrze--źle-wyjaśnij-inaczej-poprawki)). Pierwotne założenie: pokazywać pole `real` (do 25 słów, innymi słowami niż dawka, bez nowych faktów) jako mały tekst do rozwinięcia pod dawką w czacie — nie jako osobny przycisk (stare przyciski „Prościej, proszę” / „Jak to zapamiętać?” zostały usunięte, bo irytowały). Przy okazji rozwiązuje to problem schematów opartych na liczbach tylko z `real` ([3.15](#315-znane-błędy-i-niespójności-w-silniku), pkt 7). |
 | Etap 2: nagrywanie wykładów | tylko plan, nic nie zaczęte ([11.1](#111-etap-2-nagrywanie-wykładów)) |
-| Naprawić błędy silnika | zwłaszcza `engine.js:3752` i `:3353` ([3.15](#315-znane-błędy-i-niespójności-w-silniku)) |
+| Naprawić błędy silnika | `engine.js:3752` i `:3353` naprawione w kodzie Build 7; reszta w [3.15](#315-znane-błędy-i-niespójności-w-silniku) |
+| Wdrożyć Build 7 | 0007 → backend → sprawdzenie buildu 6 na nowym backendzie → 0008 (cały plik, potem 5 zapytań sprawdzających) → apka (`nauka-backend/docs/DEPLOY.md`); przed zgłoszeniem do App Store uzupełnić `privacyUrl`, `termsUrl`, `supportEmail` w `cloud-config.js` (D1/D2) i zrobić `cd native && npm run sync` |
 
 ### 10.4 Dokumenty, które są nieaktualne
 
@@ -1549,9 +1606,9 @@ Kolejność: 1a schematy → 1b PPTX → 2a spike → 2b backend → 2c nagrywar
 ### 12.1 Język i ton
 
 - UI po polsku, rzeczowy i ciepły, bez młodzieżowego slangu. Ma pasować i 16-latkowi, i studentowi.
-- **Zero emoji w UI.** Emoji z AI są usuwane (`noEmoji`).
+- **Zero emoji w UI.** Emoji z AI są usuwane: `noEmoji` w tytułach i schematach, a od Build 7 także `stripEmoji` w `clean()` i w mapperze (`deepEsc`) dla całej treści tematu (P2-28; zostają symbole tekstowe jak ↔ © ™ ▶).
 - Przyciski główne wersalikami („TWÓRZ LEKCJĘ”, „ZACZNIJ NAUKĘ”), toasty krótkie („+4 XP”, „Nie tym razem”).
-- **Żadnych wzmianek o płatnościach, cenach, subskrypcji, „Pro”, „premium”, „zakupie”** (App Store 3.1.1). Trial to „na start większy limit”. Dziś jest jeden wyjątek do poprawy: komunikat o subskrypcji przy usuwaniu konta (`cloud-ui.js:184`, [4.2](#42-wylogowanie-i-usunięcie-konta)). Przy testach automatycznych użyj wyrażenia `/\bPro\b|płat|subskryp|premium|zakup/i` (proste `/Pro/` łapie „Prezentacja” i „prowadzącego”).
+- **Żadnych wzmianek o płatnościach, cenach, subskrypcji, „Pro”, „premium”, „zakupie”** (App Store 3.1.1). Trial to „na start większy limit”. Od Build 7 nie ma wyjątków (komunikat przy usuwaniu konta poprawiony, [4.2](#42-wylogowanie-i-usunięcie-konta)). Przy testach automatycznych użyj wyrażenia `/(?<!\p{L})Pro(?!\p{L})|płat|subskryp|premium|zakup/iu` — w JS `\b` nie zna polskich liter, więc dawne `/\bPro\b/` łapało „Prościej”, a proste `/Pro/` łapie „Prezentacja” i „prowadzącego”. W `build/nauka-all.html` z Build 7: 0 trafień.
 
 ### 12.2 Dane
 

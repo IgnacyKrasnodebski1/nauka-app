@@ -1,0 +1,9 @@
+/* Cramfox — fonty wbudowane (SIL Open Font License 1.1, fonts/OFL.txt). Bez Google Fonts: apka działa offline od pierwszego uruchomienia
+   i nie wysyła adresu IP do Google. Tylko używane grubości: Bricolage Grotesque 700/800 (nagłówki), Plus Jakarta Sans 500–800 (tekst).
+   Dev (index.html) czyta pliki TTF wprost; build.js wkleja je do build/nauka-all.html jako WOFF w data: (CSP font-src data:). */
+@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:700;font-display:block;src:url('BricolageGrotesque-700.ttf') format('truetype')}
+@font-face{font-family:'Bricolage Grotesque';font-style:normal;font-weight:800;font-display:block;src:url('BricolageGrotesque-800.ttf') format('truetype')}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:500;font-display:block;src:url('PlusJakartaSans-500.ttf') format('truetype')}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:600;font-display:block;src:url('PlusJakartaSans-600.ttf') format('truetype')}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:700;font-display:block;src:url('PlusJakartaSans-700.ttf') format('truetype')}
+@font-face{font-family:'Plus Jakarta Sans';font-style:normal;font-weight:800;font-display:block;src:url('PlusJakartaSans-800.ttf') format('truetype')}

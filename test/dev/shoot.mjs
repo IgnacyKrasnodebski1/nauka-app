@@ -5,7 +5,7 @@
    konto testowe z postępami, błędy generowania, offline, usuwanie konta, wąski ekran 360×780.
    Wynik: <out>/NN-nazwa.png + <out>/INDEX.md (plik → stan → jak dojść) + lista błędów z konsoli i automatycznych sprawdzeń.
 
-   Użycie (z katalogu test/):  npm install  →  node dev/shoot.mjs [--out KATALOG] [--only fresh,seeded,...] [--port 8790] [--headful] [--no-fonts]
+   Użycie (z katalogu test/):  npm install  →  node dev/shoot.mjs [--out KATALOG] [--only fresh,seeded,...] [--port 8790] [--headful]
    Chrome: /Applications/Google Chrome.app (albo --chrome ŚCIEŻKA / CHROME=…). Atrapa: test/dev/mock-backend.js — nic nie idzie do Supabase ani do API.
    Scenariusze: fresh, seeded, comeback, monday, errors, boot, nostore, xss, narrow, native (+ lesson4 do debugowania). SHOOT_DEBUG=1 = więcej logów. */
 import puppeteer from 'puppeteer-core';
@@ -23,7 +23,6 @@ const OUT=path.resolve(String(arg('out',process.env.SHOTS_DIR||path.join(HERE,'s
 const PORT=+arg('port',process.env.PORT||8790);
 const CHROME=String(arg('chrome',process.env.CHROME||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'));
 const ONLY=arg('only','')?String(arg('only')).split(','):null;
-const FONTS=!arg('no-fonts',false);
 const BASE=`http://localhost:${PORT}/test/dev/`;
 const DEBUG=!!process.env.SHOOT_DEBUG;
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
@@ -65,10 +64,10 @@ async function newRun(name,query,o={}){
   const run={name,page,ctx,w,h,prefix:o.prefix||'',last:''};
   page.on('request',r=>{const u=r.url();
     if(/^(data|blob):/.test(u)||/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(u))return r.continue();
-    if(FONTS&&/^https:\/\/fonts\.(googleapis|gstatic)\.com\//.test(u))return r.continue();
-    if(!/fonts\.(googleapis|gstatic)/.test(u))issue(run,'blocked-request',u.slice(0,140)); // produkcja nigdy: Supabase/API zatrzymuje atrapa, a to jest druga siatka
+    if(/fonts\.(googleapis|gstatic)/.test(u))issue(run,'google-fonts-request',u.slice(0,140)); // Build 7: fonty są wbudowane (fonts/), apka nie może pytać Google (AUDYT P1-27)
+    else issue(run,'blocked-request',u.slice(0,140)); // produkcja nigdy: Supabase/API zatrzymuje atrapa, a to jest druga siatka
     r.abort();});
-  page.on('console',m=>{const t=m.type();if(t!=='error'&&t!=='warning')return;const tx=m.text();if(/favicon|fonts\.g/.test(tx))return;
+  page.on('console',m=>{const t=m.type();if(t!=='error'&&t!=='warning')return;const tx=m.text();if(/favicon/.test(tx))return;
     if(/Failed to load resource: net::ERR_FAILED|ERR_INTERNET_DISCONNECTED/.test(tx)&&run.offline)return;issue(run,'console.'+t,tx.slice(0,400));});
   page.on('pageerror',e=>issue(run,'pageerror',String(e&&e.stack||e).slice(0,600)));
   page.on('dialog',async d=>{issue(run,'native-dialog',d.type()+': '+d.message());await d.dismiss().catch(()=>{});});
@@ -129,7 +128,7 @@ async function shot(run,name,state,how){
   const chk=await run.page.evaluate(()=>{
     const W=innerWidth,out={emoji:[],wide:[],docWide:document.documentElement.scrollWidth>W+1};
     const txt=[...document.querySelectorAll('#app, #sheet, .netbar')].map(e=>e.innerText||'').join('\n');
-    out.emoji=[...new Set((txt.match(/\p{Extended_Pictographic}/gu)||[]))].slice(0,12);
+    out.emoji=[...new Set((txt.match(/[\u{1F000}-\u{1FAFF}]|\p{Emoji_Presentation}|\p{Extended_Pictographic}\uFE0F/gu)||[]))].slice(0,12); // jak stripEmoji() w cloud.js: ↔ © ™ to tekst
     const scrollX=e=>{for(let p=e.parentElement;p;p=p.parentElement){const cs=getComputedStyle(p);if(/(auto|scroll|hidden|clip)/.test(cs.overflowX))return true;}return false;};
     document.querySelectorAll('#app *').forEach(e=>{if(out.wide.length>=4)return;const r=e.getBoundingClientRect();if(!r.width||!r.height||r.right<=W+2)return;const cs=getComputedStyle(e);
       if(cs.visibility==='hidden'||cs.display==='none'||+cs.opacity===0||cs.position==='fixed')return;if(scrollX(e))return;if(!e.childNodes.length||![...e.childNodes].some(n=>n.nodeType===3&&n.nodeValue.trim()))return;
@@ -360,7 +359,10 @@ SCEN.fresh=async()=>{
   await typeIn(r,'#cf-email','nowa.osoba@cramfox.test');await typeIn(r,'#cf-pass','haslo-testowe-1');
   await tap(r,'#cf-go');await shot(r,'auth-error-age','Rejestracja: błąd 16+ (bez zaznaczenia wieku); lis zasłania oczy przy haśle','E-mail i hasło bez checkboxa');
   await tap(r,'#cf-privacy');await shot(r,'privacy-sheet','Arkusz „Twoje dane w Cramfox” (7 punktów)','Logowanie → „Jak przetwarzamy Twoje dane”');await tap(r,'#cfp-ok');
+  await tap(r,'#cf-show');await shot(r,'auth-show-password','Rejestracja: „Pokaż hasło” — hasło widoczne','Przycisk „Pokaż hasło”');await tap(r,'#cf-show');
   await tap(r,'#cf-age');await tap(r,'#cf-go',null,{settle:100});
+  await waitFor(r,'#askok');await shot(r,'auth-confirm-email','Przed założeniem konta: „Sprawdź adres e-mail” (literówki nie da się później naprawić)','ZAŁÓŻ KONTO z poprawnym formularzem');
+  await tap(r,'#askok',null,{settle:100});
   await waitFor(r,'.levelpick',null,15000);
   await shot(r,'levelpick','Pierwsze uruchomienie, krok 1: „Na jakim etapie jesteś?” (nic nie wybrane, DALEJ nieaktywne)','Po rejestracji (przeładowanie)');
   await tap(r,'.obopt[data-level="studia"]');await shot(r,'levelpick-selected','Krok 1: wybrany etap „Studia” i cele','Wybór „Studia”');
@@ -374,15 +376,13 @@ SCEN.fresh=async()=>{
   await fill(r,'.cfadd-body input.cfin:last-of-type','tylko instrumenty polityki społecznej');
   await shot(r,'add-material-filled','„Dodaj materiał” z podpowiedzią „Na czym się skupić?”','Wpisana podpowiedź');
   await tap(r,'#cfadd-go',null,{settle:1500});
-  await shot(r,'generating-start','Tworzenie lekcji: start (pasek, kroki, „DZIAŁAJ W TLE”)','TWÓRZ LEKCJĘ (atrapa: gen=slow:30)');
+  await shot(r,'generating-start','Tworzenie lekcji: faza AI (pasek, kroki, „Możesz zamknąć ten ekran…”, WRÓĆ DO DZIŚ)','TWÓRZ LEKCJĘ (atrapa: gen=slow:30)');
   await sleep(26000);await shot(r,'generating-progress','Tworzenie lekcji po ~27 s: kolejny krok zaznaczony, pasek ~55%','Czekanie na AI');
   await waitFor(r,'#cfr-name',null,20000);
   await shot(r,'subject-ready','„Lekcja gotowa”: nazwa od AI, kolor, nowe poziomy, ZACZNIJ NAUKĘ / „Mam z tego sprawdzian”','Koniec generowania');
   const log=await mockLog(r);const posts=log.filter(x=>x.startsWith('POST /api/generate')).length;
   if(posts!==1)issue(r,'generate-retry',`POST /api/generate wywołany ${posts} razy przy jednym „TWÓRZ LEKCJĘ”`);
-  await tap(r,'.cfadd-foot .pill.a-glow');await waitFor(r,'.pathview');
-  await shot(r,'subject-path','Ścieżka nowego przedmiotu: poziom 1 do zrobienia, reszta zablokowana, skrzynia, boss','„Lekcja gotowa” → ZACZNIJ NAUKĘ');
-  await tap(r,'.node-open');await waitFor(r,'#lesson.open .chat');
+  await tap(r,'.cfadd-foot .pill.a-glow');await waitFor(r,'#lesson.open .chat'); // P1-22: ZACZNIJ NAUKĘ od razu otwiera poziom 1 nowego materiału
   await chatThrough(r);
   const res=await lessonQuiz(r,{wrong:1});
   if(res==='done'){
@@ -419,8 +419,8 @@ SCEN.fresh=async()=>{
   await shot(r,'settings-new-account','Ustawienia nowego konta: „Nowe lekcje 1 z 150 · na start większy limit, jeszcze 30 dni”','Profil → Ustawienia');
   await tap(r,'.topbar .backbtn');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await waitFor(r,'#set-logout');
   await tap(r,'#set-logout');await waitFor(r,'#askok');await tap(r,'#askok',null,{settle:100});
-  await waitFor(r,'#cf-go',null,15000);await shot(r,'after-logout','Po wylogowaniu: ekran logowania (dane lokalne skasowane)','Ustawienia → Wyloguj → Wyloguj');
-  const left=await r.page.evaluate(()=>Object.keys(localStorage).filter(k=>!k.startsWith('mockbe:')&&k!=='cf_legacy_cleared')); // cf_legacy_cleared: globalny znacznik, nie dane konta
+  await waitFor(r,'#cf-go',null,15000);await shot(r,'after-logout','Po wylogowaniu: ekran logowania na zakładce „Zaloguj się” (dane lokalne skasowane)','Ustawienia → Wyloguj → Wyloguj');
+  const left=await r.page.evaluate(()=>Object.keys(localStorage).filter(k=>!k.startsWith('mockbe:')&&k!=='cf_legacy_cleared'&&k!=='cf_seen')); // cf_legacy_cleared, cf_seen: znaczniki urządzenia, nie dane konta
   if(left.length)issue(r,'logout-leftovers','Po wylogowaniu w localStorage zostało: '+left.join(', '));
   await closeRun(r);
 };
@@ -458,7 +458,7 @@ SCEN.seeded=async()=>{
   await tap(r,'.rvrun .flip');await shot(r,'review-card-back','Powtórka: fiszka odwrócona (definicja)','Stuknięcie fiszki');
   let rq=false;
   for(let k=0;k<20;k++){if(await has(r,'#rvmain'))break;
-    if(await has(r,'#rvyes')){await tap(r,k%3===1?'#rvno':'#rvyes',null,{settle:420});continue;}
+    if(await has(r,'#rvyes')){if(!(await has(r,'.rvrun .flip.flipped')))await tap(r,'.rvrun .flip',null,{settle:950});await tap(r,k%3===1?'#rvno':'#rvyes',null,{settle:420});continue;} // P1-17: ocena dopiero po odwróceniu
     if(await has(r,'.rvrun .quiz')){if(!rq){rq=true;await shot(r,'review-quiz','Powtórka: pytanie z quizu (bez serc i combo)','Po fiszkach w sesji');}
       await solve(r,{wrong:k%2===0});await sheetAfter(r);await tap(r,'#snext',null,{settle:420});continue;}
     await sleep(300);}
@@ -468,7 +468,7 @@ SCEN.seeded=async()=>{
   await tap(r,'.setrow','Polityka');await waitFor(r,'#subjscreen .flip');await shot(r,'flashcards','Fiszki przedmiotu: filtr poziomów, licznik, karta','Fiszki → przedmiot');
   await tap(r,'#subjscreen .flip');await shot(r,'flashcards-back','Fiszka odwrócona','Stuknięcie karty');
   await tap(r,'.chips .chip','Podstawy');
-  for(let k=0;k<12&&!(await has(r,'.fdone'));k++)await tap(r,k%3===2?'.fbtn.no':'.fbtn.yes',null,{settle:420});
+  for(let k=0;k<12&&!(await has(r,'.fdone'));k++){if(!(await has(r,'#subjscreen .flip.flipped')))await tap(r,'#subjscreen .flip',null,{settle:950});await tap(r,k%3===2?'.fbtn.no':'.fbtn.yes',null,{settle:420});}
   await waitFor(r,'.fdone');await shot(r,'flashcards-done','Koniec talii: % umiem, „Wracają dziś”, POWTÓRZ TE N','Przejście talii „Podstawy”');
   // ścieżka, skrzynia, info
   await tap(r,'.subtab','Ścieżka');await waitFor(r,'.pathview');await shot(r,'path-progress','Ścieżka w trakcie: 3 zaliczone (gwiazdki), bieżący poziom 4, skrzynia do otwarcia','Przedmiot → Ścieżka');
@@ -540,15 +540,22 @@ SCEN.seeded=async()=>{
   await shot(r,'no-hearts','Koniec żyć: licznik, „Powtórz 10 fiszek”, „Uzupełnij wszystkie” za gemy','Węzeł poziomu przy 0 sercach (stan ustawiony w localStorage)');
   await tap(r,'#nhgems',null,{settle:100});await shot(r,'no-hearts-refilled','Życia uzupełnione za 50 gemów (toast)','Koniec żyć → Uzupełnij wszystkie');
   // duch: powtórka zaliczonego dziś poziomu
-  try{await tap(r,'.nodebtn.node-done[aria-label*="Polska: demografia"]');await waitFor(r,'#lesson.open .chat');await chatThrough(r,{shots:false,endShot:false,vizShots:false});
+  try{await tap(r,'.nodebtn.node-done[aria-label*="Polska: demografia"]');await waitFor(r,'#lesson.open .quiz, #lesson.open .task'); // P1-11: powtórka zaliczonego poziomu od pytań
     await waitFor(r,'.ghostcard',null,8000);await sleep(1200);await shot(r,'lesson-ghost','Powtórka poziomu: wyścig z duchem (własny najlepszy przebieg)','Ścieżka → zaliczony dziś poziom → czat → pytania');
-    await tap(r,'#lesson .lessonhead .x');}catch(e){FAILS.push('seeded/duch: '+e.message);}
+    if(await has(r,'#lreread'))await shot(r,'lesson-replay-reread','Powtórka zaliczonego poziomu: od pytań, „Przeczytaj jeszcze raz” nad pierwszym pytaniem','Ścieżka → zaliczony poziom');
+    await solve(r);await sheetAfter(r);await tap(r,'#snext');
+    await tap(r,'#lesson .lessonhead .x');
+    if(await has(r,'#toast.show','Miejsce zapisane'))await shot(r,'lesson-left-saved','Wyjście z lekcji (X): „Miejsce zapisane — dokończysz z węzła na ścieżce”','X w trakcie pytań');
+    if(await has(r,'.bubble.resume')){await r.page.evaluate(()=>{const b=document.querySelector('.bubble.resume');if(b)b.scrollIntoView({block:'center'});});await shot(r,'path-resume-bubble','Ścieżka: węzeł z dymkiem „DOKOŃCZ” (zapisana przerwana lekcja)','Po wyjściu z lekcji');
+      await tap(r,'.nodebtn[aria-label^="Dokończ"]');if(await has(r,'#sheet')){await shot(r,'lesson-resume-sheet','Arkusz „Dokończyć lekcję?” (Od nowa / DOKOŃCZ)','Węzeł „DOKOŃCZ”');await tap(r,'#sheet .pill','DOKOŃCZ');await waitFor(r,'#lesson.open .quiz, #lesson.open .task');await tap(r,'#lesson .lessonhead .x');}}
+    else UNREACHED.push('seeded: po wyjściu z lekcji nie pojawił się dymek „DOKOŃCZ” na ścieżce');
+  }catch(e){FAILS.push('seeded/duch: '+e.message);}
   // plecak: zakup
   await tap(r,'.brow .streak.gems');await waitFor(r,'#shop-freeze');await tap(r,'#shop-freeze .buy',null,{settle:150});await shot(r,'shop-bought','Plecak: kupione zamrożenie (toast, gemy w górę)','Plecak → Zamrożenie serii');
   await tap(r,'.topbar .backbtn');await tap(r,'.brow .backbtn');
   // zdjęcie strony → istniejący przedmiot → generowanie w tle
-  await mockSet(r,'upload','slow');
-  await waitFor(r,'.plan');await tap(r,'.navplus');await shot(r,'quickadd-sheet-seeded','Arkusz „Dodaj materiał” (konto z przedmiotami)','[+]');
+  await mockSet(r,'upload','slow');await mockSet(r,'gen','slow:18'); // czas na Dziś z wierszem „Tworzę lekcję…” i [+] → ekran postępu
+  await waitFor(r,'.plan');await tap(r,'.navplus');await waitFor(r,'#cf-qa-quota');await shot(r,'quickadd-sheet-seeded','Arkusz „Dodaj materiał” z limitem: „Możesz utworzyć jeszcze X z Y lekcji…”','[+]');
   await chooseFiles(r,'#qa-photo',[path.join(ASSETS,'strona-podrecznika.png')]);await waitFor(r,'#cfadd-go');
   await tap(r,'.cfwhere .obopt','Polityka');await shot(r,'add-photo','„Dodaj materiał”: miniatura zdjęcia, wybrany istniejący przedmiot','[+] → Zrób zdjęcie (wybór pliku)');
   await tap(r,'.cfthumb-x');await shot(r,'add-photo-removed','„Dodaj materiał” po usunięciu zdjęcia (pusty materiał)','Usunięcie miniatury');
@@ -556,9 +563,11 @@ SCEN.seeded=async()=>{
   await shot(r,'add-files','„Dodaj materiał”: PDF 7 MB + zdjęcie','„+ Plik” (wybór dwóch plików)');
   await tap(r,'#cfadd-go',null,{settle:900});await shot(r,'generating-upload','Tworzenie lekcji: wysyłka pliku (MB z MB; PDF > 6 MB idzie kawałkami TUS)','TWÓRZ LEKCJĘ (upload=slow)');
   await waitFor(r,'.cfstep.cur',null,20000);await shot(r,'generating-ai','Tworzenie lekcji: faza AI','Po wysłaniu plików');
-  await tap(r,'.cfadd-foot .pill.ghost');await waitFor(r,'.plan');await shot(r,'generating-background-today','Dziś w trakcie generowania w tle','DZIAŁAJ W TLE');
+  await tap(r,'.cfadd-foot .pill.ghost');await waitFor(r,'.plan');await waitFor(r,'#cf-today-genrow');await shot(r,'generating-background-today','Dziś w trakcie generowania w tle: wiersz „Tworzę lekcję…”','WRÓĆ DO DZIŚ');
+  await tap(r,'.navplus');await waitFor(r,'.cfgen');await shot(r,'generating-plus-opens-progress','[+] w trakcie tworzenia lekcji otwiera ekran postępu','Dziś → [+]');await tap(r,'#cfgen-bg');await waitFor(r,'.plan');
   const tl=await mockLog(r);if(!tl.some(x=>x.startsWith('PATCH /storage/v1/upload/resumable')))issue(r,'tus','Plik 7 MB nie poszedł przez TUS (brak PATCH /upload/resumable)');
-  await waitFor(r,'#toast.show','Lekcja gotowa',30000);await shot(r,'generation-done-toast','Toast „Lekcja gotowa: …” po generowaniu w tle','Czekanie na koniec generowania');
+  await waitFor(r,'#toast.show','Lekcja gotowa',30000);await shot(r,'generation-done-toast','Klikalny toast „Lekcja gotowa — dotknij, żeby zobaczyć” po generowaniu w tle','Czekanie na koniec generowania');
+  await tap(r,'#toast.show');await waitFor(r,'#cfr-name');await shot(r,'generation-done-from-toast','Toast → ekran „Lekcja gotowa”','Stuknięcie toastu');await tap(r,'.topbar .backbtn');await waitFor(r,'.plan');
   await tap(r,'.subjtile','Polityka');await waitFor(r,'.pathview');await scrollBy(r,'.pathview','end');await shot(r,'path-new-chapter','Ścieżka po dodaniu materiału: nowy rozdział na końcu (pierwszy poziom od razu odblokowany)','Dziś → Polityka');
   // usunięcie konta (atrapa)
   await tap(r,'.brow .backbtn');await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await tap(r,'#set-delete');
@@ -586,10 +595,13 @@ const GEN_ERRORS=[
   ['err:refusal','err-refusal','Odmowa modelu'],
   ['err:invalid_output','err-invalid-output','Nie dało się ułożyć lekcji'],
   ['err:api','err-api-overloaded','Serwer AI przeciążony'],
-  ['err:too_long','err-too-long','Za dużo materiału na jedną lekcję (pobrany limit)'],
+  ['err:too_long','err-too-long','Za dużo materiału (400 przed naliczeniem, tokens/maxTokens → „ok. 3 razy więcej”)'],
   ['err:reserve_failed','err-reserve-failed','Naliczenie limitu się nie udało'],
+  ['err:reserve_failed:ai_upload','err-reserve-ai-upload','Pliki nie dotarły do AI (reserve_failed + reason ai_upload, bez naliczenia)'],
+  ['err:download_failed:slow_intake','err-slow-intake','Przygotowanie materiału trwało za długo (download_failed + slow_intake)'],
+  ['err:lost:ai_timeout','err-ai-timeout','Termin 270 s (lost + reason ai_timeout, po naliczeniu)'],
+  ['err:busy','err-busy','Na serwerze trwa już inna generacja (409 busy)'],
   ['err:no_config','err-no-config','Serwer bez konfiguracji (503)'],
-  ['html504','err-vercel-504','504 bez JSON (Vercel zabił funkcję) → generation_failed'],
   ['err:bad_request','err-unknown-400','Błąd 400 bez znanego kodu → „Coś poszło nie tak”']
 ];
 SCEN.errors=async()=>{
@@ -604,11 +616,24 @@ SCEN.errors=async()=>{
       await waitFor(r,'.plan',null,8000);
     }catch(e){FAILS.push(`errors/${name}: ${e.message}`);await go(r,'mock=seeded');}
   }
-  // limit sprawdzony w kliencie (z /api/me), zanim cokolwiek zostanie wysłane
-  try{await mockSet(r,'gen','ok');await mockSet(r,'used','150');await addTextMaterial(r);const n0=(await mockLog(r)).length;await tap(r,'#cfadd-go');await waitFor(r,'.errv',null,10000);
-    await shot(r,'err-limit-client','Limit miesięczny wykryty w kliencie (/api/me: 150 z 150) — bez tworzenia przedmiotu','used=150 → TWÓRZ LEKCJĘ');
+  // limit sprawdzony w kliencie (z /api/me), zanim cokolwiek zostanie wysłane — komunikat w treści ekranu, szkic zostaje (P1-12)
+  try{await mockSet(r,'gen','ok');await mockSet(r,'used','150');await addTextMaterial(r);const n0=(await mockLog(r)).length;await tap(r,'#cfadd-go');await waitFor(r,'#cfadd-err','Limit',10000);
+    await shot(r,'err-limit-client','Limit miesięczny wykryty w kliencie (/api/me: 150 z 150) — komunikat na ekranie „Dodaj materiał”, szkic zostaje','used=150 → TWÓRZ LEKCJĘ');
     const lg=await mockLog(r);if(lg.slice(n0).some(x=>x.startsWith('POST /rest/v1/subjects')||x.startsWith('POST /api/generate')))issue(r,'limit-client','Przy wyczerpanym limicie klient i tak utworzył przedmiot albo wywołał generowanie');
-    await tap(r,'.errfoot .pill');await mockSet(r,'used','');}catch(e){FAILS.push('errors/limit-client: '+e.message);}
+    await mockSet(r,'used','');await r.page.evaluate(()=>NAUKA_CLOUD.me().catch(()=>{})); // świeży limit w pamięci klienta (cache ~60 s)
+    await tap(r,'.topbar .backbtn');if(await has(r,'#askok'))await tap(r,'#askok');await waitFor(r,'.plan');}catch(e){FAILS.push('errors/limit-client: '+e.message);}
+  // limity konta z backend/0008 (bez naliczenia): przedmioty i dzienna wysyłka plików
+  try{await mockSet(r,'cap','subjects');await addTextMaterial(r);await tap(r,'#cfadd-go');await waitFor(r,'.errv',null,10000);
+    await shot(r,'err-subject-limit','Limit przedmiotów na koncie (23514 subject_limit) → „Dodaj do istniejącego przedmiotu”','cap=subjects → Nowy przedmiot → TWÓRZ LEKCJĘ');
+    await tap(r,'.errfoot .pill','WRÓĆ DO MATERIAŁU');await waitFor(r,'#cfadd-go');await tap(r,'.topbar .backbtn');if(await has(r,'#askok'))await tap(r,'#askok');await waitFor(r,'.plan');
+    await mockSet(r,'cap','storage');await tap(r,'.navplus');await chooseFiles(r,'#qa-photo',[path.join(ASSETS,'strona-podrecznika.png')]);await waitFor(r,'#cfadd-go');
+    await tap(r,'.cfwhere .obopt','Polityka');await tap(r,'#cfadd-go');await waitFor(r,'.errv',null,10000);
+    await shot(r,'err-upload-daily-cap','Dzienny limit wysyłki plików (Storage RLS 403) → „Na dziś wysłano już dużo plików”','cap=storage → zdjęcie → TWÓRZ LEKCJĘ');
+    await mockSet(r,'cap','materials');await tap(r,'.errfoot .pill','WRÓĆ DO MATERIAŁU');await tap(r,'#cfadd-go');await waitFor(r,'.errv',null,10000);
+    const t2=await r.page.evaluate(()=>document.querySelector('.errv').innerText);if(!/dużo plików/.test(t2))issue(r,'cap-materials','23514 materials_daily_limit nie dał komunikatu o dziennym limicie plików: '+t2.slice(0,120));
+    const leftObj=await r.page.evaluate(()=>Object.keys(MOCK.db().objects).filter(k=>Date.parse(MOCK.db().objects[k].at)>Date.now()-60000).length);if(leftObj)issue(r,'cap-orphans',`Po odmowie wiersza materials zostało ${leftObj} plików w Storage`);
+    await mockSet(r,'cap','');await tap(r,'.errfoot .pill','WRÓĆ DO MATERIAŁU');await tap(r,'.topbar .backbtn');if(await has(r,'#askok'))await tap(r,'#askok');await waitFor(r,'.plan');}
+  catch(e){FAILS.push('errors/caps: '+e.message);await mockSet(r,'cap','').catch(()=>{});await go(r,'mock=seeded');}
   // plik za duży (serwer, z nazwą pliku) i błąd wysyłki
   try{await mockSet(r,'gen','err:file_too_big');await tap(r,'.navplus');await chooseFiles(r,'#qa-file',[path.join(ASSETS,'notatki-wyklad.pdf')]);await waitFor(r,'#cfadd-go');
     await shot(r,'add-pdf','„Dodaj materiał” z plikiem PDF (miniatura pliku)','[+] → Wgraj plik');
@@ -629,16 +654,17 @@ SCEN.errors=async()=>{
   catch(e){FAILS.push('errors/drop: '+e.message);await go(r,'mock=seeded');}
   // offline: pasek, błąd przy dodawaniu, pasek po powrocie sieci
   try{await mockSet(r,'gen','ok');r.offline=true;await r.page.setOfflineMode(true);await settle(r,400);
-    await shot(r,'offline-banner','Brak sieci: pasek „Brak sieci — nauka działa dalej…”','Tryb offline (navigator.onLine=false + zdarzenie offline)');
-    await addTextMaterial(r);await tap(r,'#cfadd-go');await waitFor(r,'.errv',null,15000);await shot(r,'err-network','Tworzenie lekcji bez sieci: „Brak połączenia”','Offline → TWÓRZ LEKCJĘ');
+    await shot(r,'offline-banner','Brak sieci: pasek „Brak sieci — postępy wyślą się później” w jednej linii, nad treścią (nie zasłania górnego paska)','Tryb offline (navigator.onLine=false + zdarzenie offline)');
+    await addTextMaterial(r);await tap(r,'#cfadd-go');await waitFor(r,'#cfadd-err','Brak połączenia',15000);await shot(r,'err-network','Tworzenie lekcji bez sieci: „Brak połączenia…” na ekranie „Dodaj materiał” (materiał zostaje)','Offline → TWÓRZ LEKCJĘ');
     await r.page.setOfflineMode(false);r.offline=false;await settle(r,1200);
     const stuck=await r.page.evaluate(()=>{const b=document.getElementById('netbar');return !!b&&b.classList.contains('on');});
-    await shot(r,'online-again','Sieć wróciła: czy pasek „Brak sieci” zniknął?','setOfflineMode(false) → zdarzenie online');
+    await shot(r,'online-again','Sieć wróciła: pasek „Brak sieci” zniknął, toast „Sieć wróciła”','setOfflineMode(false) → zdarzenie online');
     if(stuck)issue(r,'BUG netbar',"Pasek „Brak sieci” zostaje po zdarzeniu 'online' (nasłuch online/resize w komentarzu, engine.js:3752)");
-    await tap(r,'.errfoot .pill','Wróć',{exact:true}).catch(()=>{});}
+    await tap(r,'.topbar .backbtn').catch(()=>{});if(await has(r,'#askok'))await tap(r,'#askok');}
   catch(e){FAILS.push('errors/offline: '+e.message);}
   // każde „TWÓRZ LEKCJĘ” = najwyżej jedno POST /api/generate (CLAUDE.md: bez automatycznego ponawiania)
-  try{const posts=(await mockLog(r)).filter(x=>x.startsWith('POST /api/generate')).length;const want=GEN_ERRORS.length+3;
+  try{const posts=(await mockLog(r)).filter(x=>x.startsWith('POST /api/generate')).length;const want=GEN_ERRORS.length+3; // + file_too_big, drop, dropfail (limit, limity konta, 413/500 i offline nie dochodzą do generowania)
+    if(posts!==want)issue(r,'generate-count',`POST /api/generate: ${posts} wywołań, oczekiwane dokładnie ${want} (jedno na próbę)`);
     NOTES.push(`errors: POST /api/generate wywołany ${posts} razy przy ${want} próbach, które doszły do generowania`);
     if(posts>want)issue(r,'generate-retry',`POST /api/generate: ${posts} wywołań przy ${want} próbach`);}catch(e){}
   // wylogowanie z niewysłanymi postępami
@@ -671,8 +697,9 @@ SCEN.boot=async()=>{
   await typeIn(r,'#cf-email','test@cramfox.test');await typeIn(r,'#cf-pass','zle-haslo');await tap(r,'#cf-go');await waitFor(r,'#cf-err','Zły',8000);
   await shot(r,'auth-wrong-password','Logowanie: „Zły e-mail albo hasło.”','Złe hasło');
   await tap(r,'.cftab','Załóż konto');await typeIn(r,'#cf-email','test@cramfox.test');await typeIn(r,'#cf-pass','cramfox-test-1');await tap(r,'#cf-age');await tap(r,'#cf-go');
+  if(await has(r,'#askok'))await tap(r,'#askok'); // „Sprawdź adres e-mail” (P1-21)
   await waitFor(r,'#cf-err','istnieje',8000);await shot(r,'auth-user-exists','Rejestracja na istniejący e-mail: „To konto już istnieje — zaloguj się.”','Załóż konto z e-mailem konta testowego');
-  await mockSet(r,'signup','confirm');await typeIn(r,'#cf-email','inna.osoba@cramfox.test');await tap(r,'#cf-go');await waitFor(r,'#cf-err','potwierdzenia',8000);
+  await mockSet(r,'signup','confirm');await typeIn(r,'#cf-email','inna.osoba@cramfox.test');await tap(r,'#cf-go');if(await has(r,'#askok'))await tap(r,'#askok');await waitFor(r,'#cf-err','potwierdzenia',8000);
   await shot(r,'auth-needs-confirm','Rejestracja wymagająca potwierdzenia e-maila (nieobsługiwana)','signup=confirm');
   await tap(r,'.cftab','Zaloguj się');await typeIn(r,'#cf-email','test@cramfox.test');await typeIn(r,'#cf-pass','cramfox-test-1');await tap(r,'#cf-go',null,{settle:100});
   await waitFor(r,'.cfsplash',null,15000);await shot(r,'splash-loading','Logowanie na nowym urządzeniu: „Wczytuję Twoje przedmioty…”','Poprawne logowanie (lat=1500)');
@@ -681,12 +708,14 @@ SCEN.boot=async()=>{
   r=await newRun('boot-free','mock=seeded&reset=1&trial=-2&used=3');
   await waitFor(r,'.plan');await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await waitFor(r,'#set-plan');await settle(r,600);
   await shot(r,'settings-free-plan','Karta „Konto” po okresie próbnym: „3 z 3 w tym miesiącu · odnawia się 1. dnia miesiąca”','trial=-2, used=3');
-  await addTextMaterial(r);await tap(r,'#cfadd-go');await waitFor(r,'.errv',null,10000);
-  await shot(r,'err-limit-free','Plan free: limit 3 z 3 wyczerpany (sprawdzone w kliencie)','trial=-2, used=3 → TWÓRZ LEKCJĘ');
+  await tap(r,'.topbar .backbtn');await nav(r,'Dziś');await waitFor(r,'.plan');
+  await tap(r,'.navplus');await waitFor(r,'#cf-qa-quota');await shot(r,'quickadd-limit-free','Arkusz [+] przy wyczerpanym limicie: „…wykorzystany (3 z 3). Odnowi się 1 …”','trial=-2, used=3 → [+]');
+  await tap(r,'#qa-text');await waitFor(r,'#cflim-ok');await shot(r,'err-limit-free','Plan free: limit 3 z 3 — arkusz „Limit na ten miesiąc wykorzystany” zamiast aparatu i tekstu','[+] → Wklej tekst');
+  await tap(r,'#cflim-ok');
   await closeRun(r);
   r=await newRun('boot-delete','mock=seeded&reset=1&del=active_subscription');
-  await waitFor(r,'.plan');await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await tap(r,'#set-delete');await tap(r,'#cfdel-go');await waitFor(r,'#cfdel-err','subskrypc',10000);
-  await shot(r,'delete-account-error','Usuwanie konta zablokowane: aktywna subskrypcja „kupiona poza aplikacją”','del=active_subscription');
+  await waitFor(r,'.plan');await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await tap(r,'#set-delete');await tap(r,'#cfdel-go');await waitFor(r,'#cfdel-err','automatycznie',10000);
+  await shot(r,'delete-account-error','Usuwanie konta odrzucone przez serwer: „Nie możemy teraz usunąć tego konta automatycznie…” (bez słowa o płatnościach)','del=active_subscription');
   await closeRun(r);
 };
 
@@ -746,11 +775,11 @@ SCEN.monday=async()=>{
 /* 10) Zablokowany localStorage (tryb prywatny / zablokowane dane witryn) */
 SCEN.nostore=async()=>{
   const r=await newRun('nostore','mock=fresh&reset=1&nostore=1');
-  await waitFor(r,'#cf-go');await shot(r,'storebar','localStorage zablokowany: pasek „Postępy nie zapisują się na tym urządzeniu…”','nostore=1 (zapisy apki rzucają QuotaExceededError)');
+  await waitFor(r,'#cf-go');await shot(r,'storebar','localStorage zablokowany: pasek pamięci w jednej linii („Więcej”, ×)','nostore=1 (zapisy apki rzucają QuotaExceededError)');
   await typeIn(r,'#cf-email','prywatny@cramfox.test');await typeIn(r,'#cf-pass','haslo-testowe-1');await tap(r,'#cf-age');await tap(r,'#cf-go',null,{settle:100});
   await sleep(2500);await waitFor(r,'#cf-go',null,10000);
-  await shot(r,'storebar-after-signup','Po rejestracji bez localStorage: sesja nie przetrwała przeładowania — znowu ekran logowania','ZAŁÓŻ KONTO przy nostore=1');
-  if(await has(r,'#cf-go'))issue(r,'nostore-login-loop','Bez działającego localStorage logowanie/rejestracja kończy się przeładowaniem i powrotem do ekranu logowania (sesja tylko w pamięci, location.reload ją gubi) — bez komunikatu');
+  await shot(r,'storebar-after-signup','Rejestracja bez localStorage: komunikat „Ta przeglądarka nie pozwala zapisać logowania…” zamiast pętli','ZAŁÓŻ KONTO przy nostore=1');
+  if(await has(r,'#cf-go')&&!(await has(r,'#cf-err','nie pozwala zapisać')))issue(r,'nostore-login-loop','Bez działającego localStorage logowanie/rejestracja kończy się przeładowaniem i powrotem do ekranu logowania (sesja tylko w pamięci, location.reload ją gubi) — bez komunikatu');
   await closeRun(r);
 };
 
@@ -767,7 +796,7 @@ const KNOWN_UNREACHED=[ // ekrany/stany, których ten skrypt świadomie nie poka
   'Ekran „Silnik zatrzymał się przy starcie” (engine.js start → renderError): wymaga wyjątku w start(); fixProgress/fixMeta czyszczą każdy zapisany stan, więc żadne realne dane go nie wywołują.',
   'Zadanie „Wskaż na schemacie” (hotspot): dane z chmury zawsze dostają type:_skip (cloud.js TASK_OK) — celowo nieosiągalne.',
   'Gry językowe (Wpisywanie, Klocki, Pary słówek): produkcja nigdy nie ustawia lang (BIBLIA §3.7); pokazane tylko z parametrem atrapy lang=1.',
-  'Odzyskiwanie: not_started (≥ 90 s bez wiersza generations) i lost (> 330 s) — za długie na zrzuty; failed i udane odzyskanie są pokazane.',
+  'Odzyskiwanie: not_started (≥ 90 s bez wiersza generations) i lost (> 330 s) — za długie na zrzuty; failed i udane odzyskanie są pokazane. 504 bez JSON → odzyskiwanie zamiast porażki: dev/checks/cloud-gen.mjs.',
   'Pozostałe kody błędów generowania (too_many_files, too_much_material, bad_materials, bad_pptx, pptx_protected, pptx_empty, download_failed, not_found, unauthorized): ten sam szablon ekranu, osiągalne przez gen=err:KOD.',
   'HEIC na iOS 16 („Zdjęcie w formacie HEIC”): Chrome dekoduje obrazy inaczej niż WebKit iOS 16 — do sprawdzenia w symulatorze.',
   'Rzeczy natywne: aparat i Pliki iOS, safe area, zdarzenia resume/pause, timeouty CapacitorHttp — tylko symulator/urządzenie.',
@@ -777,7 +806,7 @@ const KNOWN_UNREACHED=[ // ekrany/stany, których ten skrypt świadomie nie poka
 function writeIndex(t0){
   const L=[];
   L.push('# Cramfox — zrzuty ekranów (atrapa backendu)','',`Wygenerowano: ${new Date().toISOString()} · czas: ${Math.round((Date.now()-t0)/1000)} s · ${SHOTS.length} zrzutów · viewport 375×812 @2x (dotyk, prefers-reduced-motion), część 360×780.`,
-    '',`Skrypt: \`test/dev/shoot.mjs\` · atrapa: \`test/dev/mock-backend.js\` · strona: \`test/dev/index.html\`. Nic nie trafia do Supabase ani do API (atrapa podmienia fetch; Chrome blokuje wszystko poza localhost i Google Fonts).`,'');
+    '',`Skrypt: \`test/dev/shoot.mjs\` · atrapa: \`test/dev/mock-backend.js\` · strona: \`test/dev/index.html\`. Nic nie trafia do Supabase ani do API (atrapa podmienia fetch; Chrome blokuje wszystko poza localhost — także Google Fonts, bo fonty są wbudowane).`,'');
   let sc='';
   L.push('| Plik | Stan | Jak dojść |','|---|---|---|');
   SHOTS.forEach(s=>{if(s.scenario!==sc){sc=s.scenario;L.push(`| **${sc}** | | |`);}L.push(`| ${s.file} | ${s.state.replace(/\|/g,'\\|')} | ${s.how.replace(/\|/g,'\\|')} |`);});
