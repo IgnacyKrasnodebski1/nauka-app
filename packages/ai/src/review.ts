@@ -1,4 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import type { UsageMeter } from "./cost.js";
+import { observeStream, type StreamObserver } from "./deadline.js";
 import { z } from "zod";
 import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import {
@@ -278,12 +280,32 @@ function parseJson(text: string): unknown {
 export async function reviewLevel<L extends ReviewableLevel>(
   client: Anthropic,
   level: L,
-  ctx: { stage: Stage; lang?: boolean; title?: string; timeoutMs?: number; /** viz mode: review visuals too (keep_viz) */ viz?: boolean },
+  ctx: {
+    stage: Stage;
+    lang?: boolean;
+    title?: string;
+    timeoutMs?: number;
+    /** viz mode: review visuals too (keep_viz) */
+    viz?: boolean;
+    /** the generation deadline: aborting it aborts the review call too */
+    signal?: AbortSignal;
+    /** SDK retries for the review call (default 1; the generation passes 0 when the deadline is near) */
+    maxRetries?: number;
+    /** collects the call's tokens (also of an aborted call) for the generation's cost */
+    meter?: UsageMeter;
+  },
 ): Promise<LevelReview<L>> {
   const usage = { input: 0, output: 0 };
   const keep = (error: string): LevelReview<L> => ({ level, reviewed: false, error, stats: { ...ZERO_STATS }, usage });
   const controller = new AbortController();
+  const onOuterAbort = () => controller.abort();
+  if (ctx.signal) {
+    if (ctx.signal.aborted) controller.abort();
+    else ctx.signal.addEventListener("abort", onOuterAbort, { once: true });
+  }
   let timer: ReturnType<typeof setTimeout> | undefined;
+  let observer: StreamObserver | null = null;
+  let recorded = false;
   try {
     const viz = ctx.viz === true;
     if (!level.quiz.length && !level.tasks?.length && !level.feed.some((f) => f.mnemo.trim() || f.real.trim() || (viz && hasViz(f)))) return keep("nothing to review");
@@ -303,21 +325,22 @@ export async function reviewLevel<L extends ReviewableLevel>(
     const schema = viz ? ReviewOutputVizSchema : ReviewOutputSchema;
     const parseSchema = viz ? ReviewParseVizSchema : ReviewParseSchema;
 
-    const call = client.beta.messages
-      .stream(
-        {
-          model: reviewModelId(),
-          max_tokens: REVIEW_MAX_TOKENS,
-          // No server-side `fallbacks` here: `fallbacks: "default"` is documented for Opus 5 / Fable, not verified on
-          // Sonnet 5, and a 400 would silently disable every review. A refusal already just keeps the original level.
-          thinking: { type: "adaptive" },
-          output_config: { effort: "low", format: betaZodOutputFormat(schema) },
-          system: viz ? `${REVIEW_QUESTIONS_PROMPT}\n\n${REVIEW_VIZ_RULES}` : REVIEW_QUESTIONS_PROMPT,
-          messages: [{ role: "user", content: prompt }],
-        },
-        { signal: controller.signal, maxRetries: 1 },
-      )
-      .finalMessage();
+    if (controller.signal.aborted) return keep("no time left");
+    const stream = client.beta.messages.stream(
+      {
+        model: reviewModelId(),
+        max_tokens: REVIEW_MAX_TOKENS,
+        // No server-side `fallbacks` here: `fallbacks: "default"` is documented for Opus 5 / Fable, not verified on
+        // Sonnet 5, and a 400 would silently disable every review. A refusal already just keeps the original level.
+        thinking: { type: "adaptive" },
+        output_config: { effort: "low", format: betaZodOutputFormat(schema) },
+        system: viz ? `${REVIEW_QUESTIONS_PROMPT}\n\n${REVIEW_VIZ_RULES}` : REVIEW_QUESTIONS_PROMPT,
+        messages: [{ role: "user", content: prompt }],
+      },
+      { signal: controller.signal, maxRetries: ctx.maxRetries ?? 1 },
+    );
+    observer = observeStream(stream);
+    const call = stream.finalMessage();
     const deadline = new Promise<never>((_, reject) => {
       timer = setTimeout(() => {
         // reject first, so the race settles with the timeout and not with the abort error it triggers
@@ -328,6 +351,8 @@ export async function reviewLevel<L extends ReviewableLevel>(
     const msg = (await Promise.race([call, deadline])) as Anthropic.Beta.BetaMessage & { parsed_output?: unknown };
     usage.input = msg.usage.input_tokens + (msg.usage.cache_read_input_tokens ?? 0) + (msg.usage.cache_creation_input_tokens ?? 0);
     usage.output = msg.usage.output_tokens;
+    ctx.meter?.record("review", msg.usage, msg.model || reviewModelId());
+    recorded = true;
     if (msg.stop_reason === "refusal" || msg.stop_reason === "max_tokens") return keep(`stop_reason ${msg.stop_reason}`);
     const text = msg.content
       .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
@@ -338,8 +363,15 @@ export async function reviewLevel<L extends ReviewableLevel>(
     const { level: next, stats } = applyReview(level, parsed.data);
     return { level: next, reviewed: true, stats, usage };
   } catch (e) {
+    // a timed-out / aborted / failed call may still have been billed: cost what the stream reported
+    const last = observer?.lastUsage();
+    if (!recorded && last) {
+      ctx.meter?.recordPartial("review", last.usage, last.model || reviewModelId());
+      recorded = true;
+    }
     return keep((e as Error)?.message || "review failed");
   } finally {
     clearTimeout(timer);
+    ctx.signal?.removeEventListener("abort", onOuterAbort);
   }
 }

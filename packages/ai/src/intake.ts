@@ -27,6 +27,11 @@ export interface IntakeDeps<R> {
   precheck?: () => Promise<IntakeFailure | null>;
   /** Download one material's bytes. */
   download: (row: IntakeRow) => Promise<Uint8Array>;
+  /**
+   * Last check before the charge, with the prepared materials (the generate route uploads them to the Files API and
+   * counts their tokens here). Return a failure to stop; nothing is charged.
+   */
+  measure?: (materials: MaterialInput[], stats: PreparedStats) => Promise<IntakeFailure | null>;
   /** Charge the generation. Runs only once every material is downloaded and readable. */
   reserve: () => Promise<ReserveResult<R>>;
   /** Override of the per-generation image cap (tests). */
@@ -60,7 +65,8 @@ export const TOO_LONG_MESSAGE = "Materiał jest za duży na jedną lekcję (za d
  *      (400 `file_too_big` / `too_much_material`; the `size_bytes` column is written by the client);
  *   4. {@link prepareMaterials} — PPTX → text + images (400 `bad_pptx` / `pptx_protected` / `pptx_empty`);
  *   5. text budget (400 `too_long`) — would otherwise fail at the AI after the charge;
- *   6. reserve (charge) the generation.
+ *   6. `measure` (optional): Files API upload + token count (400 `too_long` above the token budget);
+ *   7. reserve (charge) the generation.
  */
 export async function intakeMaterials<R>(rows: IntakeRow[], deps: IntakeDeps<R>): Promise<IntakeResult<R>> {
   const bad = rows.find((r) => !isUploadMime(r.mime));
@@ -84,6 +90,11 @@ export async function intakeMaterials<R>(rows: IntakeRow[], deps: IntakeDeps<R>)
   }
 
   if (stats.textChars + (deps.pastedChars ?? 0) > (deps.maxTextChars ?? MAX_TEXT_CHARS_PER_GENERATION)) return fail(400, "too_long", TOO_LONG_MESSAGE);
+
+  if (deps.measure) {
+    const stop = await deps.measure(materials, stats);
+    if (stop) return stop;
+  }
 
   const reserved = await deps.reserve();
   if (!reserved.ok) return reserved;

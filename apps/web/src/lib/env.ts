@@ -36,6 +36,13 @@ export function hasSupabaseEnv(): boolean {
 export function hasServiceRole(): boolean {
   return hasSupabaseEnv() && Boolean(env.supabaseServiceKey);
 }
+/**
+ * `/api/tutor` (old Recall web only; Cramfox does not use it) is an open proxy to the generation model (AUDYT P1-1).
+ * In production builds it answers 410 unless TUTOR_ENABLED=1; `next dev` keeps it on.
+ */
+export function tutorEnabled(): boolean {
+  return process.env.TUTOR_ENABLED === "1" || process.env.NODE_ENV !== "production";
+}
 export function hasStripeEnv(): boolean {
   return Boolean(env.stripeSecret);
 }

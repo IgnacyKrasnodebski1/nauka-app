@@ -18,6 +18,47 @@
 
 Zostało: merge do `main`, Google OAuth (1.4), przełączenie Stripe z test na live (klucze `sk_live`, nowy webhook), własna domena.
 
+## Build 7: bezpieczniki kosztów generacji (AUDYT §6.1 A) — kolejność wdrożenia
+
+Zmiany: rezerwacja limitu w jednej transakcji (`reserve_generation`, P0-1), `/api/tutor` wyłączony w produkcji (P1-1), `levels` z klienta ignorowane i `count_tokens` przed naliczeniem (P1-29), rozłożony start wywołań, żeby cache promptu był czytany (P1-2), kolumny kosztu i jakości (P1-3), termin 270 s, sprzątacz w pg_cron i zapis tematu z `done` w jednym RPC (P1-4), limity Storage i bazy na konto (P1-5). Kontrakt API dla buildu 6 bez zmian (szczegóły i nowe kody: `docs/API.md`). Migracje leżą w `nauka-app/backend/` (gałąź apki), nie w `supabase/migrations/` tego repo.
+
+**Kolejność** (każdy krok sprawdzić, zanim przejdziesz dalej):
+
+0. Bez kodu, jeśli jeszcze nie ma: miesięczny limit wydatków i alerty w workspace Anthropic (AUDYT 6.0).
+1. **Migracja 0007 (addytywna)**, przed wdrożeniem backendu:
+   ```bash
+   cd /Users/ignacykrasnodebski/nauka-app
+   supabase db query --linked -f backend/0007_generation_guards.sql
+   ```
+   Sprawdzenie (tylko odczyt): `select proname from pg_proc where proname in ('reserve_generation','finish_generation','sweep_stale_generations','materials_bucket_stats');` (4 wiersze), `select to_regclass('public.generation_ledger');` (nie null; licznik do limitu globalnego, przeżywa usunięcie konta; Supabase sam przeładowuje schemat PostgREST — gdyby API zgłaszało `PGRST202`, `notify pgrst, 'reload schema';`) i `select jobname, schedule from cron.job;` (`cramfox-sweep-generations` `*/5 * * * *` obok `cramfox-end-trials`). Build 6 i obecny backend działają z 0007 bez zmian (nowe kolumny puste, nowe RPC nieużywane, sprzątacz zamyka tylko wiersze starsze niż 8 min).
+2. **Wdrożenie backendu** (z kopii bez gita, BIBLIA §9.2). Nowych zmiennych nie trzeba; `TUTOR_ENABLED` **nie ustawiać** (tutor ma odpowiadać 410). Backend wdrożony bez 0007 odpowiada na każdą generację 500 `reserve_failed` (bez naliczenia) — dlatego 0007 najpierw.
+3. **Sprawdzenie na produkcji** (konto testowe, jedna płatna generacja z krótkiego tekstu): wiersz w `generations` ma `status = 'done'`, `cost_usd`, `opus_*`, `review_*` i `quality`; przy ≥ 2 poziomach `opus_cache_read > 0` (cache czytany). `POST /api/tutor` → 410 `tutor_disabled`. W logach funkcji `[generate] coverage`.
+4. **Migracja 0008 (zaostrzająca)** — dopiero gdy build 6 tworzy lekcje na nowym backendzie:
+   ```bash
+   supabase db query --linked -f backend/0008_account_limits.sql
+   ```
+   Sprawdzenie **wszystkich czterech sekcji** (tylko odczyt), potem build 6 wysyła zdjęcie, tworzy przedmiot i lekcję (odzyskiwanie czyta `generations` przez nowe uprawnienia kolumn):
+   - `select conname, convalidated from pg_constraint where conname = 'topics_content_size';` → 1 wiersz, `false` (NOT VALID);
+   - `select tgrelid::regclass, tgname from pg_trigger where tgname = 'cap_owner_rows';` → 3 wiersze (`subjects`, `materials`, `topics`);
+   - `select has_column_privilege('authenticated', 'public.generations', 'cost_usd', 'select') as koszt, has_column_privilege('authenticated', 'public.generations', 'status', 'select') as status;` → `false`, `true`;
+   - `select polname, polpermissive from pg_policy where polrelid = 'storage.objects'::regclass;` → `materials upload daily cap` z `polpermissive = false`;
+   - właściciel funkcji limitu widzi pliki: `select has_table_privilege(proowner::regrole::text, 'storage.objects', 'select') from pg_proc where proname = 'materials_upload_allowed';` → `true`.
+
+   Polityka na `storage.objects` jest ostatnią sekcją pliku. Gdyby CLI jej odmówiło (`must be owner of table objects`), wklej **cały** plik w SQL Editor panelu (jest idempotentny; CLI mogło cofnąć wcześniejsze sekcje razem z błędem) i powtórz wszystkie sprawdzenia powyżej.
+5. Build 7 apki (mapowanie nowych kodów: `docs/API.md` → „Mapowanie dla klienta”).
+
+**Wycofanie.** Backend: w Vercelu „Promote” poprzedniego wdrożenia — stary kod działa z 0007 i 0008 (`increment_usage` zostało). 0008: `drop policy "materials upload daily cap" on storage.objects; drop trigger cap_owner_rows on public.subjects; drop trigger cap_owner_rows on public.materials; drop trigger cap_owner_rows on public.topics; alter table public.topics drop constraint topics_content_size; grant select on public.generations to authenticated;`. 0007 nie trzeba cofać; sam sprzątacz wyłącza `select cron.unschedule('cramfox-sweep-generations');`.
+
+**Limity z 0008** (zmiana = nowa migracja): Storage `materials` ≤ 100 nowych plików i ≤ 500 MB na konto w kroczącej dobie (polityka RESTRICTIVE); `materials` ≤ 100 wierszy, `topics` ≤ 50 wierszy na konto na dobę; `subjects` ≤ 200 na konto (bezpiecznik, nie limit planu); `topics.content` < 1 MB (`NOT VALID`); kolumny kosztu, jakości, modelu i tokenów w `generations` niewidoczne dla kluczy użytkowników (klienci czytają tylko `id, status, topic_id, error, created_at` i filtrują po `subject_id`, `material_ids`).
+
+**Monitoring (SQL Editor, tylko odczyt):**
+- dzienny koszt: `select * from generation_cost_daily order by day desc limit 14;` (mediana i p90 kosztu: `percentile_cont` na `generations.cost_usd`);
+- bucket: `select * from materials_bucket_stats();` — na planie Free (1 GB) reaguj, gdy `bytes` przekroczy ok. 800 MB;
+- wiszące generacje: `select count(*) from generations where status = 'running' and created_at < now() - interval '10 minutes';` (powinno być 0 — sprzątacz);
+- przed `alter table public.topics validate constraint topics_content_size;` sprawdź `select max(pg_column_size(content)) from topics;` (< 1 000 000).
+
+**Testy migracji lokalnie** (tymczasowy Postgres, nigdy produkcja): `npm run test:db` (wymaga `initdb`/`pg_ctl`/`psql`, np. `brew install postgresql@16`; bez nich test się pomija). Sprawdza m.in. wyścig 12 równoległych sesji o jedną rezerwację, limit globalny po usunięciu kont (`generation_ledger`), okno `busy` 5,5 min, limity Storage, uprawnienia kolumn `generations` i funkcje SECURITY DEFINER pod właścicielem bez superusera (jak `postgres` w Supabase).
+
 ## 0. Wymagania
 - Node 22+, npm 10+, konto GitHub (repo już jest), Supabase, Vercel, Stripe, Anthropic Console, Expo (EAS).
 
@@ -38,7 +79,7 @@ Zostało: merge do `main`, Google OAuth (1.4), przełączenie Stripe z test na l
 
 ## 2. Anthropic (AI)
 1. https://console.anthropic.com → API Keys → Create key → `ANTHROPIC_API_KEY`.
-2. Model domyślny: `claude-opus-5` (zmiana: `RECALL_AI_MODEL`). Koszt orientacyjny jednej generacji (5 zdjęć, 4 poziomy): ok. 0,15–0,40 USD. Plan Pro za 29 zł/mies. z limitem 150 generacji jest bezpieczny przy typowym użyciu (kilka–kilkanaście generacji/mies.); limity zmienisz w `packages/shared/src/plans.ts`.
+2. Model domyślny: `claude-opus-5` (zmiana: `RECALL_AI_MODEL`; review: `RECALL_AI_FIX_MODEL`, domyślnie `claude-sonnet-5`). **Koszt:** dawna liczba 0,15–0,40 USD za generację jest według audytu (P1-29) zaniżona ok. dziesięciokrotnie (szacunek $2–3 za 5 zdjęć, $20–35 za 100-stronicowy PDF przed poprawkami z Build 7). Od Build 7 prawdziwy koszt każdej generacji jest w `generations.cost_usd` (widok `generation_cost_daily`) — limity i ceny (decyzja D4) opieraj na tych liczbach. Limity zmienisz w `packages/shared/src/plans.ts`; limity dobowe (20 na konto, 300 na serwer) są w `reserve_generation` (migracja 0007).
 3. Bez klucza apka działa w **trybie demo** (generuje przykładowy przedmiot) — dobre do testów UI.
 
 ## 3. Stripe (płatności, karty + Apple/Google Pay)
@@ -56,7 +97,8 @@ Zostało: merge do `main`, Google OAuth (1.4), przełączenie Stripe z test na l
 3. Environment Variables (Production + Preview):
 ```
 NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY,
-ANTHROPIC_API_KEY, RECALL_AI_MODEL (opcjonalnie),
+ANTHROPIC_API_KEY, RECALL_AI_MODEL (opcjonalnie), RECALL_AI_FIX_MODEL (opcjonalnie),
+TUTOR_ENABLED (NIE ustawiać w Production: bez niej /api/tutor odpowiada 410),
 STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, STRIPE_PRICE_MONTHLY, STRIPE_PRICE_YEARLY,
 NEXT_PUBLIC_APP_URL=https://twoja-domena.pl
 ```

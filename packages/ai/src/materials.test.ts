@@ -158,7 +158,7 @@ test("deleteUploadedFiles bounds every delete with a short timeout (cleanup cann
   ]);
 });
 
-test("generateTopic sends PDFs by file_id, keeps cache_control on the last block and deletes uploads when generation fails", async () => {
+test("generateTopic sends PDFs by file_id, leaves the outline uncached and deletes uploads when generation fails", async () => {
   withKey();
   const m = mockClient();
   setClientForTests(m.client);
@@ -174,10 +174,11 @@ test("generateTopic sends PDFs by file_id, keeps cache_control on the last block
   assert.deepEqual(doc.source, { type: "file", file_id: m.uploads[0]!.id });
   const image = content.find((b) => b.type === "image") as Anthropic.Beta.BetaImageBlockParam;
   assert.equal(image.source.type, "base64");
-  // last material block (pasted text) carries the cache breakpoint; the prompt text block comes after it
+  // the outline call (the only one here: it refuses) is not cached — nothing reads its cache entry (AUDYT P1-2);
+  // the level calls carry the breakpoint on the last material block (generate-cache.test.ts)
   const pasted = content[content.length - 2] as Anthropic.Beta.BetaRequestDocumentBlock;
   assert.equal(pasted.title, "Wklejony tekst");
-  assert.deepEqual(pasted.cache_control, { type: "ephemeral" });
+  assert.equal(pasted.cache_control, undefined);
   assert.equal(content[content.length - 1]!.type, "text");
 });
 
@@ -229,7 +230,8 @@ test("generateTopic with text only (no materials) uploads nothing", async () => 
   assert.equal(m.uploads.length, 0);
   assert.equal(m.deleted.length, 0);
   const content = m.streamCalls[0]!.messages[0]!.content as Anthropic.Beta.BetaContentBlockParam[];
-  assert.deepEqual(content[0], { type: "document", source: { type: "text", media_type: "text/plain", data: "Fotosynteza to…" }, title: "Wklejony tekst", cache_control: { type: "ephemeral" } });
+  // outline call: no cache breakpoint (see generate-cache.test.ts for the cached level calls)
+  assert.deepEqual(content[0], { type: "document", source: { type: "text", media_type: "text/plain", data: "Fotosynteza to…" }, title: "Wklejony tekst" });
 });
 
 test("generateTopic in prompt mode uploads nothing", async () => {

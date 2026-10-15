@@ -514,6 +514,11 @@ export interface GenerationOptions {
    * without it the prompt and output grammar are exactly the pre-viz ones (older clients keep full-text doses).
    */
   viz?: boolean;
+  /**
+   * Version of the AI-consent text the user accepted in the client (Cramfox: `META.aiConsentV`, missing = 1).
+   * Metadata only — stored with the generation row (`generations.options`) as proof of which text was accepted; never read by the generator.
+   */
+  aiConsentV?: number;
 }
 
 export type Plan = "free" | "pro";

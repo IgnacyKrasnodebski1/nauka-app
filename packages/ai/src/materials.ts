@@ -63,7 +63,7 @@ export function materialsToUpload(materials: MaterialInput[]): number[] {
 /** Minimal slice of the Anthropic client used for uploads (lets tests pass a mock). */
 export interface FilesClient {
   files: {
-    upload(params: Anthropic.FileUploadParams): PromiseLike<{ id: string }>;
+    upload(params: Anthropic.FileUploadParams, options?: { signal?: AbortSignal; maxRetries?: number; timeout?: number }): PromiseLike<{ id: string }>;
     delete(fileId: string, params?: Anthropic.FileDeleteParams | null, options?: { timeout?: number; maxRetries?: number }): PromiseLike<unknown>;
   };
 }
@@ -103,7 +103,13 @@ function uploadFilename(m: MaterialInput, i: number): string {
  * `finally` even when a sibling upload (or anything later) fails. Waits for all uploads to settle before throwing,
  * so nothing is still in flight when the caller cleans up.
  */
-export async function uploadMaterials(client: FilesClient, materials: MaterialInput[], uploaded: string[]): Promise<(string | undefined)[]> {
+export async function uploadMaterials(
+  client: FilesClient,
+  materials: MaterialInput[],
+  uploaded: string[],
+  /** request options for every upload (the generation deadline's signal and retry budget) */
+  requestOptions?: { signal?: AbortSignal; maxRetries?: number; timeout?: number },
+): Promise<(string | undefined)[]> {
   const fileIds: (string | undefined)[] = new Array(materials.length).fill(undefined);
   const picked = materialsToUpload(materials);
   if (!picked.length) return fileIds;
@@ -111,7 +117,7 @@ export async function uploadMaterials(client: FilesClient, materials: MaterialIn
     picked.map(async (i) => {
       const m = materials[i]!;
       const file = await toFile(toBytes(m.data), uploadFilename(m, i), { type: m.mime });
-      const meta = await client.files.upload({ file, expires_in_seconds: UPLOAD_TTL_SECONDS });
+      const meta = requestOptions ? await client.files.upload({ file, expires_in_seconds: UPLOAD_TTL_SECONDS }, requestOptions) : await client.files.upload({ file, expires_in_seconds: UPLOAD_TTL_SECONDS });
       uploaded.push(meta.id);
       fileIds[i] = meta.id;
     }),

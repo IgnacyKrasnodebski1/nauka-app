@@ -493,4 +493,6 @@ export const GenerationOptionsSchema = z.object({
   locale: z.enum(["pl", "en"]).optional(),
   /** client renders dose visuals — see GenerationOptions.viz */
   viz: z.boolean().optional(),
+  /** version of the AI-consent text the user accepted (Cramfox build 7+); stored in generations.options. A malformed value is dropped, never a 400. */
+  aiConsentV: z.number().int().min(1).max(999).optional().catch(undefined),
 });

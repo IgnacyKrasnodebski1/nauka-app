@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { tutorStream } from "@/lib/ai";
 import { getUserFromRequest, jsonError, NO_SUPABASE } from "@/lib/auth";
-import { hasServiceRole, hasSupabaseEnv } from "@/lib/env";
+import { hasServiceRole, hasSupabaseEnv, tutorEnabled } from "@/lib/env";
 import { getPlan, reserveTutorMessage } from "@/lib/plan";
 import { getTopic } from "@/lib/data";
 
@@ -16,6 +16,8 @@ const BodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  // AUDYT P1-1: open proxy to the generation model with no global cap — off in production unless TUTOR_ENABLED=1
+  if (!tutorEnabled()) return jsonError("Korepetytor jest wyłączony.", 410, { code: "tutor_disabled" });
   if (!hasSupabaseEnv() || !hasServiceRole()) return jsonError(NO_SUPABASE, 503, { code: "no_config" });
   const ctx = await getUserFromRequest(req);
   if (!ctx) return jsonError("Wymagane logowanie", 401, { code: "unauthorized" });

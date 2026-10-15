@@ -261,6 +261,16 @@ test("options.viz is accepted by GenerationOptionsSchema", () => {
   assert.equal(GenerationOptionsSchema.safeParse({ stage: "liceum", viz: "yes" }).success, false);
 });
 
+test("options.aiConsentV is kept (for generations.options); a malformed value is dropped, not a 400", () => {
+  assert.equal(GenerationOptionsSchema.parse({ stage: "liceum", aiConsentV: 1 }).aiConsentV, 1);
+  assert.equal(GenerationOptionsSchema.parse({ stage: "liceum" }).aiConsentV, undefined);
+  for (const bad of [0, -1, 1.5, "1", 1000, null]) {
+    const r = GenerationOptionsSchema.safeParse({ stage: "liceum", aiConsentV: bad });
+    assert.equal(r.success, true, String(bad));
+    assert.equal(r.success && r.data.aiConsentV, undefined, String(bad));
+  }
+});
+
 test("viz grammar adds only viz_type (enum) and viz (string) to each dose", () => {
   const off = z.toJSONSchema(LevelCoreGenSchema) as unknown as { properties: { feed: { items: { properties: Record<string, unknown>; required: string[] } } } };
   const on = z.toJSONSchema(LevelCoreGenVizSchema) as unknown as typeof off;

@@ -60,7 +60,10 @@ const checks = [
   { path: "/api/me", expect: apiErr },
   { path: "/api/generate", method: "POST", body: "{}", expect: apiErr },
   { path: "/api/generate?id=x", expect: apiErr },
-  { path: "/api/tutor", method: "POST", body: "{}", expect: apiErr },
+  // AUDYT P1-1: the tutor is off in production builds unless TUTOR_ENABLED=1 (410 before auth, no AI call)
+  process.env.TUTOR_ENABLED === "1"
+    ? { path: "/api/tutor", method: "POST", body: "{}", expect: apiErr }
+    : { path: "/api/tutor", method: "POST", body: "{}", expect: (r, body) => r.status === 410 && JSON.parse(body).code === "tutor_disabled" },
   { path: "/api/stripe/checkout", method: "POST", body: "{}", expect: apiErr },
   { path: "/api/stripe/portal", method: "POST", expect: apiErr },
   { path: "/api/stripe/webhook", method: "POST", body: "{}", expect: (r) => r.status === 503 || r.status === 400 },
