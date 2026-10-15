@@ -8,7 +8,7 @@ const FAQ = [
   { q: "Nie mam notatek — da się?", a: "Wpisz samo hasło, np. „tryby warunkowe” albo „pochodne”. AI ułoży temat zgodnie z polską podstawą programową dla Twojego etapu." },
   { q: "Czy AI nie zmyśla?", a: "Z materiałów uczy tylko tego, co w nich jest, a nieczytelne fragmenty pomija. Każde pytanie ma wyjaśnienie i źródło, a złe pytanie poprawisz jednym dotknięciem." },
   { q: "Po co serca i gemy?", a: "Serca sprawiają, że myślisz przed odpowiedzią (błąd w lekcji = −1, regeneracja co 30 min, Pro = bez limitu). Gemy zbierasz za poziomy, skrzynie i misje, a wydajesz w plecaku: serca, zamrożenie serii, podwójne XP, motywy." },
-  { q: "Ile to kosztuje?", a: `Free: ${PLANS.free.generationsPerMonth} tematy miesięcznie za darmo. Pro: ${PLANS.pro.priceMonthlyPln} zł/mies. albo ${PLANS.pro.priceYearlyPln} zł/rok za ${PLANS.pro.generationsPerMonth} tematów, nieskończone serca, większe pliki i tutora bez limitu.` },
+  { q: "Ile to kosztuje?", a: `Free: ${(PLANS.free.generationsLifetime ?? PLANS.free.generationsPerMonth)} tematy za darmo (jednorazowo, bez odnawiania). Pro: ${PLANS.pro.priceMonthlyPln} zł/mies. albo ${PLANS.pro.priceYearlyPln} zł/rok za ${PLANS.pro.generationsPerMonth} tematów, nieskończone serca, większe pliki i tutora bez limitu.` },
   { q: "Co z moimi plikami?", a: "Pliki lądują w Twoim prywatnym folderze i widzi je tylko Twoje konto. Przedmiot możesz usunąć w każdej chwili razem z tematami i postępami." },
 ];
 
@@ -64,7 +64,7 @@ export default function Landing() {
                 <Link href="/login" className="pill auto a-glow">Zacznij za darmo</Link>
                 <a href="#jak" className="pill ghost auto">Jak to działa</a>
               </div>
-              <p className="text-muted text-sm mt-4 font-semibold">{PLANS.free.generationsPerMonth} tematy w miesiącu gratis · bez karty</p>
+              <p className="text-muted text-sm mt-4 font-semibold">{(PLANS.free.generationsLifetime ?? PLANS.free.generationsPerMonth)} tematy gratis na start · bez karty</p>
             </div>
             <div className="hidden sm:block"><DeviceMock /></div>
           </div>
@@ -128,7 +128,7 @@ export default function Landing() {
                 <div className="eyebrow">Free</div>
                 <div className="price">0 zł</div>
                 <div className="space-y-2 mt-2">
-                  {[`${PLANS.free.generationsPerMonth} tematy w miesiącu`, `pliki do ${PLANS.free.maxFileMb} MB, ${PLANS.free.filesPerGeneration} na temat`, "ścieżka, fiszki, zadania, quiz, egzamin", "5 serc, gemy, misje, liga", "tutor: 30 wiadomości dziennie"].map((t) => <div key={t} className="check"><Icon name="check" size={18} stroke={3} /><span>{t}</span></div>)}
+                  {[`${(PLANS.free.generationsLifetime ?? PLANS.free.generationsPerMonth)} tematy za darmo, bez odnawiania`, `pliki do ${PLANS.free.maxFileMb} MB, ${PLANS.free.filesPerGeneration} na temat`, "ścieżka, fiszki, zadania, quiz, egzamin", "5 serc, gemy, misje, liga", "tutor: 30 wiadomości dziennie"].map((t) => <div key={t} className="check"><Icon name="check" size={18} stroke={3} /><span>{t}</span></div>)}
                 </div>
                 <Link href="/login" className="pill ghost mt-auto">Zacznij</Link>
               </div>

@@ -206,7 +206,7 @@ export default function Settings() {
         <Eyebrow>Plan</Eyebrow>
         <Motion kind="up" d={5}>
           <ListCard tone={app.plan === "pro" ? "acid" : undefined}>
-            <Row icon="star" iconColor={T.gold} title={app.plan === "pro" ? "Recall Pro" : "Plan darmowy"} sub={me ? `${me.usage.generations}/${me.limits.generationsPerMonth === Infinity ? "∞" : me.limits.generationsPerMonth} tematów w tym miesiącu · ${me.usage.tutorMessages} wiadomości do tutora` : `${PLANS.free.generationsPerMonth} tematy z AI miesięcznie · ${PLANS.pro.generationsPerMonth} w Pro`} chevron={false} />
+            <Row icon="star" iconColor={T.gold} title={app.plan === "pro" ? "Recall Pro" : "Plan darmowy"} sub={me ? `${me.quota?.scope === "lifetime" ? `${me.quota.used}/${me.quota.limit} darmowych tematów (bez odnawiania)` : `${me.usage.generations}/${me.limits.generationsPerMonth === Infinity ? "∞" : me.limits.generationsPerMonth} tematów w tym miesiącu`} · ${me.usage.tutorMessages} wiadomości do tutora` : `${PLANS.free.generationsLifetime ?? PLANS.free.generationsPerMonth} darmowe tematy z AI · ${PLANS.pro.generationsPerMonth}/mies. w Pro`} chevron={false} />
             {app.plan === "pro" ? (
               <Row icon="settings" title={busy === "portal" ? "Otwieram…" : "Zarządzaj subskrypcją"} sub="Stripe: faktury, anulowanie" onPress={() => openUrl(stripePortal, "portal")} />
             ) : (

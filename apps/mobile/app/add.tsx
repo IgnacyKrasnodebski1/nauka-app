@@ -179,7 +179,10 @@ export default function AddScreen() {
     } catch (e) {
       haptic.bad();
       let msg = e instanceof Error ? e.message : "Coś się wysypało.";
-      if (e instanceof ApiError && e.code === "limit_reached") msg = `Limit tematów na ten miesiąc wyczerpany (${String(e.extra?.used ?? "?")}/${String(e.extra?.limit ?? "?")}). Pro daje ${PLANS.pro.generationsPerMonth}/mies.`;
+      if (e instanceof ApiError && e.code === "limit_reached")
+        msg = e.extra?.scope === "lifetime"
+          ? `Darmowe tematy wykorzystane (${String(e.extra?.used ?? "?")}/${String(e.extra?.limit ?? "?")}) — nie odnawiają się. Pro daje ${PLANS.pro.generationsPerMonth}/mies.`
+          : `Limit tematów na ten miesiąc wyczerpany (${String(e.extra?.used ?? "?")}/${String(e.extra?.limit ?? "?")}). Pro daje ${PLANS.pro.generationsPerMonth}/mies.`;
       if (e instanceof ApiError && e.status === 401) msg = "Sesja wygasła — zaloguj się ponownie.";
       if (e instanceof ApiError && e.code === "network") msg = "Brak połączenia z API. Sprawdź sieć i spróbuj jeszcze raz.";
       setError(msg);

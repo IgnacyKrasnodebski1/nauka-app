@@ -72,10 +72,27 @@ test("reserveRejection keeps build 6's shapes: 402 limit_reached with the 999999
   assert.deepEqual(reserveRejection({ reason: "daily" }, 150), { ok: false, status: 402, code: "limit_reached", message: "Dzienny limit nowych lekcji jest wykorzystany.", extra: { used: 999_999, limit: 150 } });
   assert.equal(reserveRejection({ reason: "global" }, 3).extra!.used, GLOBAL_CAP_SENTINEL);
   assert.equal(DAILY_CAP_SENTINEL, 999_999);
-  assert.deepEqual(reserveRejection({ reason: "monthly", used: 3, limit: 3 }, 3), { ok: false, status: 402, code: "limit_reached", message: "Wykorzystano 3/3 generacji w tym miesiącu", extra: { used: 3, limit: 3 } });
+  assert.deepEqual(reserveRejection({ reason: "monthly", used: 3, limit: 3 }, 3), { ok: false, status: 402, code: "limit_reached", message: "Wykorzystano 3/3 generacji w tym miesiącu", extra: { used: 3, limit: 3, scope: "month" } });
   const busy = reserveRejection({ reason: "busy" }, 3);
   assert.equal(busy.status, 409);
   assert.equal(busy.code, "busy");
+});
+
+test("reserveRejection: the free plan's generations for life (D3) → 402 limit_reached with used / limit (build 6 reads only those) + scope lifetime", () => {
+  assert.deepEqual(reserveRejection({ reason: "lifetime", used: 2, limit: 2 }, 2), {
+    ok: false,
+    status: 402,
+    code: "limit_reached",
+    message: "Wykorzystano 2/2 darmowych lekcji",
+    extra: { used: 2, limit: 2, scope: "lifetime" },
+  });
+  // limit lowered in app_config below what was used: the message never says "3/1", the payload keeps the real count
+  const lowered = reserveRejection({ reason: "lifetime", used: 3, limit: 1 }, 2);
+  assert.equal(lowered.message, "Wykorzystano 1/1 darmowych lekcji");
+  assert.deepEqual(lowered.extra, { used: 3, limit: 1, scope: "lifetime" });
+  // never a sentinel: build 6 must not read it as the daily / server limit
+  assert.ok((lowered.extra!.used as number) < DAILY_CAP_SENTINEL);
+  assert.doesNotMatch(lowered.message, /miesiąc|Pro|płat|subskryp|zakup/);
 });
 
 test("demo mode: one reservation with levels forced to 4, then finish with the topic and zero cost", async () => {
@@ -179,6 +196,7 @@ test("refused reservations answer like before and delete the uploads; reserve er
     ["daily", 402, DAILY_CAP_SENTINEL],
     ["global", 402, GLOBAL_CAP_SENTINEL],
     ["monthly", 402, 3],
+    ["lifetime", 402, 3],
   ] as const) {
     const m = mockAi();
     setClientForTests(m.client);
@@ -187,6 +205,7 @@ test("refused reservations answer like before and delete the uploads; reserve er
     assert.equal(res.status, status, reason);
     assert.equal(res.body.code, reason === "busy" ? "busy" : "limit_reached");
     assert.equal(res.body.used, used);
+    assert.equal(res.body.scope, reason === "lifetime" ? "lifetime" : reason === "monthly" ? "month" : undefined, `${reason}: scope`);
     assert.equal(res.body.generationId, undefined);
     assert.equal(m.calls.length, 0);
     assert.deepEqual(m.deleted, m.uploads, `${reason}: uploads deleted`);

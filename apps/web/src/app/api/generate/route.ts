@@ -1,9 +1,9 @@
 import { z } from "zod";
 import { GenerationOptionsSchema, PLANS } from "@nauka/shared";
-import { handleGenerationRequest, reserveRejection, type IntakeFailure, type IntakeRow } from "@/lib/ai";
+import { handleGenerationRequest, reserveRejection, type IntakeRow } from "@/lib/ai";
 import { getUserFromRequest, jsonError, NO_SUPABASE } from "@/lib/auth";
 import { hasServiceRole, hasSupabaseEnv } from "@/lib/env";
-import { failGeneration, findFinishedTopic, finishGeneration, getPlan, getUsage, hasActiveGeneration, reserveGenerationSlot } from "@/lib/plan";
+import { failGeneration, findFinishedTopic, finishGeneration, getGenerationQuota, getPlan, hasActiveGeneration, reserveGenerationSlot } from "@/lib/plan";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { rowToTopic } from "@/lib/types";
 
@@ -16,6 +16,12 @@ export const maxDuration = 300;
 const MAX_TOTAL_MATERIALS_MB = 150;
 /** Mirrors the per-account daily cap inside `reserve_generation` (backend/0007); used only by the read-only pre-check. */
 const DAILY_GENERATIONS_PER_USER = 20;
+/**
+ * `p_monthly_limit` for `reserve_generation` / `generation_quota`: the RPCs read the account's plan from `profiles.plan`
+ * themselves and apply this only on the pro plan (free ignores it — its limit is for life, from `app_config`). Always the
+ * pro value, so a failed profile read here (`getPlan` → "free") never gives a pro / trial account the free plan's 2 a month.
+ */
+const PRO_MONTHLY_LIMIT = PLANS.pro.generationsPerMonth;
 
 const BodySchema = z
   .object({
@@ -31,14 +37,6 @@ const BodySchema = z
   });
 
 type MaterialRow = IntakeRow;
-
-const limitError = (used: number, limit: number): IntakeFailure => ({
-  ok: false,
-  status: 402,
-  code: "limit_reached",
-  message: `Wykorzystano ${used}/${limit} generacji w tym miesiącu`,
-  extra: { used, limit },
-});
 
 export async function POST(req: Request) {
   const startedAt = Date.now();
@@ -95,8 +93,14 @@ export async function POST(req: Request) {
     maxTotalMb: MAX_TOTAL_MATERIALS_MB,
     monthlyLimit: limits.generationsPerMonth,
     precheck: async () => {
-      const usage = await getUsage(ctx.supabase, ctx.user.id);
-      if (usage.generations >= limits.generationsPerMonth) return limitError(usage.generations, limits.generationsPerMonth);
+      // plan limit (free: generations for life of the e-mail address, pro: this month) — the same RPC logic as the charge
+      try {
+        const q = await getGenerationQuota(admin, ctx.user.id, PRO_MONTHLY_LIMIT);
+        if (q.used >= q.limit) return reserveRejection({ reason: q.scope === "lifetime" ? "lifetime" : "monthly", used: q.used, limit: q.limit }, limits.generationsPerMonth);
+      } catch (e) {
+        // only an early exit: reserve_generation checks the same limit in its transaction
+        console.warn("[generate] quota pre-check skipped:", (e as Error)?.message ?? e);
+      }
       const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
       const { count } = await admin.from("generations").select("id", { count: "exact", head: true }).eq("owner_id", ctx.user.id).gt("created_at", since);
       if ((count ?? 0) >= DAILY_GENERATIONS_PER_USER) return reserveRejection({ reason: "daily" }, limits.generationsPerMonth);
@@ -111,7 +115,7 @@ export async function POST(req: Request) {
     reserve: (options) =>
       reserveGenerationSlot(admin, {
         userId: ctx.user.id,
-        monthlyLimit: limits.generationsPerMonth,
+        monthlyLimit: PRO_MONTHLY_LIMIT,
         subjectId: subject.id,
         stage: options.stage,
         hint: options.hint ?? null,

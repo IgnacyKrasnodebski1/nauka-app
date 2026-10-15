@@ -1,4 +1,4 @@
-import type { GenerationOptions, Plan, PLANS, Stage, Topic } from "@nauka/shared";
+import type { GenerationOptions, GenerationQuota, Plan, PLANS, Stage, Topic } from "@nauka/shared";
 import { rowToTopic, type TopicRow } from "./data";
 import { ENV, hasApi } from "./env";
 
@@ -48,6 +48,8 @@ export interface MeResponse {
   plan: Plan;
   usage: { month: string; generations: number; tutorMessages: number };
   limits: (typeof PLANS)[Plan];
+  /** backend/0007: free = generations for life (`scope: "lifetime"`), pro = this month; absent on older backends */
+  quota?: GenerationQuota | null;
   subscription: { status: string | null; interval: string | null; current_period_end: string | null; cancel_at_period_end: boolean } | null;
 }
 

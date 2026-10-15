@@ -1,4 +1,4 @@
-import { TopicContentSchema, type GenerationOptions, type TopicContent } from "@nauka/shared";
+import { TopicContentSchema, type GenerationOptions, type GenerationScope, type Plan, type TopicContent } from "@nauka/shared";
 import { costColumns, UsageMeter, type GenerationCostColumns, type UsageSummary } from "./cost.js";
 import { Deadline, GENERATION_DEADLINE_MS, MIN_AI_TIME_MS, RESPOND_BY_MS, settledOrTimeout, valueOrTimeout } from "./deadline.js";
 import { GENERATION_LEVELS, GenerationError, MAX_INPUT_TOKENS, prepareGeneration, releasePreparedGeneration, runPreparedGeneration, type PreparedGeneration } from "./generate.js";
@@ -10,8 +10,8 @@ import { intakeMaterials, TOO_LONG_MESSAGE, type IntakeFailure, type IntakeRow }
  *
  *   intake (MIME, read-only quota pre-check, download, PPTX, text budget)
  *   → prepare: Files API upload + count_tokens, `too_long` above MAX_INPUT_TOKENS          (nothing charged yet)
- *   → reserve: ONE transaction (RPC reserve_generation) — busy / daily / global / monthly checks, then the
- *     `generations` row and the usage increment                                            (P0-1)
+ *   → reserve: ONE transaction (RPC reserve_generation) — busy / daily / plan limit (free: lifetime per e-mail,
+ *     pro: monthly) / global checks, then the `generations` row and the counters           (P0-1, D3)
  *     only within CHARGE_BY_MS (75 s) of the request start, checked before the upload AND right before the charge
  *   → AI, every request aborted at request start + 270 s                                   (P1-4)
  *   → finish: ONE transaction (RPC finish_generation) — topic row + `done` + cost columns  (P1-3, P1-4)
@@ -20,9 +20,10 @@ import { intakeMaterials, TOO_LONG_MESSAGE, type IntakeFailure, type IntakeRow }
  * Cleanup and `fail` are bounded by RESPOND_BY_MS, so the JSON answer leaves before Vercel's 300 s.
  */
 
-export type ReserveRejection = "busy" | "daily" | "global" | "monthly";
+/** `lifetime` = the free plan's generations for life are used up (D3); the others as before. */
+export type ReserveRejection = "busy" | "daily" | "global" | "monthly" | "lifetime";
 export type ReserveOutcome =
-  | { ok: true; generationId: string; used?: number; limit?: number }
+  | { ok: true; generationId: string; used?: number; limit?: number; plan?: Plan; scope?: GenerationScope }
   | { ok: false; reason: ReserveRejection; used?: number; limit?: number };
 
 /** `used` values Cramfox reads as "daily limit of the account" / "daily limit of the server" (cloud-ui.js failGen). */
@@ -31,7 +32,11 @@ export const GLOBAL_CAP_SENTINEL = 1_999_999;
 
 const failure = (status: number, code: string, message: string, extra?: Record<string, unknown>): IntakeFailure => ({ ok: false, status, code, message, extra });
 
-/** HTTP answer for a refused reservation. Same shapes as before the RPC (402 `limit_reached` + sentinels); `busy` is new. */
+/**
+ * HTTP answer for a refused reservation. Same shapes as before the RPC (402 `limit_reached` + sentinels); `busy` is new.
+ * Plan limits add `scope` (additive): `"month"` for the monthly limit, `"lifetime"` for the free plan's generations for
+ * life — build 6 reads only `used` / `limit` (and shows its monthly text with the right numbers, "2 z 2").
+ */
 export function reserveRejection(r: { reason: ReserveRejection; used?: number; limit?: number }, monthlyLimit: number): IntakeFailure {
   switch (r.reason) {
     case "busy":
@@ -39,11 +44,17 @@ export function reserveRejection(r: { reason: ReserveRejection; used?: number; l
     case "daily":
       return failure(402, "limit_reached", "Dzienny limit nowych lekcji jest wykorzystany.", { used: DAILY_CAP_SENTINEL, limit: monthlyLimit });
     case "global":
-      return failure(402, "limit_reached", "Serwer ma dziś bardzo dużo pracy. Spróbuj jutro.", { used: GLOBAL_CAP_SENTINEL, limit: monthlyLimit });
+      // rolling 24 h window (and 0 in app_config pauses generation) — "later", not "tomorrow"
+      return failure(402, "limit_reached", "Serwer ma teraz bardzo dużo pracy. Spróbuj później.", { used: GLOBAL_CAP_SENTINEL, limit: monthlyLimit });
+    case "lifetime": {
+      const limit = r.limit ?? monthlyLimit;
+      const used = r.used ?? limit;
+      return failure(402, "limit_reached", `Wykorzystano ${Math.min(used, limit)}/${limit} darmowych lekcji`, { used, limit, scope: "lifetime" });
+    }
     default: {
       const used = r.used ?? monthlyLimit;
       const limit = r.limit ?? monthlyLimit;
-      return failure(402, "limit_reached", `Wykorzystano ${used}/${limit} generacji w tym miesiącu`, { used, limit });
+      return failure(402, "limit_reached", `Wykorzystano ${used}/${limit} generacji w tym miesiącu`, { used, limit, scope: "month" });
     }
   }
 }

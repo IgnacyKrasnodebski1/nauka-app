@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
-import { allFlashcards, allQuiz, isAcceptedMime, PLANS, SUBJECT_HUES, type Plan, type Subject, type Topic } from "@nauka/shared";
+import { allFlashcards, allQuiz, isAcceptedMime, PLANS, SUBJECT_HUES, type GenerationQuota, type Plan, type Subject, type Topic } from "@nauka/shared";
 import { useApp } from "@/lib/store/app-context";
 import { invalidateLibrary } from "@/lib/client-data";
 import { useUi, BackBtn, Toggle } from "@/components/app/chrome";
@@ -13,7 +13,8 @@ import { themeStyle } from "@/components/ui/mono";
 
 type Mode = "photo" | "file" | "text" | "prompt";
 type Step = "add" | "scan" | "detected" | "generating" | "ready";
-interface MeInfo { plan: Plan; usage: { generations: number } }
+/** `quota` (backend/0007): free = generations for life (`scope: "lifetime"`), pro = this month; absent on older backends */
+interface MeInfo { plan: Plan; usage: { generations: number }; quota?: GenerationQuota | null }
 const STEPS_GEN = ["Odczytuję materiały", "Wyciągam pojęcia", "Układam poziomy", "Piszę pytania i zadania", "Dobieram mnemotechniki"];
 const STEPS_PROMPT = ["Sprawdzam podstawę programową", "Wyciągam pojęcia", "Układam poziomy", "Piszę pytania i zadania", "Dobieram mnemotechniki"];
 const fmtMb = (b: number) => (b >= 1024 * 1024 ? (b / 1024 / 1024).toFixed(1).replace(".", ",") + " MB" : Math.max(1, Math.round(b / 1024)) + " KB");
@@ -72,7 +73,8 @@ export function NewTopicFlow({ subject }: { subject: Subject }) {
   }, [session, authHeaders]);
   const plan: Plan = me?.plan ?? "free";
   const limits = PLANS[plan];
-  const left = me ? Math.max(0, limits.generationsPerMonth - me.usage.generations) : null;
+  const quota = me?.quota ?? null;
+  const left = me ? (quota ? quota.remaining : Math.max(0, limits.generationsPerMonth - me.usage.generations)) : null;
 
   const addFiles = (list: FileList | File[], into: "files" | "shots" = "files") => {
     setErr(null);
@@ -312,7 +314,7 @@ export function NewTopicFlow({ subject }: { subject: Subject }) {
       <div className="blob a-float acid" aria-hidden="true" />
       <Head title="Nowy temat" sub={noEmoji(subject.name)} back={back} step={1} />
       <div className="screen active"><div className="scroll addv">
-        <div className="addhead"><h1>{mode === "prompt" ? "Jaki temat?" : "Skąd wziąć materiał?"}</h1><p>{mode === "prompt" ? "Wpisz hasło, np. „fotosynteza” albo „tryby warunkowe”. Temat powstanie wg podstawy programowej dla Twojego etapu." : "Wrzuć prezentacje z zajęć, skrypt albo notatki. Z tego powstaną poziomy, fiszki i pytania."}</p>{me && <p>Plan <b>{limits.label}</b> · zostało <b>{left}</b> z {limits.generationsPerMonth} tematów w tym miesiącu</p>}</div>
+        <div className="addhead"><h1>{mode === "prompt" ? "Jaki temat?" : "Skąd wziąć materiał?"}</h1><p>{mode === "prompt" ? "Wpisz hasło, np. „fotosynteza” albo „tryby warunkowe”. Temat powstanie wg podstawy programowej dla Twojego etapu." : "Wrzuć prezentacje z zajęć, skrypt albo notatki. Z tego powstaną poziomy, fiszki i pytania."}</p>{me && <p>Plan <b>{limits.label}</b> · zostało <b>{left}</b> z {quota?.limit ?? limits.generationsPerMonth} {quota?.scope === "lifetime" ? "darmowych tematów (bez odnawiania)" : "tematów w tym miesiącu"}</p>}</div>
         <button type="button" className={cn("addbig", mode !== "prompt" && "a-glow")} onClick={() => { setMode("file"); input.current?.click(); }}>
           <div className="ico"><Icon name="upload" size={24} stroke={2.8} /></div>
           <div className="grow"><div className="t">Wgraj pliki</div><div className="s">PDF, zdjęcia, txt — do {limits.filesPerGeneration} plików, {limits.maxFileMb} MB każdy</div></div>

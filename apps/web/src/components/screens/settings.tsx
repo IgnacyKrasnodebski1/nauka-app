@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { FREEZE_MAX, HEARTS_MAX, PLANS, pl, THEMES, todayStr, type Plan, type Subject } from "@nauka/shared";
+import { FREEZE_MAX, HEARTS_MAX, PLANS, pl, THEMES, todayStr, type GenerationQuota, type Plan, type Subject } from "@nauka/shared";
 import { useApp } from "@/lib/store/app-context";
 import { etaText, initial, noEmoji } from "@/lib/dates";
 import { GOAL_NAME, LEVEL_NAME } from "@/components/screens/onboarding";
@@ -16,7 +16,7 @@ const CHANGELOG: [string, string][] = [
   ["2.0", "Nowa skóra na tokenach, plan dnia, ścieżka ze skrzyniami i bossem, 16 typów zadań, powtórka na interwałach, egzamin z siatką, plan do sprawdzianu, gemy, misje, album, duch"],
   ["1.x", "Przedmioty i tematy z AI, roladka, fiszki, mini-gry, quiz, egzamin, tutor, Pro przez Stripe"],
 ];
-interface MeInfo { plan: Plan; usage: { generations: number; tutorMessages: number }; subscription: { status: string; interval: string; current_period_end: string; cancel_at_period_end: boolean } | null }
+interface MeInfo { plan: Plan; usage: { generations: number; tutorMessages: number }; quota?: GenerationQuota | null; subscription: { status: string; interval: string; current_period_end: string; cancel_at_period_end: boolean } | null }
 
 function Row({ ic, t, s, v, href, onClick, id, cls }: { ic?: string; t: string; s?: string; v?: string; href?: string; onClick?: () => void; id?: string; cls?: string }) {
   const inner = <>{ic && <Icon name={ic} size={20} stroke={2.4} />}<div className="grow"><div className={cn("t", cls)}>{t}</div>{s && <div className="s">{s}</div>}</div>{v && <span className="v acid">{v}</span>}<Icon name="chevron-right" size={18} className="chev" /></>;
@@ -137,7 +137,7 @@ export function SettingsScreen({ subjects }: { subjects: Subject[] }) {
 
       <div className="eyebrow sec">Plan</div>
       <div className="setcard a-up d3">
-        <div className="setrow"><Icon name="star" size={20} stroke={2.4} className="ic-gold" /><div className="grow"><div className="t">Plan {limits.label}</div><div className="s">{me ? `${me.usage.generations} z ${limits.generationsPerMonth} tematów w tym miesiącu · tutor ${me.plan === "pro" ? "bez limitu" : "30 wiadomości dziennie"}` : "…"}</div></div></div>
+        <div className="setrow"><Icon name="star" size={20} stroke={2.4} className="ic-gold" /><div className="grow"><div className="t">Plan {limits.label}</div><div className="s">{me ? `${me.quota ? `${me.quota.used} z ${me.quota.limit} ${me.quota.scope === "lifetime" ? "darmowych tematów (bez odnawiania)" : "tematów w tym miesiącu"}` : `${me.usage.generations} z ${limits.generationsPerMonth} tematów w tym miesiącu`} · tutor ${me.plan === "pro" ? "bez limitu" : "30 wiadomości dziennie"}` : "…"}</div></div></div>
         <div className="setsep" />
         {plan === "pro" || me?.plan === "pro" ? (
           <Row ic="check" t="Pro aktywne" s={me?.subscription ? (me.subscription.cancel_at_period_end ? "wygasa " : "odnawia się ") + new Date(me.subscription.current_period_end).toLocaleDateString("pl-PL") : "nieskończone życia, większe pliki, tutor bez limitu"} onClick={portal} id="set-portal" />

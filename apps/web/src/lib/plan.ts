@@ -1,5 +1,5 @@
-import { monthKey, type Plan } from "@nauka/shared";
-import type { FailInput, FinishInput, ReserveOutcome } from "@nauka/ai";
+import { monthKey, parseGenerationQuota, type GenerationQuota, type Plan } from "@nauka/shared";
+import type { FailInput, FinishInput, ReserveOutcome, ReserveRejection } from "@nauka/ai";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import type { TopicRow } from "@/lib/types";
@@ -45,10 +45,26 @@ export async function getUsage(supabase: SupabaseClient, userId: string, month =
 export const ACTIVE_GENERATION_WINDOW_MS = 5.5 * 60 * 1000;
 
 /**
- * The charge (AUDYT P0-1): RPC `reserve_generation` (backend/0007) checks, in ONE transaction under advisory locks,
- * that the account has no generation running (busy), the daily (20/24 h per account) and global (300/24 h) caps and
- * the monthly plan limit — all BEFORE counting — then inserts the `generations` row (status `running`) and counts the
- * generation in `usage`. Service role only.
+ * The account's generation limit right now — RPC `generation_quota` (backend/0007), the same plan logic as
+ * `reserve_generation`: free → generations for the life of the e-mail address (limit from `app_config`, default 2),
+ * pro → `monthlyLimit` this month (UTC). Read-only, service role only. Throws when the RPC is missing or answers junk.
+ */
+export async function getGenerationQuota(admin: SupabaseClient, userId: string, monthlyLimit: number): Promise<GenerationQuota> {
+  const { data, error } = await admin.rpc("generation_quota", { p_user: userId, p_month: monthKey(), p_monthly_limit: monthlyLimit });
+  if (error) throw new Error(`generation_quota: ${error.message}`);
+  const q = parseGenerationQuota(data);
+  if (!q) throw new Error(`generation_quota: unexpected answer ${JSON.stringify(data)}`);
+  return q;
+}
+
+const REJECTIONS: readonly string[] = ["busy", "daily", "global", "monthly", "lifetime"] satisfies ReserveRejection[];
+
+/**
+ * The charge (AUDYT P0-1, D3): RPC `reserve_generation` (backend/0007) reads the account's plan itself and checks, in ONE
+ * transaction under advisory locks, that the account has no generation running (busy), the daily cap (20/24 h per
+ * account), the plan limit (free: generations for life per e-mail address; pro: `monthlyLimit` this month) and the global
+ * cap (`app_config`, default 30/24 h) — all BEFORE counting — then inserts the `generations` row (status `running`) and
+ * counts the generation (`usage`, and for free the e-mail ledger). Service role only.
  */
 export async function reserveGenerationSlot(
   admin: SupabaseClient,
@@ -65,9 +81,17 @@ export async function reserveGenerationSlot(
     p_material_ids: a.materialIds,
   });
   if (error) throw new Error(`reserve_generation: ${error.message}`);
-  const r = data as { ok?: boolean; generation_id?: string; reason?: string; used?: number; limit?: number } | null;
-  if (r?.ok && r.generation_id) return { ok: true, generationId: r.generation_id, used: r.used, limit: r.limit };
-  if (r && r.ok === false && (r.reason === "busy" || r.reason === "daily" || r.reason === "global" || r.reason === "monthly")) return { ok: false, reason: r.reason, used: r.used, limit: r.limit };
+  const r = data as { ok?: boolean; generation_id?: string; reason?: string; used?: number; limit?: number; plan?: string; scope?: string } | null;
+  if (r?.ok && r.generation_id)
+    return {
+      ok: true,
+      generationId: r.generation_id,
+      used: r.used,
+      limit: r.limit,
+      plan: r.plan === "pro" ? "pro" : r.plan === "free" ? "free" : undefined,
+      scope: r.scope === "lifetime" || r.scope === "month" ? r.scope : undefined,
+    };
+  if (r && r.ok === false && typeof r.reason === "string" && REJECTIONS.includes(r.reason)) return { ok: false, reason: r.reason as ReserveRejection, used: r.used, limit: r.limit };
   throw new Error(`reserve_generation: unexpected answer ${JSON.stringify(r)}`);
 }
 

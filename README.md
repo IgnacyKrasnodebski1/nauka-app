@@ -29,4 +29,4 @@ Patrz [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). API: [docs/API.md](docs/API.
 | `legacy/` | stara wersja vanilla JS (`node legacy/build.js`) — nadal działa offline |
 
 ## Model biznesowy
-Freemium: Free = 3 generacje AI/mies., Pro = 29 zł/mies. lub 199 zł/rok (150 generacji, tutor bez limitu). Limity: `packages/shared/src/plans.ts`.
+Freemium: Free = 2 generacje AI na zawsze (bez odnawiania, liczone po adresie e-mail — od migracji Cramfox 0007), Pro = 29 zł/mies. lub 199 zł/rok (150 generacji/mies., tutor bez limitu). Limity: `packages/shared/src/plans.ts`.
