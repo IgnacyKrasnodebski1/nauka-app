@@ -38,7 +38,7 @@ docs/             BIBLIA.md (pełna dokumentacja), plan-wyklady.md (plan Etapu 2
 
 **Bezpieczeństwo:** treść z AI przechodzi przez `clean()` (allowlista tagów, jedyny atrybut `class="zbox|gradetbl"`); build ma CSP bez `unsafe-inline` dla skryptów; klucze serwerowe (service role, Anthropic) są tylko na Vercelu. Klucz anon jest publiczny z założenia — dostęp ogranicza RLS.
 
-**Limity:** nowe konto ma 30 dni planu Pro, potem 3 generacje/mies. Globalny bezpiecznik: 300 generacji/dobę.
+**Limity** (od migracji 0007): nowe konto jest free bez okresu próbnego — 2 tworzenia lekcji na zawsze (licznik po adresie e-mail, przeżywa usunięcie konta); stare konta z trialem mają pro do jego końca. Bezpieczniki: 20 generacji/dobę na konto, 30/dobę na serwer (z tego free najwyżej 20) — wartości w tabeli `app_config`.
 
 ---
 

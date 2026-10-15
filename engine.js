@@ -775,7 +775,7 @@ function openQuickAdd(){
   s.querySelector('#qa-photo').onclick=()=>{closeSheet();hook('addPhoto',into);};
   s.querySelector('#qa-file').onclick=()=>{closeSheet();hook('addFile',into);};
   s.querySelector('#qa-text').onclick=()=>{closeSheet();hook('addText',into);};
-  hook('addSheet',s); // cloud-ui.js: ile nowych lekcji zostało w tym miesiącu (P1-12)
+  hook('addSheet',s); // cloud-ui.js: ile nowych lekcji zostało — darmowe na zawsze albo w tym miesiącu (P1-12)
   return s;
 }
 /* siatka kafli przedmiotów (Main.html): tint przedmiotu, monogram na pełnym akcencie, pasek poziomów */
@@ -1043,6 +1043,7 @@ function renderEmpty(){
     <div class="efoot"><button class="pill a-glow" id="eadd">Dodaj materiał</button></div>`;
   document.getElementById('eadd').onclick=()=>openQuickAdd();
   const top=document.getElementById('emptytop');hook('todayTop',top);if(!top.children.length)top.remove(); // pierwsza lekcja w trakcie albo nieudana — też na pustym Dziś
+  hook('emptyToday',scroll); // cloud-ui.js: darmowe lekcje wykorzystane → inny tekst i bez świecącego „Dodaj materiał”
   liveFoxes(scroll);
 }
 
@@ -3944,7 +3945,7 @@ function renderErrorView(){
   if(o.back){const b=el('button','backbtn',icon('back',{size:20,stroke:3}));b.setAttribute('aria-label','Wróć');b.onclick=o.back;top.appendChild(b);}
   top.appendChild(el('div','logo ttl',o.head||'Cramfox'));app.appendChild(top);
   const sc=el('div','screen active');const scroll=el('div','scroll errv');sc.appendChild(scroll);app.appendChild(sc);
-  scroll.appendChild(el('div','errart',`<div class="errico a-shake">${icon(o.icon||'file',{size:44,stroke:2.4})}<b>!</b></div>`));
+  scroll.appendChild(el('div','errart',o.calm?`<div class="errico calm">${icon(o.icon||'info',{size:44,stroke:2.4})}</div>`:`<div class="errico a-shake">${icon(o.icon||'file',{size:44,stroke:2.4})}<b>!</b></div>`)); // calm: spodziewany stan (np. limit lekcji), nie awaria
   scroll.appendChild(el('div','errtxt',`<h1 class="a-up d1">${o.title}</h1>${o.reason?`<p>${o.reason}</p>`:''}`));
   if(o.rows&&o.rows.length){const card=el('div','errlist a-up d2');o.rows.forEach(([ic,t,s,ok])=>card.appendChild(el('div','errrow'+(ok?' ok':' bad'),icon(ic,{size:18,stroke:2.4})+`<div class="grow"><div class="t">${t}</div>${s?`<div class="s">${s}</div>`:''}</div>`)));scroll.appendChild(card);}
   if(o.can&&o.can.length){const card=el('div','errcan a-up d3','<div class="eyebrow sec">Co możesz zrobić</div>');o.can.forEach(([ic,t])=>card.appendChild(el('div','r',icon(ic,{size:18,stroke:2.4})+`<span>${t}</span>`)));scroll.appendChild(card);}

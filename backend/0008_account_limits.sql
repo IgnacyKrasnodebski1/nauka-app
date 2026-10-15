@@ -13,7 +13,7 @@
 --
 -- Bez tego jedno konto skryptem (sam klucz anon) zapełnia 1 GB bucketu albo 500 MB bazy — bez dotykania API i limitu
 -- generacji — i wysyłka albo synchronizacja staje wszystkim. Progi są wysoko ponad normalnym użyciem buildu 6
--- (free: 3 generacje/mies. × 5 plików; pro: 20/dobę × 20 plików, ale realnie kilka materiałów dziennie).
+-- (free: 2 generacje na zawsze × 5 plików — od 0007; pro: 20/dobę × 20 plików, ale realnie kilka materiałów dziennie).
 -- Build 6 przy przekroczeniu pokaże ogólny błąd wysyłki („Nie udało się wysłać pliku … Limit się nie zmienił”) albo
 -- zapisu przedmiotu — build 7 może mapować te odpowiedzi (patrz docs/API.md w nauka-backend).
 --
@@ -24,6 +24,12 @@
 --   materials (wiersze): najwyżej 100 nowych na konto w kroczącej dobie.
 --   subjects: najwyżej 200 przedmiotów na konto (bezpiecznik przed nadużyciem, NIE limit planu free = 5 — to decyzja produktowa).
 --   topics: najwyżej 50 nowych na konto w kroczącej dobie (serwer robi najwyżej 20 generacji na dobę) i content < 1 MB.
+
+-- 0) Darmowe generacje na zawsze (0007, sekcja 2d): drugie, idempotentne doliczenie historii — łapie generacje kont free,
+--    które stary backend zrobił między wgraniem 0007 a wdrożeniem Build 7 (stary backend nie pisze free_generation_ledger).
+--    Wymaga 0007. Zwraca liczbę dopisanych wierszy (zwykle 0). Wierszy unieważnionych (reset_free_generations) nie odtwarza.
+--    Start wszystkich kont od zera = usunąć to wywołanie I ostatnią linię sekcji 2d w 0007.
+select public.backfill_free_generation_ledger();
 
 -- 1) topics.content < 1 MB (serwer zapisuje ok. 5–10 kB na poziom, maks. 6 poziomów). NOT VALID: stare wiersze nie są
 --    sprawdzane, nowe i zmieniane — tak. Po sprawdzeniu maksimum na produkcji można zrobić VALIDATE (docs/DEPLOY.md).

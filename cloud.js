@@ -59,7 +59,7 @@ function saveSession(d){
 if(session)lset(SEENK,'1'); // zalogowani w starszych wersjach też (po wylogowaniu albo wygaśnięciu sesji: zakładka „Zaloguj się”)
 const knownDevice=()=>{try{if(LS.getItem(SEENK))return true;for(let i=0;i<LS.length;i++){const k=LS.key(i);if(k&&k.startsWith('nauka_progress_v1:'))return true;}}catch(e){}return false;};
 async function signUp(email,password){
-  const d=await authPost('/signup',{email,password,data:{age16:true,client:'cramfox'}}); // client → okres próbny tylko dla kont z Cramfoxa (trigger handle_new_user)
+  const d=await authPost('/signup',{email,password,data:{age16:true,client:'cramfox'}}); // client: skąd konto (od backend/0007 nie daje okresu próbnego — nowe konta są free: 2 darmowe lekcje na zawsze)
   if(!d||!d.access_token)throw new CloudError(0,'needs_confirm','Konto wymaga potwierdzenia e-maila');
   return saveSession(d);
 }
@@ -573,10 +573,12 @@ async function recoverJob(){ // po powrocie apki / starcie: czy przerwana genera
   }
 }
 let meC=null; // ostatnia odpowiedź /api/me (limit przed dodaniem materiału) — {at, v}
-async function me(o){
+async function me(o){ // v.quota (backend/0007): {scope:'lifetime'|'month', used, limit, remaining, trialUntil}; starszy backend — bez quota
   o=o||{};if(meC&&o.maxAge!=null&&Date.now()-meC.at<o.maxAge)return meC.v;
-  const r=await api('/api/me',{timeout:15000});if(r.status>=400)throw errOf(r);let trial=null;try{const p=await rest('profiles?select=trial_until&id=eq.'+UID);trial=p&&p[0]&&p[0].trial_until||null;}catch(e){}
-  const v={...obj(r.data),trialUntil:trial};meC={at:Date.now(),v};return v;}
+  const r=await api('/api/me',{timeout:15000});if(r.status>=400)throw errOf(r);const d=obj(r.data),q=d.quota&&typeof d.quota==='object'?d.quota:null;let trial=null;
+  if(q)trial=typeof q.trialUntil==='string'&&q.trialUntil||null; // koniec okresu startowego podaje serwer razem z limitem
+  else{try{const p=await rest('profiles?select=trial_until&id=eq.'+UID);trial=p&&p[0]&&p[0].trial_until||null;}catch(e){}}
+  const v={...d,trialUntil:trial};meC={at:Date.now(),v};return v;}
 const meCached=maxAge=>meC&&(maxAge==null||Date.now()-meC.at<maxAge)?meC.v:null;
 
 /* ---------- usunięcie konta: sprawdzenie na serwerze → pliki → RPC (kaskada w bazie) → dane lokalne ---------- */

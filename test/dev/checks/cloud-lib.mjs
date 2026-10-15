@@ -68,7 +68,7 @@ export async function has(run,sel,text){try{return !!(await find(run,sel,text));
 export async function tap(run,sel,text,o={}){const el=await waitFor(run,sel,text,o.timeout||8000);await el.evaluate(e=>e.scrollIntoView({block:'center'}));if(o.real)await el.click();else await el.evaluate(e=>e.click());await sleep(o.settle??300);return el;}
 export async function fill(run,sel,v){const el=await waitFor(run,sel);await el.evaluate((e,v)=>{e.focus();e.value=v;e.dispatchEvent(new Event('input',{bubbles:true}));},v);await sleep(120);}
 export async function chooseFiles(run,sel,files,text){const el=await waitFor(run,sel,text);const [ch]=await Promise.all([run.pg.waitForFileChooser({timeout:6000}),el.click()]);await ch.accept(files);await sleep(600);}
-export const text=run=>run.pg.evaluate(()=>[...document.querySelectorAll('#app, #sheet, .netbar')].map(e=>e.innerText||'').join('\n'));
+export const text=run=>run.pg.evaluate(()=>[...document.querySelectorAll('#app, #sheet, .netbar')].map(e=>e.innerText||'').join('\n').replace(/\u00a0/g,' ')); // twarde spacje („2 z 150”) jak zwykłe
 export const view=run=>run.pg.evaluate(()=>({view:window.NaukaEngine&&NaukaEngine.view,sheet:!!document.getElementById('sheet'),lesson:!!document.querySelector('#lesson.open,.lesson.open')}));
 export const mockLog=run=>run.pg.evaluate(()=>window.MOCK.log.map(e=>e.method+' '+e.path.split('?')[0]+' '+e.status));
 export const mockSet=(run,k,v)=>run.pg.evaluate((k,v)=>window.MOCK.set(k,v),k,v);

@@ -16,7 +16,7 @@
      gen=ok|slow[:s]|demo|err:KOD[:used|:reason]|drop[:s]|dropfail[:s]|html504
                               /api/generate: sukces (1,5 s) | wolno (domyślnie 25 s) | tryb demo | błąd z kodem serwera |
                               zerwane połączenie po wysłaniu (temat powstaje po s sekundach) | j.w., ale generowanie się nie udaje | 504 bez JSON (Vercel)
-                              err:limit_reached:N → used=N; przy innych kodach trzeci człon to `reason` jak w backendzie Build 7:
+                              err:limit_reached:N → used=N (scope według planu: free → lifetime, pro → month); przy innych kodach trzeci człon to `reason` jak w backendzie Build 7:
                               err:lost:ai_timeout (termin 270 s, po naliczeniu), err:reserve_failed:ai_upload, err:download_failed:slow_intake.
                               err:busy = 409 (generacja w toku); err:too_long = 400 przed naliczeniem z tokens/maxTokens.
                               Bez err: 409 busy, gdy konto ma generację running młodszą niż 7 min (np. po gen=drop) — jak RPC reserve_generation.
@@ -24,7 +24,11 @@
                               albo przedmiot → 23514 materials_daily_limit / subject_limit. Bez cap limity liczą się naprawdę (100 plików i 500 MB na dobę,
                               100 wierszy materials na dobę, 200 przedmiotów).
      genfx=makro|viz|xss|krypto  z czego powstaje temat (domyślnie makro: 4 poziomy z topic-makro.json + schematy w czacie)
-     plan=free|pro, used=N    /api/me: plan i zużycie w tym miesiącu (free: 3 / mies.)
+     plan=free|pro, used=N    plan konta i zużycie (nadpisuje odczyt): free — darmowe lekcje NA ZAWSZE (domyślnie 2, licznik po adresie
+                              e-mail, przeżywa usunięcie konta), pro — w tym miesiącu (150). Jak backend/0007: /api/me ma quota
+                              {plan, scope:'lifetime'|'month', used, limit, remaining, trialUntil}, 402 limit_reached ma scope.
+     freecap=N                limit darmowych lekcji na zawsze (app_config.free_lifetime_generations, domyślnie 2)
+     global=full              limit serwera na dobę pełny (app_config): /api/me ma quota.globalOpen=false, /api/generate → 402 used=1999999
      upload=slow|413|500      Storage: wolna wysyłka (1,2 s na żądanie / kawałek TUS) albo błąd
      net=off                  każde żądanie do backendu = brak sieci (też gdy navigator.onLine === false)
      sync=missing|fail        app_state: brak tabeli (PGRST205) albo 500
@@ -38,7 +42,8 @@
      clock=RRRR-MM-DD         przesunięty zegar przeglądarki (Date) na ten dzień — np. poniedziałek = podsumowanie tygodnia
      nostore=1                localStorage odrzuca zapisy apki (jak tryb prywatny) — pasek ostrzeżenia, brak sesji
      lang=1                   tematy z flagą lang (gry językowe w Ćwiczeniach; produkcja jej dziś nie ustawia)
-     trial=N                  seeded: okres próbny kończy się za N dni (ujemne = już minął)
+     trial=N                  seeded: okres próbny (konto sprzed 0007, plan pro) kończy się za N dni (ujemne = już minął → free);
+                              nowe konta (rejestracja) są od razu free, bez okresu próbnego
      weekly=1                 seeded: podsumowanie tygodnia jeszcze niepokazane (w poniedziałek pojawi się na starcie)
      log=1                    każde żądanie w console.debug
    Konto testowe (tylko atrapa): test@cramfox.test / cramfox-test-1.
@@ -79,6 +84,8 @@ const cfg={
   native:P.get('native')==='1',
   lang:P.get('lang')==='1',
   trial:P.has('trial')?+P.get('trial'):23,
+  freecap:P.has('freecap')?Math.max(0,Math.floor(+P.get('freecap')||0)):2,
+  global:P.get('global')||'',
   weekly:P.get('weekly')==='1',
   cap:P.get('cap')||'',
   log:P.get('log')==='1'
@@ -89,7 +96,7 @@ const IDS={sMakro:'5b000001-0000-4000-8000-000000000001',tMakro:'7c000001-0000-4
   sKrypto:'5b000002-0000-4000-8000-000000000002',tKrypto:'7c000002-0000-4000-8000-000000000002',
   sViz:'5b000003-0000-4000-8000-000000000003',tViz:'7c000003-0000-4000-8000-000000000003',
   sXss:'5b000004-0000-4000-8000-000000000004',tXss:'7c000004-0000-4000-8000-000000000004'};
-const PLANS={free:{label:'Free',generationsPerMonth:3,filesPerGeneration:5,maxFileMb:50,maxSubjects:5,priceMonthlyPln:0,priceYearlyPln:0},
+const PLANS={free:{label:'Free',generationsPerMonth:2,generationsLifetime:2,filesPerGeneration:5,maxFileMb:50,maxSubjects:5,priceMonthlyPln:0,priceYearlyPln:0}, // jak packages/shared/src/plans.ts
   pro:{label:'Pro',generationsPerMonth:150,filesPerGeneration:20,maxFileMb:50,maxSubjects:1000,priceMonthlyPln:29,priceYearlyPln:199}};
 const BUCKET_MIME=/^(image\/(jpeg|png|webp|gif)|application\/pdf|text\/(plain|markdown)|application\/vnd\.openxmlformats-officedocument\.presentationml\.presentation)$/;
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -111,10 +118,11 @@ const levelId=(topicId,l)=>'t'+String(topicId).replace(/-/g,'').slice(0,8)+'_'+S
 /* ---------- stan „serwera” ---------- */
 const DBK='mockbe:db';
 let DB=null;
-function load(){try{const v=JSON.parse(localStorage.getItem(DBK)||'null');return v&&v.v===1?v:null;}catch(e){return null;}}
+function load(){try{const v=JSON.parse(localStorage.getItem(DBK)||'null');if(v&&v.v===1&&!v.free)v.free={};return v&&v.v===1?v:null;}catch(e){return null;}}
 function save(){try{localStorage.setItem(DBK,JSON.stringify(DB));}catch(e){console.error('[mock] zapis stanu atrapy się nie udał',e);}}
 function emptyDb(scenario){return {v:1,scenario,createdAt:iso(),seeded:false,users:[],tokens:{access:{},refresh:{}},
-  t:{subjects:[],topics:[],materials:[],generations:[],app_state:[],profiles:[],usage:[],subscriptions:[]},objects:{},tus:{}};}
+  t:{subjects:[],topics:[],materials:[],generations:[],app_state:[],profiles:[],usage:[],subscriptions:[]},objects:{},tus:{},
+  free:{}};} // free: znormalizowany adres e-mail → darmowe lekcje (jak free_generation_ledger w backend/0007 — przeżywa usunięcie konta)
 function wipeApp(){ // dane apki na tym „urządzeniu”: postępy, sesja, cache — atrapa zostaje osobno (mockbe:*)
   const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&!k.startsWith('mockbe:'))ks.push(k);}
   ks.forEach(k=>localStorage.removeItem(k));try{sessionStorage.clear();}catch(e){}
@@ -130,8 +138,8 @@ function publicUser(u){return {id:u.id,aud:'authenticated',role:'authenticated',
   app_metadata:{provider:'email',providers:['email']},user_metadata:u.meta||{},created_at:u.created_at,updated_at:u.created_at};}
 function addUser(id,email,password,meta){
   const u={id,email,password,meta:meta||{},created_at:iso()};DB.users.push(u);
-  const cf=(meta||{}).client==='cramfox'; // trigger handle_new_user: Cramfox = pro na 30 dni
-  DB.t.profiles.push({id,email,display_name:email.split('@')[0],plan:cf?'pro':'free',trial_until:cf?iso(now()+30*86400000):null,created_at:iso()});
+  // trigger handle_new_user od backend/0007: każde nowe konto jest free, bez okresu próbnego (seeded nadpisuje to niżej: konto sprzed zmiany)
+  DB.t.profiles.push({id,email,display_name:email.split('@')[0],plan:'free',trial_until:null,created_at:iso()});
   return u;
 }
 
@@ -142,7 +150,7 @@ function init(){
     wipeApp();DB=emptyDb(cfg.mock);
     if(cfg.mock==='seeded'){
       addUser(TEST_USER.id,TEST_USER.email,TEST_USER.password,{age16:true,client:'cramfox'});
-      const pr=DB.t.profiles.find(p=>p.id===TEST_USER.id);pr.trial_until=iso(now()+cfg.trial*86400000);if(cfg.trial<=0)pr.plan='free';pr.created_at=iso(now()-7*86400000);
+      const pr=DB.t.profiles.find(p=>p.id===TEST_USER.id);pr.trial_until=iso(now()+cfg.trial*86400000);pr.plan=cfg.trial>0?'pro':'free';pr.created_at=iso(now()-7*86400000);
       DB.t.usage.push({user_id:TEST_USER.id,month:monthKey(),generations:2,tutor_messages:0});
       if(cfg.login){const s=newSession(TEST_USER.id);
         localStorage.setItem('cf_session',JSON.stringify({access_token:s.access_token,refresh_token:s.refresh_token,expires_at:s.expires_at,user:{id:s.user.id,email:s.user.email}}));}
@@ -433,13 +441,26 @@ const aerr=(status,code,error,extra)=>res(status,Object.assign({error:error||cod
 const planOf=uid=>{if(cfg.plan==='free'||cfg.plan==='pro')return cfg.plan;const p=DB.t.profiles.find(x=>x.id===uid);return p&&p.plan==='pro'?'pro':'free';};
 function usageRow(uid){let u=DB.t.usage.find(x=>x.user_id===uid&&x.month===monthKey());if(!u){u={user_id:uid,month:monthKey(),generations:0,tutor_messages:0};DB.t.usage.push(u);}return u;}
 const usedOf=uid=>cfg.used!=null&&cfg.used!==''?+cfg.used||0:usageRow(uid).generations; // used=N tylko nadpisuje odczyt (nie zmienia zapisanego licznika)
+/* darmowe lekcje na zawsze (backend/0007): licznik po znormalizowanym adresie e-mail, nie po koncie — usunięcie konta go nie zeruje */
+const mailKey=uid=>{const u=DB.users.find(x=>x.id===uid);return String(u&&u.email||'').trim().toLowerCase();};
+const freeUsedOf=uid=>cfg.used!=null&&cfg.used!==''?+cfg.used||0:+(DB.free[mailKey(uid)]||0);
+const bumpFree=uid=>{const k=mailKey(uid);DB.free[k]=(+DB.free[k]||0)+1;};
+function quotaOf(uid){ // jak RPC generation_quota (+ freeLimit, globalOpen)
+  const plan=planOf(uid),prof=DB.t.profiles.find(x=>x.id===uid)||null,trialUntil=prof&&prof.trial_until||null;
+  const freeLimit=Math.max(0,Math.floor(+cfg.freecap||0)),globalOpen=cfg.global!=='full';
+  if(plan==='pro'){const used=usedOf(uid),limit=PLANS.pro.generationsPerMonth;return {plan,scope:'month',used,limit,remaining:Math.max(0,limit-used),trialUntil,freeLimit,globalOpen};}
+  const used=freeUsedOf(uid),limit=freeLimit;return {plan,scope:'lifetime',used,limit,remaining:Math.max(0,limit-used),trialUntil,freeLimit,globalOpen};
+}
+const charge=(uid,plan,us)=>{us.generations++;if(plan==='free')bumpFree(uid);}; // naliczenie: miesięczne usage zawsze, darmowe lekcje dla free
 async function api(u,m,h,b,signal){
   const p=u.pathname;
   const uid=userOf(h);
   if(p==='/api/me'&&m==='GET'){
     if(!uid)return aerr(401,'unauthorized','Wymagane logowanie');
-    const plan=planOf(uid),us=usageRow(uid),prof=DB.t.profiles.find(x=>x.id===uid)||null;
-    return res(200,{profile:prof&&{...prof,plan},plan,usage:{month:us.month,generations:usedOf(uid),tutorMessages:us.tutor_messages},limits:PLANS[plan],subscription:null});
+    const plan=planOf(uid),us=usageRow(uid),prof=DB.t.profiles.find(x=>x.id===uid)||null,q=quotaOf(uid);
+    const life=q.scope==='lifetime'; // pola dla starszych klientów: przy darmowych na zawsze niosą ten sam licznik („2 z 2”)
+    return res(200,{profile:prof&&{...prof,plan},plan,usage:{month:us.month,generations:life?q.used:usedOf(uid),tutorMessages:us.tutor_messages},
+      limits:life?{...PLANS.free,generationsPerMonth:q.limit,generationsLifetime:q.limit}:PLANS[plan],quota:q,subscription:null});
   }
   if(p==='/api/generate'&&m==='POST')return generate(uid,bodyJson(b),signal);
   return aerr(404,'not_found','mock: brak trasy '+m+' '+p);
@@ -464,28 +485,30 @@ async function generate(uid,d,signal){
   if(mats.length!==ids.length||new Set(ids).size!==ids.length)return aerr(400,'bad_materials','Część materiałów nie istnieje albo nie należy do Ciebie');
   const big=mats.find(x=>(+x.size_bytes||0)>lim.maxFileMb*MB);if(big)return aerr(400,'file_too_big',`Plik „${big.name||big.id}” przekracza ${lim.maxFileMb} MB`,{name:big.name||undefined,maxMb:lim.maxFileMb});
   if(mats.reduce((a,x)=>a+(+x.size_bytes||0),0)>150*MB)return aerr(400,'too_much_material','Za dużo materiału',{maxMb:150});
-  const us=usageRow(uid);
+  const us=usageRow(uid),q=quotaOf(uid);
   const g=String(cfg.gen||'ok'),[mode,arg,arg2]=g.split(':');
   if(mode==='err'){ // wymuszony błąd serwera — z generationId, gdy prawdziwy serwer pobrałby już limit
     const code=arg||'generation_failed',e=ERRS[code]||[500,true];const extra=Object.assign({},e[2]||{});
-    if(code==='limit_reached'){extra.used=arg2!=null?+arg2:Math.max(usedOf(uid),lim.generationsPerMonth);extra.limit=lim.generationsPerMonth;}
+    if(code==='limit_reached'){extra.used=arg2!=null?+arg2:Math.max(q.used,q.limit);extra.limit=q.limit;if(extra.used<999999)extra.scope=q.scope;}
     if(/^(file_too_big|bad_pptx|pptx_protected|pptx_empty|bad_materials)$/.test(code))extra.name=(mats[0]&&mats[0].name)||'notatki.pdf';
     if(code==='file_too_big')extra.maxMb=lim.maxFileMb;
     if(code==='too_many_files')extra.max=lim.filesPerGeneration;
     if(code!=='limit_reached'&&arg2)extra.reason=arg2; // lost:ai_timeout, reserve_failed:ai_upload, download_failed:slow_intake
-    if(e[1]){us.generations++;const gid=uuid();DB.t.generations.push({id:gid,owner_id:uid,subject_id:subj.id,status:'failed',error:'mock: '+code,material_ids:ids,stage:o.stage||null,options:o,created_at:iso(),finished_at:iso()});extra.generationId=gid;save();}
+    if(e[1]){charge(uid,plan,us);const gid=uuid();DB.t.generations.push({id:gid,owner_id:uid,subject_id:subj.id,status:'failed',error:'mock: '+code,material_ids:ids,stage:o.stage||null,options:o,created_at:iso(),finished_at:iso()});extra.generationId=gid;save();}
     await sleep(code==='api'||code==='generation_failed'||code==='lost'?2500:600,signal);
     return aerr(e[0],code,code==='api'?'AI: 529 overloaded':'mock: '+code,extra);
   }
-  if(mode==='html504'){us.generations++;DB.t.generations.push({id:uuid(),owner_id:uid,subject_id:subj.id,status:'running',error:null,material_ids:ids,created_at:iso()});save();
+  if(mode==='html504'){charge(uid,plan,us);DB.t.generations.push({id:uuid(),owner_id:uid,subject_id:subj.id,status:'running',error:null,material_ids:ids,created_at:iso()});save();
     await sleep(3000,signal);return res(504,'<!DOCTYPE html><html><body>An error occurred with your deployment\n\nFUNCTION_INVOCATION_TIMEOUT</body></html>',{'Content-Type':'text/html'});}
-  // rezerwacja jak RPC reserve_generation (0007): busy → dobowy (20 / konto) → miesięczny (plan), wszystko przed podbiciem licznika
+  // rezerwacja jak RPC reserve_generation (0007): busy → dobowy (20 / konto) → limit planu (free: na zawsze, pro: miesięczny), wszystko przed podbiciem licznika
   lazyGenerations();
   if(DB.t.generations.some(x=>x.owner_id===uid&&(x.status==='running'||x.status==='queued')&&Date.parse(x.created_at)>now()-BUSY_MS))
     return aerr(409,'busy','Trwa już tworzenie innej lekcji. Poczekaj, aż się skończy, i spróbuj ponownie.');
   if(DB.t.generations.filter(x=>x.owner_id===uid&&Date.parse(x.created_at)>now()-86400000).length>=20)return aerr(402,'limit_reached','Dzienny limit',{used:999999,limit:lim.generationsPerMonth});
-  if(usedOf(uid)>=lim.generationsPerMonth)return aerr(402,'limit_reached',`Wykorzystano ${usedOf(uid)}/${lim.generationsPerMonth} generacji w tym miesiącu`,{used:usedOf(uid),limit:lim.generationsPerMonth});
-  us.generations++;
+  if(q.used>=q.limit)return q.scope==='lifetime'?aerr(402,'limit_reached',`Wykorzystano ${Math.min(q.used,q.limit)}/${q.limit} darmowych lekcji`,{used:q.used,limit:q.limit,scope:'lifetime'})
+    :aerr(402,'limit_reached',`Wykorzystano ${q.used}/${q.limit} generacji w tym miesiącu`,{used:q.used,limit:q.limit,scope:'month'});
+  if(cfg.global==='full')return aerr(402,'limit_reached','Serwer ma teraz bardzo dużo pracy. Spróbuj później.',{used:1999999,limit:lim.generationsPerMonth}); // limit globalny (i pula free) po limicie planu
+  charge(uid,plan,us);
   const gid=uuid(),gen={id:gid,owner_id:uid,subject_id:subj.id,status:'running',error:null,topic_id:null,material_ids:ids,stage:o.stage||null,options:o,hint:o.hint||null,created_at:iso(),finished_at:null};
   DB.t.generations.push(gen);save();
   const content=await topicContent(cfg.genfx);

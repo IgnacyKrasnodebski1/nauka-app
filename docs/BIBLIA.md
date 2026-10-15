@@ -23,6 +23,7 @@ Plan nagrywania wykładów (Etap 2) jest osobno: [`docs/plan-wyklady.md`](plan-w
 3. **Build 6 czeka na wysłanie do TestFlight** (Xcode → Organizer → Distribute App; wysyłka z CLI padła na „Failed to Use Accounts”, czyli wygasłe logowanie Apple ID w Xcode). Backend z viz, PPTX i poprawkami jakości jest wdrożony (2026-10-07, Vercel `dpl_5QrNpisiG54A42B1dnjsLutQuBET`), a migracja `0006_pptx.sql` wgrana tego samego dnia, więc build 6 można rozesłać. Zasada na przyszłość: **najpierw backend, potem migracja, na końcu build apki** (stary backend pobierał limit, zanim sprawdził typ pliku).
 4. **Wylogowanie kasuje lokalne postępy z telefonu** (po próbie synchronizacji). To celowe, ale warto o tym pamiętać przy testach.
 5. **Nieudana generacja nadal zjada limit.** Nie ponawiaj `POST /api/generate` automatycznie.
+5a. **Decyzja z 2026-10-15 (AUDYT D3 / P0-2), w kodzie Build 7, niewdrożona:** plan free = **2 generacje na zawsze** (bez odnawiania; liczone po skrócie adresu e-mail, więc usunięcie konta i ponowna rejestracja tym samym adresem nic nie daje), **nowe konta bez triala**, konta z trialem w toku zostają na pro do jego końca (generacje z triala nie liczą się do darmowych 2), limit globalny i limit darmowych generacji w tabeli `app_config` (domyślnie 30/dobę i 2; zmiana bez migracji). Wszystko w `backend/0007_generation_guards.sql`; kolejność wdrożenia bez zmian (0007 → backend → 0008 → apka). Pakiety z wyższymi limitami (IAP) mają się mapować na plan `pro` — jeszcze ich nie ma.
 6. **Build 7 (AUDYT §6.1, sekcje A–C, plus poprawki z przeglądu) jest w drzewach roboczych, niewdrożony.** Kolejność: `backend/0007_generation_guards.sql` → wdrożenie backendu → sprawdzenie, że build 6 dalej tworzy lekcje → `backend/0008_account_limits.sql` (cały plik; potem sprawdzenie wszystkich 4 sekcji) → build 7 apki. Nowy backend bez 0007 odpowiada na każdą generację 500 `reserve_failed` (bez naliczenia). Szczegóły i wycofanie: `nauka-backend/docs/DEPLOY.md` („Build 7”). Opisy oznaczone niżej „Build 7” dotyczą kodu, nie produkcji, dopóki to nie zostanie wdrożone.
 
 ---
@@ -577,7 +578,7 @@ Inne globalne: `window.NAUKA_UID`, `window.NAUKA_BOOT(start)`, `window.NAUKA_CLO
 
 ### 4.1 Rejestracja, logowanie, sesja
 
-- **Rejestracja** (`cloud.js:59`): `POST /auth/v1/signup` z `{email, password, data:{age16:true, client:'cramfox'}}`. Wartość `client:'cramfox'` sprawia, że trigger `handle_new_user` daje 30 dni planu pro (trial). Brak `access_token` w odpowiedzi → błąd `needs_confirm` („ta wersja jeszcze tego nie obsługuje”).
+- **Rejestracja** (`cloud.js:59`): `POST /auth/v1/signup` z `{email, password, data:{age16:true, client:'cramfox'}}`. Do 0007 wartość `client:'cramfox'` sprawiała, że trigger `handle_new_user` dawał 30 dni planu pro (trial); od 0007 każde nowe konto jest free (2 darmowe generacje na zawsze), a `client` zostaje tylko jako znacznik. Brak `access_token` w odpowiedzi → błąd `needs_confirm` („ta wersja jeszcze tego nie obsługuje”).
 - **Logowanie** (`:63`): `POST /auth/v1/token?grant_type=password`.
 - **Walidacja w UI** (`renderAuth`): e-mail `^[^\s@]+@[^\s@]+\.[^\s@]+$`, hasło ≥6 znaków, przy rejestracji wymagany checkbox 16+. Po sukcesie `location.reload()`. **Build 7 (P1-21, część tymczasowa):** domyślna zakładka to „Zaloguj się”, gdy urządzenie jest znane (`cf_seen` albo jakikolwiek `nauka_progress_v1:*`), inaczej „Załóż konto”; przełącznik „Pokaż / Ukryj hasło”; przed założeniem konta arkusz „Sprawdź adres e-mail” z adresem; po złym logowaniu „Nie pamiętasz hasła? Napisz do nas” (mailto, tylko gdy `supportEmail` jest ustawiony); linki prawne pod formularzem. Przy zablokowanym localStorage komunikat zamiast pętli logowania (P2-44).
 - **Komunikaty** (`authMsg`, `:105–117`) dla kodów: `network`, `invalid_credentials`, `user_already_exists` / `email_exists`, `weak_password`, `over_request_rate_limit` / `over_email_send_rate_limit` / 429, `email_address_invalid`, `needs_confirm`, `signup_disabled`, ≥500 i domyślny.
@@ -608,7 +609,7 @@ Błędy: `active_subscription` (aktywna subskrypcja Stripe z weba), `network`, `
 
 **Karta „Konto”** (`settingsAccount`):
 1. E-mail z dopiskiem „postępy zapisują się na koncie” (albo „zalogowano”, gdy synchronizacja jest wyłączona).
-2. „Nowe lekcje”: „X z Y w tym miesiącu” i dopisek „· na start większy limit, jeszcze N dni” (trial) albo „· odnawia się 1 <miesiąca>”. **Bez słowa o planie Pro i płatnościach.**
+2. „Nowe lekcje” (od 0007): plan free — „Darmowe tworzenie lekcji: zostało X z Y”, a przy 0 „Wykorzystano obie darmowe lekcje — możesz dalej uczyć się z przedmiotów, które masz”; konto z trialem sprzed zmiany — „Do <data> bez limitu darmowych lekcji · X z Y w tym miesiącu”; pro bez triala — „X z Y w tym miesiącu · odnawia się 1 <miesiąca>”. **Bez słowa o planie Pro i płatnościach.**
 3. „Zgoda na AI: udzielona dd.mm.rrrr · dotknij, żeby wycofać” (Build 7, P1-26; wycofanie czyści `aiConsent` i `aiConsentV`, arkusz zgody wraca przy następnym materiale — także przy TWÓRZ po „WRÓĆ DO MATERIAŁU”, a `aiConsentV` idzie w body tylko przy ważnej zgodzie) albo „nieudzielona — zapytamy przy pierwszym materiale”.
 4. Twoje dane.
 5. Wyloguj.
@@ -636,7 +637,7 @@ Punkt o Google Fonts zniknął razem z Google Fonts. Pod listą link do pełnej 
 | Wysyłka pliku >6 MB (TUS 1.0.0) | `POST /storage/v1/upload/resumable`, kawałki po dokładnie 6 MB (`PATCH`, 180 s), do 3 ponowień po 1 / 3 / 7 s, przed ponowieniem `HEAD` po offset. Ponawiane: 0, 408, 409, 423, 429, 5xx. Adres z `Location` jest wymuszany na domenę Supabase (token nie wycieknie). |
 | API (iOS) | `CapacitorHttp.request` z samym `readTimeout: 310000`, **bez `connectTimeout`**. Błąd → `'Brak połączenia z serwerem'`. 401 → odśwież i raz ponów. |
 | API (przeglądarka) | `fetch` 310 s. Na `location.origin` (lokalne proxy) **tylko** gdy strona działa z `http://localhost` albo `http://127.0.0.1` i nie ustawiono `apiDirect` (`cloud.js:45`); każdy inny adres woła `apiUrl` wprost, co blokuje brak CORS. **Proxy nie istnieje** (`cloud-config.js:2` wspomina `node dev/proxy.js`, katalogu `dev/` nie ma), więc generowanie w przeglądarce nie działa. |
-| `me()` | `GET /api/me` (Build 7: limit czasu 15 s, cache w pamięci do 60 s; P2-45) i osobno `profiles?select=trial_until`. Pobierane przy starcie, przy powrocie do apki i przy otwarciu [+], żeby limit był znany przed aparatem. UI używa `limits.generationsPerMonth`, `limits.filesPerGeneration`, `limits.maxFileMb`, `usage.generations`. Licznik w karcie „Konto” jest przycinany do limitu (`min(used, lim)`), bo stary serwer potrafił zapisać np. 4/3 ([7.5](#75-plany-i-limity)). |
+| `me()` | `GET /api/me` (Build 7: limit czasu 15 s, cache w pamięci do 60 s; P2-45). Z backendem po 0007 limit i koniec triala są w `quota` (`scope` `lifetime`/`month`, `used`, `limit`, `trialUntil`); ze starszym backendem osobno `profiles?select=trial_until`. Pobierane przy starcie, przy powrocie do apki i przy otwarciu [+], żeby limit był znany przed aparatem. UI używa `quota` (gdy jest), inaczej `limits.generationsPerMonth` i `usage.generations`; zawsze `limits.filesPerGeneration`, `limits.maxFileMb`. Licznik w karcie „Konto” jest przycinany do limitu (`min(used, lim)`), bo stary serwer potrafił zapisać np. 4/3 ([7.5](#75-plany-i-limity)). |
 
 Cramfox woła tylko dwa endpointy API (`/api/generate` i `/api/me`) i jedno RPC (`rpc/delete_my_account`); resztę robi przez REST i Storage Supabase.
 
@@ -694,7 +695,7 @@ Cramfox woła tylko dwa endpointy API (`/api/generate` i `/api/me`) i jedno RPC 
 
 1. **Wejście.** Przycisk „+” w dolnej nawigacji albo „Dodaj materiał” → arkusz z trzema drogami: zdjęcie, plik, tekst. Hooki `addPhoto`, `addFile`, `addText` wołają `startAdd` (`cloud-ui.js:191–274`).
 2. **Blokada równoległej pracy.** Jeśli trwa inna generacja (`busyGen()`), [+] (hook `addOpen`) i wiersz „Tworzę lekcję…” na Dziś otwierają ekran postępu.
-2a. **Limit przed aparatem (Build 7, P1-12).** Arkusz „Dodaj materiał” pokazuje „Możesz utworzyć jeszcze X z Y lekcji w tym miesiącu · do N plików naraz” (hook `addSheet`). Przy 0 zamiast aparatu i pola tekstu jest arkusz „Limit na ten miesiąc wykorzystany” z datą odnowienia; w arkuszu [+] „Zrób zdjęcie”, „Wgraj plik” i „Wklej tekst” są wtedy przygaszone, pod aparatem „Nowe lekcje od 1 <miesiąca>”, a „Mam sprawdzian” działa normalnie (przegląd Build 7).
+2a. **Limit przed aparatem (Build 7, P1-12; teksty z decyzji D3).** Arkusz „Dodaj materiał” pokazuje (hook `addSheet`): plan free — „Darmowe tworzenie lekcji: zostało X z Y · do N plików naraz”; konto z trialem sprzed zmiany — „Do <data>: zostało X z 150 w tym miesiącu, potem 2 darmowe lekcje · do N plików naraz”; limit serwera na dobę pełny (`quota.globalOpen = false`) — „Serwer ma teraz bardzo dużo pracy. Nowych lekcji nie da się teraz tworzyć. Spróbuj później — Twój limit się nie zmienił.” (kafle przygaszone, pod aparatem „Spróbuj później”); limit miesięczny — „Możesz utworzyć jeszcze X z Y lekcji w tym miesiącu · …”. Przy 0 zamiast aparatu i pola tekstu jest arkusz „Wykorzystano obie darmowe lekcje” / „Możesz dalej uczyć się z przedmiotów, które masz.” (bez daty; konto bez przedmiotów: „Na tym koncie nie da się teraz utworzyć nowej lekcji.” + adres pomocy, jeśli jest) albo „Limit na ten miesiąc wykorzystany” z datą odnowienia (albo „Po <data>: 2 darmowe lekcje”, gdy trial kończy się wcześniej); na ekranie „Dodaj” **TWÓRZ LEKCJĘ** jest wtedy wyłączone i bez poświaty, a powód stoi też pod formularzem (przy pełnym limicie serwera przycisk zostaje aktywny, tylko bez poświaty — TWÓRZ sprawdzi ponownie); pusty „Dziś” (konto bez przedmiotów, hook `emptyToday`) nie obiecuje „Reszta powstanie sama” — tytuł „Wykorzystano obie darmowe lekcje”, bez kroków i świecącego „Dodaj materiał” („Napisz do nas”, gdy jest adres pomocy); w arkuszu [+] „Zrób zdjęcie”, „Wgraj plik” i „Wklej tekst” są wtedy przygaszone, pod aparatem „Darmowe lekcje wykorzystane” albo „Nowe lekcje od 1 <miesiąca>”, a „Mam sprawdzian” działa normalnie (przegląd Build 7).
 3. **Zgoda na AI** (`consent`): tylko gdy nie ma ważnej zgody (`META.aiConsent` i `aiConsentV ≥ CONSENT_V`, brak `aiConsentV` = 1). Akceptacja zapisuje datę i wersję w `META` (więc synchronizuje się z kontem). Tekst wymienia „Claude firmy Anthropic (USA)” i miejsce wycofania.
 4. **Wybór plików** (`:203–209`):
    - zdjęcie: `accept=image/*`, `capture=environment`, jedno;
@@ -738,7 +739,7 @@ Cramfox woła tylko dwa endpointy API (`/api/generate` i `/api/me`) i jedno RPC 
    10. rozpakowanie PPTX → `bad_pptx` / `pptx_protected` / `pptx_empty`;
    11. tekst łącznie >1 500 000 znaków → 400 `too_long`;
    11a. **Build 7:** wgranie do Files API (błąd → 500 `reserve_failed` + `reason:"ai_upload"`) i `count_tokens` (>150 000 tokenów → 400 `too_long` z `tokens`, `maxTokens`) — wszystko **przed** naliczeniem. **Okno naliczenia:** najpóźniej 75 s po starcie żądania (`CHARGE_BY_MS`; sprawdzane przed wgraniem i drugi raz tuż przed naliczeniem), inaczej 500 `download_failed` + `reason:"slow_intake"` bez naliczenia. Powód: klient (build 6 i 7) uznaje brak wiersza `generations` po 90 s za „nie ruszyło” i sprząta przedmiot (jego zegar liczy też sieć i zimny start funkcji); AI ma wtedy co najmniej 195 s;
-   12. **pobranie limitu** — Build 7: RPC `reserve_generation` w jednej transakcji (blokada konta, potem globalna; 409 `busy`, gdy konto ma generację `queued`/`running` młodszą niż 5,5 min; limity dobowy 20, globalny 300 i miesięczny sprawdzane **przed** podbiciem licznika; globalny liczy większą z liczb: wiersze `generations` z doby albo `generation_ledger` — licznik bez powiązania z kontem, więc usuwanie kont go nie zeruje; wstawia wiersz `running`, wpis w `generation_ledger` i podbija `usage`) → 402 `limit_reached` albo 500 `reserve_failed`. Do Build 7: `increment_usage`, a wiersz `generations` dopiero potem.
+   12. **pobranie limitu** — Build 7: RPC `reserve_generation` w jednej transakcji (blokada konta, adresu e-mail (free), potem globalna; plan czyta sama z `profiles.plan`; 409 `busy`, gdy konto ma generację `queued`/`running` młodszą niż 5,5 min; limit dobowy 20, limit planu — free: 2 na zawsze po skrócie adresu e-mail, pro: miesięczny — i globalny z `app_config` (domyślnie 30) sprawdzane **przed** podbiciem licznika; globalny liczy większą z liczb: wiersze `generations` z doby albo `generation_ledger` — licznik bez powiązania z kontem, więc usuwanie kont go nie zeruje; wstawia wiersz `running`, wpis w `generation_ledger`, dla free wpis w `free_generation_ledger` i podbija `usage`) → 402 `limit_reached` albo 500 `reserve_failed`. Do Build 7: `increment_usage`, a wiersz `generations` dopiero potem.
 10. **Wiersz `generations`** ze statusem `running` (Build 7: wstawia go `reserve_generation`).
 11. **AI** (`packages/ai/src/generate.ts`):
     1. **Faza 0, pliki:** PDF zawsze przez Files API, zdjęcia przez Files API tylko, gdy razem >15 MB, tekst inline. Pliki w Anthropic wygasają po 2 h i są kasowane po generacji.
@@ -778,9 +779,9 @@ Po `generation_failed`, `lost` i `not_started` z odzyskiwania UI woła `discard(
 
 | Limit | Wartość | Gdzie |
 |---|---|---|
-| Generacje na miesiąc | free 3, pro 150 (trial: pro przez 30 dni). Miesiąc kalendarzowy **UTC** (`monthKey`, `plans.ts:73–75`), więc odnawia się 1. dnia o 01:00 albo 02:00 czasu polskiego | `packages/shared/src/plans.ts:19–38`; RPC `increment_usage` |
+| Generacje planu | **free: 2 na zawsze** (od 0007; bez odnawiania, liczone po skrócie adresu e-mail — przeżywa usunięcie konta; liczy się każde naliczenie, także nieudane; limit z `app_config.free_lifetime_generations`). **pro: 150 na miesiąc** kalendarzowy **UTC** (`monthKey`), więc odnawia się 1. dnia o 01:00 albo 02:00 czasu polskiego. Trial (30 dni pro) mają tylko konta sprzed 0007, do końca `trial_until`; generacje z triala nie liczą się do darmowych 2 | `packages/shared/src/plans.ts` (`PLANS`, `generationsLifetime`); `reserve_generation`, `generation_quota`, `free_generation_ledger` (0007) |
 | Generacje na dobę, konto | 20 w **kroczącym oknie 24 h** (także dla pro; liczą się też nieudane), choć UI mówi „Spróbuj jutro” | `0004_cramfox.sql:103`; Build 7: `reserve_generation` (0007), sprawdzane przed podbiciem licznika |
-| Generacje na dobę, cały serwer | 300 (też kroczące 24 h) | `0004_cramfox.sql:106`; Build 7: `reserve_generation` z blokadą globalną; liczy też `generation_ledger` (bez powiązania z kontem — usuwanie kont nie zeruje limitu) |
+| Generacje na dobę, cały serwer | **30** od 0007 (wcześniej 300; też kroczące 24 h), zmiana bez migracji w `app_config.generation_global_daily_cap` (0 wstrzymuje tworzenie lekcji). Z tego konta free najwyżej **20** (`app_config.free_global_daily_cap`; wiersze `free_generation_ledger` z doby): masowo zakładane konta free nie zajmą całej doby kontom pro / z trialem / przyszłym pakietom. Pełny limit → apka mówi to przed aparatem (`quota.globalOpen = false`), komunikat „Spróbuj później” (okno kroczące, nie „jutro”) | `reserve_generation` z blokadą globalną i `increment_usage` (stary backend, bez puli free); liczy też `generation_ledger` (bez powiązania z kontem — usuwanie kont nie zeruje limitu); `generations_last_day()`, `free_generations_last_day()` |
 | Równoległa generacja (Build 7) | najwyżej jedna `queued`/`running` młodsza niż 5,5 min (330 s) na konto → 409 `busy` (żądanie żyje ≤300 s, a klient ogłasza `lost` po 330 s) | `reserve_generation` (0007), `ACTIVE_GENERATION_WINDOW_MS` (`plan.ts`) |
 | Moment naliczenia (Build 7) | najpóźniej 75 s po starcie żądania, inaczej 500 `download_failed` + `slow_intake` bez naliczenia | `CHARGE_BY_MS`, `deadline.ts` |
 | Tokeny wejścia (Build 7) | ≤150 000 (`count_tokens` przed naliczeniem) → inaczej 400 `too_long` | `MAX_INPUT_TOKENS`, `generate.ts` |
@@ -879,12 +880,13 @@ Parametry generowania (`callOnce`, `generate.ts:206–237`): beta `server-side-f
 
 ### 5.7 Kody błędów i co widzi użytkownik
 
-Komunikaty są w `failText` (`cloud-ui.js`). „+limit” oznacza dopisek: „Ta próba liczy się do miesięcznego limitu.” — od Build 7 tylko wtedy, gdy odpowiedź ma `generationId` (naliczenie potwierdzone przez serwer). Jeśli użytkownik nie jest na ekranie generowania, dostaje klikalny toast „Nie udało się utworzyć lekcji — dotknij, żeby zobaczyć” i kartę na Dziś. Przycisk **WRÓĆ DO MATERIAŁU** (szkic zachowany) jest wszędzie poza `unauthorized`, `no_session` i `unknown_outcome` — od Build 7 także przy `limit_reached`.
+Komunikaty są w `failText` (`cloud-ui.js`). „+limit” oznacza dopisek: „Ta próba liczy się do miesięcznego limitu.” (pro), „Ta próba zużyła jedną z darmowych lekcji — zostało X z Y.” (free) albo „Ta próba liczy się do limitu lekcji.” (zakres nieznany, np. po odzyskaniu bez `/api/me`) — od Build 7 tylko wtedy, gdy odpowiedź ma `generationId` (naliczenie potwierdzone przez serwer). Gdy nieudana próba zużyła **ostatnią** darmową lekcję (licznik sprzed próby − 1 albo świeży `/api/me` po próbie), treść to „Ta próba zużyła ostatnią darmową lekcję. Możesz dalej uczyć się…”, bez rad „spróbuj jeszcze raz” i bez „WRÓĆ DO MATERIAŁU”. Jeśli użytkownik nie jest na ekranie generowania, dostaje klikalny toast „Nie udało się utworzyć lekcji — dotknij, żeby zobaczyć” i kartę na Dziś. Przycisk **WRÓĆ DO MATERIAŁU** (szkic zachowany) jest wszędzie poza `unauthorized`, `no_session` i `unknown_outcome` — od Build 7 także przy `limit_reached`.
 
 | Kod | Skąd | Limit pobrany? | Tytuł w apce | Uwagi |
 |---|---|---|---|---|
-| `limit_reached` (`used` ≥1999999) | serwer 402 | nie | Serwer ma dziś bardzo dużo pracy | „Nowe lekcje będzie można tworzyć jutro. Twój limit się nie zmienił.” (globalne 300/dobę) |
+| `limit_reached` (`used` ≥1999999) | serwer 402 | nie | Serwer ma teraz bardzo dużo pracy | „Nowe lekcje będzie można tworzyć później. Twój limit się nie zmienił.” (limit globalny z `app_config`, domyślnie 30/dobę, albo pula free 20; okno kroczące, więc nie „jutro”). Zwykle widać to już przed aparatem (`quota.globalOpen`) |
 | `limit_reached` (`used` ≥999999) | serwer 402 | nie | Na dziś wystarczy | „Dzienny limit nowych lekcji jest wykorzystany. Spróbuj jutro.” (20/dobę na konto) |
+| `limit_reached` (`scope: "lifetime"`, od 0007) | klient albo serwer 402 | nie | Wykorzystano obie darmowe lekcje | „Możesz dalej uczyć się z przedmiotów, które masz.” (bez przedmiotów: „Na tym koncie nie da się teraz utworzyć nowej lekcji.”). Spokojna ikona, bez „WRÓĆ DO MATERIAŁU”. Build 6 pokaże tu swój tekst miesięczny z dobrymi liczbami („2 z 2”) i nieprawdziwą datą odnowienia |
 | `limit_reached` (inne) | klient albo serwer 402 | nie | Limit na ten miesiąc wykorzystany | „Wykorzystano X z Y lekcji w tym miesiącu. Limit odnowi się 1. dnia miesiąca.” |
 | `too_many_files` | klient albo serwer 400 | nie | Za dużo plików naraz | „Maksymalnie N plików…” (domyślnie 5) |
 | `file_too_big` | klient, Storage 413, serwer 400 | nie | Plik jest za duży | z nazwą pliku i limitem MB |
@@ -1102,7 +1104,7 @@ Wspólne: autoryzacja `Authorization: Bearer <access_token z Supabase>` albo coo
 |---|---|---|---|
 | `POST /api/generate` | Cramfox | 300 s | materiały → temat (sekcja [5](#5-tworzenie-przedmiotu-krok-po-kroku)) |
 | `GET /api/generate?id=` | (Cramfox odzyskuje inaczej, przez REST) | | `{status, topicId, error}`; 400 „Brak ?id”, 404 „Nie znaleziono” |
-| `GET /api/me` | Cramfox | | `{profile, plan, usage:{month, generations, tutorMessages}, limits, subscription}`. **`limits` zawiera ceny w PLN** — apka nie może ich pokazywać. `profile` (`lib/plan.ts:17`) ma `id, email, display_name, stage, plan, stripe_customer_id`, bez `trial_until`. |
+| `GET /api/me` | Cramfox | | `{profile, plan, usage:{month, generations, tutorMessages}, limits, quota, subscription}`. `quota` (od 0007): `{plan, scope: "lifetime"\|"month", used, limit, remaining, trialUntil}`; dla `lifetime` pola `usage.generations` i `limits.generationsPerMonth` niosą licznik na zawsze (stare buildy blokują przy „2 z 2”). **`limits` zawiera ceny w PLN** — apka nie może ich pokazywać. `profile` (`lib/plan.ts:17`) ma `id, email, display_name, stage, plan, stripe_customer_id`, bez `trial_until`. |
 | `POST /api/tutor` | stary web | 60 s | czat z tutorem; limit free 30/dzień (jako 30 × dzień miesiąca). Konto na trialu przy limicie dostaje **500** zamiast 402 (wyjątek `tutor_cap`). Pobiera limit przed odpowiedzią, nie zwraca. **Build 7 (P1-1):** w produkcji 410 `tutor_disabled`, chyba że `TUTOR_ENABLED=1`. |
 | `POST /api/stripe/checkout` | stary web | | sesja Stripe Checkout; zły body → 500 zamiast 400 |
 | `POST /api/stripe/portal` | stary web | | portal rozliczeń; 400 `no_customer` |
@@ -1125,7 +1127,9 @@ Projekt Supabase `zhgxhdsnizujzygpcyfl` („nauka”), eu-central-1. Typy: `stag
 | `topics` | subject_id (kaskada), owner_id, name, emoji, source (`materials`/`prompt`), **content jsonb**, generation_id, position | wszystko na swoich. **Klient może zapisać dowolny `content` bez walidacji**, dlatego `clean()` w apce jest obowiązkowe |
 | `materials` | owner_id, storage_path, mime, size_bytes (pisane przez klienta, niezaufane), name | wszystko na swoich; constraint `materials_path_owner` (`^<owner_id>/<uuid>.<ext>$`) jest **NOT VALID** (stare wiersze niesprawdzone) |
 | `generations` | owner_id, status, stage, hint, options, material_ids, subject_id, topic_id, error, model, input/output_tokens, created_at, finished_at; Build 7 (0007): `opus_input`, `opus_cache_write`, `opus_cache_read`, `opus_output`, `review_input`, `review_output`, `cost_usd`, `quality` | tylko SELECT swoich; pisze service role. Od 0008 klucz użytkownika czyta tylko kolumny `id, owner_id, status, stage, hint, options, material_ids, subject_id, topic_id, error, created_at, finished_at` (koszt, jakość, model i tokeny tylko dla serwera; `select=*` z kluczem użytkownika nie działa) |
-| `generation_ledger` (Build 7, 0007) | id, created_at — jeden wiersz na rezerwację, **bez** powiązania z kontem | RLS bez polityk, rolom API odebrane; liczy limit globalny 300/dobę (przeżywa usunięcie konta); wiersze >2 dni kasuje `reserve_generation` |
+| `generation_ledger` (Build 7, 0007) | id, created_at — jeden wiersz na rezerwację, **bez** powiązania z kontem | RLS bez polityk, rolom API odebrane; liczy limit globalny (`app_config`, domyślnie 30/dobę; przeżywa usunięcie konta); wiersze >2 dni kasuje `reserve_generation` |
+| `free_generation_ledger` (0007, D3) | id, email_hash (sha256 hex z `lower(trim(email))` z `auth.users`), user_id (→ auth.users, `on delete set null`), generation_id (unikalne), created_at — jeden wiersz na naliczenie na planie free | RLS bez polityk, rolom API odebrane; przeżywa usunięcie konta; zużycie konta = wiersze z jego skrótem adresu **albo** jego user_id (zmiana adresu nie zeruje); nigdy nie kasowane |
+| `app_config` (0007, D3) | key, value jsonb, note, updated_at | RLS bez polityk, rolom API odebrane (service role tylko SELECT); `generation_global_daily_cap` (30), `free_lifetime_generations` (2); czyta `app_config_int()` — zła wartość albo brak wiersza = wartość domyślna |
 | `usage` | (user_id, month `RRRR-MM`) PK, generations, tutor_messages | tylko SELECT; pisze tylko RPC `increment_usage` |
 | `app_state` (0004) | user_id PK, progress jsonb, meta jsonb, client_ts, rev, updated_at; CHECK rozmiar progress+meta < 2 000 000 B | wszystko na swoim (także DELETE) |
 | `subscriptions` | user_id PK, stripe_subscription_id, status, price_id, interval, current_period_end, cancel_at_period_end | SELECT swoje; pisze webhook |
@@ -1134,7 +1138,7 @@ Projekt Supabase `zhgxhdsnizujzygpcyfl` („nauka”), eu-central-1. Typy: `stag
 ### 7.4 Triggery, RPC, cron
 
 **Triggery:**
-- `on_auth_user_created` → `handle_new_user()`: tworzy `profiles` i `user_meta`. Od 0004: gdy `raw_user_meta_data.client = 'cramfox'` → `plan = 'pro'`, `trial_until = now() + 30 dni`; inaczej `free`.
+- `on_auth_user_created` → `handle_new_user()`: tworzy `profiles` i `user_meta`. 0004–0006: gdy `raw_user_meta_data.client = 'cramfox'` → `plan = 'pro'`, `trial_until = now() + 30 dni`. **Od 0007: zawsze `free` bez `trial_until`** (dowolny klient).
 - `touch_<tabela>` → `touch_updated_at()` na profiles, subjects, topics, progress, user_meta, subscriptions.
 - `bump_app_state` (BEFORE INSERT OR UPDATE): przy INSERT `rev = 1`, przy UPDATE `rev = stary + 1`, `updated_at = now()`. **`rev` nadaje serwer.**
 
@@ -1142,12 +1146,15 @@ Projekt Supabase `zhgxhdsnizujzygpcyfl` („nauka”), eu-central-1. Typy: `stag
 
 | RPC | Działanie | Dostęp |
 |---|---|---|
-| `reserve_generation(...)` (Build 7, `0007`) | jedna transakcja: blokada doradcza konta, potem globalna; `busy` (generacja <5,5 min), limit dobowy 20, globalny 300 (większa z liczb: `generations` z doby albo `generation_ledger`) i miesięczny sprawdzane **przed** podbiciem; wstawia wiersz `running`, wpis w `generation_ledger`, potem `usage + 1` | tylko service role |
+| `reserve_generation(...)` (Build 7, `0007`) | jedna transakcja: blokada doradcza konta, adresu e-mail (free), potem globalna; plan z `profiles.plan`; `busy` (generacja <5,5 min), limit dobowy 20, limit planu (free: `lifetime` — 2 na zawsze po skrócie adresu, `app_config`; pro: `monthly` z `p_monthly_limit`), globalny z `app_config` (domyślnie 30; większa z liczb: `generations` z doby albo `generation_ledger`) sprawdzane **przed** podbiciem; wstawia wiersz `running`, wpis w `generation_ledger`, dla free w `free_generation_ledger`, potem `usage + 1`; odpowiedź z `plan`, `scope` | tylko service role |
+| `generation_quota(p_user, p_month, p_monthly_limit)` (0007, D3) | tylko odczyt, ta sama logika planu: `{plan, scope, used, limit, remaining, month?, trial_until, free_limit, global_open}` — dla `GET /api/me` i wstępnego sprawdzenia w `/api/generate`. API zawsze podaje `p_monthly_limit` = limit pro (free go pomija), więc nieudany odczyt profilu w API nie da kontu pro limitu 2 | tylko service role |
+| `backfill_free_generation_ledger()` (0007, D3) | dolicza do darmowych 2 historię kont, które są dziś free: generacje po końcu triala albo kont bez triala (bez generacji z triala); idempotentne (pomija też wiersze unieważnione); wołane w 0007 (koniec sekcji 2d) i drugi raz w 0008 (sekcja 0). Start wszystkich od zera = usunąć **oba** wywołania | nikt (właściciel) |
+| `reset_free_generations(p_email)` (0007, D3) | unieważnia (`voided_at`) darmowe generacje adresu i kont, które go mają — licznik wraca do 0; wiersze zostają, więc ponowne wgranie 0007/0008 ich nie przywróci; pula free w limicie globalnym nadal je liczy. Też przyszłe zwroty (D4) mają unieważniać wiersz, nie kasować | nikt (właściciel, SQL Editor) |
 | `finish_generation(...)` (Build 7) | temat do `topics` (pozycja max+1) i `generations` → `done` z kosztem i jakością w jednej transakcji; zwraca wiersz tematu | tylko service role |
 | `sweep_stale_generations()` (Build 7) | `running`/`queued` starsze niż 8 min → `failed` (bez zwrotu limitu — decyzja D4) | tylko service role / cron |
 | `materials_bucket_stats()` (Build 7) | rozmiar i liczba plików bucketu (alert) | tylko service role |
 | `materials_upload_allowed()` (Build 7, `0008`) | dla polityki RESTRICTIVE: <100 plików i <500 MB konta w 24 h | wołana przez politykę |
-| `increment_usage(p_user, p_month, p_field)` | (do Build 7 dla generacji; tutor nadal) `generations`: najpierw limity dobowe (≥20 wierszy `generations` konta w 24 h → zwraca **1000000**; ≥300 globalnie → **2000000**; licznik bez zmian), potem +1 i zwraca sumę miesięczną. Inne pole (tutor): na trialu bez subskrypcji przy ≥30 × dzień miesiąca → wyjątek `tutor_cap` | tylko service role |
+| `increment_usage(p_user, p_month, p_field)` | (do Build 7 dla generacji; tutor nadal) `generations`: najpierw limity dobowe (≥20 wierszy `generations` konta w 24 h → zwraca **1000000**; globalnie ≥ limit z `app_config` — od 0007, wcześniej 300 — → **2000000**; licznik bez zmian), potem +1 i zwraca sumę miesięczną. Inne pole (tutor): na trialu bez subskrypcji przy ≥30 × dzień miesiąca → wyjątek `tutor_cap` | tylko service role |
 | `delete_my_account(p_dry_run)` | `not_authenticated`; `active_subscription` (active / trialing / past_due, także na próbę); `files_remaining` (pliki w `materials/<uid>/`, tylko na serio); potem `delete from auth.users` z kaskadą | tylko zalogowani |
 | `end_trials()` | pro → free po końcu `trial_until`, jeśli brak subskrypcji | nikt (tylko cron) |
 | `my_total_xp()`, `log_activity(...)`, `weekly_leaderboard(...)`, `my_weekly_rank()` | stara apka Recall | |
@@ -1162,7 +1169,8 @@ Projekt Supabase `zhgxhdsnizujzygpcyfl` („nauka”), eu-central-1. Typy: `stag
 
 | | free | pro |
 |---|---|---|
-| Generacje / miesiąc | 3 | 150 |
+| Generacje | **2 na zawsze** (od 0007; `generationsLifetime`, w bazie `app_config.free_lifetime_generations`; `generationsPerMonth` = 2 tylko dla starszych klientów); liczone po skrócie adresu e-mail, przeżywa usunięcie konta | 150 / miesiąc |
+| Udział w limicie serwera na dobę | najwyżej 20 z 30 (`app_config.free_global_daily_cap`) | reszta (i wolne miejsca puli free) |
 | Pliki / generacja | 5 | 20 |
 | Maks. plik | 50 MB | 50 MB |
 | Materiał łącznie na generację | 150 MB | 150 MB (`route.ts:14`) |
@@ -1171,12 +1179,15 @@ Projekt Supabase `zhgxhdsnizujzygpcyfl` („nauka”), eu-central-1. Typy: `stag
 | Ceny w `plans.ts` | 0 | 29 / 199 PLN |
 
 - Miesiąc (`monthKey()`) to `RRRR-MM` w UTC.
-- Trial: 30 dni pro dla nowych kont Cramfoxa. W UI opisany jako „na start większy limit”.
-- Limity dobowe (20 na konto, 300 globalnie) dotyczą też pro i liczą nieudane próby.
+- Trial: do 0007 30 dni pro dla nowych kont Cramfoxa; od 0007 nowe konta są free. Konta z trialem w toku zostają na pro do `trial_until`, potem `end_trials` przenosi je na free z pełnymi 2 darmowymi generacjami (generacje z triala się nie liczą — wybór celowy: uczeń po trialu dostaje pełne 2, a farmienie triali i tak się skończyło, bo nowe konta triala nie mają). W UI (bez słowa o planie): „Do 7 listopada: 2 z 150 w tym miesiącu, potem 2 darmowe lekcje”; gdy limit miesięczny wyczerpany, a trial kończy się przed 1. dniem miesiąca: „Po 7 listopada: 2 darmowe lekcje.”
+- **Zużycie free** = wiersze `free_generation_ledger` (bez `voided_at`) ze skrótem adresu konta albo z jego `user_id` (zmiana adresu w Auth też nie zeruje). Skrót: `sha256(lower(btrim(email)))` hex, wbudowane `sha256()` (bez pgcrypto), adres z `auth.users`. Po usunięciu konta zostaje skrót, data i id generacji (opisane w apce: „Twoje dane”, „Usuń konto” — do polityki prywatności).
+- **Konfiguracja bez migracji** (`app_config`, tylko serwer, SQL Editor): `generation_global_daily_cap` (30; 0 = wstrzymanie), `free_lifetime_generations` (2), `free_global_daily_cap` (20; ≥ limitu globalnego = bez puli). Ponowne wgranie 0007 nie nadpisuje zmienionych wartości. Polecenia: `nauka-backend/docs/DEPLOY.md`.
+- Plan pro zostaje (150 na miesiąc); przyszłe pakiety z wyższymi limitami (IAP) mają się mapować na `pro`.
+- Limity dobowe (20 na konto, globalny z `app_config`, domyślnie 30) dotyczą też pro i liczą nieudane próby.
 - **Wyścig:** limity dobowe liczą wiersze `generations`, które powstają dopiero po pobraniu limitu. Równoległe żądania mogą przejść razem.
 - **Limit miesięczny sprawdzany po podbiciu licznika:** `increment_usage` najpierw dodaje 1 (`0004_cramfox.sql:109–111`), a dopiero potem `reserveGeneration` porównuje `used > limit` (`lib/plan.ts:48`). Odrzucone żądanie i tak zostawia licznik ponad limitem (np. 4/3). Wstępne sprawdzenie tylko do odczytu działa tylko w trybie materiałów **z plikami** (`intake.ts:71–75`), więc żądania z samym tekstem i tryb `prompt` zawsze idą tą drogą. UI ukrywa to przez `min(used, lim)` (`cloud-ui.js:156`).
 - **Okna limitów:** dobowe to kroczące 24 h (nie doba kalendarzowa, choć UI mówi „Spróbuj jutro”); miesięczne to miesiąc UTC; koniec triala przez cron o :15 co godzinę (do ok. 1 h spóźnienia).
-- CLAUDE.md i README wymieniają tylko 300/dobę globalnie; **brakuje tam limitu 20/dobę na konto**.
+- CLAUDE.md i oba README opisują plany od 0007 (free 2 na zawsze, bez triala, 30/dobę z pulą free 20, 20/dobę na konto).
 
 ### 7.6 Bucket `materials`
 
@@ -1290,14 +1301,14 @@ Dodatkowo:
 
 | Wytyczna | Co to znaczy dla nas | Stan |
 |---|---|---|
-| 3.1.1 (zakupy w aplikacji) | W UI nie może być płatności, cen ani słowa „Pro”. Stripe zostaje na webie. Trial opisany jako „na start większy limit”. `/api/me` zwraca ceny, apka ich nie pokazuje. Zakupy w aplikacji trzeba dodać osobno (DEPLOY.md §5 sugeruje RevenueCat mapowany na `profiles.plan`). | prawie: jeden wyjątek, komunikat o „subskrypcji kupionej poza aplikacją” przy usuwaniu konta (`cloud-ui.js:184`, [4.2](#42-wylogowanie-i-usunięcie-konta)); IAP do zrobienia |
+| 3.1.1 (zakupy w aplikacji) | W UI nie może być płatności, cen ani słowa „Pro”. Stripe zostaje na webie. Trial starych kont opisany jako „Do <data> bez limitu darmowych lekcji”, plan free jako „darmowe lekcje”. `/api/me` zwraca ceny, apka ich nie pokazuje. Zakupy w aplikacji trzeba dodać osobno (DEPLOY.md §5 sugeruje RevenueCat mapowany na `profiles.plan`). | prawie: jeden wyjątek, komunikat o „subskrypcji kupionej poza aplikacją” przy usuwaniu konta (`cloud-ui.js:184`, [4.2](#42-wylogowanie-i-usunięcie-konta)); IAP do zrobienia |
 | 5.1.1(v) (usuwanie konta) | Usuwanie konta w apce | jest |
 | 5.1.2(i) (dane do AI firm trzecich) | Zgoda przed pierwszym wysłaniem, z nazwą dostawcy | v1 jest; dla nagrań potrzebna v2 |
 | Etykiety prywatności | e-mail, treści użytkownika (zdjęcia, pliki, tekst), postępy; później „Audio Data”; powiązane z użytkownikiem, cel „funkcjonalność”, bez śledzenia | do wypełnienia |
 
 ### 8.7 Znane ryzyka bezpieczeństwa
 
-1. **Farmienie triali:** `client:'cramfox'` w metadanych rejestracji plus brak potwierdzania maila daje dowolną liczbę kont z 30 dniami pro. Hamują tylko limity 20 i 300 na dobę (i te da się obejść wyścigiem).
+1. **Farmienie triali:** `client:'cramfox'` w metadanych rejestracji plus brak potwierdzania maila dawało dowolną liczbę kont z 30 dniami pro. **Od 0007 (w kodzie, niewdrożone): bez triala, free 2 na zawsze po skrócie adresu e-mail, limit globalny 30/dobę.** Zostaje farmienie nowymi adresami (np. aliasy `a+1@gmail.com` — normalizacja to tylko `lower(trim())`): każdy adres to 2 generacje; hamuje je limit globalny 30/dobę.
 2. **Wyścig limitów dobowych** (patrz [7.5](#75-plany-i-limity)).
 3. **Tokeny w localStorage.**
 4. **Otwarte przekierowanie** w `proxy.ts:39` (tylko web).
@@ -1414,7 +1425,7 @@ Potem: Xcode → Window → Organizer → archiwum → Distribute App. Zapisz, k
 
 - Pułapki:
   - migracje są w dwóch worktree (dwóch gałęziach) jednego repo: 0001–0003 w `nauka-backend/supabase/migrations/`, 0004–0008 w `nauka-app/backend/`. Build 7: **0007 (addytywna) przed backendem, 0008 (zaostrzająca) po sprawdzeniu buildu 6 na nowym backendzie** — kolejność i sprawdzenia w `nauka-backend/docs/DEPLOY.md`; lokalny test obu (`cd nauka-backend && npm run test:db`, tymczasowy Postgres); `supabase db push` z backendu **nie** da schematu Cramfoxa;
-  - **nigdy nie uruchamiaj 0001–0003 ani `supabase db push` z `nauka-backend` na produkcji.** 0001 i 0002 odtwarzają politykę `"profiles self update"` bez sprawdzenia `trial_until` (`0001_init.sql:193–195`, `0002_gamification.sql:36–38`), więc użytkownik mógłby sam ustawić sobie trial do 2099 i zostać na pro. 0001 przywraca też `increment_usage` bez limitów 20/300 i bez `tutor_cap` (`0001_init.sql:233–249`) oraz `handle_new_user` bez triala. Po takim błędzie trzeba od razu wgrać ponownie 0004;
+  - **nigdy nie uruchamiaj 0001–0003 ani `supabase db push` z `nauka-backend` na produkcji.** 0001 i 0002 odtwarzają politykę `"profiles self update"` bez sprawdzenia `trial_until` (`0001_init.sql:193–195`, `0002_gamification.sql:36–38`), więc użytkownik mógłby sam ustawić sobie trial do 2099 i zostać na pro. 0001 przywraca też `increment_usage` bez limitów 20/300 i bez `tutor_cap` (`0001_init.sql:233–249`) oraz `handle_new_user` bez triala. Po takim błędzie trzeba od razu wgrać ponownie 0004, **a po nim 0007** (0004 przywraca trial dla nowych kont i globalne 300 w `increment_usage`; 0007 jest idempotentna i nie nadpisuje wartości w `app_config`);
   - `0001_init.sql` został zmieniony na miejscu (limit 50 MB, PPTX). Baza, która już go wykonała, tego nie widzi; właściwą drogą są 0005 i 0006;
   - `reset_dev.sql` kasuje wszystko. **Nigdy na produkcji.**
 - Sprawdzenie stanu produkcji (tylko odczyt, np. w edytorze SQL w panelu Supabase):
@@ -1574,7 +1585,7 @@ Kolejność: 1a schematy → 1b PPTX → 2a spike → 2b backend → 2c nagrywar
 7. **AI firm trzecich (5.1.2(i)):** zgoda v1 jest; dla nagrań v2.
 8. **Usuwanie konta (5.1.1(v)):** jest.
 9. **Info.plist:** usunąć podwójny most; dla nagrań mikrofon i audio w tle.
-10. **Bezpieczniki kosztów:** 20/dobę na konto i 300/dobę globalnie (Anthropic); dla STT limity w env i limit wydatków w ElevenLabs.
+10. **Bezpieczniki kosztów:** 20/dobę na konto i globalnie 30/dobę (od 0007, `app_config`; wcześniej 300); free 2 generacje na zawsze; dla STT limity w env i limit wydatków w ElevenLabs.
 11. **Zacommitować i otagować** kod produkcji (apka i backend) i zapisać, który commit to który build.
 12. **Opcjonalnie:** płatny plan Supabase (limit pliku, ok. 1 GB na free, usypianie projektu), Vercel Pro (800 s), własna domena zamiast `nauka-jet.vercel.app`.
 
@@ -1608,7 +1619,7 @@ Kolejność: 1a schematy → 1b PPTX → 2a spike → 2b backend → 2c nagrywar
 - UI po polsku, rzeczowy i ciepły, bez młodzieżowego slangu. Ma pasować i 16-latkowi, i studentowi.
 - **Zero emoji w UI.** Emoji z AI są usuwane: `noEmoji` w tytułach i schematach, a od Build 7 także `stripEmoji` w `clean()` i w mapperze (`deepEsc`) dla całej treści tematu (P2-28; zostają symbole tekstowe jak ↔ © ™ ▶).
 - Przyciski główne wersalikami („TWÓRZ LEKCJĘ”, „ZACZNIJ NAUKĘ”), toasty krótkie („+4 XP”, „Nie tym razem”).
-- **Żadnych wzmianek o płatnościach, cenach, subskrypcji, „Pro”, „premium”, „zakupie”** (App Store 3.1.1). Trial to „na start większy limit”. Od Build 7 nie ma wyjątków (komunikat przy usuwaniu konta poprawiony, [4.2](#42-wylogowanie-i-usunięcie-konta)). Przy testach automatycznych użyj wyrażenia `/(?<!\p{L})Pro(?!\p{L})|płat|subskryp|premium|zakup/iu` — w JS `\b` nie zna polskich liter, więc dawne `/\bPro\b/` łapało „Prościej”, a proste `/Pro/` łapie „Prezentacja” i „prowadzącego”. W `build/nauka-all.html` z Build 7: 0 trafień.
+- **Żadnych wzmianek o płatnościach, cenach, subskrypcji, „Pro”, „premium”, „zakupie”** (App Store 3.1.1). Trial starych kont to „Do <data>: X z 150 w tym miesiącu, potem 2 darmowe lekcje”, plan free to „darmowe lekcje” („Darmowe tworzenie lekcji: zostało 1 z 2”, tytuł „Wykorzystano obie darmowe lekcje” + „Możesz dalej uczyć się z przedmiotów, które masz.”; konto bez przedmiotów: „Na tym koncie nie da się teraz utworzyć nowej lekcji.” i ewentualnie adres pomocy). Pełny limit serwera: „Serwer ma teraz bardzo dużo pracy … Spróbuj później”. Liczby „X z Y” z twardymi spacjami. Limit to stan, nie awaria: spokojna ikona (`renderError({calm:true})`). Od Build 7 nie ma wyjątków (komunikat przy usuwaniu konta poprawiony, [4.2](#42-wylogowanie-i-usunięcie-konta)). Przy testach automatycznych użyj wyrażenia `/(?<!\p{L})Pro(?!\p{L})|płat|subskryp|premium|zakup/iu` — w JS `\b` nie zna polskich liter, więc dawne `/\bPro\b/` łapało „Prościej”, a proste `/Pro/` łapie „Prezentacja” i „prowadzącego”. W `build/nauka-all.html` z Build 7: 0 trafień.
 
 ### 12.2 Dane
 
@@ -1683,7 +1694,9 @@ Kolejność: 1a schematy → 1b PPTX → 2a spike → 2b backend → 2c nagrywar
 | **Pre-check** | Wstępne sprawdzenie limitu tylko do odczytu (bez pobierania). |
 | **Reserve (pobranie limitu)** | Wywołanie `increment_usage`; od tej chwili próba się liczy. |
 | **Sentinel** | Umowna wartość: `used` = 999999 (limit dobowy konta) albo 1999999 (limit serwera). |
-| **Trial** | 30 dni planu pro dla nowego konta Cramfoxa; kończy go cron `cramfox-end-trials`. |
+| **Trial** | 30 dni planu pro dla nowego konta Cramfoxa — tylko konta sprzed 0007 (od 0007 nowe konta są free); kończy go cron `cramfox-end-trials`. |
+| **Darmowe lekcje (free na zawsze)** | Od 0007: 2 generacje na całe życie adresu e-mail, bez odnawiania; licznik `free_generation_ledger` po skrócie adresu przeżywa usunięcie konta. |
+| **`app_config`** | Tabela ustawień serwera (limit globalny, darmowe lekcje) zmienianych bez migracji. |
 | **Tryb demo** | Generowanie bez klucza Anthropic; przykładowy temat z `tagline` „DEMO — …” i banerem trybu demo na ekranie „Gotowe”. Limit i tak schodzi. |
 | **Dziennik (`cf_job`)** | Zapis trwającej generacji w telefonie, do odzyskania po utracie połączenia. |
 | **Odzyskiwanie (recovery)** | Dociąganie wyniku generacji po przerwie (`recoverJob`). |

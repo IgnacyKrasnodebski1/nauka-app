@@ -14,11 +14,13 @@ Otwórz w przeglądarce (najlepiej w trybie urządzenia mobilnego w DevTools):
 - http://localhost:8765/test/dev/?mock=fresh&reset=1 — nowe konto od zera (rejestracja → etap → cel → pusty „Dziś”)
 - http://localhost:8765/test/dev/?mock=seeded&reset=1 — konto testowe z 2 przedmiotami i postępami, od razu zalogowane
 - http://localhost:8765/test/dev/?mock=seeded&reset=1&gen=slow:30 — generowanie trwa 30 s
-- http://localhost:8765/test/dev/?mock=seeded&reset=1&gen=err:limit_reached — błąd limitu przy tworzeniu lekcji
+- http://localhost:8765/test/dev/?mock=seeded&reset=1&gen=err:limit_reached — błąd limitu przy tworzeniu lekcji (konto z okresem startowym: limit miesięczny)
+- http://localhost:8765/test/dev/?mock=seeded&reset=1&trial=-2&used=2 — plan free po okresie startowym: obie darmowe lekcje wykorzystane (backend/0007: 2 na zawsze, bez odnawiania; `plan=free&used=N` to samo bez zmiany profilu)
+- http://localhost:8765/test/dev/?mock=seeded&reset=1&plan=free&global=full — limit serwera na dobę pełny (`quota.globalOpen=false`): komunikat „Spróbuj później” przed aparatem
 - http://localhost:8765/test/dev/?mock=seeded&reset=1&gen=err:lost:ai_timeout — kody backendu Build 7 (`err:KOD[:reason]`: `busy`, `too_long`, `lost:ai_timeout`, `reserve_failed:ai_upload`, `download_failed:slow_intake`)
 - http://localhost:8765/test/dev/?mock=seeded&reset=1&cap=storage — limity konta z `backend/0008` (`cap=storage|materials|subjects`)
 
-`reset=1` czyści stan atrapy i apki (raz — parametr znika z adresu). Bez `reset` stan zostaje między przeładowaniami. Wszystkie parametry (`gen`, `genfx`, `upload`, `cap`, `net`, `sync`, `fail`, `auth`, `plan`, `used`, `trial`, `clock`, `nostore`, `native`, `lang`, `extra`, `away`, `weekly`, `lat`, `log`) są opisane na początku `mock-backend.js`.
+`reset=1` czyści stan atrapy i apki (raz — parametr znika z adresu). Bez `reset` stan zostaje między przeładowaniami. Wszystkie parametry (`gen`, `genfx`, `upload`, `cap`, `net`, `sync`, `fail`, `auth`, `plan`, `used`, `trial`, `freecap`, `global`, `clock`, `nostore`, `native`, `lang`, `extra`, `away`, `weekly`, `lat`, `log`) są opisane na początku `mock-backend.js`.
 
 Konto testowe (tylko w atrapie): `test@cramfox.test` / `cramfox-test-1` (`?mock=seeded&reset=1&login=0` — logowanie ręczne).
 
@@ -42,7 +44,7 @@ cd test
 node dev/checks/build7-engine.mjs --out /ścieżka   # silnik: egzamin, zmiana dnia, pasek offline, toasty, kontrast, wyjaśnienia, wznowienie lekcji (też X przy panelu odpowiedzi), fiszki, nazwy
 node dev/checks/cloud-auth.mjs                     # logowanie, „Sprawdź adres e-mail”, linki prawne, usuwanie konta
 node dev/checks/cloud-sync.mjs                     # strażnik przed wyzerowaniem postępów (P1-6, też zgubiony epoch i META), scalanie serii, zmiana dnia po pull
-node dev/checks/cloud-gen.mjs                      # generowanie: limit przed aparatem, 504 → odzyskiwanie, kody Build 7, ekran postępu, wiersz na Dziś, zgoda przy TWÓRZ, dziennik przed POST
+node dev/checks/cloud-gen.mjs                      # generowanie: limit przed aparatem (darmowe na zawsze i miesięczny), okres startowy, nowe konto bez triala, 504 → odzyskiwanie, kody Build 7, ekran postępu, wiersz na Dziś, zgoda przy TWÓRZ, dziennik przed POST
 node dev/checks/cloud-hooks.mjs                    # hooki silnika: todayTop, addOpen, addSheet, settingsAbout
 node dev/checks/cloud-fonts.mjs                    # fonty w buildzie (WOFF w data:), CSP bez Google
 node dev/checks/cloud-content.mjs                  # emoji z treści AI, limity konta z backend/0008 → kody klienta, aiConsentV w options

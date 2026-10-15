@@ -12,8 +12,9 @@ await start();
 section('addSheet: limit w arkuszu „Dodaj materiał”');
 {const r=await page('mock=seeded&reset=1&plan=free&used=1',{settle:3000});
   await tap(r,'.navplus');await sleep(800); // silnik woła addSheet po otwarciu arkusza
-  const t=await r.pg.evaluate(()=>document.getElementById('cf-qa-quota')?.textContent||'');
-  check(t==='Możesz utworzyć jeszcze 2 z 3 lekcji w tym miesiącu · do 5 plików naraz','linia limitu w arkuszu',t);
+  const t=await r.pg.evaluate(()=>(document.getElementById('cf-qa-quota')?.textContent||'').replace(/\u00a0/g,' '));
+  check(t==='Darmowe tworzenie lekcji: zostało 1 z 2 · do 5 plików naraz','linia limitu w arkuszu (darmowe lekcje na zawsze)',t);
+  check(await r.pg.evaluate(()=>typeof window.NAUKA_HOOKS.emptyToday==='function'),'hook emptyToday (pusty „Dziś” bez darmowych lekcji)');
   await shot(r,'hooks-addsheet');
   check(await r.pg.evaluate(()=>window.NAUKA_HOOKS.addOpen(null))===false,'addOpen bez trwającej generacji → false (arkusz się otwiera)');
   await close(r);}

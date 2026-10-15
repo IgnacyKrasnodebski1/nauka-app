@@ -193,7 +193,7 @@ function openPrivacy(){
       <li><b>Materiały.</b> Zdjęcia, pliki i teksty, które dodajesz, są przechowywane na Twoim koncie w Supabase. Dostęp do nich masz Ty; nasz serwer pobiera je tylko, żeby utworzyć lekcję.</li>
       <li><b>AI.</b> Żeby zrobić lekcję, materiał trafia przez nasz serwer (Vercel) do modelu Claude firmy Anthropic (USA). Pytamy o zgodę przed pierwszym wysłaniem, a wycofasz ją w Ustawieniach.</li>
       <li><b>Postępy.</b> XP, serię i wyniki zapisujemy na koncie, żeby działały na kilku urządzeniach.</li>
-      <li><b>Usunięcie.</b> Ustawienia → Usuń konto kasuje konto, przedmioty, pliki i postępy.</li>
+      <li><b>Usunięcie.</b> Ustawienia → Usuń konto kasuje konto, przedmioty, pliki i postępy. Zostaje tylko nieodwracalny skrót (hash) adresu e-mail i daty utworzenia darmowych lekcji — bez samego adresu — żeby po ponownej rejestracji darmowe lekcje nie liczyły się od nowa.</li>
       <li><b>Wiek.</b> Cramfox jest dla osób od 16 lat.</li>
     </ul>
     <div class="cfmore" id="cfp-links"></div>
@@ -224,8 +224,9 @@ window.NAUKA_HOOKS={
   settingsTop:scroll=>settingsAccount(scroll),
   settingsAbout:card=>settingsAbout(card), // „Ustawienia → O aplikacji”: pomoc, polityka, regulamin, licencje (gdy silnik woła ten hook)
   todayTop:scroll=>todayCard(scroll),      // „Dziś”: wiersz „Tworzę lekcję…” albo karta nieudanej generacji (gdy silnik woła ten hook)
+  emptyToday:scroll=>emptyToday(scroll),   // pusty „Dziś” (konto bez przedmiotów): bez obietnicy „Reszta powstanie sama”, gdy darmowe lekcje są wykorzystane
   addOpen:into=>addOpen(into),             // [+]: w trakcie tworzenia lekcji → ekran postępu zamiast arkusza (true = obsłużone)
-  addSheet:sh=>addSheet(sh),               // arkusz „Dodaj materiał”: ile lekcji zostało w tym miesiącu
+  addSheet:sh=>addSheet(sh),               // arkusz „Dodaj materiał”: ile lekcji zostało (darmowe na zawsze albo w tym miesiącu)
   addPhoto:into=>startAdd('photo',into),
   addFile:into=>startAdd('file',into),
   addText:into=>startAdd('text',into),
@@ -252,8 +253,7 @@ function settingsAccount(scroll){
     const eh=document.createElement('div');eh.className='eyebrow sec';eh.id='cf-help-eb';eh.textContent='Pomoc i informacje';scroll.appendChild(eh);
     const hc=document.createElement('div');hc.className='setcard a-up';hc.id='cf-help';helpRows(hc,false);scroll.appendChild(hc);}
   C.me({maxAge:60000}).then(m=>{const s=$('.s',plan);if(!s)return;const q=quotaOf(m);if(!q){s.textContent='limit sprawdzisz po połączeniu z internetem';return;}
-    const trial=m.trialUntil&&new Date(m.trialUntil)>new Date()?Math.max(1,Math.ceil((new Date(m.trialUntil)-new Date())/86400000)):0;
-    s.textContent=`${q.used} z ${q.limit} w tym miesiącu`+(trial?` · na start większy limit, jeszcze ${trial} ${E().pl(trial,'dzień','dni','dni')}`:` · odnawia się ${q.renew}`);})
+    s.textContent=accountLine(q);})
     .catch(()=>{const s=$('.s',plan);if(s)s.textContent='limit sprawdzisz po połączeniu z internetem';});
 }
 function helpRows(card,lead){ // lead: przed pierwszym wierszem separator (wiersze dokładane do cudzej karty)
@@ -288,6 +288,7 @@ function openDeleteSheet(){
   const sh=E().openSheet('cfdel',`<div class="shandle"></div><div class="shead"><div class="st2">Usunąć konto?</div><button class="backbtn sclose" id="cfdel-x" aria-label="Zamknij">${E().icon('close',{size:18,stroke:3})}</button></div>
     <p class="sp">Tego nie da się cofnąć. Usuniemy na zawsze:</p>
     <ul class="cfdel-list"><li>konto i adres e-mail</li><li>wszystkie przedmioty i lekcje</li><li>wgrane zdjęcia i pliki</li><li>postępy, serię, gemy i odznaki</li></ul>
+    <p class="sp">Zostanie tylko nieodwracalny skrót (hash) adresu e-mail i daty utworzenia darmowych lekcji — bez samego adresu — żeby po ponownej rejestracji nie liczyły się od nowa.</p>
     <div class="cferr" id="cfdel-err" role="alert"></div>
     <button class="pill red" id="cfdel-go">USUŃ KONTO NA ZAWSZE</button><button class="pill text" id="cfdel-no" data-primary>Zostawiam konto</button>`);
   E().sheetBack();let busy=false;const close=()=>{if(!busy)E().closeSheet();};
@@ -303,36 +304,92 @@ function openDeleteSheet(){
   };
 }
 
-/* ---------- limit nowych lekcji (z /api/me, cache ok. 60 s) — widoczny, zanim cokolwiek się przygotuje albo wyśle ---------- */
+/* ---------- limit nowych lekcji (z /api/me, cache ok. 60 s) — widoczny, zanim cokolwiek się przygotuje albo wyśle ----------
+   Dwa rodzaje (backend/0007, decyzja z 2026-10-15): scope 'lifetime' — darmowe lekcje na zawsze (domyślnie 2, bez odnawiania),
+   scope 'month' — limit miesięczny (konta z okresem startowym sprzed tej zmiany: do jego końca). Teksty jak w BIBLIA §12.1 (App Store 3.1.1). */
 const monthNow=()=>{const d=new Date();return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0');}; // jak monthKey w backendzie (miesiąc UTC)
 function renewText(){const d=new Date();return '1 '+MONTHS[(d.getUTCMonth()+1)%12];}
-function quotaOf(m){ // {limit, used, left, files, maxMb, renew} albo null (brak danych)
-  if(!m||!m.limits)return null;const limit=+m.limits.generationsPerMonth||0;if(!(limit>0))return null;
+const renewAt=()=>{const d=new Date();return new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()+1,1));}; // odnowienie limitu miesięcznego
+function trialAt(t){const d=t?new Date(t):null;return d&&!isNaN(d)&&d>new Date()?d:null;}
+function trialText(t){const d=trialAt(t);return d?d.getDate()+' '+MONTHS[d.getMonth()]:'';} // „12 listopada” albo '' (okres startowy minął / go nie ma)
+const xOfY=(a,b)=>a+'\u00a0z\u00a0'+b; // „2 z 150” z twardymi spacjami: bez łamania wiersza między liczbami
+function quotaOf(m){ // {scope, limit, used, left, files, maxMb, renew, trial, trialAt, freeN, closed} albo null (brak danych)
+  if(!m||!m.limits)return null;const files=+m.limits.filesPerGeneration||0,maxMb=+m.limits.maxFileMb||0;
+  const Q=m.quota&&typeof m.quota==='object'?m.quota:null,ql=Q?+Q.limit:NaN;
+  if(Q&&(Q.scope==='lifetime'||Q.scope==='month')&&Number.isFinite(ql)&&ql>=0){ // serwer z darmowymi lekcjami na zawsze
+    const limit=Math.floor(ql),mk=String(Q.month||m.usage&&m.usage.month||''),fresh=Q.scope==='lifetime'||!mk||mk===monthNow(); // miesięczny z poprzedniego miesiąca → już odnowiony
+    const used=fresh?Math.max(0,Math.floor(+Q.used||0)):0,fl=+Q.freeLimit,month=Q.scope==='month';
+    return {scope:Q.scope,limit,used:Math.min(used,limit),left:Math.max(0,limit-used),files,maxMb,renew:renewText(),
+      trial:month?trialText(m.trialUntil):'',trialAt:month?trialAt(m.trialUntil):null,
+      freeN:Number.isFinite(fl)&&fl>=0?Math.floor(fl):null, // darmowe lekcje po okresie startowym (app_config), null = nie wiadomo
+      closed:Q.globalOpen===false}; // limit serwera na dobę pełny (backend/0007): powiedzieć przed aparatem, nie po wysłaniu plików
+  }
+  const limit=+m.limits.generationsPerMonth||0;if(!(limit>0))return null; // starszy backend: tylko limit miesięczny
   const mk=String(m.usage&&m.usage.month||''),fresh=!mk||mk===monthNow(); // odpowiedź z poprzedniego miesiąca → licznik już się odnowił
   const used=fresh?Math.max(0,+(m.usage&&m.usage.generations)||0):0;
-  return {limit,used:Math.min(used,limit),left:Math.max(0,limit-used),files:+m.limits.filesPerGeneration||0,maxMb:+m.limits.maxFileMb||0,renew:renewText()};
+  return {scope:'month',limit,used:Math.min(used,limit),left:Math.max(0,limit-used),files,maxMb,renew:renewText(),trial:trialText(m.trialUntil),trialAt:trialAt(m.trialUntil),freeN:null,closed:false};
 }
 const quotaNow=()=>quotaOf(C.meCached(600000)); // do blokady przed aparatem tylko świeży odczyt (≤ 10 min); starszy = sprawdzi TWÓRZ i serwer
 const refreshQuota=()=>C.me({maxAge:60000}).then(quotaOf).catch(()=>null);
-function quotaLine(q){
-  if(!q)return '';
-  if(q.left<=0)return `Limit nowych lekcji na ten miesiąc jest wykorzystany (${q.used} z ${q.limit}). Odnowi się ${q.renew}.`;
-  return `Możesz utworzyć jeszcze ${q.left} z ${q.limit} lekcji w tym miesiącu`+(q.files?` · do ${q.files} ${q.files===1?'pliku':'plików'} naraz`:'');
+const blocked=q=>!!q&&(q.left<=0||q.closed); // nowej lekcji nie da się teraz utworzyć
+function usedUp(n){ // darmowe lekcje wykorzystane — liczba z serwera (app_config), zwykle 2
+  n=+n;if(!Number.isFinite(n))return 'Wykorzystano darmowe lekcje';if(n<=0)return 'Tworzenie nowych lekcji jest teraz niedostępne';
+  return n===1?'Wykorzystano darmową lekcję':n===2?'Wykorzystano obie darmowe lekcje':`Wykorzystano wszystkie ${n} ${E().pl(n,'darmową lekcję','darmowe lekcje','darmowych lekcji')}`;
 }
-function limitSheet(q){ // limit wyczerpany: zanim ktoś zrobi zdjęcia, które i tak by przepadły
-  const sh=E().openSheet('cfpriv',`<div class="shandle"></div><div class="shead"><div class="st2">Limit na ten miesiąc wykorzystany</div><button class="backbtn sclose" id="cflim-x" aria-label="Zamknij">${E().icon('close',{size:18,stroke:3})}</button></div>
+const freeLessons=n=>`${n} ${E().pl(n,'darmowa lekcja','darmowe lekcje','darmowych lekcji')}`;
+const hasSubjects=()=>{try{return E().subjects().length>0;}catch(e){return true;}};
+function keepLearning(o){ // co dalej, gdy nowej lekcji nie da się utworzyć — bez ofert i cen (App Store 3.1.1); tekst (przy innerHTML: esc)
+  if(hasSubjects())return 'Możesz dalej uczyć się z przedmiotów, które masz.';
+  return 'Na tym koncie nie da się teraz utworzyć nowej lekcji.'+(L.email&&!(o&&o.noMail)?` Jeśli lekcja nie powstała przez błąd, napisz do nas: ${L.email}.`:''); // konto bez przedmiotów (np. dwie nieudane próby): nie ma „przedmiotów, które masz”
+}
+const trialFirst=q=>!!(q&&q.trialAt&&q.trialAt<=renewAt()); // okres startowy kończy się przed odnowieniem limitu miesięcznego
+const afterTrial=q=>q.freeN>0?freeLessons(q.freeN):q.freeN===0?'':'darmowe lekcje'; // co zostaje po okresie startowym
+function whenMore(q){ // miesięczny limit wykorzystany: kiedy znowu będzie można (okres startowy może skończyć się przed 1. dniem miesiąca)
+  if(trialFirst(q))return afterTrial(q)?`Po ${q.trial}: ${afterTrial(q)}.`:'';
+  return `Nowe lekcje od ${q.renew}.`;
+}
+const BUSY_TITLE='Serwer ma teraz bardzo dużo pracy',BUSY_TEXT='Nowych lekcji nie da się teraz tworzyć. Spróbuj później — Twój limit się nie zmienił.';
+function quotaLine(q){ // arkusz [+] i ekran „Dodaj materiał”; przy 0 także komunikat po TWÓRZ
+  if(!q)return '';const files=q.files?` · do ${q.files} ${q.files===1?'pliku':'plików'} naraz`:'';
+  if(q.closed&&q.left>0)return `${BUSY_TITLE}. ${BUSY_TEXT}`;
+  if(q.scope==='lifetime')return q.left<=0?`${usedUp(q.limit)}. ${keepLearning()}`:`Darmowe tworzenie lekcji: zostało ${xOfY(q.left,q.limit)}`+files;
+  if(q.left<=0)return `Limit nowych lekcji na ten miesiąc jest wykorzystany (${xOfY(q.used,q.limit)}). ${whenMore(q)}`.trim();
+  if(q.trial)return `Do ${q.trial}: zostało ${xOfY(q.left,q.limit)} w tym miesiącu`+(afterTrial(q)?`, potem ${afterTrial(q)}`:'')+files;
+  return `Możesz utworzyć jeszcze ${xOfY(q.left,q.limit)} lekcji w tym miesiącu`+files;
+}
+function accountLine(q){ // „Ustawienia → Konto → Nowe lekcje”
+  if(q.scope==='lifetime')return q.left>0?`Darmowe tworzenie lekcji: zostało ${xOfY(q.left,q.limit)}`:usedUp(q.limit)+(hasSubjects()?' — możesz dalej uczyć się z przedmiotów, które masz':'');
+  if(q.trial)return `Do ${q.trial}: ${xOfY(q.used,q.limit)} w tym miesiącu`+(afterTrial(q)?`, potem ${afterTrial(q)}`:'');
+  return `${xOfY(q.used,q.limit)} w tym miesiącu · odnawia się ${q.renew}`;
+}
+function limitSheet(q){ // nowej lekcji nie da się utworzyć: zanim ktoś zrobi zdjęcia, które i tak by przepadły
+  const sh=E().openSheet('cfpriv',`<div class="shandle"></div><div class="shead"><div class="st2" id="cflim-h"></div><button class="backbtn sclose" id="cflim-x" aria-label="Zamknij">${E().icon('close',{size:18,stroke:3})}</button></div>
     <p class="sp" id="cflim-t"></p><button class="pill" id="cflim-ok" data-primary>OK</button>`);
-  $('#cflim-t',sh).textContent=`Utworzono ${q.used} z ${q.limit} lekcji w tym miesiącu. Nowe materiały dodasz od ${q.renew}. Gotowe lekcje, fiszki i powtórki działają bez zmian.`;
+  const life=q.scope==='lifetime',busy=q.closed&&q.left>0;
+  $('#cflim-h',sh).textContent=busy?BUSY_TITLE:life?(q.limit>0?usedUp(q.limit):'Nowe lekcje są niedostępne'):'Limit na ten miesiąc wykorzystany'; // tytuł mówi, co się stało, treść — co dalej (bez powtórzeń)
+  $('#cflim-t',sh).textContent=busy?`${BUSY_TEXT} Gotowe lekcje, fiszki i powtórki działają bez zmian.`:life?keepLearning()
+    :`Utworzono ${xOfY(q.used,q.limit)} lekcji w tym miesiącu. ${whenMore(q)} Gotowe lekcje, fiszki i powtórki działają bez zmian.`.replace(/  +/g,' ');
   E().sheetBack();const close=()=>E().closeSheet();
   $('#cflim-x',sh).onclick=close;$('#cflim-ok',sh).onclick=close;const bk=document.getElementById('sheetback');if(bk)bk.onclick=close;
+}
+function emptyToday(scroll){ // pusty „Dziś” (EmptyState): gdy darmowe lekcje są wykorzystane, nie obiecuje „Reszta powstanie sama” ani nie świeci „Dodaj materiał”
+  if(!scroll||!scroll.querySelector)return;
+  const apply=q=>{if(!q||q.scope!=='lifetime'||q.left>0||!scroll.isConnected)return;
+    const h=scroll.querySelector('h1'),p=h&&h.nextElementSibling,st=scroll.querySelector('.steps'),b=scroll.querySelector('#eadd');
+    if(h)h.textContent=q.limit>0?usedUp(q.limit):'Nowe lekcje są niedostępne';
+    if(p)p.textContent=keepLearning({noMail:true});
+    if(st)st.style.display='none';
+    if(b){if(L.email){b.textContent='Napisz do nas';b.classList.remove('a-glow');b.classList.add('ghost');b.onclick=()=>mailTo('Cramfox — darmowe lekcje');}else b.remove();}
+  };
+  apply(quotaNow());refreshQuota().then(apply);
 }
 function addOpen(){if(genRun||C.job()){busyGen();return true;}refreshQuota();return false;}
 function addSheet(sh){
   if(!sh||!sh.appendChild)return;const p=document.createElement('p');p.className='sp';p.id='cf-qa-quota';
   const fill=q=>{p.textContent=quotaLine(q);p.style.display=q?'':'none';
-    const off=!!q&&q.left<=0; // limit wykorzystany: „Zrób zdjęcie” i kafle przygaszone, pod aparatem data odnowienia (dotknięcie pokaże arkusz limitu); „Mam sprawdzian” działa
+    const off=blocked(q); // limit wykorzystany albo serwer pełny: „Zrób zdjęcie” i kafle przygaszone, pod aparatem powód (dotknięcie pokaże arkusz limitu); „Mam sprawdzian” działa
     ['#qa-photo','#qa-file','#qa-text'].forEach(id=>{const b=sh.querySelector(id);if(!b)return;b.classList.toggle('off',off);if(off)b.setAttribute('aria-disabled','true');else b.removeAttribute('aria-disabled');});
-    const bs=sh.querySelector('#qa-photo .s');if(bs){if(!bs.dataset.t)bs.dataset.t=bs.textContent;bs.textContent=off?`Nowe lekcje od ${q.renew}`:bs.dataset.t;}
+    const bs=sh.querySelector('#qa-photo .s');if(bs){if(!bs.dataset.t)bs.dataset.t=bs.textContent;bs.textContent=off?(q.left>0?'Spróbuj później':q.scope==='lifetime'?(q.limit>0?'Darmowe lekcje wykorzystane':'Nowe lekcje są niedostępne'):trialFirst(q)?`Nowe lekcje po ${q.trial}`:`Nowe lekcje od ${q.renew}`):bs.dataset.t;}
     p.classList.toggle('cfq-off',off);};
   const head=sh.querySelector('.shead');if(head&&head.nextSibling)sh.insertBefore(p,head.nextSibling);else sh.appendChild(p);
   fill(quotaNow());refreshQuota().then(q=>{if(p.isConnected&&q)fill(q);});
@@ -364,7 +421,7 @@ function busyGen(){ // trwa tworzenie lekcji → ekran postępu (po restarcie ap
 }
 function startAdd(kind,into){
   if(busyGen())return;
-  const q=quotaNow();if(q&&q.left<=0){limitSheet(q);refreshQuota();return;} // limit znany z ostatniego sprawdzenia: bez aparatu
+  const q=quotaNow();if(blocked(q)){limitSheet(q);refreshQuota();return;} // limit (albo pełny serwer) znany z ostatniego sprawdzenia: bez aparatu
   refreshQuota();
   consent(()=>{
     const lv=E().meta().level;draft={files:[],text:'',into:into||null,name:'',hint:'',stage:lv==='podstawowka'?'inne':lv||'inne'};
@@ -405,7 +462,12 @@ function renderAdd(){
   const box=document.createElement('div');box.className='cfadd-body';scroll.appendChild(box);
   const eb=(t)=>{const d=document.createElement('div');d.className='eyebrow sec';d.textContent=t;return d;};
   const ql=document.createElement('p');ql.className='sp';ql.id='cfadd-quota';box.appendChild(ql);
-  const showQ=q=>{ql.textContent=quotaLine(q);ql.style.display=q?'':'none';};showQ(quotaNow());
+  const go=document.createElement('button');go.className='pill a-glow';go.id='cfadd-go';go.textContent='TWÓRZ LEKCJĘ'; // do stopki niżej
+  let errEl=null; // komunikat pod formularzem (niżej)
+  const showQ=q=>{ql.textContent=quotaLine(q);ql.style.display=q?'':'none';
+    const out=!!q&&q.left<=0;go.disabled=out;go.classList.toggle('a-glow',!blocked(q)); // lekcji nie zostało: TWÓRZ wyłączone; pełny serwer: bez poświaty, TWÓRZ sprawdzi ponownie
+    if(out&&errEl&&!errEl.textContent)errEl.textContent=quotaLine(q);}; // powód przy wyłączonym przycisku (linia limitu u góry bywa poza ekranem)
+  showQ(quotaNow());
   refreshQuota().then(q=>{if(q&&ql.isConnected){showQ(q);const c=document.getElementById('cfadd-count');if(c&&q.files&&draft)c.textContent=countText(q);}});
   const countText=q=>'Materiał'+(q&&q.files&&draft.files.length?` · ${draft.files.length}/${q.files}`:'');
   const mt=eb(countText(quotaNow()));mt.id='cfadd-count';box.appendChild(mt);
@@ -432,8 +494,8 @@ function renderAdd(){
   if(draft.into===null){const nm=document.createElement('input');nm.className='cfin';nm.placeholder='Nazwa (opcjonalnie), np. Biologia';nm.maxLength=60;nm.value=draft.name||'';nm.oninput=()=>{draft.name=nm.value;};box.appendChild(nm);}
   box.appendChild(eb('Na czym się skupić? (opcjonalnie)'));
   const hint=document.createElement('input');hint.className='cfin';hint.placeholder='np. tylko rozdział o fotosyntezie';hint.maxLength=300;hint.value=draft.hint||'';hint.oninput=()=>{draft.hint=hint.value;};box.appendChild(hint);
-  const err=document.createElement('div');err.className='cferr';err.id='cfadd-err';err.setAttribute('role','alert');err.textContent=draft.warn||'';const warned=!!draft.warn;draft.warn='';box.appendChild(err);if(warned)setTimeout(()=>{try{err.scrollIntoView({block:'center'});}catch(x){}},50);
-  const go=document.createElement('button');go.className='pill a-glow';go.id='cfadd-go';go.textContent='TWÓRZ LEKCJĘ';footer(scroll).appendChild(go);
+  const err=document.createElement('div');err.className='cferr';err.id='cfadd-err';err.setAttribute('role','alert');err.textContent=draft.warn||'';const warned=!!draft.warn;draft.warn='';box.appendChild(err);errEl=err;{const q0=quotaNow();if(q0&&q0.left<=0&&!err.textContent)err.textContent=quotaLine(q0);}if(warned)setTimeout(()=>{try{err.scrollIntoView({block:'center'});}catch(x){}},50);
+  footer(scroll).appendChild(go);
   const say=t=>{err.textContent=t;try{err.scrollIntoView({block:'center',behavior:'smooth'});}catch(x){}}; // komunikat pod formularzem bywa poza ekranem
   go.onclick=async()=>{
     if(go.disabled)return;
@@ -447,18 +509,18 @@ function renderAdd(){
     if(fail&&fail.code==='network'){say('Brak połączenia z internetem — tworzenie lekcji wymaga sieci. Materiał zostaje tutaj.');return;}
     if(fail&&(fail.status===401||!C.signedIn())){say('Sesja wygasła — zaloguj się ponownie.');return;}
     const q=quotaOf(m);showQ(q);
-    if(q&&q.left<=0){say(`Limit nowych lekcji na ten miesiąc jest wykorzystany (${q.used} z ${q.limit}). Odnowi się ${q.renew}.`);return;}
+    if(blocked(q)){say(quotaLine(q));return;}
     if(q&&q.files&&d.files.length>q.files){const n=d.files.length-q.files;say(`Maksymalnie ${q.files} plików w jednej lekcji — usuń ${n} ${E().pl(n,'plik','pliki','plików')} albo podziel materiał na dwie lekcje.`);return;}
-    runGeneration(m&&m.limits||null); // bez /api/me (inny błąd) limity sprawdzi serwer
+    runGeneration(m&&m.limits||null,q); // bez /api/me (inny błąd) limity sprawdzi serwer
   };
 }
 
 /* ---------- generowanie ---------- */
-let genRun=null,recovering=false,lastFail=null; // genRun: {subjectId, created, uploaded:[{id,path}], phase, done, total (pliki), bytes, sent (bajty), startedAt, aiAt, limits}; lastFail: nieudana próba poza ekranem postępu
+let genRun=null,recovering=false,lastFail=null,failShown=null; // genRun: {subjectId, created, uploaded:[{id,path}], phase, done, total (pliki), bytes, sent (bajty), startedAt, aiAt, limits, q}; lastFail: nieudana próba poza ekranem postępu; failShown: która jest na ekranie błędu
 const STEPS=['Czytam materiał','Wyciągam najważniejsze pojęcia','Układam poziomy','Piszę pytania i fiszki','Dodaję zadania i sprawdzam pytania'];
-async function runGeneration(lim){
+async function runGeneration(lim,q){ // q: limit z chwili TWÓRZ (quotaOf) albo null — do uczciwego „liczy się do…” i „zostało” po błędzie
   const d=draft;draft=null;lastDraft=d;lastFail=null;
-  const g=genRun={phase:'prep',done:0,total:d.files.length,startedAt:Date.now(),subjectId:d.into,created:null,uploaded:[],limits:lim||null};E().go('cfgen');
+  const g=genRun={phase:'prep',done:0,total:d.files.length,startedAt:Date.now(),subjectId:d.into,created:null,uploaded:[],limits:lim||null,q:q||null};E().go('cfgen');
   try{
     if(lim&&+lim.filesPerGeneration>0&&d.files.length>lim.filesPerGeneration)throw new C.CloudError(400,'too_many_files','',{max:lim.filesPerGeneration});
     const files=await C.prepareFiles(d.files); // zdjęcia → JPEG 1568 px; zły format wychodzi tu, zanim cokolwiek zapiszemy
@@ -489,17 +551,32 @@ function finishGen(topic,demo){
   if(safeToRerender())E().go(E().view); // wiersz „Tworzę lekcję…” znika z Dziś
   actionToast('Lekcja gotowa — dotknij, żeby zobaczyć','check',()=>{if(readyState&&readyState.topicId===topic.id)E().go('cfready');});
 }
-const COUNTS=' Ta próba liczy się do miesięcznego limitu.';
 function failGen(e){
   const was=genRun;genRun=null;
-  lastFail={e,limits:(was&&was.limits)||{}};refreshQuota();
+  const q=(was&&was.q)||null,f=lastFail={e,limits:(was&&was.limits)||{},q,scope:(q&&q.scope)||((quotaNow()||{}).scope)||''};
+  // limit po próbie (generate() wyzerował cache /api/me, więc to świeży odczyt): „zostało X” i czy była to ostatnia darmowa lekcja — także po odzyskaniu, gdy q nie ma
+  C.me({maxAge:0}).then(quotaOf).catch(()=>null).then(a=>{if(!a||lastFail!==f)return;f.after=a;if(!f.scope)f.scope=a.scope;if(failShown===f&&E().view==='error')showFail();});
   if(E().view!=='cfgen'){ // poza ekranem postępu: klikalny komunikat i karta na Dziś — szkic czeka w lastDraft
     if(safeToRerender())E().go(E().view);
     actionToast('Nie udało się utworzyć lekcji — dotknij, żeby zobaczyć','alert',showFail);return;}
   showFail();
 }
-function failText(e,lim){
-  const d=e.data||{},c=e.code;lim=lim||{};const used=+d.used||0;
+const COUNTED=/^(generation_failed|refusal|invalid_output|api|lost)$/; // błędy zawsze po naliczeniu (pozostałe — tylko z generationId)
+function freeLeftAfter(f){ // ile darmowych lekcji zostało po nieudanej, naliczonej próbie (null = nie wiadomo)
+  const a=f.after&&f.after.scope==='lifetime'?f.after.left:null,q=f.q,d=f.e.data||{};
+  const b=q&&q.scope==='lifetime'&&!d.refunded?Math.max(0,q.left-1):null; // z licznika sprzed próby
+  return a!=null&&b!=null?Math.min(a,b):a!=null?a:b; // odczyt po próbie mógł być nieświeży — nigdy więcej niż „przed − 1”
+}
+function lastFree(f){ // ta nieudana próba zużyła ostatnią darmową lekcję → bez „spróbuj jeszcze raz” i bez powrotu do materiału
+  const d=f.e.data||{},c=f.e.code;if(d.refunded||!(d.generationId||COUNTED.test(c)))return false;
+  return (d.scope==='lifetime'||f.scope==='lifetime')&&freeLeftAfter(f)===0;
+}
+function failText(e,lim,scope,f){
+  const d=e.data||{},c=e.code;lim=lim||{};const used=+d.used||0;f=f||{e,q:null};
+  const life=d.scope==='lifetime'||scope==='lifetime'; // darmowe lekcje na zawsze (serwer z backend/0007)
+  const left=life?freeLeftAfter(f):null,lim2=(f.after&&f.after.limit)||(f.q&&f.q.limit)||0;
+  const COUNTS=life?' Ta próba zużyła jedną z darmowych lekcji'+(left!=null&&lim2?` — zostało ${xOfY(left,lim2)}.`:'.')
+    :scope==='month'||d.scope==='month'?' Ta próba liczy się do miesięcznego limitu.':' Ta próba liczy się do limitu lekcji.'; // nieznany zakres (np. po odzyskaniu): bez „miesięcznego”
   const fname=d.name?`„${esc(String(d.name).slice(0,40))}”: `:''; // serwer podaje plik przy błędach PPTX, typu i rozmiaru
   const withName=s=>fname?fname+s.charAt(0).toLowerCase()+s.slice(1):s;
   const charged=!!d.generationId; // błąd po naliczeniu ma generationId; odrzucenie przed naliczeniem — nie
@@ -508,8 +585,9 @@ function failText(e,lim){
   const ld=lastDraft,img=!!(ld&&ld.files.some(f=>/^image\//.test(C.mimeOf(f)))),onlyText=!!(ld&&!ld.files.length&&ld.text);
   const retryTip=img?'Spróbuj jeszcze raz albo dodaj wyraźniejsze zdjęcia.':onlyText?'Spróbuj jeszcze raz albo wklej inny, dłuższy fragment notatek.':'Spróbuj jeszcze raz albo z innym fragmentem materiału.';
   const map={
-    limit_reached:used>=1999999?['Serwer ma dziś bardzo dużo pracy','Nowe lekcje będzie można tworzyć jutro. Twój limit się nie zmienił.']
+    limit_reached:used>=1999999?[BUSY_TITLE,'Nowe lekcje będzie można tworzyć później. Twój limit się nie zmienił.'] // kroczące 24 h (albo wstrzymane w app_config) — nie „jutro”
       :used>=999999?['Na dziś wystarczy','Dzienny limit nowych lekcji jest wykorzystany. Spróbuj jutro.']
+      :d.scope==='lifetime'?[+d.limit===0?'Nowe lekcje są niedostępne':usedUp(d.limit),esc(keepLearning())] // 402 z serwera: darmowe lekcje na zawsze (tytuł: co się stało, treść: co dalej)
       :['Limit na ten miesiąc wykorzystany',`Wykorzystano ${Math.min(used,+d.limit||used)} z ${+d.limit||0} lekcji w tym miesiącu. Limit odnowi się ${renewText()}. Twój materiał zostaje — możesz do niego wrócić.`],
     busy:['Tworzę już inną lekcję','Poczekaj, aż skończę — zwykle ok. 2 minuty (mogła zacząć się na innym urządzeniu). Potem wróć do materiału i spróbuj ponownie. Limit się nie zmienił.'], // 409: serwer ma generację w toku (P0-1)
     too_many_files:['Za dużo plików naraz',`Maksymalnie ${+d.max||+lim.filesPerGeneration||5} plików w jednej lekcji. Podziel materiał na dwie części.`],
@@ -547,19 +625,22 @@ function failText(e,lim){
   if(c==='lost'&&d.reason==='ai_timeout')map.lost=map.ai_timeout; // backend z terminem 270 s: kod lost (zgodny ze starszymi buildami) + powód
   if(c==='reserve_failed'&&d.reason==='ai_upload')map.reserve_failed=['Nie udało się przekazać materiału do AI','Serwer nie zdążył przesłać plików dalej. Limit się nie zmienił — spróbuj ponownie za chwilę.'];
   if(c==='download_failed'&&d.reason==='slow_intake')map.download_failed=['Przygotowanie materiału trwało za długo','Serwer nie zdążył przygotować plików. Limit się nie zmienił — spróbuj ponownie albo z mniejszą ilością materiału.'];
-  if(map[c])return map[c];
+  if(map[c]){if(lastFree(f)&&c!=='limit_reached')return [map[c][0],'Ta próba zużyła ostatnią darmową lekcję. '+esc(keepLearning())];return map[c];} // ostatnia darmowa lekcja: bez rad „spróbuj jeszcze raz”
   // nieznany kod (np. nowy z backendu): bezpieczny tekst według statusu, „liczy się do limitu” tylko, gdy serwer potwierdził naliczenie (generationId)
-  if(e.status===402)return ['Limit wykorzystany',`Teraz nie da się utworzyć nowej lekcji. Limit odnowi się ${renewText()}. Gotowe lekcje działają bez zmian.`];
+  if(e.status===402)return ['Limit wykorzystany','Teraz nie da się utworzyć nowej lekcji.'+(scope==='month'||d.scope==='month'?` Limit odnowi się ${renewText()}.`:'')+' Gotowe lekcje działają bez zmian.'];
   if(e.status===429)return ['Za dużo prób naraz','Odczekaj chwilę i spróbuj ponownie.'+(charged?CH:' Limit się nie zmienił.')];
   if(e.status>=500)return ['Coś poszło nie tak po stronie serwera','Nie udało się utworzyć lekcji.'+(charged?CH:' Spróbuj ponownie za kilka minut.')];
   return ['Coś poszło nie tak','Nie udało się utworzyć lekcji. Spróbuj ponownie.'];
 }
 function showFail(){
   const f=lastFail;if(!f)return E().go('today');
-  const e=f.e,c=e.code;const [title,reason]=failText(e,f.limits);
-  const back={label:'Wróć',text:true,go:()=>{lastFail=null;E().go('today');}};
-  const retry=lastDraft&&c!=='unauthorized'&&c!=='no_session'&&c!=='unknown_outcome'?[{label:'WRÓĆ DO MATERIAŁU',primary:true,go:()=>{draft=lastDraft;lastDraft=null;lastFail=null;E().go('cfadd');}}]:[];
-  E().renderError({head:'Dodaj materiał',icon:/network|timeout/.test(c)?'wifi':'alert',title,reason,actions:retry.concat([retry.length?back:{...back,label:'WRÓĆ',primary:true,text:false}]),back:()=>{lastFail=null;E().go('today');}});
+  const e=f.e,c=e.code,d=e.data||{};const [title,reason]=failText(e,f.limits,f.scope,f);
+  const back={label:'Wróć',text:true,go:()=>{lastFail=null;failShown=null;E().go('today');}};
+  const usedUpLife=c==='limit_reached'&&d.scope==='lifetime'; // darmowe lekcje wykorzystane: do szkicu nie ma po co wracać
+  const retry=lastDraft&&c!=='unauthorized'&&c!=='no_session'&&c!=='unknown_outcome'&&!usedUpLife&&!lastFree(f)?[{label:'WRÓĆ DO MATERIAŁU',primary:true,go:()=>{draft=lastDraft;lastDraft=null;lastFail=null;failShown=null;E().go('cfadd');}}]:[];
+  const calm=c==='limit_reached'; // spodziewany stan (limit), nie awaria: spokojna ikona bez „!”
+  failShown=f;
+  E().renderError({head:'Dodaj materiał',icon:/network|timeout/.test(c)?'wifi':calm?(usedUpLife?'book':'clock'):'alert',calm,title,reason,actions:retry.concat([retry.length?back:{...back,label:'WRÓĆ',primary:true,text:false}]),back:()=>{lastFail=null;failShown=null;E().go('today');}});
 }
 async function recover(inView){
   const j=C.job();if(!j||recovering)return;recovering=true;

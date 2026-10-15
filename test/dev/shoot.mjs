@@ -416,7 +416,8 @@ SCEN.fresh=async()=>{
   await tap(r,'.subtab','Ścieżka');
   // ustawienia → wylogowanie
   await tap(r,'.brow .backbtn');await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await waitFor(r,'#set-plan');await settle(r,500);
-  await shot(r,'settings-new-account','Ustawienia nowego konta: „Nowe lekcje 1 z 150 · na start większy limit, jeszcze 30 dni”','Profil → Ustawienia');
+  await shot(r,'settings-new-account','Ustawienia nowego konta (bez okresu startowego): „Nowe lekcje — Darmowe tworzenie lekcji: zostało 1 z 2”','Profil → Ustawienia');
+  {const s=await r.page.evaluate(()=>(document.querySelector('#set-plan .s')?.textContent||'').replace(/\u00a0/g,' '));if(s!=='Darmowe tworzenie lekcji: zostało 1 z 2')issue(r,'quota-new-account','Nowe konto po pierwszej lekcji: oczekiwane „Darmowe tworzenie lekcji: zostało 1 z 2”, jest „'+s+'”');}
   await tap(r,'.topbar .backbtn');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await waitFor(r,'#set-logout');
   await tap(r,'#set-logout');await waitFor(r,'#askok');await tap(r,'#askok',null,{settle:100});
   await waitFor(r,'#cf-go',null,15000);await shot(r,'after-logout','Po wylogowaniu: ekran logowania na zakładce „Zaloguj się” (dane lokalne skasowane)','Ustawienia → Wyloguj → Wyloguj');
@@ -443,7 +444,7 @@ SCEN.seeded=async()=>{
   await scrollBy(r,'.screen.active .scroll','end');await shot(r,'profile-badges','Profil: odznaki i XP w przedmiotach','Przewinięcie');
   await tap(r,'.sechdr .link','Ten tydzień');await waitFor(r,'.wk');await shot(r,'weekly','Podsumowanie tygodnia (bieżący vs zeszły)','Profil → „Ten tydzień”');await tap(r,'#wk-close');
   await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await waitFor(r,'#set-logout');await settle(r,600);
-  await shot(r,'settings','Ustawienia: karta „Konto” (limit lekcji, trial), Profil','Profil → koło zębate');
+  await shot(r,'settings','Ustawienia: karta „Konto” (konto sprzed zmiany z okresem startowym: „Do <data>: 2 z 150 w tym miesiącu, potem 2 darmowe lekcje”), Profil','Profil → koło zębate');
   await scrollBy(r,'.screen.active .scroll',560);await shot(r,'settings-middle','Ustawienia: Nauka, Przedmioty, Dane','Przewinięcie');
   await tap(r,'#set-whatsnew');await scrollBy(r,'.screen.active .scroll','end');await shot(r,'settings-bottom','Ustawienia: O aplikacji + rozwinięte „Co nowego”','Przewinięcie + „Co nowego”');
   await tap(r,'#set-privacy');await shot(r,'privacy-sheet-settings','Arkusz „Twoje dane” z ustawień','Ustawienia → Twoje dane');await tap(r,'#cfp-ok');
@@ -555,7 +556,7 @@ SCEN.seeded=async()=>{
   await tap(r,'.topbar .backbtn');await tap(r,'.brow .backbtn');
   // zdjęcie strony → istniejący przedmiot → generowanie w tle
   await mockSet(r,'upload','slow');await mockSet(r,'gen','slow:18'); // czas na Dziś z wierszem „Tworzę lekcję…” i [+] → ekran postępu
-  await waitFor(r,'.plan');await tap(r,'.navplus');await waitFor(r,'#cf-qa-quota');await shot(r,'quickadd-sheet-seeded','Arkusz „Dodaj materiał” z limitem: „Możesz utworzyć jeszcze X z Y lekcji…”','[+]');
+  await waitFor(r,'.plan');await tap(r,'.navplus');await waitFor(r,'#cf-qa-quota');await shot(r,'quickadd-sheet-seeded','Arkusz „Dodaj materiał” konta z okresem startowym: „Do <data>: zostało 148 z 150 w tym miesiącu, potem 2 darmowe lekcje · do 20 plików naraz”','[+]');
   await chooseFiles(r,'#qa-photo',[path.join(ASSETS,'strona-podrecznika.png')]);await waitFor(r,'#cfadd-go');
   await tap(r,'.cfwhere .obopt','Polityka');await shot(r,'add-photo','„Dodaj materiał”: miniatura zdjęcia, wybrany istniejący przedmiot','[+] → Zrób zdjęcie (wybór pliku)');
   await tap(r,'.cfthumb-x');await shot(r,'add-photo-removed','„Dodaj materiał” po usunięciu zdjęcia (pusty materiał)','Usunięcie miniatury');
@@ -588,7 +589,7 @@ SCEN.comeback=async()=>{
 
 /* 4) Błędy generowania i sieci (konto z postępami, zgoda na AI już dana) */
 const GEN_ERRORS=[
-  ['err:limit_reached','err-limit-month','Limit na ten miesiąc (402 z serwera)'],
+  ['err:limit_reached','err-limit-month','Limit na ten miesiąc (402 z serwera, konto z okresem startowym: scope month)'],
   ['err:limit_reached:999999','err-limit-day','Limit dzienny konta (used=999999)'],
   ['err:limit_reached:1999999','err-limit-global','Globalny bezpiecznik serwera (used=1999999)'],
   ['err:generation_failed','err-generation-failed','AI nie dało rady (+ „liczy się do limitu”)'],
@@ -705,13 +706,32 @@ SCEN.boot=async()=>{
   await waitFor(r,'.cfsplash',null,15000);await shot(r,'splash-loading','Logowanie na nowym urządzeniu: „Wczytuję Twoje przedmioty…”','Poprawne logowanie (lat=1500)');
   await waitFor(r,'.plan',null,40000);await shot(r,'today-after-login','Dziś po zalogowaniu na nowym urządzeniu (postępy z konta)','Koniec wczytywania');
   await closeRun(r);
-  r=await newRun('boot-free','mock=seeded&reset=1&trial=-2&used=3');
+  r=await newRun('boot-free','mock=seeded&reset=1&trial=-2&used=1');
   await waitFor(r,'.plan');await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await waitFor(r,'#set-plan');await settle(r,600);
-  await shot(r,'settings-free-plan','Karta „Konto” po okresie próbnym: „3 z 3 w tym miesiącu · odnawia się 1. dnia miesiąca”','trial=-2, used=3');
+  await shot(r,'settings-free-left','Karta „Konto” po okresie startowym (plan free): „Darmowe tworzenie lekcji: zostało 1 z 2”','trial=-2, used=1');
+  // ostatnia darmowa lekcja zużyta na innym urządzeniu: serwer odmawia (402 limit_reached, scope lifetime)
   await tap(r,'.topbar .backbtn');await nav(r,'Dziś');await waitFor(r,'.plan');
-  await tap(r,'.navplus');await waitFor(r,'#cf-qa-quota');await shot(r,'quickadd-limit-free','Arkusz [+] przy wyczerpanym limicie: „…wykorzystany (3 z 3). Odnowi się 1 …”','trial=-2, used=3 → [+]');
-  await tap(r,'#qa-text');await waitFor(r,'#cflim-ok');await shot(r,'err-limit-free','Plan free: limit 3 z 3 — arkusz „Limit na ten miesiąc wykorzystany” zamiast aparatu i tekstu','[+] → Wklej tekst');
+  try{await mockSet(r,'gen','err:limit_reached');await addTextMaterial(r);await tap(r,'#cfadd-go');await waitFor(r,'.errv',null,15000);
+    await shot(r,'err-limit-lifetime','Darmowe lekcje wykorzystane (402 z serwera, scope lifetime): tytuł „Wykorzystano obie darmowe lekcje”, treść „Możesz dalej uczyć się z przedmiotów, które masz.”, spokojna ikona — bez „WRÓĆ DO MATERIAŁU”','gen=err:limit_reached → TWÓRZ LEKCJĘ');
+    await tap(r,'.errfoot .pill');await waitFor(r,'.plan');}catch(e){FAILS.push('boot-free/err-limit-lifetime: '+e.message);}
+  await mockSet(r,'gen','ok');await mockSet(r,'used','2');await r.page.evaluate(()=>NAUKA_CLOUD.me().catch(()=>{}));
+  await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await waitFor(r,'#set-plan');await settle(r,600);
+  await shot(r,'settings-free-plan','Karta „Konto”, darmowe lekcje wykorzystane: „Wykorzystano obie darmowe lekcje — możesz dalej uczyć się z przedmiotów, które masz”','used=2');
+  await tap(r,'.topbar .backbtn');await nav(r,'Dziś');await waitFor(r,'.plan');
+  await tap(r,'.navplus');await waitFor(r,'#cf-qa-quota');await shot(r,'quickadd-limit-free','Arkusz [+] po wykorzystaniu darmowych lekcji: kafle przygaszone, „Darmowe lekcje wykorzystane” pod aparatem, „Mam sprawdzian” działa','used=2 → [+]');
+  await tap(r,'#qa-text');await waitFor(r,'#cflim-ok');await shot(r,'err-limit-free','Arkusz „Wykorzystano obie darmowe lekcje” / „Możesz dalej uczyć się…” zamiast aparatu i tekstu (bez daty odnowienia)','[+] → Wklej tekst');
   await tap(r,'#cflim-ok');
+  // konto bez przedmiotów i bez darmowych lekcji (np. dwie nieudane próby): pusty „Dziś” bez „Reszta powstanie sama”
+  try{await r.page.evaluate(()=>{NaukaEngine.setSubjects([]);NaukaEngine.go('today');});await waitFor(r,'.empty h1');await settle(r,700);
+    await shot(r,'today-empty-no-lessons','Pusty „Dziś” bez darmowych lekcji: „Wykorzystano obie darmowe lekcje” / „Na tym koncie nie da się teraz utworzyć nowej lekcji.”, bez kroków i świecącego przycisku','setSubjects([]) przy used=2');
+    const h=await r.page.evaluate(()=>document.querySelector('.empty h1')?.textContent||'');if(h!=='Wykorzystano obie darmowe lekcje')issue(r,'empty-no-lessons','Pusty Dziś bez darmowych lekcji: tytuł „'+h+'”');}
+  catch(e){FAILS.push('boot-free/today-empty-no-lessons: '+e.message);}
+  await closeRun(r);
+  r=await newRun('boot-global','mock=seeded&reset=1&plan=free&global=full');
+  try{await waitFor(r,'.plan');await tap(r,'.navplus');await waitFor(r,'#cf-qa-quota');await settle(r,600);
+    await shot(r,'quickadd-global-full','Arkusz [+], gdy limit serwera na dobę jest pełny (quota.globalOpen=false): „Serwer ma teraz bardzo dużo pracy… Spróbuj później”, kafle przygaszone','global=full → [+]');
+    await tap(r,'#qa-photo');await waitFor(r,'#cflim-ok');await shot(r,'limit-global-full','Arkusz „Serwer ma teraz bardzo dużo pracy” zamiast aparatu (przed wysłaniem plików)','[+] → Zrób zdjęcie');await tap(r,'#cflim-ok');}
+  catch(e){FAILS.push('boot-global: '+e.message);}
   await closeRun(r);
   r=await newRun('boot-delete','mock=seeded&reset=1&del=active_subscription');
   await waitFor(r,'.plan');await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await tap(r,'#set-delete');await tap(r,'#cfdel-go');await waitFor(r,'#cfdel-err','automatycznie',10000);

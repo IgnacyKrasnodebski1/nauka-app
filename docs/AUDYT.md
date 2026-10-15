@@ -253,6 +253,7 @@ Każda pozycja: czego dotyczy, opcje i moja rekomendacja. Pozycje D1–D11 dotyc
 **D3. Trial: wielkość, farmienie i „klif”** (P0-2, P1-42)
 - Opcje: (a) zostawić 30 dni i 150 generacji; (b) mniejszy trial, np. 10 generacji łącznie i 3 na dobę, plus `trial_ledger` i osobna pula globalna; (c) trial dopiero po potwierdzeniu maila, CAPTCHA albo App Attest.
 - Rekomendacja: (b) od razu, (c) gdy będzie SMTP. Klif: po końcu triala limit free liczyć tylko z generacji po `trial_until`, baner na Dziś 3 dni przed końcem i w dniu końca („Od jutra 3 nowe materiały w miesiącu”), konkretny tekst błędu tuż po trialu. Bez cen i „Pro” do czasu IAP.
+- **Decyzja właściciela (2026-10-15), zrobiona w kodzie Build 7 (`backend/0007`), niewdrożona:** bez triala dla nowych kont; plan free = 2 generacje **na zawsze** (bez odnawiania), liczone po skrócie adresu e-mail w `free_generation_ledger` (przeżywa usunięcie konta — zamiast `trial_ledger`); konta z trialem w toku zostają na pro do jego końca, a generacje z triala nie liczą się do darmowych 2 (klif P1-42 znika: po trialu zawsze pełne 2); limit globalny 30/dobę i limit darmowych generacji w `app_config` (zmiana bez migracji). Osobna pula dla triali niepotrzebna (nowych triali nie ma); jest za to pula free w limicie globalnym (domyślnie 20 z 30 na dobę, `app_config.free_global_daily_cap`), żeby masowo zakładane konta free (bez potwierdzania maila) nie zajęły doby kontom pro. Reset jednego adresu: `reset_free_generations` (unieważnienie, nie kasowanie). Do zrobienia osobno: zwroty za awarie po naszej stronie (D4 — na free mają unieważniać wiersz ledgera; dziś dwie naliczone porażki zużywają nowe konto), pakiety z wyższymi limitami (IAP → plan `pro`), opcja (c).
 
 <a id="d4"></a>
 **D4. Koszt, model, limity, zwroty i ceny** (P1-29, P1-33, P1-43, część P1-20)
@@ -492,7 +493,7 @@ Build 7 to wszystkie P0 i P1 bez decyzji o wysiłku S lub M, plus zatwierdzone j
 
 | Kolejność | Krok | Decyzje | Wysiłek |
 |---|---|---|---|
-| 1 | Trial (mniejszy, `trial_ledger`, osobna pula) i naprawa klifu po trialu | [D3](#d3) | M |
+| 1 | Trial (mniejszy, `trial_ledger`, osobna pula) i naprawa klifu po trialu — **zastąpione decyzją z 2026-10-15 (bez triala, free 2 na zawsze), zrobione w kodzie Build 7** | [D3](#d3) | M |
 | 2 | Reset hasła kodem OTP, SMTP, Sign in with Apple, obsługa `needs_confirm` | [D8](#d8) | M |
 | 3 | Supabase Pro przed publicznym wydaniem; sprzątanie plików po generacji | [D10](#d10), [D9](#d9) | S |
 | 4 | Życia, ekonomia XP i zakres grywalizacji; słownik pojęć | [D6](#d6), [D7](#d7), [D18](#d18) | M |
