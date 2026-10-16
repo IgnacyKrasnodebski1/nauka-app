@@ -27,6 +27,8 @@ function harness(over: Partial<GenerationRequest> & { reserveWith?: ReserveOutco
   const reserved: GenerationOptions[] = [];
   const finished: { id: string; out: FinishInput }[] = [];
   const failed: { id: string; info: FailInput }[] = [];
+  const released: { id: string; reason: string }[] = [];
+  const logs: string[] = [];
   const order: string[] = [];
   const req: GenerationRequest = {
     rows: [],
@@ -57,10 +59,15 @@ function harness(over: Partial<GenerationRequest> & { reserveWith?: ReserveOutco
       order.push("fail");
       failed.push({ id, info });
     },
-    log: { info: () => undefined, warn: () => undefined, error: () => undefined },
+    release: async (id, reason) => {
+      order.push("release");
+      released.push({ id, reason });
+      return true;
+    },
+    log: { info: (...a: unknown[]) => void logs.push(a.map(String).join(" ")), warn: (...a: unknown[]) => void logs.push(a.map(String).join(" ")), error: (...a: unknown[]) => void logs.push(a.map(String).join(" ")) },
     ...over,
   };
-  return { req, reserved, finished, failed, order };
+  return { req, reserved, finished, failed, released, logs, order };
 }
 
 test("normalizeOptions ignores the client's level count (P1-29)", () => {
@@ -252,7 +259,7 @@ test("deadline after the charge: failed row with the cost spent so far; answer `
   const res = await handleGenerationRequest(h.req);
   assert.ok(Date.now() - t0 < 2000);
   assert.equal(res.status, 500);
-  assert.deepEqual(res.body, { error: res.body.error, code: "lost", reason: "ai_timeout", generationId: "gen-1" });
+  assert.deepEqual(res.body, { error: res.body.error, code: "lost", reason: "ai_timeout", generationId: "gen-1", charged: true });
   assert.match(String(res.body.error), /za długo/);
   assert.equal(h.failed.length, 1);
   const f = h.failed[0]!.info;
@@ -413,7 +420,235 @@ test("the answer leaves by RESPOND_BY_MS: hung Files API deletes and a hung `fai
   });
   const t1 = Date.now();
   const res2 = await quiet(() => handleGenerationRequest(h2.req));
-  assert.equal(res2.value.status, 500);
+  // the deadline passed before any AI call answered: the AI part never ran — ai_unavailable (refunded), not `lost`
+  assert.equal(res2.value.status, 503);
+  assert.equal(res2.value.body.code, "ai_unavailable");
   assert.equal(res2.value.body.generationId, "gen-2");
   assert.ok(Date.now() - t1 < 1500, "a hung `fail` past the budget does not hold the answer");
+});
+
+/* ---------- incident 2026-10-16: the AI failing on OUR side is `ai_unavailable`, refunded when nothing was produced ---------- */
+
+const HEADERS = () => new Headers({ "request-id": "req_test_1" });
+/** An SDK error as the client raises it for an HTTP answer (the right subclass for the status). */
+const apiError = (status: number, type: string, message: string) => Anthropic.APIError.generate(status, { type: "error", error: { type, message } }, undefined, HEADERS());
+// clearly fake, only to prove that a key-shaped string never reaches a log line or generations.error
+const FAKE_KEY = "sk-ant-api03-FAKE0000000000000000000000";
+
+const UNAVAILABLE_CASES: [string, () => unknown][] = [
+  ["401 invalid x-api-key (the incident)", () => apiError(401, "authentication_error", `invalid x-api-key ${FAKE_KEY}`)],
+  ["403 permission_error", () => apiError(403, "permission_error", "Your API key does not have permission to use the specified resource.")],
+  ["429 rate_limit_error", () => apiError(429, "rate_limit_error", "Number of request tokens has exceeded your per-minute rate limit")],
+  ["529 overloaded_error", () => apiError(529, "overloaded_error", "Overloaded")],
+  ["500 api_error", () => apiError(500, "api_error", "Internal server error")],
+  ["400 credit balance too low", () => apiError(400, "invalid_request_error", "Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.")],
+  ["connection error", () => new Anthropic.APIConnectionError({ message: "Connection error.", cause: Object.assign(new Error("socket hang up"), { code: "ECONNRESET" }) })],
+];
+
+test("AI unavailable at the first call (401, 403, 429, 529, 500, billing, connection): 503 ai_unavailable, refunded (release called), charged: false", async () => {
+  process.env.ANTHROPIC_API_KEY = "test-key-not-used";
+  for (const [label, make] of UNAVAILABLE_CASES) {
+    const m = mockAi({ behavior: (kind) => (kind === "outline" ? { error: make() } : undefined) });
+    setClientForTests(m.client);
+    const h = harness();
+    const res = await handleGenerationRequest(h.req);
+    assert.equal(res.status, 503, label);
+    assert.equal(res.body.code, "ai_unavailable", label);
+    assert.equal(res.body.charged, false, `${label}: the client shows „Limit się nie zmienił”`);
+    assert.equal(res.body.refunded, true, `${label}: build 7 reads \`refunded\` (its „Limit się nie zmienił”)`);
+    assert.equal(res.body.generationId, "gen-1", label);
+    assert.match(String(res.body.error), /po naszej stronie/, label);
+    assert.match(String(res.body.error), /Limit się nie zmienił/, label);
+    assert.doesNotMatch(String(res.body.error), /za duży|zabezpiecz|plik|PDF/i, `${label}: never blames the material`);
+    assert.doesNotMatch(String(res.body.error), /^AI: \d/, `${label}: not the old text build 7 maps to „file too big”`);
+    // release INSTEAD of fail: the RPC closes the row as failed + refunded in one transaction, so a client polling the row
+    // (recoverJob) never sees a failed row that is not refunded yet
+    assert.deepEqual(h.order, ["reserve", "release"], label);
+    assert.equal(h.failed.length, 0, `${label}: fail not called after a refund`);
+    assert.equal(h.released.length, 1, label);
+    assert.equal(h.released[0]!.id, "gen-1", label);
+    // the reason carries the original error (stored as "released:ai_unavailable: …", which the client reads)
+    assert.match(h.released[0]!.reason, /^ai_unavailable: /, label);
+    assert.ok(h.released[0]!.reason.length <= 200, `${label}: reason fits release_generation's 200 characters`);
+    assert.equal(m.calls.length, 1, `${label}: no level calls after a failed outline`);
+    // the original error is logged server-side, without secrets
+    assert.ok(h.logs.some((l) => /\[generate\] failed gen-1 ai_unavailable/.test(l)), `${label}: logged`);
+    for (const text of [...h.logs, h.released[0]!.reason, JSON.stringify(res.body)]) assert.ok(!text.includes("FAKE0000"), `${label}: key-shaped text leaked: ${text}`);
+  }
+  // the log line says what happened (status, type, request id)
+  const m = mockAi({ behavior: (kind) => (kind === "outline" ? { error: apiError(401, "authentication_error", "invalid x-api-key") } : undefined) });
+  setClientForTests(m.client);
+  const h = harness();
+  await handleGenerationRequest(h.req);
+  assert.ok(h.logs.some((l) => /401 authentication_error \[req_test_1\]: 401 .*invalid x-api-key/.test(l)), h.logs.join("\n"));
+  assert.match(h.released[0]!.reason, /^ai_unavailable: 401 authentication_error \[req_test_1\]/);
+});
+
+test("AI unavailable: a failed or missing refund keeps the attempt charged and says so (charged: true, no `refunded`)", async () => {
+  process.env.ANTHROPIC_API_KEY = "test-key-not-used";
+  for (const release of [
+    undefined,
+    async () => {
+      throw new Error("release_generation: function does not exist");
+    },
+    async () => false,
+  ]) {
+    setClientForTests(mockAi({ behavior: (kind) => (kind === "outline" ? { error: apiError(529, "overloaded_error", "Overloaded") } : undefined) }).client);
+    const h = harness({ release });
+    const res = await handleGenerationRequest(h.req);
+    assert.equal(res.status, 503);
+    assert.equal(res.body.code, "ai_unavailable");
+    assert.equal(res.body.charged, true);
+    // no refund: the row is closed by `fail` (after the refund attempt), with the original error
+    assert.equal(h.order.at(-1), "fail");
+    assert.equal(h.failed.length, 1);
+    assert.equal(h.failed[0]!.info.code, "ai_unavailable");
+    assert.match(h.failed[0]!.info.error, /^ai_unavailable: 529 overloaded_error/);
+    assert.equal(res.body.refunded, undefined);
+    assert.equal(res.body.generationId, "gen-1");
+    assert.doesNotMatch(String(res.body.error), /Limit się nie zmienił/);
+    assert.match(String(res.body.error), /po naszej stronie/);
+  }
+});
+
+test("AI unavailable AFTER output was produced (outline done, every level 529): charged as today, no refund, code ai_unavailable", async () => {
+  process.env.ANTHROPIC_API_KEY = "test-key-not-used";
+  const m = mockAi({ outlineLevels: 2, behavior: (kind) => (kind === "core" || kind === "tasks" ? { error: apiError(529, "overloaded_error", "Overloaded") } : undefined) });
+  setClientForTests(m.client);
+  const h = harness();
+  const res = await handleGenerationRequest(h.req);
+  assert.equal(res.status, 503);
+  assert.equal(res.body.code, "ai_unavailable");
+  assert.equal(res.body.charged, true);
+  assert.equal(h.released.length, 0, "the outline was produced (and paid): not refunded");
+  assert.deepEqual(h.order, ["reserve", "fail"]);
+  assert.ok(h.failed[0]!.info.cost.cost_usd > 0, "the outline is costed");
+
+  // one level unavailable, the other fine: the topic is saved without it (as with `api` before)
+  const m2 = mockAi({ outlineLevels: 2, behavior: (kind, title) => (kind === "core" && title === "Poziom 2" ? { error: apiError(500, "api_error", "Internal server error") } : undefined) });
+  setClientForTests(m2.client);
+  const h2 = harness();
+  const res2 = await quiet(() => handleGenerationRequest(h2.req));
+  assert.equal(res2.value.status, 200);
+  assert.equal(h2.finished[0]!.out.content.levels.length, 1);
+  assert.equal(h2.finished[0]!.out.quality.levelsFailed, 1);
+  // the skipped level is logged with the original API error (status, type, request id), not only the Polish user text
+  assert.ok(res2.logs.some((l) => /levels failed and were left out — poziom 2: 500 api_error \[req_test_1\]/.test(l)), res2.logs.join("\n"));
+});
+
+test("Files API upload failing on our side (invalid key with a PDF — the incident, 403, 429, 529, connection): 503 ai_unavailable BEFORE the charge, not reserve_failed", async () => {
+  process.env.ANTHROPIC_API_KEY = "test-key-not-used";
+  for (const [label, make] of UNAVAILABLE_CASES) {
+    const m = mockAi({ failUpload: make });
+    setClientForTests(m.client);
+    const h = harness({ rows: [PDF], text: undefined });
+    const res = await handleGenerationRequest(h.req);
+    assert.equal(res.status, 503, label);
+    assert.equal(res.body.code, "ai_unavailable", label);
+    assert.equal(res.body.charged, false, label);
+    assert.equal(res.body.reason, undefined, `${label}: not ai_upload`);
+    assert.equal(res.body.generationId, undefined, `${label}: nothing reserved`);
+    assert.match(String(res.body.error), /po naszej stronie/, label);
+    assert.match(String(res.body.error), /Limit się nie zmienił/, label);
+    assert.deepEqual(h.order, ["download"], `${label}: never reserved`);
+    assert.equal(m.calls.length, 0, label);
+    // the original SDK error (the MaterialUploadError's cause) is logged, without secrets
+    assert.ok(h.logs.some((l) => /AI unavailable before the charge/.test(l)), `${label}: logged`);
+    for (const text of [...h.logs, JSON.stringify(res.body)]) assert.ok(!text.includes("FAKE0000"), `${label}: key-shaped text leaked: ${text}`);
+  }
+  const m = mockAi({ failUpload: () => apiError(401, "authentication_error", "invalid x-api-key") });
+  setClientForTests(m.client);
+  const h = harness({ rows: [PDF], text: undefined });
+  await handleGenerationRequest(h.req);
+  assert.ok(h.logs.some((l) => /AI unavailable before the charge.*401 authentication_error \[req_test_1\]: 401 .*invalid x-api-key/.test(l)), h.logs.join("\n"));
+});
+
+test("Files API rejecting the material itself (400 about the PDF): the old path — 500 reserve_failed / ai_upload, original error logged", async () => {
+  process.env.ANTHROPIC_API_KEY = "test-key-not-used";
+  const m = mockAi({ failUpload: () => apiError(400, "invalid_request_error", "The PDF specified is password protected.") });
+  setClientForTests(m.client);
+  const h = harness({ rows: [PDF], text: undefined });
+  const res = await handleGenerationRequest(h.req);
+  assert.equal(res.status, 500);
+  assert.equal(res.body.code, "reserve_failed");
+  assert.equal(res.body.reason, "ai_upload");
+  assert.equal(res.body.charged, false);
+  assert.deepEqual(h.order, ["download"]);
+  assert.ok(h.logs.some((l) => /could not be handed to the AI.*400 invalid_request_error \[req_test_1\]/.test(l)), h.logs.join("\n"));
+});
+
+test("deadline with no answer at all (the outline never starts streaming) = the AI not answering: ai_unavailable, refunded", async () => {
+  process.env.ANTHROPIC_API_KEY = "test-key-not-used";
+  const m = mockAi({ behavior: (kind) => (kind === "outline" ? { firstEventMs: 60_000 } : undefined) });
+  setClientForTests(m.client);
+  const h = harness({ deadlineMs: 100, minAiTimeMs: 0 });
+  const t0 = Date.now();
+  const res = await handleGenerationRequest(h.req);
+  assert.ok(Date.now() - t0 < 2000);
+  assert.equal(res.status, 503);
+  assert.equal(res.body.code, "ai_unavailable");
+  assert.equal(res.body.charged, false);
+  assert.deepEqual(h.released, [{ id: "gen-1", reason: "ai_unavailable: no answer from the AI before the deadline" }]);
+  assert.equal(h.failed.length, 0);
+});
+
+test("the material is the problem (400 invalid image / password-protected PDF): old path — 500 api, charged, no refund, plus reason material", async () => {
+  process.env.ANTHROPIC_API_KEY = "test-key-not-used";
+  for (const msg of ["messages.0.content.0.image.source.base64.data: Could not process image", "The PDF specified is password protected."]) {
+    const m = mockAi({ behavior: (kind) => (kind === "outline" ? { error: apiError(400, "invalid_request_error", msg) } : undefined) });
+    setClientForTests(m.client);
+    const h = harness();
+    const res = await handleGenerationRequest(h.req);
+    assert.equal(res.status, 500, msg);
+    assert.equal(res.body.code, "api", msg);
+    assert.match(String(res.body.error), /^AI: 400 /, "the old text (build 7 maps AI: 4xx to „Tego materiału nie da się przetworzyć”)");
+    assert.equal(res.body.reason, "material", msg);
+    assert.equal(res.body.charged, true, msg);
+    assert.equal(res.body.generationId, "gen-1");
+    assert.equal(h.released.length, 0, "never refunded");
+    assert.deepEqual(h.order, ["reserve", "fail"]);
+  }
+  // a 400 about our request (not the material): still `api`, but the client is not told to blame the file
+  setClientForTests(mockAi({ behavior: (kind) => (kind === "outline" ? { error: apiError(400, "invalid_request_error", "thinking: unexpected value") } : undefined) }).client);
+  const h = harness();
+  const res = await handleGenerationRequest(h.req);
+  assert.equal(res.body.code, "api");
+  assert.equal(res.body.reason, undefined);
+  assert.equal(res.body.charged, true);
+  assert.equal(h.released.length, 0);
+});
+
+test("count_tokens answering 401 (invalid key): 503 ai_unavailable BEFORE the charge — nothing reserved, uploads deleted, charged: false", async () => {
+  process.env.ANTHROPIC_API_KEY = "test-key-not-used";
+  const m = mockAi({
+    countTokens: async () => {
+      throw apiError(401, "authentication_error", "invalid x-api-key");
+    },
+  });
+  setClientForTests(m.client);
+  const h = harness({ rows: [PDF], text: undefined });
+  const res = await handleGenerationRequest(h.req);
+  assert.equal(res.status, 503);
+  assert.equal(res.body.code, "ai_unavailable");
+  assert.equal(res.body.charged, false);
+  assert.equal(res.body.generationId, undefined, "build 7 adds „liczy się do limitu” only with a generationId");
+  assert.equal(res.body.refunded, undefined, "nothing was charged, nothing refunded");
+  assert.match(String(res.body.error), /Limit się nie zmienił/);
+  assert.deepEqual(h.order, ["download"], "never reserved");
+  assert.equal(m.calls.length, 0);
+  assert.deepEqual(m.deleted, m.uploads);
+});
+
+test("every error answer says `charged`: false before the charge, true after it", async () => {
+  const pre = harness({ rows: [{ ...PDF, mime: "application/zip" }], text: undefined });
+  assert.equal((await handleGenerationRequest(pre.req)).body.charged, false);
+  const limit = harness({ reserveWith: { ok: false, reason: "lifetime", used: 2, limit: 2 } });
+  assert.equal((await handleGenerationRequest(limit.req)).body.charged, false);
+  process.env.ANTHROPIC_API_KEY = "test-key-not-used";
+  setClientForTests(mockAi({ behavior: (kind) => (kind === "outline" ? { stop_reason: "refusal" } : undefined) }).client);
+  const post = harness();
+  const res = await handleGenerationRequest(post.req);
+  assert.equal(res.body.code, "refusal");
+  assert.equal(res.body.charged, true);
+  assert.equal(post.released.length, 0, "a refusal is never refunded");
 });

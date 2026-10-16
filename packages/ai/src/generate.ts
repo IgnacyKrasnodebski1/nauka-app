@@ -132,20 +132,91 @@ const LANG_CATEGORIES = new Set(["inny-język", "angielski"]);
  */
 const CORE_MAX_TOKENS = 20000;
 
-export type GenerationErrorCode = "refusal" | "invalid_output" | "no_input" | "api" | "too_long" | "ai_timeout";
+/**
+ * `ai_unavailable` (incident 2026-10-16: an invalid ANTHROPIC_API_KEY was shown to users as „the file is too big or
+ * protected”): the AI service failed on our side — authentication / permission / billing of our account, rate limit,
+ * overload, 5xx, a broken connection — not because of the user's material. See {@link classifyAiError}.
+ */
+export type GenerationErrorCode = "refusal" | "invalid_output" | "no_input" | "api" | "too_long" | "ai_timeout" | "ai_unavailable";
 
 export class GenerationError extends Error {
+  /** server-side description of the underlying API error (logs and `generations.error`; never sent to the client, no secrets) */
+  readonly detail?: string;
+  /** `api` only: the API rejected the user's material (bad / protected image or PDF), not our request */
+  readonly material?: boolean;
   constructor(
     message: string,
     public readonly code: GenerationErrorCode,
+    extra: { detail?: string; material?: boolean } = {},
   ) {
     super(message);
+    if (extra.detail) this.detail = extra.detail;
+    if (extra.material) this.material = true;
   }
 }
 
 export const AI_TIMEOUT_MESSAGE = "Tworzenie lekcji trwało za długo i zostało przerwane. Spróbuj z mniejszą ilością materiału.";
+/** `ai_unavailable` after a charge that stays (some AI output was produced). The refunded variant is in pipeline.ts. */
+export const AI_UNAVAILABLE_MESSAGE = "Tworzenie lekcji chwilowo nie działa. To problem po naszej stronie, nie z Twoim materiałem. Spróbuj ponownie za kilka minut.";
 const TOO_LONG_AI_MESSAGE = "Materiał jest za duży na jedną lekcję (za dużo stron albo tekstu). Podziel go na mniejsze części, np. po rozdziale.";
 const TOO_LONG_RE = /prompt is too long|too many (pages|tokens)|exceeds? (the )?(maximum|limit)|request too large/i;
+/** 400 answers about OUR account, not the request (e.g. "Your credit balance is too low to access the Anthropic API"). */
+const ACCOUNT_RE = /credit balance|billing|spend(ing)? limit|usage limits?|organization (has been |is )?(disabled|suspended)|workspace .*(disabled|archived)/i;
+/** 400 / 415 / 422 answers about the user's material (unreadable, unsupported or protected image / PDF). */
+const MATERIAL_RE = /image|\bpdf\b|document|media.?type|mime|password|encrypt|corrupt|decod|base64|could not process|unsupported (format|file|media)|invalid (file|format)/i;
+/** Error types the API reports in the body (also in a stream's `error` event, where `status` is undefined). */
+const UNAVAILABLE_TYPES = new Set(["authentication_error", "permission_error", "billing_error", "not_found_error", "rate_limit_error", "overloaded_error", "api_error", "timeout_error"]);
+/** A per-attempt timeout this close to the deadline is the deadline (the SDK's timer may fire a moment before ours). */
+const DEADLINE_SLACK_MS = 1_000;
+
+export type AiErrorKind = "unavailable" | "too_long" | "material" | "request";
+
+/**
+ * What an Anthropic SDK error means for the user (incident 2026-10-16):
+ *  - `unavailable` — our side: 401 / 403 (key, permissions), 404 (model or file id — our configuration), 408, 429,
+ *    5xx incl. 529 overloaded, a broken connection, a 400 about our account's billing, and the same error types in a
+ *    stream's `error` event. Becomes `ai_unavailable` (the route refunds it when no AI output was produced);
+ *  - `too_long` — 413 or a "prompt is too long" answer (as before);
+ *  - `material` — 400 / 415 / 422 about the image / PDF the user sent (as before code `api`, now flagged);
+ *  - `request` — any other 4xx (as before code `api`).
+ * Not an SDK error, or an abort: null.
+ */
+export function classifyAiError(e: unknown): AiErrorKind | null {
+  if (!(e instanceof Anthropic.APIError) || e instanceof Anthropic.APIUserAbortError) return null;
+  if (e instanceof Anthropic.APIConnectionError) return "unavailable";
+  const status = e.status;
+  const type = errorType(e);
+  if (status === 413 || type === "request_too_large") return "too_long";
+  if (status === 401 || status === 403 || status === 404 || status === 408 || status === 429 || (typeof status === "number" && status >= 500)) return "unavailable";
+  if (TOO_LONG_RE.test(e.message)) return "too_long";
+  if (type && UNAVAILABLE_TYPES.has(type)) return "unavailable";
+  if (ACCOUNT_RE.test(e.message)) return "unavailable";
+  if ((status === 400 || status === 415 || status === 422 || status === undefined) && MATERIAL_RE.test(e.message)) return "material";
+  return "request";
+}
+
+function errorType(e: InstanceType<typeof Anthropic.APIError>): string | null {
+  const body = e.error as { error?: { type?: unknown } } | undefined;
+  const t = (e as { type?: unknown }).type ?? body?.error?.type ?? null;
+  return typeof t === "string" ? t : null;
+}
+
+/** Never let a key-shaped string reach a log line or `generations.error`. */
+const scrub = (s: string) => s.replace(/sk-ant-[A-Za-z0-9_-]+/g, "sk-ant-***").replace(/\b(x-api-key|authorization|bearer)(["':=\s]+)(?!\*)[A-Za-z0-9._~+/=-]{12,}/gi, "$1$2***");
+
+/** One line about an SDK error for the server logs and `generations.error`: status, error type, request id, message (scrubbed). */
+export function describeAiError(e: unknown): string {
+  if (e instanceof Anthropic.APIConnectionError) {
+    const cause = (e as { cause?: { code?: unknown; message?: unknown } }).cause;
+    const why = cause ? ` (${String(cause.code ?? cause.message ?? "")})` : "";
+    return scrub(`connection: ${e.message}${why}`).slice(0, 500);
+  }
+  if (e instanceof Anthropic.APIError) {
+    const id = e.requestID ? ` [${e.requestID}]` : "";
+    return scrub(`${e.status ?? "stream"} ${errorType(e) ?? e.constructor.name}${id}: ${e.message}`).slice(0, 500);
+  }
+  return scrub(String((e as Error)?.message ?? e)).slice(0, 500);
+}
 
 /**
  * Before the charge, materials whose prompt (system + materials + base prompt, `count_tokens`) is larger than this
@@ -167,9 +238,12 @@ export const WARM_UP_CAP_MS = 30_000;
 /** Map an SDK / network error of one AI request to a GenerationError (the deadline wins over whatever the abort caused). */
 function aiError(e: unknown, deadline: Deadline): unknown {
   if (e instanceof GenerationError) return e;
-  if (deadline.expired()) return new GenerationError(AI_TIMEOUT_MESSAGE, "ai_timeout");
-  if (e instanceof Anthropic.APIError && (e.status === 413 || TOO_LONG_RE.test(e.message))) return new GenerationError(TOO_LONG_AI_MESSAGE, "too_long");
-  if (e instanceof Anthropic.APIError) return new GenerationError(`AI: ${e.status} ${e.message}`, "api");
+  if (deadline.expired() || (e instanceof Anthropic.APIConnectionTimeoutError && deadline.left() < DEADLINE_SLACK_MS)) return new GenerationError(AI_TIMEOUT_MESSAGE, "ai_timeout");
+  const kind = classifyAiError(e);
+  if (kind === "too_long") return new GenerationError(TOO_LONG_AI_MESSAGE, "too_long");
+  if (kind === "unavailable") return new GenerationError(AI_UNAVAILABLE_MESSAGE, "ai_unavailable", { detail: describeAiError(e) });
+  // the old `AI: <status> …` text stays for `api`: Cramfox build 7 reads the status from it
+  if (e instanceof Anthropic.APIError) return new GenerationError(scrub(`AI: ${e.status} ${e.message}`), "api", { detail: describeAiError(e), material: kind === "material" });
   return e;
 }
 
@@ -214,10 +288,12 @@ function requestParts(prep: PreparedGeneration) {
  *  - validates the input (`no_input`);
  *  - uploads PDFs (and large image sets) to the Files API — free, and needed to count their tokens;
  *  - with `countTokens`, counts the prompt with `count_tokens` (free). An API answer that the prompt is too long
- *    becomes `too_long`; any other counting problem only logs a warning (the token gate is a cost guard, not a
- *    reason to refuse a lesson). Pasted text alone is not counted (the route caps it at 200k characters).
- * Throws GenerationError (`no_input`, `api` for a failed upload, `too_long`, `ai_timeout`); its own uploads are
- * deleted before it throws.
+ *    becomes `too_long`; a 401 becomes `ai_unavailable`; any other counting problem only logs a warning (the token
+ *    gate is a cost guard, not a reason to refuse a lesson). Pasted text alone is not counted (the route caps it at
+ *    200k characters).
+ * Throws GenerationError (`no_input`, `ai_unavailable` for an upload or count failing on our side — key, permissions,
+ * 429, 5xx, network —, `api` for any other failed upload, `too_long`, `ai_timeout`); its own uploads are deleted
+ * before it throws.
  */
 export async function prepareGeneration(input: GenerateInput, ctx: { deadline: Deadline; countTokens?: boolean }): Promise<PreparedGeneration> {
   const { options, mode } = parseInput(input);
@@ -230,7 +306,13 @@ export async function prepareGeneration(input: GenerateInput, ctx: { deadline: D
         prep.fileIds = await uploadMaterials(client, input.materials, prep.uploaded, ctx.deadline.requestOptions());
       } catch (e) {
         if (ctx.deadline.expired()) throw new GenerationError(AI_TIMEOUT_MESSAGE, "ai_timeout");
-        throw new GenerationError((e as Error).message || "Nie udało się przesłać materiałów do AI. Spróbuj ponownie za chwilę.", "api");
+        // uploadMaterials wraps the SDK error in a MaterialUploadError: classify and log the original (status, type, request id)
+        const cause = (e as Error)?.cause ?? e;
+        // the AI unavailable on our side (incident 2026-10-16: an invalid key fails the PDF upload first) — before the charge,
+        // the route answers 503 ai_unavailable with charged: false
+        if (classifyAiError(cause) === "unavailable") throw new GenerationError(AI_UNAVAILABLE_MESSAGE, "ai_unavailable", { detail: describeAiError(cause) });
+        // anything else, also before the charge: the route answers reserve_failed / ai_upload (nothing charged)
+        throw new GenerationError(scrub((e as Error).message || "") || "Nie udało się przesłać materiałów do AI. Spróbuj ponownie za chwilę.", "api", { detail: describeAiError(cause) });
       }
       if (ctx.countTokens) prep.inputTokens = await countPromptTokens(client, prep, ctx.deadline);
     }
@@ -251,8 +333,12 @@ async function countPromptTokens(client: Anthropic, prep: PreparedGeneration, de
     return typeof r?.input_tokens === "number" ? r.input_tokens : null;
   } catch (e) {
     if (deadline.expired()) throw new GenerationError(AI_TIMEOUT_MESSAGE, "ai_timeout");
-    if (e instanceof Anthropic.APIError && (e.status === 413 || TOO_LONG_RE.test(e.message))) throw new GenerationError(TOO_LONG_AI_MESSAGE, "too_long");
-    console.warn(`[generate] count_tokens failed, generation continues without the token check: ${(e as Error)?.message ?? String(e)}`);
+    const kind = classifyAiError(e);
+    if (kind === "too_long") throw new GenerationError(TOO_LONG_AI_MESSAGE, "too_long");
+    // An invalid / revoked API key fails every call of the generation: stop BEFORE the charge (incident 2026-10-16).
+    // Other failures of this free call (429, 529, 5xx, network) only skip the token check, as before.
+    if (e instanceof Anthropic.AuthenticationError) throw new GenerationError(AI_UNAVAILABLE_MESSAGE, "ai_unavailable", { detail: describeAiError(e) });
+    console.warn(`[generate] count_tokens failed, generation continues without the token check: ${describeAiError(e)}`);
     return null;
   }
 }
@@ -448,7 +534,8 @@ async function generateWithAi(prep: PreparedGeneration, client: Anthropic, deadl
   if (!okIdx.length) throw deadline.expired() ? new GenerationError(AI_TIMEOUT_MESSAGE, "ai_timeout") : (settled[0] as PromiseRejectedResult).reason;
   const levelsFailed = outline.levels.length - okIdx.length;
   if (levelsFailed) {
-    const why = settled.flatMap((r, i) => (r.status === "rejected" ? [`poziom ${i + 1}: ${(r.reason as Error)?.message}`] : []));
+    // the original API error (status, type, request id — scrubbed) when there is one, not only the user-facing text
+    const why = settled.flatMap((r, i) => (r.status === "rejected" ? [`poziom ${i + 1}: ${(r.reason as GenerationError)?.detail ?? (r.reason as Error)?.message}`] : []));
     console.warn(`[generate] ${levelsFailed}/${outline.levels.length} levels failed and were left out — ${why.join("; ")}`);
     outline.levels = okIdx.map((i) => outline.levels[i]!);
   }
@@ -523,9 +610,9 @@ async function generateWithAi(prep: PreparedGeneration, client: Anthropic, deadl
   return { content, category: outline.category || "inne", model: servedModel, usage: { input: cost.input, output: cost.output }, demo: false, quality, cost };
 }
 
-/** A level error that fails the whole generation (anything but a truncated / invalid answer, an API error or the deadline). */
+/** A level error that fails the whole generation (anything but a truncated / invalid answer, an API error, the AI being unavailable or the deadline). */
 function isFatalLevelError(e: unknown): boolean {
-  return !(e instanceof GenerationError && (e.code === "invalid_output" || e.code === "api" || e.code === "ai_timeout"));
+  return !(e instanceof GenerationError && (e.code === "invalid_output" || e.code === "api" || e.code === "ai_unavailable" || e.code === "ai_timeout"));
 }
 
 function safeParse<T>(schema: { parse: (v: unknown) => T }, text: string): T | null {

@@ -119,6 +119,21 @@ export async function failGeneration(admin: SupabaseClient, generationId: string
 }
 
 /**
+ * RPC `release_generation` (backend/0009, incident 2026-10-16): refunds a generation that failed on our side before any
+ * AI output — in ONE transaction: `generations` → `failed` + `refunded_at`, `usage.generations` − 1 in the row's month,
+ * its `free_generation_ledger` row voided (free plan: the free lesson comes back) and its `generation_ledger` entry voided
+ * (the global 24 h cap). Idempotent; refuses a `done` generation. Service role only. True = refunded (now or before).
+ */
+export async function releaseGeneration(admin: SupabaseClient, generationId: string, reason: string): Promise<boolean> {
+  const { data, error } = await admin.rpc("release_generation", { p_generation_id: generationId, p_reason: reason });
+  if (error) throw new Error(`release_generation: ${error.message}`);
+  const r = data as { ok?: boolean; reason?: string } | null;
+  if (r?.ok === true) return true;
+  console.warn("[generate] release_generation refused", generationId, r?.reason ?? JSON.stringify(r));
+  return false;
+}
+
+/**
  * After finish_generation threw: the topic row of the generation when the transaction did commit (status `done`), else null.
  * Lets the route answer 200 when only the RPC's reply was lost.
  */

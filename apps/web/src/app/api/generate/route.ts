@@ -3,7 +3,7 @@ import { GenerationOptionsSchema, PLANS } from "@nauka/shared";
 import { handleGenerationRequest, reserveRejection, type IntakeRow } from "@/lib/ai";
 import { getUserFromRequest, jsonError, NO_SUPABASE } from "@/lib/auth";
 import { hasServiceRole, hasSupabaseEnv } from "@/lib/env";
-import { failGeneration, findFinishedTopic, finishGeneration, getGenerationQuota, getPlan, hasActiveGeneration, reserveGenerationSlot } from "@/lib/plan";
+import { failGeneration, findFinishedTopic, finishGeneration, getGenerationQuota, getPlan, hasActiveGeneration, releaseGeneration, reserveGenerationSlot } from "@/lib/plan";
 import { getAdminSupabase } from "@/lib/supabase/admin";
 import { rowToTopic } from "@/lib/types";
 
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
 
   // MIME allow-list → read-only quota pre-check → download (real sizes) → PPTX unpacking → text budget → Files API
   // upload + token count → charge (one transaction) → AI (deadline: start + 270 s) → topic + `done` (one transaction).
-  // A request that fails before the charge is never charged (see docs/API.md).
+  // A request that fails before the charge is never charged; `ai_unavailable` before any AI output is refunded (docs/API.md).
   const res = await handleGenerationRequest({
     rows: materials,
     text: body.text,
@@ -127,6 +127,9 @@ export async function POST(req: Request) {
       return { topicId: row.id, topic: rowToTopic(row) };
     },
     fail: (generationId, info) => failGeneration(admin, generationId, info),
+    // the AI unavailable on our side before any output (key, permissions, billing, 429, 529, 5xx, network): the attempt
+    // is given back in one transaction (backend/0009) and the answer says `charged: false`
+    release: (generationId, reason) => releaseGeneration(admin, generationId, reason),
     // finish_generation committed but its reply was lost (network): the lesson exists and is paid — answer it, do not report a failure
     lookup: async (generationId) => {
       const row = await findFinishedTopic(admin, generationId);

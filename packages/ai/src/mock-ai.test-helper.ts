@@ -93,7 +93,8 @@ export interface MockOptions {
   restTokens?: number;
   behavior?: (kind: Kind, title: string, call: CallRecord) => Behavior | undefined;
   countTokens?: (params: unknown) => Promise<{ input_tokens: number }>;
-  failUpload?: boolean;
+  /** true: a plain Error; a function: the error to throw (e.g. an SDK APIError) */
+  failUpload?: boolean | (() => unknown);
 }
 
 class FakeStream {
@@ -127,7 +128,7 @@ export function mockAi(opts: MockOptions = {}) {
   const client = {
     files: {
       async upload(_p: unknown, _o?: Options) {
-        if (opts.failUpload) throw new Error("upload boom");
+        if (opts.failUpload) throw typeof opts.failUpload === "function" ? opts.failUpload() : new Error("upload boom");
         const id = `file_${uploads.length + 1}`;
         uploads.push(id);
         return { id };

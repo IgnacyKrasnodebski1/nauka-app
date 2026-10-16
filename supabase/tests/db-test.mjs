@@ -2,7 +2,9 @@
 /**
  * Migration tests on a THROWAWAY local Postgres (never a real project): starts a temporary cluster, stubs the parts of
  * Supabase the migrations use (auth.users / auth.uid(), storage.objects with RLS, pg_cron's API, the API roles), applies
- * 0001 + Cramfox 0004–0008 (0007 and 0008 twice: idempotence) and checks the generation guards (AUDYT P0-1, P1-3, P1-4),
+ * 0001 + Cramfox 0004–0009 (0007, 0008 and 0009 twice: idempotence; 0009 both before and after 0008) and checks the
+ * generation guards (AUDYT P0-1, P1-3, P1-4), the refund of a generation the AI failed on our side (0009,
+ * release_generation — incident 2026-10-16),
  * the free plan's lifetime generations keyed by the e-mail hash (and their reset), no trial for new accounts, the
  * configurable global cap with its free pool (D3 / P0-2, owner decision 2026-10-15) and the account limits (P1-5),
  * including real parallel sessions racing for a reservation.
@@ -36,7 +38,7 @@ if (!bin) {
   console.log("skip: no local Postgres binaries (initdb, pg_ctl, psql) — set PG_BIN to run the migration tests");
   process.exit(0);
 }
-for (const f of ["0004_cramfox.sql", "0005_materials_50mb.sql", "0006_pptx.sql", "0007_generation_guards.sql", "0008_account_limits.sql"])
+for (const f of ["0004_cramfox.sql", "0005_materials_50mb.sql", "0006_pptx.sql", "0007_generation_guards.sql", "0008_account_limits.sql", "0009_release_generation.sql"])
   if (!existsSync(path.join(migrationsDir, f))) {
     console.error(`missing ${f} in ${migrationsDir} (set CRAMFOX_MIGRATIONS)`);
     process.exit(1);
@@ -117,9 +119,11 @@ try {
       (fr, 'done', 'liceum', now() - interval '2 days'),   -- on the free plan: counts
       (fr, 'failed', 'liceum', now() - interval '1 day');  -- charged, failed: counts
   end $$;`);
-  for (const f of ["0007_generation_guards.sql", "0008_account_limits.sql", "0007_generation_guards.sql", "0008_account_limits.sql"])
+  // 0009 before 0008 on the first pass, after it on the second (the documented order allows both); 0009 twice in a row.
+  // Re-running 0007 reverts 0009's versions of the day counters and the backfill — so 0009 always follows a re-run of 0007.
+  for (const f of ["0007_generation_guards.sql", "0009_release_generation.sql", "0008_account_limits.sql", "0007_generation_guards.sql", "0008_account_limits.sql", "0009_release_generation.sql", "0009_release_generation.sql"])
     psqlFile(migration(path.join(migrationsDir, f)));
-  results.push("ok - migrations 0001, 0004–0008 apply; 0007 and 0008 apply a second time (idempotent)");
+  results.push("ok - migrations 0001, 0004–0009 apply; 0007, 0008 and 0009 apply a second time (idempotent), 0009 before and after 0008");
   {
     const pre = psql(`select (select string_agg(key || '=' || value::text, ',' order by key) from public.app_config) || '|' ||
       (select count(*) from public.free_generation_ledger) || '|' ||
@@ -188,6 +192,12 @@ try {
       assert not has_function_privilege('anon', 'public.free_generations_last_day()', 'execute'), 'anon free day count';
       assert not has_function_privilege('authenticated', 'public.reset_free_generations(text)', 'execute'), 'authenticated reset';
       assert not has_function_privilege('anon', 'public.reset_free_generations(text)', 'execute'), 'anon reset';
+      -- 0009: the refund is server-only (a signed-in user must not give themselves generations back)
+      assert not has_function_privilege('authenticated', 'public.release_generation(uuid,text)', 'execute'), 'authenticated release';
+      assert not has_function_privilege('anon', 'public.release_generation(uuid,text)', 'execute'), 'anon release';
+      assert has_function_privilege('service_role', 'public.release_generation(uuid,text)', 'execute'), 'service release';
+      assert not has_column_privilege('authenticated', 'public.generations', 'refunded_at', 'select'), 'refunded_at hidden from clients (0008 column grants)';
+      assert has_column_privilege('authenticated', 'public.generations', 'error', 'select'), 'error readable (the client sees the released: prefix)';
       assert not has_table_privilege('authenticated', 'public.app_config', 'select'), 'authenticated config';
       assert not has_table_privilege('anon', 'public.app_config', 'select'), 'anon config';
       assert not has_table_privilege('authenticated', 'public.app_config', 'update'), 'authenticated config update';
@@ -207,6 +217,14 @@ try {
       denied = /permission denied/.test(e.message);
     }
     if (!denied) throw new Error("a signed-in user could call reserve_generation (charge or bypass)");
+    let releaseDenied = false;
+    try {
+      psqlFile(`set role authenticated; select set_config('request.jwt.claim.sub', '${u}', false);
+        select public.release_generation(gen_random_uuid(), 'ai_unavailable');`);
+    } catch (e) {
+      releaseDenied = /permission denied/.test(e.message);
+    }
+    if (!releaseDenied) throw new Error("a signed-in user could call release_generation (refund themselves)");
   });
 
   await check("reserve_generation: inserts the running row with the client's fields, counts usage; a second one is busy and changes nothing", async () => {
@@ -411,6 +429,154 @@ try {
       assert (select command from cron.job where jobname = 'cramfox-sweep-generations') = 'select public.sweep_stale_generations()';
       assert (select count(*) from cron.job where jobname = 'cramfox-end-trials') = 1, '0004 job still there';
     end $$;`);
+  });
+
+  // ---- 0009: release_generation (incident 2026-10-16: the AI failed on our side — invalid API key — and the user was charged)
+  await check("release_generation (0009): pro/trial account — usage −1, generation_ledger entry voided, global count back, row failed + refunded_at + released: prefix; a second call is a no-op", async () => {
+    psqlFile(`do $$ declare u uuid := t.new_user(); s uuid := t.new_subject(u); mk text := to_char(now() at time zone 'UTC', 'YYYY-MM'); r jsonb; x jsonb; g uuid; gr public.generations%rowtype; begin
+      r := public.reserve_generation(u, mk, 150, s, 'liceum', null, '{}', '{}');
+      assert (r->>'ok')::boolean, r::text;
+      g := (r->>'generation_id')::uuid;
+      assert (select generations from public.usage where user_id = u and month = mk) = 1, 'charged';
+      assert public.generations_last_day() = 1 and (select count(*) from public.generation_ledger where voided_at is null) = 1, 'counted globally';
+      -- a row already failed (a manual refund in the SQL Editor, or a refund that landed after the route's fallback fail)
+      update public.generations set status = 'failed', error = 'ai_unavailable: 401 authentication_error [req_1]', finished_at = now() where id = g;
+      x := public.release_generation(g, 'ai_unavailable');
+      assert x = jsonb_build_object('ok', true, 'generation_id', g, 'usage', 1, 'free_ledger', 0, 'ledger', 1), x::text;
+      select * into gr from public.generations where id = g;
+      assert gr.status = 'failed' and gr.refunded_at is not null and gr.finished_at is not null, 'row';
+      assert gr.error = 'released:ai_unavailable | ai_unavailable: 401 authentication_error [req_1]', gr.error;
+      assert (select generations from public.usage where user_id = u and month = mk) = 0, 'usage restored';
+      assert (select count(*) from public.generation_ledger) = 1 and (select count(*) from public.generation_ledger where voided_at is null) = 0, 'ledger entry voided, not deleted';
+      assert public.generations_last_day() = 0, 'the global 24 h count no longer includes it';
+      assert (public.generation_quota(u, mk, 150)->>'used')::int = 0, 'quota for /api/me';
+      x := public.release_generation(g, 'ai_unavailable');
+      assert x = jsonb_build_object('ok', true, 'already', true, 'generation_id', g), 'idempotent: ' || x::text;
+      assert (select generations from public.usage where user_id = u and month = mk) = 0, 'a second call changes nothing';
+      assert (select error from public.generations where id = g) = gr.error, 'error not prefixed twice';
+      assert (select count(*) from public.generation_ledger where voided_at is null) = 0;
+      -- not busy any more; the next reservation counts from 0 again
+      r := public.reserve_generation(u, mk, 150, s, 'liceum', null, '{}', '{}');
+      assert (r->>'ok')::boolean and (r->>'used')::int = 1, r::text;
+    end $$;`);
+  });
+
+  await check("release_generation (0009): free plan — the lifetime lesson comes back (e-mail ledger voided + refunded), free pool not counted; a still-running row is closed; survives re-running 0007/0008/0009 and the backfill", async () => {
+    const u = psql("select t.new_free_user('Zwrot.Limitu@test.local')");
+    const s = psql(`select t.new_subject('${u}')`);
+    psqlFile(`do $$ declare u uuid := '${u}'; s uuid := '${s}'; mk text := to_char(now() at time zone 'UTC', 'YYYY-MM'); r jsonb; x jsonb; g uuid; begin
+      r := t.reserve_done(u, s, mk, 2);
+      assert (r->>'used')::int = 1, r::text;
+      r := public.reserve_generation(u, mk, 2, s, 'liceum', null, '{}', '{}');
+      assert (r->>'ok')::boolean and (r->>'used')::int = 2, r::text;
+      g := (r->>'generation_id')::uuid;
+      assert public.reserve_generation(u, mk, 2, s, 'liceum', null, '{}', '{}')->>'reason' = 'busy', 'running';
+      -- what the route does: release a still-running row (release INSTEAD of fail, so a polling client never sees a failed,
+      -- not yet refunded row); the reason carries the original error
+      x := public.release_generation(g, 'ai_unavailable: 401 authentication_error [req_1]: invalid x-api-key');
+      assert (x->>'ok')::boolean and (x->>'usage')::int = 1 and (x->>'free_ledger')::int = 1 and (x->>'ledger')::int = 1, x::text;
+      assert (select status = 'failed' and refunded_at is not null and finished_at is not null and error = 'released:ai_unavailable: 401 authentication_error [req_1]: invalid x-api-key' from public.generations where id = g), 'closed';
+      assert (select voided_at is not null and refunded_at is not null from public.free_generation_ledger where generation_id = g), 'e-mail ledger row voided and refunded';
+      assert public.free_generations_used(u, public.account_email_hash(u)) = 1, 'the free lesson came back';
+      assert (public.generation_quota(u, mk, 2)->>'remaining')::int = 1, 'quota: 1 left';
+      assert public.free_generations_last_day() = 1, 'the free pool counts only the done one';
+      assert (select sum(generations) from public.usage where user_id = u) = 1, 'monthly statistics';
+      assert public.backfill_free_generation_ledger() = 0, 'the backfill does not re-add it';
+      assert (public.release_generation(g, 'ai_unavailable')->>'already')::boolean, 'idempotent';
+      assert public.free_generations_used(u, public.account_email_hash(u)) = 1;
+    end $$;`);
+    for (const f of ["0007_generation_guards.sql", "0008_account_limits.sql", "0009_release_generation.sql"]) psqlFile(migration(path.join(migrationsDir, f)));
+    psqlFile(`do $$ declare u uuid := '${u}'; s uuid := '${s}'; mk text := to_char(now() at time zone 'UTC', 'YYYY-MM'); r jsonb; begin
+      assert public.free_generations_used(u, public.account_email_hash(u)) = 1, 'still refunded after re-running 0007, 0008, 0009';
+      assert public.free_generations_last_day() = 1 and public.generations_last_day() = 1, 'day counters still without it';
+      r := t.reserve_done(u, s, mk, 2);
+      assert (r->>'ok')::boolean and (r->>'used')::int = 2, 'the refunded lesson can be used: ' || r::text;
+      assert public.reserve_generation(u, mk, 2, s, 'liceum', null, '{}', '{}')->>'reason' = 'lifetime', 'then the limit';
+    end $$;`);
+  });
+
+  await check("release_generation (0009): refuses a done generation and unknown ids (nothing changes); missing arguments raise; usage of the row's own month (UTC)", async () => {
+    psqlFile(`do $$ declare u uuid := t.new_user(); s uuid := t.new_subject(u); mk text := to_char(now() at time zone 'UTC', 'YYYY-MM'); r jsonb; x jsonb; g uuid; ok boolean; begin
+      r := public.reserve_generation(u, mk, 150, s, 'liceum', null, '{}', '{}');
+      g := (r->>'generation_id')::uuid;
+      perform public.finish_generation(g, '{"name":"T","source":"materials","content":{"name":"T"}}', '{"model":"claude-opus-5"}');
+      x := public.release_generation(g, 'ai_unavailable');
+      assert x = '{"ok": false, "reason": "done"}'::jsonb, x::text;
+      assert (select status = 'done' and refunded_at is null from public.generations where id = g), 'a finished lesson is never refunded';
+      assert (select generations from public.usage where user_id = u and month = mk) = 1, 'usage unchanged';
+      assert (select count(*) from public.generation_ledger where voided_at is null) = 1, 'ledger unchanged';
+      x := public.release_generation(gen_random_uuid(), 'ai_unavailable');
+      assert x = '{"ok": false, "reason": "not_found"}'::jsonb, x::text;
+      begin
+        perform public.release_generation(g, '  ');
+        ok := false;
+      exception when others then ok := sqlerrm like 'release_generation: missing arguments%';
+      end;
+      assert ok, 'empty reason';
+      -- a row reserved at the end of the previous month: the refund goes to that month's usage, this month's stays
+      r := public.reserve_generation(u, mk, 150, s, 'liceum', null, '{}', '{}');
+      g := (r->>'generation_id')::uuid;
+      update public.generations set created_at = date_trunc('month', now() at time zone 'UTC') at time zone 'UTC' - interval '1 second', status = 'failed' where id = g;
+      insert into public.usage (user_id, month, generations) values (u, to_char((date_trunc('month', now() at time zone 'UTC') - interval '1 day'), 'YYYY-MM'), 5);
+      x := public.release_generation(g, 'ai_unavailable');
+      assert (x->>'usage')::int = 1 and (x->>'ledger')::int = 0, x::text;
+      assert (select generations from public.usage where user_id = u and month = to_char((date_trunc('month', now() at time zone 'UTC') - interval '1 day'), 'YYYY-MM')) = 4, 'previous month −1';
+      assert (select generations from public.usage where user_id = u and month = mk) = 2, 'this month unchanged';
+      -- usage never goes below 0
+      update public.usage set generations = 0 where user_id = u;
+      r := public.reserve_generation(u, mk, 150, s, 'liceum', null, '{}', '{}');
+      update public.usage set generations = 0 where user_id = u and month = mk;
+      x := public.release_generation((r->>'generation_id')::uuid, 'ai_unavailable');
+      assert (x->>'usage')::int = 0 and (select generations from public.usage where user_id = u and month = mk) = 0, 'not negative: ' || x::text;
+    end $$;`);
+  });
+
+  await check("release_generation (0009): a refunded generation frees its place under the global cap (30) and the free pool; the account's daily cap of 20 still counts it (abuse guard)", async () => {
+    psqlFile(`do $$ declare a uuid := t.new_user(); u uuid := t.new_user(); s uuid := t.new_subject(u); v uuid := t.new_user(); sv uuid := t.new_subject(v);
+                     mk text := to_char(now() at time zone 'UTC', 'YYYY-MM'); r jsonb; x jsonb; begin
+      insert into public.generations (owner_id, status, stage, created_at) select a, 'done', 'liceum', now() - interval '2 hours' from generate_series(1, 29);
+      r := public.reserve_generation(u, mk, 150, s, 'liceum', null, '{}', '{}');
+      assert (r->>'ok')::boolean, 'the 30th: ' || r::text;
+      assert public.reserve_generation(v, mk, 150, sv, 'liceum', null, '{}', '{}')->>'reason' = 'global', 'full';
+      x := public.release_generation((r->>'generation_id')::uuid, 'ai_unavailable');
+      assert (x->>'ok')::boolean, x::text;
+      assert (public.generation_quota(v, mk, 150)->>'global_open')::boolean, '/api/me: open again';
+      r := public.reserve_generation(v, mk, 150, sv, 'liceum', null, '{}', '{}');
+      assert (r->>'ok')::boolean, 'a place again after the refund: ' || r::text;
+    end $$;`);
+    psql("select t.reset()");
+    psqlFile(`do $$ declare f uuid := t.new_free_user(); sf uuid := t.new_subject(f); g uuid := t.new_free_user(); sg uuid := t.new_subject(g);
+                     mk text := to_char(now() at time zone 'UTC', 'YYYY-MM'); r jsonb; begin
+      update public.app_config set value = '1' where key = 'free_global_daily_cap';
+      r := public.reserve_generation(f, mk, 2, sf, 'liceum', null, '{}', '{}');
+      assert (r->>'ok')::boolean, r::text;
+      assert public.reserve_generation(g, mk, 2, sg, 'liceum', null, '{}', '{}')->>'reason' = 'global', 'free pool 1 full';
+      perform public.release_generation((r->>'generation_id')::uuid, 'ai_unavailable');
+      r := public.reserve_generation(g, mk, 2, sg, 'liceum', null, '{}', '{}');
+      assert (r->>'ok')::boolean, 'free pool free again: ' || r::text;
+    end $$;`);
+    psql("select t.reset()");
+    psqlFile(`do $$ declare u uuid := t.new_user(); s uuid := t.new_subject(u); mk text := to_char(now() at time zone 'UTC', 'YYYY-MM'); r jsonb; begin
+      insert into public.generations (owner_id, status, stage, created_at) select u, 'done', 'liceum', now() - interval '1 hour' from generate_series(1, 19);
+      r := public.reserve_generation(u, mk, 150, s, 'liceum', null, '{}', '{}');
+      assert (r->>'ok')::boolean, r::text;
+      perform public.release_generation((r->>'generation_id')::uuid, 'ai_unavailable');
+      r := public.reserve_generation(u, mk, 150, s, 'liceum', null, '{}', '{}');
+      assert r = '{"ok": false, "reason": "daily", "limit": 20}'::jsonb, 'refunded attempts still count to 20/24 h: ' || r::text;
+    end $$;`);
+  });
+
+  await check("release_generation (0009) takes the account lock (like reserve_generation): a held lock makes it wait", async () => {
+    const u = psql("select t.new_user()");
+    const s = psql(`select t.new_subject('${u}')`);
+    const g = psql(`select public.reserve_generation('${u}', to_char(now() at time zone 'UTC', 'YYYY-MM'), 150, '${s}', 'liceum', null, '{}', '{}')->>'generation_id'`);
+    const holder = psqlAsync(`begin; select pg_advisory_xact_lock(hashtext('cramfox:generation:user'), hashtext('${u}')); select pg_sleep(0.6); commit;`);
+    await sleep(200);
+    const r = await psqlAsync(`set lock_timeout = '150ms'; select public.release_generation('${g}', 'ai_unavailable')`);
+    await holder;
+    if (r.code === 0 || !/lock timeout/i.test(r.err)) throw new Error(`account lock not taken: ${r.code} ${r.out} ${r.err}`);
+    eq(psql(`select refunded_at is null from public.generations where id = '${g}'`), "t", "nothing refunded while waiting");
+    eq(psql(`select public.release_generation('${g}', 'ai_unavailable')->>'ok'`), "true", "then it goes through");
   });
 
   await check("cost view and bucket stats (service role)", async () => {
@@ -717,8 +883,9 @@ try {
     end $$;`);
     psqlFile(migration(path.join(migrationsDir, "0007_generation_guards.sql")));
     psqlFile(migration(path.join(migrationsDir, "0008_account_limits.sql")));
+    psqlFile(migration(path.join(migrationsDir, "0009_release_generation.sql")));
     psqlFile(`do $$ declare r jsonb; begin
-      assert (select count(*) from public.free_generation_ledger where voided_at is null) = 0, 'still voided after re-running 0007 and 0008';
+      assert (select count(*) from public.free_generation_ledger where voided_at is null) = 0, 'still voided after re-running 0007, 0008 and 0009';
       assert public.free_generations_last_day() = 2, 'the free pool counts voided rows (the cost was paid)';
       r := t.reserve_done('${u}', '${s}');
       assert (r->>'ok')::boolean and (r->>'used')::int = 1, 'after the reset: ' || r::text;
@@ -797,6 +964,7 @@ try {
     end $$;`);
     psql(`insert into public.app_config (key, value) values ('generation_global_daily_cap', '45') on conflict (key) do update set value = excluded.value`);
     psqlFile(migration(path.join(migrationsDir, "0007_generation_guards.sql")));
+    psqlFile(migration(path.join(migrationsDir, "0009_release_generation.sql"))); // always after a re-run of 0007
     eq(psql(`select value::text from public.app_config where key = 'generation_global_daily_cap'`), "45", "0007 re-run keeps the owner's value");
   });
 
@@ -842,6 +1010,7 @@ try {
       alter function public.generations_last_day() owner to supa_postgres;
       alter function public.free_generations_last_day() owner to supa_postgres;
       alter function public.reset_free_generations(text) owner to supa_postgres;
+      alter function public.release_generation(uuid, text) owner to supa_postgres;
       do $$ begin
         assert (select not rolsuper and rolbypassrls from pg_roles where rolname = 'supa_postgres'), 'role attributes';
         assert (select proowner::regrole::text from pg_proc where proname = 'materials_upload_allowed') = 'supa_postgres', 'owner';
@@ -867,6 +1036,11 @@ try {
       tp := public.finish_generation((r->>'generation_id')::uuid, '{"name":"T","source":"materials","content":{"name":"T"}}', '{"model":"demo"}');
       assert tp->>'name' = 'T', tp::text;
       assert (select count(*) from public.generation_ledger) = 2, 'ledger written (the free reservation above + this one)';
+      -- 0009 under that owner: refund a reservation (usage, ledger)
+      r := public.reserve_generation(u, '2026-10', 3, s, 'liceum', null, '{}', '{}');
+      assert (r->>'ok')::boolean, r::text;
+      assert (public.release_generation((r->>'generation_id')::uuid, 'ai_unavailable')->>'ok')::boolean, 'release under a non-superuser owner';
+      assert (select refunded_at is not null from public.generations where id = (r->>'generation_id')::uuid), 'refunded';
     end $$;`);
     const a = psql("select t.new_user()");
     psql(`insert into storage.objects (bucket_id, name, metadata) select 'materials', '${a}/' || gen_random_uuid() || '.jpg', '{"size": 1000}' from generate_series(1, 100)`);

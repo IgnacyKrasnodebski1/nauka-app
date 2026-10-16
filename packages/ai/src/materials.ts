@@ -74,7 +74,7 @@ export interface FilesClient {
  */
 export const DELETE_TIMEOUT_MS = 10_000;
 
-/** Thrown by {@link uploadMaterials}; generate.ts maps it to a GenerationError with code "api". */
+/** Thrown by {@link uploadMaterials} (the SDK error as `cause`); generate.ts maps it to a GenerationError — "ai_unavailable" when the cause is on our side (401/403/429/5xx/network), else "api". */
 export class MaterialUploadError extends Error {
   constructor(message: string, cause?: unknown) {
     super(message, { cause });
