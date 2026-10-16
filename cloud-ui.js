@@ -562,13 +562,17 @@ function failGen(e){
   showFail();
 }
 const COUNTED=/^(generation_failed|refusal|invalid_output|api|lost)$/; // błędy zawsze po naliczeniu (pozostałe — tylko z generationId)
+// backend z 0009 mówi wprost: charged:false (albo refunded:true — zwrot po awarii AI po naszej stronie) = limit się nie zmienił
+const freed=d=>!!d&&(!!d.refunded||d.charged===false);
+// błąd AI po stronie Anthropic, który jest problemem materiału (400/413/415/422 o obrazie albo PDF) — starszy backend nie mówi tego wprost
+const MATERIAL_RE=/image|\bpdf\b|document|media.?type|mime|password|encrypt|corrupt|decod|base64|could not process|unsupported (format|file|media)|invalid (file|format)/i;
 function freeLeftAfter(f){ // ile darmowych lekcji zostało po nieudanej, naliczonej próbie (null = nie wiadomo)
   const a=f.after&&f.after.scope==='lifetime'?f.after.left:null,q=f.q,d=f.e.data||{};
-  const b=q&&q.scope==='lifetime'&&!d.refunded?Math.max(0,q.left-1):null; // z licznika sprzed próby
+  const b=q&&q.scope==='lifetime'&&!freed(d)?Math.max(0,q.left-1):null; // z licznika sprzed próby
   return a!=null&&b!=null?Math.min(a,b):a!=null?a:b; // odczyt po próbie mógł być nieświeży — nigdy więcej niż „przed − 1”
 }
 function lastFree(f){ // ta nieudana próba zużyła ostatnią darmową lekcję → bez „spróbuj jeszcze raz” i bez powrotu do materiału
-  const d=f.e.data||{},c=f.e.code;if(d.refunded||!(d.generationId||COUNTED.test(c)))return false;
+  const d=f.e.data||{},c=f.e.code;if(freed(d)||!(d.charged===true||d.generationId||COUNTED.test(c)))return false;
   return (d.scope==='lifetime'||f.scope==='lifetime')&&freeLeftAfter(f)===0;
 }
 function failText(e,lim,scope,f){
@@ -579,8 +583,12 @@ function failText(e,lim,scope,f){
     :scope==='month'||d.scope==='month'?' Ta próba liczy się do miesięcznego limitu.':' Ta próba liczy się do limitu lekcji.'; // nieznany zakres (np. po odzyskaniu): bez „miesięcznego”
   const fname=d.name?`„${esc(String(d.name).slice(0,40))}”: `:''; // serwer podaje plik przy błędach PPTX, typu i rozmiaru
   const withName=s=>fname?fname+s.charAt(0).toLowerCase()+s.slice(1):s;
-  const charged=!!d.generationId; // błąd po naliczeniu ma generationId; odrzucenie przed naliczeniem — nie
-  const CH=d.refunded?' Limit się nie zmienił.':COUNTS; // gdyby serwer zwrócił limit (pole refunded)
+  const known=typeof d.charged==='boolean'; // backend z 0009: pole charged w każdej odpowiedzi z błędem
+  const charged=known?d.charged&&!d.refunded:!!d.generationId; // starszy backend: błąd po naliczeniu ma generationId; odrzucenie przed naliczeniem — nie
+  const CH=freed(d)?' Limit się nie zmienił.':COUNTS; // serwer zwrócił limit albo go nie pobrał (refunded / charged:false)
+  // AI nie działa po naszej stronie (klucz, uprawnienia, limity API, przeciążenie, 5xx, sieć): nigdy „plik za duży”; bez automatycznego ponawiania
+  const aiCharged=!freed(d)&&(d.charged===true||!!d.generationId||COUNTED.test(c));
+  const aiDown=['Tworzenie lekcji chwilowo nie działa','To problem po naszej stronie, nie z Twoim materiałem.'+(freed(d)?' Limit się nie zmienił — spróbuj ponownie za kilka minut.':(aiCharged?CH:'')+' Spróbuj ponownie za kilka minut.')];
   const over=+d.tokens>0&&+d.maxTokens>0?+d.tokens/+d.maxTokens:0,parts=over>1?Math.min(20,Math.ceil(over)):0; // too_long: ile razy za dużo
   const ld=lastDraft,img=!!(ld&&ld.files.some(f=>/^image\//.test(C.mimeOf(f)))),onlyText=!!(ld&&!ld.files.length&&ld.text);
   const retryTip=img?'Spróbuj jeszcze raz albo dodaj wyraźniejsze zdjęcia.':onlyText?'Spróbuj jeszcze raz albo wklej inny, dłuższy fragment notatek.':'Spróbuj jeszcze raz albo z innym fragmentem materiału.';
@@ -607,7 +615,8 @@ function failText(e,lim,scope,f){
     generation_failed:['AI nie dało rady z tym materiałem',retryTip+CH],
     refusal:['AI nie przetworzy tego materiału','Spróbuj z innym materiałem.'+CH],
     invalid_output:['Nie dało się ułożyć lekcji',(onlyText?'Spróbuj z krótszym tekstem albo podziel go na części.':img?'Spróbuj z mniejszą ilością materiału albo wyraźniejszymi zdjęciami.':'Spróbuj z mniejszą ilością materiału, np. jednym rozdziałem.')+CH],
-    api:['Serwer AI jest przeciążony','Spróbuj za kilka minut.'+CH],
+    api:aiDown, // starszy backend: „AI: 529…”, „AI: 401…”, sieć; inne przypadki niżej
+    ai_unavailable:aiDown, // backend z 0009 (HTTP 503): charged:false + refunded — limit zwrócony
     not_started:['Lekcja nie zaczęła się tworzyć','Połączenie przerwało się przed wysłaniem materiału. Limit się nie zmienił — spróbuj ponownie.'],
     too_long:['Za dużo materiału na jedną lekcję',(parts>=2?(over>=1.5?`To ok. ${Math.round(over)} razy więcej, niż zmieści jedna lekcja. `:'Materiał jest trochę za duży na jedną lekcję. ')+`Podziel materiał na ${parts} ${E().pl(parts,'część','części','części')}, np. po jednym rozdziale.`:'Plik ma za dużo stron albo tekstu naraz. Podziel go na mniejsze części, np. po jednym rozdziale.')+(charged?CH:' Limit się nie zmienił.')], // 400 przed naliczeniem: serwer policzył tokeny (tokens, maxTokens)
     lost:['Tworzenie lekcji się nie zakończyło','Serwer przerwał pracę. Spróbuj jeszcze raz z mniejszą ilością materiału.'+CH],
@@ -620,7 +629,12 @@ function failText(e,lim,scope,f){
     unauthorized:['Sesja wygasła','Zaloguj się ponownie.'],
     no_session:['Sesja wygasła','Zaloguj się ponownie.'],
     no_config:['Serwer chwilowo nie działa','Spróbuj za kilka minut.']};
-  if(c==='api'&&/^AI: 4(?!29)\d\d/.test(String(e.message||'')))map.api=['Tego materiału nie da się przetworzyć','Plik jest za duży albo zabezpieczony (np. PDF ponad 600 stron albo z hasłem). Podziel materiał na mniejsze części.'+CH];
+  if(c==='api'){ // „plik za duży albo zabezpieczony” tylko wtedy, gdy serwer mówi, że problemem jest materiał
+    const msg=String(e.message||''),st=(/^AI: (\d{3})\b/.exec(msg)||[])[1]||'';
+    const material=d.reason==='material'||(!known&&/^(400|413|415|422)$/.test(st)&&MATERIAL_RE.test(msg)); // backend z 0009: reason; starszy: status 4xx i treść o obrazie / PDF
+    const ours=!st||/^(401|403|404|408|429|5\d\d)$/.test(st)||/credit balance|billing/i.test(msg); // starszy backend: awaria po naszej stronie (incydent 2026-10-16: 401 invalid x-api-key)
+    if(material)map.api=['Tego materiału nie da się przetworzyć','Plik jest za duży albo zabezpieczony (np. PDF ponad 600 stron albo z hasłem). Podziel materiał na mniejsze części.'+CH];
+    else if(!ours)map.api=['Nie udało się utworzyć lekcji',retryTip+CH];}
   if(c==='bad_type'&&d.heic)map.bad_type=['Zdjęcie w formacie HEIC','Ten iPhone nie przerobi go w aplikacji. Wybierz zdjęcie z Biblioteki zdjęć (zamiast z Plików) albo zapisz je jako JPG.'];
   if(c==='lost'&&d.reason==='ai_timeout')map.lost=map.ai_timeout; // backend z terminem 270 s: kod lost (zgodny ze starszymi buildami) + powód
   if(c==='reserve_failed'&&d.reason==='ai_upload')map.reserve_failed=['Nie udało się przekazać materiału do AI','Serwer nie zdążył przesłać plików dalej. Limit się nie zmienił — spróbuj ponownie za chwilę.'];
@@ -651,7 +665,7 @@ async function recover(inView){
     else{genRun=null;if(E().view==='cfgen'){try{await C.fetchAll();}catch(e){}E().setSubjects(C.toEngine());E().go('today');}}}
   catch(e){recovering=false;
     if(e.code==='network'){if(genRun){genRun.phase='offline';paintGen();}return;} // dziennik zostaje — sprawdzimy, gdy wróci internet
-    if(/^(generation_failed|lost|not_started)$/.test(e.code))C.discard({subjectId:j.created,materials:j.materials||[]}).catch(()=>{}); // pusty nowy przedmiot i pliki z nieudanej próby (discard sprawdza, czy temat jednak nie powstał)
+    if(/^(generation_failed|lost|not_started|ai_unavailable)$/.test(e.code))C.discard({subjectId:j.created,materials:j.materials||[]}).catch(()=>{}); // pusty nowy przedmiot i pliki z nieudanej próby (discard sprawdza, czy temat jednak nie powstał)
     failGen(e);}
 }
 const mmss=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');

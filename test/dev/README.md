@@ -19,6 +19,7 @@ Otwórz w przeglądarce (najlepiej w trybie urządzenia mobilnego w DevTools):
 - http://localhost:8765/test/dev/?mock=seeded&reset=1&plan=free&global=full — limit serwera na dobę pełny (`quota.globalOpen=false`): komunikat „Spróbuj później” przed aparatem
 - http://localhost:8765/test/dev/?mock=seeded&reset=1&gen=err:lost:ai_timeout — kody backendu Build 7 (`err:KOD[:reason]`: `busy`, `too_long`, `lost:ai_timeout`, `reserve_failed:ai_upload`, `download_failed:slow_intake`)
 - http://localhost:8765/test/dev/?mock=seeded&reset=1&cap=storage — limity konta z `backend/0008` (`cap=storage|materials|subjects`)
+- http://localhost:8765/test/dev/?mock=seeded&reset=1&gen=err:ai_unavailable — AI nie działa po naszej stronie, limit zwrócony (`backend/0009`, incydent 2026-10-16; `:charged` — naliczenie zostaje, `:precharge` — przed naliczeniem; `gen=droprelease` — to samo przy odzyskiwaniu; `gen=err:api:material|401|400` — kształty błędu `api`; `oldbe=1` — backend sprzed 0009, bez pola `charged`)
 
 `reset=1` czyści stan atrapy i apki (raz — parametr znika z adresu). Bez `reset` stan zostaje między przeładowaniami. Wszystkie parametry (`gen`, `genfx`, `upload`, `cap`, `net`, `sync`, `fail`, `auth`, `plan`, `used`, `trial`, `freecap`, `global`, `clock`, `nostore`, `native`, `lang`, `extra`, `away`, `weekly`, `lat`, `log`) są opisane na początku `mock-backend.js`.
 
@@ -44,7 +45,7 @@ cd test
 node dev/checks/build7-engine.mjs --out /ścieżka   # silnik: egzamin, zmiana dnia, pasek offline, toasty, kontrast, wyjaśnienia, wznowienie lekcji (też X przy panelu odpowiedzi), fiszki, nazwy
 node dev/checks/cloud-auth.mjs                     # logowanie, „Sprawdź adres e-mail”, linki prawne, usuwanie konta
 node dev/checks/cloud-sync.mjs                     # strażnik przed wyzerowaniem postępów (P1-6, też zgubiony epoch i META), scalanie serii, zmiana dnia po pull
-node dev/checks/cloud-gen.mjs                      # generowanie: limit przed aparatem (darmowe na zawsze i miesięczny), okres startowy, nowe konto bez triala, 504 → odzyskiwanie, kody Build 7, ekran postępu, wiersz na Dziś, zgoda przy TWÓRZ, dziennik przed POST
+node dev/checks/cloud-gen.mjs                      # generowanie: limit przed aparatem (darmowe na zawsze i miesięczny), okres startowy, nowe konto bez triala, 504 → odzyskiwanie, kody Build 7, ai_unavailable i pole charged (0009), ekran postępu, wiersz na Dziś, zgoda przy TWÓRZ, dziennik przed POST
 node dev/checks/cloud-hooks.mjs                    # hooki silnika: todayTop, addOpen, addSheet, settingsAbout
 node dev/checks/cloud-fonts.mjs                    # fonty w buildzie (WOFF w data:), CSP bez Google
 node dev/checks/cloud-content.mjs                  # emoji z treści AI, limity konta z backend/0008 → kody klienta, aiConsentV w options

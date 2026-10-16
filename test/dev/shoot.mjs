@@ -595,7 +595,10 @@ const GEN_ERRORS=[
   ['err:generation_failed','err-generation-failed','AI nie dało rady (+ „liczy się do limitu”)'],
   ['err:refusal','err-refusal','Odmowa modelu'],
   ['err:invalid_output','err-invalid-output','Nie dało się ułożyć lekcji'],
-  ['err:api','err-api-overloaded','Serwer AI przeciążony'],
+  ['err:api','err-api-overloaded','Serwer AI przeciążony (stary kształt „AI: 529” → „Tworzenie lekcji chwilowo nie działa”)'],
+  ['err:ai_unavailable','err-ai-unavailable','AI nie działa po naszej stronie, limit zwrócony (503 ai_unavailable, charged:false — incydent 2026-10-16, backend/0009)'],
+  ['err:ai_unavailable:charged','err-ai-unavailable-charged','AI nie działa po naszej stronie po częściowej odpowiedzi (503 ai_unavailable, charged:true → „liczy się do limitu”)'],
+  ['err:api:material','err-api-material','Materiał odrzucony przez AI (api + reason material → „Tego materiału nie da się przetworzyć”)'],
   ['err:too_long','err-too-long','Za dużo materiału (400 przed naliczeniem, tokens/maxTokens → „ok. 3 razy więcej”)'],
   ['err:reserve_failed','err-reserve-failed','Naliczenie limitu się nie udało'],
   ['err:reserve_failed:ai_upload','err-reserve-ai-upload','Pliki nie dotarły do AI (reserve_failed + reason ai_upload, bez naliczenia)'],
@@ -630,9 +633,10 @@ SCEN.errors=async()=>{
     await mockSet(r,'cap','storage');await tap(r,'.navplus');await chooseFiles(r,'#qa-photo',[path.join(ASSETS,'strona-podrecznika.png')]);await waitFor(r,'#cfadd-go');
     await tap(r,'.cfwhere .obopt','Polityka');await tap(r,'#cfadd-go');await waitFor(r,'.errv',null,10000);
     await shot(r,'err-upload-daily-cap','Dzienny limit wysyłki plików (Storage RLS 403) → „Na dziś wysłano już dużo plików”','cap=storage → zdjęcie → TWÓRZ LEKCJĘ');
+    const objsBefore=await r.page.evaluate(()=>Object.keys(MOCK.db().objects)); // pliki z wcześniejszych kroków (materiały prób generowania) zostają legalnie
     await mockSet(r,'cap','materials');await tap(r,'.errfoot .pill','WRÓĆ DO MATERIAŁU');await tap(r,'#cfadd-go');await waitFor(r,'.errv',null,10000);
     const t2=await r.page.evaluate(()=>document.querySelector('.errv').innerText);if(!/dużo plików/.test(t2))issue(r,'cap-materials','23514 materials_daily_limit nie dał komunikatu o dziennym limicie plików: '+t2.slice(0,120));
-    const leftObj=await r.page.evaluate(()=>Object.keys(MOCK.db().objects).filter(k=>Date.parse(MOCK.db().objects[k].at)>Date.now()-60000).length);if(leftObj)issue(r,'cap-orphans',`Po odmowie wiersza materials zostało ${leftObj} plików w Storage`);
+    let leftObj=0;for(let i=0;i<20;i++){leftObj=await r.page.evaluate(before=>Object.keys(MOCK.db().objects).filter(k=>!before.includes(k)).length,objsBefore);if(!leftObj)break;await sleep(150);} // tylko pliki z tej próby; klient usuwa plik w tle (storageRemove bez await)if(leftObj)issue(r,'cap-orphans',`Po odmowie wiersza materials zostało ${leftObj} plików w Storage`);
     await mockSet(r,'cap','');await tap(r,'.errfoot .pill','WRÓĆ DO MATERIAŁU');await tap(r,'.topbar .backbtn');if(await has(r,'#askok'))await tap(r,'#askok');await waitFor(r,'.plan');}
   catch(e){FAILS.push('errors/caps: '+e.message);await mockSet(r,'cap','').catch(()=>{});await go(r,'mock=seeded');}
   // plik za duży (serwer, z nazwą pliku) i błąd wysyłki

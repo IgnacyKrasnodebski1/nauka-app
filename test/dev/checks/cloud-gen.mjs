@@ -4,7 +4,9 @@
    D3 (decyzja z 2026-10-15): darmowe lekcje na zawsze (2), teksty bez daty odnowienia, okres startowy starych kont, nowe konto bez triala;
    P1-4 (klient) odpowiedź ≥500 bez JSON-a = wynik nieznany → dziennik zostaje i odzyskiwanie (sukces i „lost”), jeden POST na próbę;
    P1-22 ekran tworzenia (teksty faz, WRÓĆ DO DZIŚ, „Duży materiał”, [+] w trakcie, klikalny „Lekcja gotowa”, ZACZNIJ NAUKĘ → poziom 1);
-   nowe kody backendu (busy, lost+ai_timeout, too_long z tokens, reserve_failed+ai_upload, download_failed+slow_intake, nieznany) → polskie teksty.  Użycie (z test/): node dev/checks/cloud-gen.mjs [--out KATALOG] */
+   nowe kody backendu (busy, lost+ai_timeout, too_long z tokens, reserve_failed+ai_upload, download_failed+slow_intake, nieznany) → polskie teksty;
+   incydent 2026-10-16 (backend/0009): ai_unavailable → „Tworzenie lekcji chwilowo nie działa”, „Limit się nie zmienił” tylko przy charged:false,
+   „plik za duży albo zabezpieczony” tylko, gdy serwer mówi, że problemem jest materiał; stary backend (oldbe=1) bez pola charged.  Użycie (z test/): node dev/checks/cloud-gen.mjs [--out KATALOG] */
 import {start,page,close,check,section,done,shot,tap,fill,waitFor,has,text,view,sleep,mockLog,mockSet,chooseFiles,testImage} from './cloud-lib.mjs';
 
 const UID='0c0ffee0-0000-4000-8000-000000000001';
@@ -238,6 +240,78 @@ for(const [code,re] of [['busy',/Tworzę już inną lekcję/],['ai_timeout',/Two
   const t=await text(r);check(re.test(t),`${code} → „${re.source}”`,t.slice(0,200));
   check(!PAY.test(t)&&!/[a-z]+_[a-z]+/.test(t.replace(/@\S+/g,'')),`${code}: bez surowego kodu i bez słów o płatnościach`);
   if(code==='busy')await shot(r,'gen-err-busy');
+  await close(r);}
+
+section('incydent 2026-10-16: AI nie działa po naszej stronie (ai_unavailable, limit zwrócony) → uczciwy tekst, szkic zostaje, bez ponawiania');
+const AIU_T='Tworzenie lekcji chwilowo nie działa',AIU_B='To problem po naszej stronie, nie z Twoim materiałem. Limit się nie zmienił — spróbuj ponownie za kilka minut.';
+{const r=await page('mock=seeded&reset=1&gen=err:ai_unavailable',{settle:3000});
+  const u0=await r.pg.evaluate(async()=>(await window.NAUKA_CLOUD.me({maxAge:0})).quota.used);
+  await addText(r);await tap(r,'#cfadd-go',null,{settle:300});
+  await waitFor(r,'.errv',null,15000);await sleep(300);
+  const t=await text(r);
+  check(t.includes(AIU_T),'tytuł „Tworzenie lekcji chwilowo nie działa”',t.slice(0,300));
+  check(t.includes(AIU_B),'treść: „To problem po naszej stronie, nie z Twoim materiałem. Limit się nie zmienił — spróbuj ponownie za kilka minut.”',t.slice(0,300));
+  check(!/za duży|zabezpiecz|PDF|liczy się do|zużyła/i.test(t),'bez rady o pliku i bez „liczy się do limitu”',t.slice(0,300));
+  check(!PAY.test(t)&&!/[a-z]+_[a-z]+/.test(t.replace(/@\S+/g,'')),'bez surowego kodu i bez słów o płatnościach');
+  check(await has(r,'button','WRÓĆ DO MATERIAŁU'),'jest „WRÓĆ DO MATERIAŁU”');
+  await shot(r,'gen-err-ai-unavailable');
+  await sleep(6000); // żadnego automatycznego ponowienia (każdy POST zjada limit)
+  check(await posts(r)===1,'dokładnie jeden POST /api/generate, bez ponawiania',await posts(r));
+  const u1=await r.pg.evaluate(async()=>(await window.NAUKA_CLOUD.me({maxAge:0})).quota.used);
+  check(u1===u0,'limit na serwerze bez zmian (zwrot)',JSON.stringify({u0,u1}));
+  await tap(r,'button','WRÓĆ DO MATERIAŁU');await waitFor(r,'#cfadd-go');
+  const thumbs=await r.pg.evaluate(()=>document.querySelectorAll('.cfthumb').length);
+  check((await view(r)).view==='cfadd'&&thumbs>=1,'szkic zachowany (materiał na ekranie dodawania)',thumbs);
+  check(await posts(r)===1,'powrót do materiału nie wysyła niczego',await posts(r));
+  check(r.errors.length===0,'bez błędów w konsoli',r.errors.join(' | '));
+  await close(r);}
+
+section('ai_unavailable: darmowe konto — limit bez zmian, bez „zużyła jedną z darmowych lekcji”');
+{const r=await page('mock=seeded&reset=1&plan=free&gen=err:ai_unavailable',{settle:3000});
+  await addText(r);await tap(r,'#cfadd-go',null,{settle:300});await waitFor(r,'.errv',null,15000);await sleep(800);
+  const t=await text(r);
+  check(t.includes(AIU_T)&&t.includes(AIU_B),'ten sam tekst co na koncie z limitem miesięcznym',t.slice(0,300));
+  check(!/zużyła|zostało/.test(t),'bez „zużyła … zostało”',t.slice(0,300));
+  check(await has(r,'button','WRÓĆ DO MATERIAŁU'),'jest „WRÓĆ DO MATERIAŁU”');
+  check(await r.pg.evaluate(async()=>(await window.NAUKA_CLOUD.me({maxAge:0})).quota.used)===0,'darmowa lekcja wróciła (0 z 2 zużyte)');
+  await close(r);}
+
+section('ai_unavailable: naliczenie zostało (AI zdążyło coś wyprodukować) albo nie doszło do niego → tekst zgodny z polem charged');
+for(const [qs,re,not,label] of [
+  ['gen=err:ai_unavailable:charged',/To problem po naszej stronie, nie z Twoim materiałem\. Ta próba liczy się do miesięcznego limitu\. Spróbuj ponownie za kilka minut\./,/Limit się nie zmienił/,'charged:true → „liczy się do miesięcznego limitu”'],
+  ['gen=err:ai_unavailable:precharge',/To problem po naszej stronie, nie z Twoim materiałem\. Limit się nie zmienił — spróbuj ponownie za kilka minut\./,/liczy się do/,'przed naliczeniem (nieważny klucz przy wgraniu PDF-u albo count_tokens 401) → „Limit się nie zmienił”']]){
+  const r=await page('mock=seeded&reset=1&'+qs,{settle:3000});
+  await addText(r);await tap(r,'#cfadd-go',null,{settle:300});await waitFor(r,'.errv',null,15000);await sleep(300);
+  const t=await text(r);
+  check(t.includes(AIU_T)&&re.test(t)&&!not.test(t),label,t.slice(0,300));
+  check(await has(r,'button','WRÓĆ DO MATERIAŁU'),qs+': jest „WRÓĆ DO MATERIAŁU”');
+  await close(r);}
+
+section('kod api: „plik za duży albo zabezpieczony” tylko, gdy serwer mówi, że problemem jest materiał (backend z 0009 i stary)');
+for(const [qs,re,not,label] of [
+  ['oldbe=1&gen=err:api:401',/Tworzenie lekcji chwilowo nie działa[\s\S]*To problem po naszej stronie, nie z Twoim materiałem\. Ta próba liczy się do miesięcznego limitu\./,/za duży|zabezpiecz/,'stary backend, „AI: 401 invalid x-api-key” (incydent) → awaria po naszej stronie (naliczone przez stary backend)'],
+  ['oldbe=1&gen=err:api',/Tworzenie lekcji chwilowo nie działa[\s\S]*liczy się do miesięcznego limitu/,/za duży|zabezpiecz/,'stary backend, „AI: 529 overloaded” → awaria po naszej stronie'],
+  ['gen=err:api:material',/Tego materiału nie da się przetworzyć[\s\S]*Plik jest za duży albo zabezpieczony[\s\S]*liczy się do miesięcznego limitu/,/po naszej stronie/,'reason material → tekst o pliku'],
+  ['oldbe=1&gen=err:api:material',/Tego materiału nie da się przetworzyć/,/po naszej stronie/,'stary backend: 400 o PDF z hasłem → tekst o pliku'],
+  ['gen=err:api:400',/Nie udało się utworzyć lekcji/,/za duży|zabezpiecz|Tego materiału/,'400 o naszym zapytaniu (bez reason) → bez obwiniania pliku']]){
+  const r=await page('mock=seeded&reset=1&'+qs,{settle:3000});
+  await addText(r);await tap(r,'#cfadd-go',null,{settle:300});await waitFor(r,'.errv',null,15000);await sleep(300);
+  const t=await text(r);
+  check(re.test(t)&&!not.test(t),label,t.slice(0,300));
+  check(!PAY.test(t)&&!/[a-z]+_[a-z]+/.test(t.replace(/@\S+/g,'')),qs+': bez surowego kodu i bez słów o płatnościach');
+  await close(r);}
+
+section('ai_unavailable przy odzyskiwaniu (odpowiedź zginęła, serwer zwrócił limit: error „released:ai_unavailable …”) → ten sam tekst, sprzątanie');
+{const r=await page('mock=seeded&reset=1&gen=droprelease:2',{settle:3000});
+  await addText(r);await tap(r,'#cfadd-go',null,{settle:300});
+  await waitFor(r,'.errv',null,30000);await sleep(800);
+  const t=await text(r);
+  check(t.includes(AIU_T)&&t.includes(AIU_B)&&!/liczy się do/.test(t),'„Tworzenie lekcji chwilowo nie działa … Limit się nie zmienił”',t.slice(0,300));
+  check(!(await r.pg.evaluate(uid=>localStorage.getItem('cf_job:'+uid),UID)),'dziennik usunięty');
+  check(await posts(r)===1,'dokładnie jeden POST /api/generate',await posts(r));
+  const fresh=await r.pg.evaluate(()=>{const D=window.MOCK.db();const g=D.t.generations.slice(-1)[0];return {id:g.subject_id,known:['5b000001-0000-4000-8000-000000000001','5b000002-0000-4000-8000-000000000002'].includes(g.subject_id),left:D.t.subjects.some(s=>s.id===g.subject_id)};});
+  check(fresh.known||!fresh.left,'pusty nowy przedmiot posprzątany (albo materiał dodany do istniejącego)',JSON.stringify(fresh));
+  check(r.errors.length===0,'bez błędów w konsoli',r.errors.join(' | '));
   await close(r);}
 
 section('P1-22: ekran tworzenia, [+] w trakcie, klikalny „Lekcja gotowa”');

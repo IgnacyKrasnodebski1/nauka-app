@@ -560,7 +560,11 @@ async function recoverJob(){ // po powrocie apki / starcie: czy przerwana genera
     try{const rows=await rest('generations?select=id,status,topic_id,error,created_at&subject_id=eq.'+j.subjectId+ids+since+'&order=created_at.desc&limit=1');g=rows&&rows[0]||null;}
     catch(e){if(e.code!=='network'||age>330)throw e;emit('job',{state:'offline',age});await sleep(8000);continue;}
     if(g&&g.status==='done'&&g.topic_id){jset(JOBK,{...j,topicId:g.topic_id});const t=await addTopic(g.topic_id);LS.removeItem(JOBK);emit('job',{state:'done',topic:t});return t;}
-    if(g&&g.status==='failed'){LS.removeItem(JOBK);emit('job',{state:'failed',error:g.error});throw new CloudError(500,'generation_failed','',{});}
+    if(g&&g.status==='failed'){LS.removeItem(JOBK);emit('job',{state:'failed',error:g.error});const er=String(g.error||'');
+      // backend/0009: awaria AI po naszej stronie — „released:” = serwer zwrócił limit (release_generation), „ai_unavailable:” = bez zwrotu
+      if(/^released:ai_unavailable\b/.test(er))throw new CloudError(503,'ai_unavailable','',{charged:false,refunded:true});
+      if(/^ai_unavailable\b/.test(er))throw new CloudError(503,'ai_unavailable','',{charged:true});
+      throw new CloudError(500,'generation_failed','',/^released:/.test(er)?{charged:false,refunded:true}:{});}
     if(!g&&age>90){LS.removeItem(JOBK);emit('job',{state:'lost'});throw new CloudError(0,'not_started','Generowanie nie ruszyło',{});} // POST nie dotarł do serwera — limit bez zmian
     if(age>330){ // wiersz wisi jako running (funkcja zabita): temat mógł się jednak zapisać tuż przed przerwaniem — wtedy go bierzemy, zamiast zgłaszać porażkę
       // tylko temat TEJ generacji (topics.generation_id, ustawiane przez serwer) — nie poprzedni materiał dodany do tego samego przedmiotu chwilę wcześniej

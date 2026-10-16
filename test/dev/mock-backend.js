@@ -13,12 +13,21 @@
      login=0|1                seeded: od razu zalogowany (domyślnie 1)
      away=N                   seeded: ostatnia nauka N dni temu (ekran powrotu przy N ≥ 3)
      extra=viz,xss,krypto4    seeded: dodatkowe przedmioty z fixtures (viz = wszystkie schematy + próby XSS, xss = topic-xss.json)
-     gen=ok|slow[:s]|demo|err:KOD[:used|:reason]|drop[:s]|dropfail[:s]|html504
+     gen=ok|slow[:s]|demo|err:KOD[:used|:reason]|drop[:s]|dropfail[:s]|droprelease[:s]|html504
                               /api/generate: sukces (1,5 s) | wolno (domyślnie 25 s) | tryb demo | błąd z kodem serwera |
-                              zerwane połączenie po wysłaniu (temat powstaje po s sekundach) | j.w., ale generowanie się nie udaje | 504 bez JSON (Vercel)
+                              zerwane połączenie po wysłaniu (temat powstaje po s sekundach) | j.w., ale generowanie się nie udaje |
+                              j.w., ale AI nie działa po naszej stronie i serwer zwraca limit (backend/0009: error „released:ai_unavailable …”) | 504 bez JSON (Vercel)
                               err:limit_reached:N → used=N (scope według planu: free → lifetime, pro → month); przy innych kodach trzeci człon to `reason` jak w backendzie Build 7:
                               err:lost:ai_timeout (termin 270 s, po naliczeniu), err:reserve_failed:ai_upload, err:download_failed:slow_intake.
                               err:busy = 409 (generacja w toku); err:too_long = 400 przed naliczeniem z tokens/maxTokens.
+                              err:ai_unavailable (backend/0009, incydent 2026-10-16: AI nie działa po naszej stronie — klucz, 429, 529, 5xx, sieć)
+                              = 503 z charged:false, refunded:true i generationId (naliczone, potem zwrócone: limit bez zmian);
+                              err:ai_unavailable:charged = 503 z charged:true (AI zdążyło coś wyprodukować — naliczenie zostaje);
+                              err:ai_unavailable:precharge = 503 z charged:false bez generationId (przed naliczeniem: wgranie PDF-u do Files API
+                              odrzucone po naszej stronie, np. nieważny klucz, albo count_tokens 401).
+                              err:api = „AI: 529 overloaded” (stary backend); err:api:material = 400 o PDF z hasłem (+ reason material);
+                              err:api:401 = „AI: 401 … invalid x-api-key” (incydent na starym backendzie); err:api:400 = 400 o naszym zapytaniu.
+     oldbe=1                  backend sprzed 0009 (Build 7): odpowiedzi bez pól charged / refunded / reason material
                               Bez err: 409 busy, gdy konto ma generację running młodszą niż 7 min (np. po gen=drop) — jak RPC reserve_generation.
      cap=storage|materials|subjects  limity konta z backend/0008: Storage odmawia (RLS „row-level security”, 403), wiersz materials
                               albo przedmiot → 23514 materials_daily_limit / subject_limit. Bez cap limity liczą się naprawdę (100 plików i 500 MB na dobę,
@@ -88,6 +97,7 @@ const cfg={
   global:P.get('global')||'',
   weekly:P.get('weekly')==='1',
   cap:P.get('cap')||'',
+  oldbe:P.get('oldbe')==='1',
   log:P.get('log')==='1'
 };
 const MB=1048576;
@@ -307,6 +317,7 @@ function pick(rows,sel){if(!sel||sel==='*')return rows.map(clone);const cols=sel
 function lazyGenerations(){ // gen=drop: generowanie kończy się „w tle” — wynik widać przy następnym odczycie tabeli
   let ch=false;DB.t.generations.forEach(g=>{if(g.status!=='running'||!g._finishAt||g._finishAt>now())return;ch=true;
     if(g._outcome==='fail'){g.status='failed';g.error='mock: AI nie dało rady';g.finished_at=iso();return;}
+    if(g._outcome==='release'){refund(g);g.status='failed';g.error='released:ai_unavailable: 401 authentication_error [req_mock]: invalid x-api-key';g.refunded_at=iso();g.finished_at=iso();return;} // backend/0009
     const t=insertTopic(g.subject_id,g.owner_id,g._content,null,g.id);g.status='done';g.topic_id=t.id;g.finished_at=iso();delete g._content;});
   if(ch)save();
 }
@@ -452,6 +463,10 @@ function quotaOf(uid){ // jak RPC generation_quota (+ freeLimit, globalOpen)
   const used=freeUsedOf(uid),limit=freeLimit;return {plan,scope:'lifetime',used,limit,remaining:Math.max(0,limit-used),trialUntil,freeLimit,globalOpen};
 }
 const charge=(uid,plan,us)=>{us.generations++;if(plan==='free')bumpFree(uid);}; // naliczenie: miesięczne usage zawsze, darmowe lekcje dla free
+function refund(g){ // RPC release_generation (backend/0009): usage − 1 w miesiącu wiersza, darmowa lekcja wraca
+  const u=DB.t.usage.find(x=>x.user_id===g.owner_id&&x.month===String(g.created_at||'').slice(0,7));if(u&&u.generations>0)u.generations--;
+  if(planOf(g.owner_id)==='free'){const k=mailKey(g.owner_id);if(+DB.free[k]>0)DB.free[k]--;}}
+const preCharge=x=>cfg.oldbe?(x||{}):Object.assign({charged:false},x||{}); // backend z 0009: odrzucenie przed naliczeniem mówi charged:false
 async function api(u,m,h,b,signal){
   const p=u.pathname;
   const uid=userOf(h);
@@ -469,6 +484,7 @@ const ERRS={ // kod → [status, czy liczy się do limitu (generationId), dodatk
   limit_reached:[402,false],too_many_files:[400,false],file_too_big:[400,false],too_much_material:[400,false,{maxMb:150}],bad_materials:[400,false],
   bad_pptx:[400,false],pptx_protected:[400,false],pptx_empty:[400,false],download_failed:[500,false],reserve_failed:[500,false],
   busy:[409,false],no_input:[400,false],too_long:[400,false,{tokens:412000,maxTokens:150000}], // przed naliczeniem: count_tokens > 150k
+  ai_unavailable:[503,true], // backend/0009: naliczone i zwrócone (domyślnie), naliczone (:charged) albo przed naliczeniem (:precharge)
   generation_failed:[500,true],refusal:[500,true],invalid_output:[500,true],api:[500,true],lost:[500,true],
   not_found:[404,false],unauthorized:[401,false],no_config:[503,false],bad_request:[400,false]};
 const BUSY_MS=7*60000; // reserve_generation: generacja queued/running młodsza niż 7 min = busy
@@ -493,27 +509,39 @@ async function generate(uid,d,signal){
     if(/^(file_too_big|bad_pptx|pptx_protected|pptx_empty|bad_materials)$/.test(code))extra.name=(mats[0]&&mats[0].name)||'notatki.pdf';
     if(code==='file_too_big')extra.maxMb=lim.maxFileMb;
     if(code==='too_many_files')extra.max=lim.filesPerGeneration;
-    if(code!=='limit_reached'&&arg2)extra.reason=arg2; // lost:ai_timeout, reserve_failed:ai_upload, download_failed:slow_intake
-    if(e[1]){charge(uid,plan,us);const gid=uuid();DB.t.generations.push({id:gid,owner_id:uid,subject_id:subj.id,status:'failed',error:'mock: '+code,material_ids:ids,stage:o.stage||null,options:o,created_at:iso(),finished_at:iso()});extra.generationId=gid;save();}
-    await sleep(code==='api'||code==='generation_failed'||code==='lost'?2500:600,signal);
-    return aerr(e[0],code,code==='api'?'AI: 529 overloaded':'mock: '+code,extra);
+    let msg=code==='api'?'AI: 529 overloaded':'mock: '+code,rowErr='mock: '+code,counts=e[1],refunded=false;
+    if(code==='api'){ // jak backend: „AI: <status> <komunikat API>”; reason material tylko z backendu z 0009
+      const A={material:['AI: 400 The PDF specified is password protected.','material'],'401':['AI: 401 {"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}'],
+        '400':['AI: 400 {"type":"error","error":{"type":"invalid_request_error","message":"thinking: unexpected value"}}']}[arg2];
+      if(A){msg=A[0];if(A[1]&&!cfg.oldbe)extra.reason=A[1];}}
+    else if(code==='ai_unavailable'){ // backend/0009 (incydent 2026-10-16)
+      msg='Tworzenie lekcji chwilowo nie działa. To problem po naszej stronie, nie z Twoim materiałem. '+(arg2==='charged'?'Spróbuj ponownie za kilka minut.':'Limit się nie zmienił — spróbuj ponownie za kilka minut.');
+      if(arg2==='precharge')counts=false;
+      else if(arg2==='charged')rowErr='ai_unavailable: 529 overloaded_error [req_mock]';
+      else{refunded=true;rowErr='released:ai_unavailable: 401 authentication_error [req_mock]: invalid x-api-key';}}
+    else if(code!=='limit_reached'&&arg2)extra.reason=arg2; // lost:ai_timeout, reserve_failed:ai_upload, download_failed:slow_intake
+    if(counts){charge(uid,plan,us);const gid=uuid(),row={id:gid,owner_id:uid,subject_id:subj.id,status:'failed',error:rowErr,material_ids:ids,stage:o.stage||null,options:o,created_at:iso(),finished_at:iso()};
+      DB.t.generations.push(row);extra.generationId=gid;if(refunded){refund(row);row.refunded_at=iso();extra.refunded=true;}save();}
+    if(!cfg.oldbe)extra.charged=!!counts&&!refunded; // backend z 0009: każda odpowiedź z błędem mówi, czy próba się liczy
+    await sleep(code==='api'||code==='generation_failed'||code==='lost'||code==='ai_unavailable'?2500:600,signal);
+    return aerr(e[0],code,msg,extra);
   }
   if(mode==='html504'){charge(uid,plan,us);DB.t.generations.push({id:uuid(),owner_id:uid,subject_id:subj.id,status:'running',error:null,material_ids:ids,created_at:iso()});save();
     await sleep(3000,signal);return res(504,'<!DOCTYPE html><html><body>An error occurred with your deployment\n\nFUNCTION_INVOCATION_TIMEOUT</body></html>',{'Content-Type':'text/html'});}
   // rezerwacja jak RPC reserve_generation (0007): busy → dobowy (20 / konto) → limit planu (free: na zawsze, pro: miesięczny), wszystko przed podbiciem licznika
   lazyGenerations();
   if(DB.t.generations.some(x=>x.owner_id===uid&&(x.status==='running'||x.status==='queued')&&Date.parse(x.created_at)>now()-BUSY_MS))
-    return aerr(409,'busy','Trwa już tworzenie innej lekcji. Poczekaj, aż się skończy, i spróbuj ponownie.');
-  if(DB.t.generations.filter(x=>x.owner_id===uid&&Date.parse(x.created_at)>now()-86400000).length>=20)return aerr(402,'limit_reached','Dzienny limit',{used:999999,limit:lim.generationsPerMonth});
-  if(q.used>=q.limit)return q.scope==='lifetime'?aerr(402,'limit_reached',`Wykorzystano ${Math.min(q.used,q.limit)}/${q.limit} darmowych lekcji`,{used:q.used,limit:q.limit,scope:'lifetime'})
-    :aerr(402,'limit_reached',`Wykorzystano ${q.used}/${q.limit} generacji w tym miesiącu`,{used:q.used,limit:q.limit,scope:'month'});
-  if(cfg.global==='full')return aerr(402,'limit_reached','Serwer ma teraz bardzo dużo pracy. Spróbuj później.',{used:1999999,limit:lim.generationsPerMonth}); // limit globalny (i pula free) po limicie planu
+    return aerr(409,'busy','Trwa już tworzenie innej lekcji. Poczekaj, aż się skończy, i spróbuj ponownie.',preCharge());
+  if(DB.t.generations.filter(x=>x.owner_id===uid&&Date.parse(x.created_at)>now()-86400000).length>=20)return aerr(402,'limit_reached','Dzienny limit',preCharge({used:999999,limit:lim.generationsPerMonth}));
+  if(q.used>=q.limit)return q.scope==='lifetime'?aerr(402,'limit_reached',`Wykorzystano ${Math.min(q.used,q.limit)}/${q.limit} darmowych lekcji`,preCharge({used:q.used,limit:q.limit,scope:'lifetime'}))
+    :aerr(402,'limit_reached',`Wykorzystano ${q.used}/${q.limit} generacji w tym miesiącu`,preCharge({used:q.used,limit:q.limit,scope:'month'}));
+  if(cfg.global==='full')return aerr(402,'limit_reached','Serwer ma teraz bardzo dużo pracy. Spróbuj później.',preCharge({used:1999999,limit:lim.generationsPerMonth})); // limit globalny (i pula free) po limicie planu
   charge(uid,plan,us);
   const gid=uuid(),gen={id:gid,owner_id:uid,subject_id:subj.id,status:'running',error:null,topic_id:null,material_ids:ids,stage:o.stage||null,options:o,hint:o.hint||null,created_at:iso(),finished_at:null};
   DB.t.generations.push(gen);save();
   const content=await topicContent(cfg.genfx);
-  if(mode==='drop'||mode==='dropfail'){ // odpowiedź ginie po drodze, serwer kończy sam (klient odzyskuje przez tabelę generations)
-    gen._finishAt=now()+(+arg>0?+arg:20)*1000;gen._outcome=mode==='dropfail'?'fail':'ok';gen._content=content;save();
+  if(mode==='drop'||mode==='dropfail'||mode==='droprelease'){ // odpowiedź ginie po drodze, serwer kończy sam (klient odzyskuje przez tabelę generations)
+    gen._finishAt=now()+(+arg>0?+arg:20)*1000;gen._outcome=mode==='dropfail'?'fail':mode==='droprelease'?'release':'ok';gen._content=content;save();
     await sleep(1500,signal);throw new TypeError('Failed to fetch');
   }
   await sleep(mode==='slow'?(+arg>0?+arg:25)*1000:1500,signal);
