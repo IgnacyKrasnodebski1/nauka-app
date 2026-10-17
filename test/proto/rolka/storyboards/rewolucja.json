@@ -1,0 +1,1265 @@
+{
+ "title": "Rewolucja francuska",
+ "subject": "Historia",
+ "intro": "Przyczyny, daty i skutki z Twoich notatek. Na końcu jedno pytanie.",
+ "cover": {
+  "title": "Rewolucja francuska to NIE jeden dzień",
+  "sub": "10 lat w {s} s · pytanie na końcu"
+ },
+ "lang": "pl-PL",
+ "voice": {
+  "provider": "elevenlabs",
+  "model": "eleven_v4",
+  "voice_id": "gBomWqQijp5IiOPF7hkJ",
+  "name": "Dawid"
+ },
+ "audio": {
+  "src": "audio/rewolucja.mp3",
+  "words": "audio/rewolucja.words.json",
+  "rate": 1.2
+ },
+ "world": {
+  "seed": 17,
+  "stations": [
+   {
+    "id": "wybuch",
+    "kind": "flag",
+    "label": "Wybuch 1789",
+    "x": 0,
+    "y": 0
+   },
+   {
+    "id": "skarb",
+    "kind": "vault",
+    "label": "Pusty skarbiec",
+    "x": -5.5,
+    "y": 0.5
+   },
+   {
+    "id": "tlum",
+    "kind": "crowd",
+    "label": "Stan trzeci",
+    "x": -6,
+    "y": -3,
+    "n": 16
+   },
+   {
+    "id": "elita",
+    "kind": "pair",
+    "label": "I i II stan",
+    "x": -8.4,
+    "y": -0.8,
+    "s": 0.8
+   },
+   {
+    "id": "oswiec",
+    "kind": "book",
+    "label": "Oświecenie",
+    "x": -3.5,
+    "y": -5.5,
+    "bulb": true
+   },
+   {
+    "id": "pole",
+    "kind": "field",
+    "label": "Nieurodzaj 1788",
+    "x": 0.5,
+    "y": -5.5
+   },
+   {
+    "id": "stany",
+    "kind": "hall",
+    "label": "Stany Generalne",
+    "x": 4.2,
+    "y": 0,
+    "date": "5 V",
+    "dateName": "Stany Gen."
+   },
+   {
+    "id": "przysiega",
+    "kind": "school",
+    "label": "Sala do gry w piłkę",
+    "x": 4.2,
+    "y": 4.2,
+    "date": "20 VI",
+    "dateName": "przysięga"
+   },
+   {
+    "id": "bastylia",
+    "kind": "fortress",
+    "label": "Bastylia",
+    "x": 8.4,
+    "y": 4.2,
+    "date": "14 VII",
+    "dateName": "Bastylia"
+   },
+   {
+    "id": "deklaracja",
+    "kind": "document",
+    "label": "Deklaracja praw",
+    "x": 8.4,
+    "y": 8.4,
+    "date": "26 VIII",
+    "dateName": "Deklaracja"
+   },
+   {
+    "id": "ludwik",
+    "kind": "crown",
+    "label": "Ludwik XVI",
+    "x": 12.6,
+    "y": 8.4,
+    "date": "21 I 1793",
+    "dateName": "król"
+   },
+   {
+    "id": "terror",
+    "kind": "hall",
+    "label": "Terror jakobinów",
+    "x": 12.6,
+    "y": 12.6,
+    "date": "1793–94",
+    "color": "#8A857F",
+    "dateName": "terror",
+    "dark": true,
+    "cap": true
+   },
+   {
+    "id": "napoleon",
+    "kind": "palace",
+    "label": "Napoleon Bonaparte",
+    "x": 16.8,
+    "y": 12.6,
+    "date": "9 XI 1799",
+    "dateName": "Napoleon"
+   },
+   {
+    "id": "rownosc",
+    "kind": "scales",
+    "label": "Równość wobec prawa",
+    "x": 16.8,
+    "y": 16.8
+   },
+   {
+    "id": "narod",
+    "kind": "crowd",
+    "label": "Suwerenność narodu",
+    "x": 21,
+    "y": 16.8,
+    "n": 9
+   },
+   {
+    "id": "swiat",
+    "kind": "globe",
+    "label": "Wzór dla XIX w.",
+    "x": 21,
+    "y": 21
+   }
+  ],
+  "roads": [
+   [
+    "skarb",
+    "wybuch"
+   ],
+   [
+    "tlum",
+    "wybuch"
+   ],
+   [
+    "oswiec",
+    "wybuch"
+   ],
+   [
+    "pole",
+    "wybuch"
+   ],
+   [
+    "tlum",
+    "skarb"
+   ],
+   [
+    "wybuch",
+    "stany"
+   ],
+   [
+    "stany",
+    "przysiega"
+   ],
+   [
+    "przysiega",
+    "bastylia"
+   ],
+   [
+    "bastylia",
+    "deklaracja"
+   ],
+   [
+    "deklaracja",
+    "ludwik"
+   ],
+   [
+    "ludwik",
+    "terror"
+   ],
+   [
+    "terror",
+    "napoleon"
+   ],
+   [
+    "napoleon",
+    "rownosc"
+   ],
+   [
+    "rownosc",
+    "narod"
+   ],
+   [
+    "narod",
+    "swiat"
+   ]
+  ]
+ },
+ "scenes": [
+  {
+   "say": "Czekaj, czekaj… Myślisz, że rewolucja francuska to jeden dzień i jedna Bastylia? Nie, nie, NIE! To było dziesięć lat jazdy bez trzymanki.",
+   "tts": "[excited] Czekaj, czekaj… myślisz, że rewolucja francuska to jeden dzień i jedna Bastylia? [laughs softly] Nie, nie, NIE! To było DZIESIĘĆ lat jazdy bez trzymanki.",
+   "cam": {
+    "to": "bastylia",
+    "zoom": 2.4,
+    "y": 0.52
+   },
+   "actions": [
+    {
+     "type": "card",
+     "id": "mit",
+     "title": "Popularny mit",
+     "lines": [
+      "Rewolucja = 1 dzień"
+     ],
+     "t": -0.6,
+     "y": 0.15,
+     "sfx": "none",
+     "off": "Zostań@+1"
+    },
+    {
+     "type": "label",
+     "at": "bastylia",
+     "text": "Bastylia",
+     "on": "Bastylia",
+     "dx": -40
+    },
+    {
+     "type": "cam",
+     "on": "Bastylia",
+     "to": "bastylia",
+     "zoom": 2.65,
+     "dur": 0.22,
+     "punch": true,
+     "flash": false
+    },
+    {
+     "type": "fox",
+     "pose": "shrug",
+     "side": "left",
+     "size": "big",
+     "on": "Nie,",
+     "dur": 1.9
+    },
+    {
+     "type": "strike",
+     "card": "mit",
+     "line": 0,
+     "text": "10 lat: 1789–1799",
+     "on": "dziesięć"
+    },
+    {
+     "type": "cam",
+     "on": "dziesięć",
+     "to": [
+      "stany",
+      "napoleon"
+     ],
+     "zoom": 0.7,
+     "y": 0.58,
+     "dur": 1.0
+    },
+    {
+     "type": "recap",
+     "from": "stany",
+     "to": "napoleon",
+     "on": "jazdy",
+     "dates": false,
+     "delay": 0.05,
+     "step": 0.11,
+     "sfx": "none"
+    }
+   ]
+  },
+  {
+   "say": "Zostań do końca, bo finał? Kompletny odlot. Ale najpierw: cztery powody, czemu to w ogóle wybuchło.",
+   "tts": "[mischievously] Zostań do końca, bo finał? [whispers] Kompletny odlot. [excited] Ale najpierw: CZTERY powody, czemu to w ogóle wybuchło.",
+   "cam": {
+    "to": "napoleon",
+    "zoom": 2.0,
+    "y": 0.52
+   },
+   "actions": [
+    {
+     "type": "fox",
+     "pose": "point",
+     "side": "right",
+     "on": "Zostań",
+     "dur": 2.4
+    },
+    {
+     "type": "label",
+     "at": "napoleon",
+     "text": "finał?",
+     "on": "finał",
+     "style": "dark",
+     "off": "Ale"
+    },
+    {
+     "type": "cam",
+     "on": "odlot",
+     "to": "napoleon",
+     "zoom": 2.45,
+     "dur": 0.25,
+     "punch": true
+    },
+    {
+     "type": "chapter",
+     "n": 1,
+     "text": "Przyczyny",
+     "on": "najpierw"
+    },
+    {
+     "type": "cam",
+     "on": "najpierw",
+     "to": [
+      "skarb",
+      "tlum",
+      "oswiec",
+      "pole",
+      "wybuch"
+     ],
+     "zoom": "fit",
+     "y": 0.5,
+     "dur": 1.0
+    },
+    {
+     "type": "packet",
+     "from": "skarb",
+     "to": "wybuch",
+     "on": "cztery",
+     "n": 2,
+     "color": "#E9A23B"
+    },
+    {
+     "type": "packet",
+     "from": "tlum",
+     "to": "wybuch",
+     "on": "cztery",
+     "n": 2,
+     "color": "#E9A23B"
+    },
+    {
+     "type": "packet",
+     "from": "oswiec",
+     "to": "wybuch",
+     "on": "cztery",
+     "n": 2,
+     "color": "#E9A23B"
+    },
+    {
+     "type": "packet",
+     "from": "pole",
+     "to": "wybuch",
+     "on": "cztery",
+     "n": 2,
+     "color": "#E9A23B"
+    },
+    {
+     "type": "label",
+     "at": "wybuch",
+     "text": "wybuch 1789",
+     "on": "wybuchło",
+     "style": "dark"
+    },
+    {
+     "type": "badge",
+     "at": "skarb",
+     "n": 1,
+     "on": "cztery",
+     "lit": "Jeden@+1",
+     "scenes": 5
+    },
+    {
+     "type": "badge",
+     "at": "tlum",
+     "n": 2,
+     "on": "cztery",
+     "lit": "Dwa@+2",
+     "scenes": 5
+    },
+    {
+     "type": "badge",
+     "at": "oswiec",
+     "n": 3,
+     "on": "cztery",
+     "lit": "Trzy@+3",
+     "scenes": 5
+    },
+    {
+     "type": "badge",
+     "at": "pole",
+     "n": 4,
+     "on": "cztery",
+     "lit": "Cztery@+4",
+     "scenes": 5
+    }
+   ],
+   "hold": 0.6
+  },
+  {
+   "say": "Jeden: pusty skarbiec. Długi po wojnach, między innymi po wsparciu wojny o niepodległość USA. Ups.",
+   "tts": "[excited] Jeden: PUSTY skarbiec. Długi po wojnach, między innymi po wsparciu wojny o niepodległość USA. [sarcastic] Ups.",
+   "cam": {
+    "to": "skarb",
+    "zoom": 2.2,
+    "y": 0.52
+   },
+   "actions": [
+    {
+     "type": "highlight",
+     "at": "skarb",
+     "on": "pusty"
+    },
+    {
+     "type": "cam",
+     "on": "pusty",
+     "to": "skarb",
+     "zoom": 2.5,
+     "dur": 0.22,
+     "punch": true,
+     "flash": false
+    },
+    {
+     "type": "label",
+     "at": "skarb",
+     "text": "kryzys finansowy",
+     "on": "pusty",
+     "dx": 20
+    },
+    {
+     "type": "cutaway",
+     "kind": "arc",
+     "on": "Długi",
+     "off": "Ups",
+     "title": "Długi po wojnach",
+     "from": {
+      "label": "Francja",
+      "x": 0.74,
+      "y": 0.5
+     },
+     "to": {
+      "label": "USA",
+      "x": 0.2,
+      "y": 0.58
+     },
+     "extra": [
+      {
+       "x": 0.92,
+       "y": 0.86,
+       "r": 40
+      }
+     ]
+    },
+    {
+     "type": "cam",
+     "on": "Ups",
+     "to": "skarb",
+     "zoom": 2.6,
+     "dur": 0.2,
+     "punch": true,
+     "flash": false
+    },
+    {
+     "type": "fox",
+     "pose": "shrug",
+     "side": "left",
+     "on": "Ups",
+     "dur": 1.1
+    }
+   ]
+  },
+  {
+   "say": "Dwa: nierówności. Stan trzeci to około 97% ludzi. I płaci prawie wszystkie podatki. Ma totalnie dość.",
+   "tts": "[excited] Dwa: nierówności. Stan trzeci to około 97% ludzi. [sarcastic] I płaci prawie WSZYSTKIE podatki. [sighs] Ma totalnie dość.",
+   "cam": {
+    "to": "tlum",
+    "zoom": 2.1,
+    "y": 0.52
+   },
+   "actions": [
+    {
+     "type": "label",
+     "at": "tlum",
+     "text": "stan trzeci",
+     "on": "nierówności"
+    },
+    {
+     "type": "cutaway",
+     "kind": "dots",
+     "on": "Stan",
+     "land": "97%",
+     "off": "I",
+     "head": "Na 100 mieszkańców",
+     "total": 100,
+     "hit": 97,
+     "value": 97,
+     "unit": "%",
+     "label": "to stan trzeci",
+     "note": "Pozostałe stany: tylko 3%."
+    },
+    {
+     "type": "cam",
+     "on": "płaci",
+     "to": [
+      "tlum",
+      "skarb",
+      "elita"
+     ],
+     "zoom": 1.45,
+     "y": 0.55,
+     "dur": 0.6
+    },
+    {
+     "type": "packet",
+     "style": "coin",
+     "from": "tlum",
+     "to": "skarb",
+     "untrim": "from",
+     "on": "płaci",
+     "n": 12,
+     "speed": 2.0,
+     "sfx": "none"
+    },
+    {
+     "type": "label",
+     "at": "elita",
+     "text": "I i II stan",
+     "style": "dark",
+     "on": "prawie",
+     "dy": -40
+    },
+    {
+     "type": "card",
+     "at": "tlum",
+     "title": "Prawie wszystkie podatki",
+     "lines": [
+      "płaci stan trzeci"
+     ],
+     "on": "wszystkie",
+     "dx": -20
+    },
+    {
+     "type": "cam",
+     "on": "totalnie",
+     "to": "tlum",
+     "zoom": 2.4,
+     "dur": 0.3,
+     "punch": true
+    },
+    {
+     "type": "label",
+     "at": "tlum",
+     "text": "ma dość!",
+     "on": "totalnie",
+     "style": "accent",
+     "dx": -30
+    }
+   ],
+   "hold": 0.4
+  },
+  {
+   "say": "Trzy: idee oświecenia. Monteskiusz? Trójpodział władzy. {Rousseau?|Russo?} Umowa społeczna. Mózgi na pełnych obrotach.",
+   "tts": "[excited] Trzy: idee oświecenia. Monteskiusz? Trójpodział władzy. Russo? Umowa społeczna. [laughs softly] Mózgi na pełnych obrotach.",
+   "cam": {
+    "to": "oswiec",
+    "zoom": 2.0,
+    "y": 0.56
+   },
+   "actions": [
+    {
+     "type": "highlight",
+     "at": "oswiec",
+     "on": "idee"
+    },
+    {
+     "type": "card",
+     "at": "oswiec",
+     "title": "Monteskiusz",
+     "lines": [
+      "trójpodział władzy"
+     ],
+     "on": "Monteskiusz",
+     "dx": -70,
+     "dy": -130,
+     "adx": -14
+    },
+    {
+     "type": "card",
+     "at": "oswiec",
+     "title": "Rousseau",
+     "lines": [
+      "umowa społeczna"
+     ],
+     "on": "Rousseau",
+     "dx": 80,
+     "dy": -26,
+     "adx": 16,
+     "af": 0.6
+    },
+    {
+     "type": "fox",
+     "pose": "think",
+     "side": "left",
+     "on": "Mózgi",
+     "dur": 1.8
+    },
+    {
+     "type": "cam",
+     "on": "Mózgi",
+     "to": "oswiec",
+     "zoom": 2.3,
+     "dur": 1.4
+    }
+   ]
+  },
+  {
+   "say": "Cztery: nieurodzaj w 1788 roku. Chleb drożeje jak szalony. A jak brakuje na chleb… robi się gorąco.",
+   "tts": "[dramatically] Cztery: nieurodzaj w 1788 roku. [excited] Chleb drożeje jak SZALONY. [whispers] A jak brakuje na chleb… robi się gorąco.",
+   "cam": {
+    "to": "pole",
+    "zoom": 2.0,
+    "y": 0.56
+   },
+   "actions": [
+    {
+     "type": "state",
+     "at": "pole",
+     "show": "dry",
+     "hide": "ok",
+     "on": "nieurodzaj"
+    },
+    {
+     "type": "burst",
+     "at": "pole",
+     "kind": "dust",
+     "on": "nieurodzaj",
+     "n": 6,
+     "sfx": "none"
+    },
+    {
+     "type": "label",
+     "at": "pole",
+     "date": "1788",
+     "text": "nieurodzaj",
+     "on": "nieurodzaj",
+     "dx": 40,
+     "dy": -64
+    },
+    {
+     "type": "label",
+     "at": "pole",
+     "icon": "bread",
+     "text": "chleb",
+     "trend": "up",
+     "on": "drożeje",
+     "dx": -70,
+     "dy": -20,
+     "af": 0.3
+    },
+    {
+     "type": "cam",
+     "on": "szalony",
+     "to": "pole",
+     "zoom": 2.3,
+     "dur": 0.25,
+     "punch": true,
+     "flash": false
+    },
+    {
+     "type": "cam",
+     "on": "robi",
+     "to": "wybuch",
+     "zoom": 1.8,
+     "y": 0.55,
+     "dur": 0.6
+    },
+    {
+     "type": "cam",
+     "on": "gorąco",
+     "to": "wybuch",
+     "zoom": 2.2,
+     "dur": 0.25,
+     "punch": true
+    },
+    {
+     "type": "highlight",
+     "at": "wybuch",
+     "on": "gorąco",
+     "color": "#E0483F"
+    }
+   ]
+  },
+  {
+   "say": "Rok 1789. Piąty maja: zwołanie Stanów Generalnych. Dwudziesty czerwca: przysięga w sali do gry w piłkę. Tak, w piłkę!",
+   "tts": "[excited] Rok 1789. Piąty maja: zwołanie Stanów Generalnych. Dwudziesty czerwca: przysięga w sali do gry w piłkę. [laughs] Tak, w PIŁKĘ!",
+   "cam": {
+    "to": [
+     "stany",
+     "przysiega",
+     "bastylia",
+     "deklaracja"
+    ],
+    "y": 0.55
+   },
+   "actions": [
+    {
+     "type": "chapter",
+     "n": 2,
+     "text": "Wydarzenia",
+     "t": 0.1
+    },
+    {
+     "type": "packet",
+     "from": "wybuch",
+     "to": "stany",
+     "on": "1789",
+     "loop": false,
+     "dur": 1.2,
+     "color": "#B4FF3A"
+    },
+    {
+     "type": "cam",
+     "on": "Piąty",
+     "to": "stany",
+     "zoom": 1.9,
+     "y": 0.55,
+     "dur": 0.55
+    },
+    {
+     "type": "label",
+     "at": "stany",
+     "text": "Stany Generalne",
+     "on": "Piąty",
+     "date": "5 maja 1789",
+     "dx": -20
+    },
+    {
+     "type": "cam",
+     "on": "Dwudziesty",
+     "to": "przysiega",
+     "zoom": 1.9,
+     "y": 0.55,
+     "dur": 0.55
+    },
+    {
+     "type": "packet",
+     "from": "stany",
+     "to": "przysiega",
+     "on": "Dwudziesty",
+     "loop": false,
+     "dur": 0.9
+    },
+    {
+     "type": "card",
+     "at": "przysiega",
+     "lines": [
+      "przysięga",
+      {
+       "t": "w sali do gry w piłkę",
+       "on": "sali"
+      }
+     ],
+     "on": "Dwudziesty",
+     "date": "20 czerwca 1789",
+     "dx": -10
+    },
+    {
+     "type": "fox",
+     "pose": "celebrate",
+     "side": "right",
+     "on": "Tak",
+     "dur": 1.5
+    },
+    {
+     "type": "cam",
+     "on": "piłkę#2",
+     "to": "przysiega",
+     "zoom": 2.3,
+     "dur": 0.25,
+     "punch": true,
+     "flash": false
+    }
+   ]
+  },
+  {
+   "say": "Czternasty lipca: bum! Zdobycie Bastylii. A w sierpniu: Deklaracja praw człowieka i obywatela.",
+   "tts": "[excited] Czternasty lipca: [shouting] BUM! [excited] Zdobycie Bastylii. A w sierpniu: Deklaracja praw człowieka i obywatela.",
+   "cam": {
+    "to": "bastylia",
+    "zoom": 1.9,
+    "y": 0.55
+   },
+   "actions": [
+    {
+     "type": "packet",
+     "style": "people",
+     "on": "lipca",
+     "loop": false,
+     "n": 10,
+     "dur": 0.95,
+     "gap": 0.05,
+     "sfx": "none",
+     "path": [
+      [
+       8.7,
+       8.1
+      ],
+      [
+       8.5,
+       6.8
+      ],
+      [
+       8.4,
+       5.5
+      ]
+     ],
+     "jit": true,
+     "hold": 0.9
+    },
+    {
+     "type": "cam",
+     "on": "bum",
+     "to": "bastylia",
+     "zoom": 2.45,
+     "dur": 0.2,
+     "punch": true
+    },
+    {
+     "type": "highlight",
+     "at": "bastylia",
+     "on": "bum",
+     "color": "#FF7A2F"
+    },
+    {
+     "type": "prop",
+     "at": "bastylia",
+     "kind": "flag",
+     "z": 1.12,
+     "h": 1.55,
+     "on": "bum"
+    },
+    {
+     "type": "burst",
+     "at": "bastylia",
+     "kind": "dust",
+     "on": "bum",
+     "n": 6,
+     "sfx": "none"
+    },
+    {
+     "type": "label",
+     "at": "bastylia",
+     "date": "14 lipca 1789",
+     "text": "zdobycie Bastylii",
+     "on": "Zdobycie",
+     "dx": -10,
+     "z": 0.9
+    },
+    {
+     "type": "fox",
+     "pose": "startle",
+     "side": "left",
+     "on": "bum",
+     "dur": 1.3
+    },
+    {
+     "type": "cam",
+     "on": "sierpniu",
+     "to": "deklaracja",
+     "zoom": 1.9,
+     "y": 0.55,
+     "dur": 0.55
+    },
+    {
+     "type": "packet",
+     "from": "bastylia",
+     "to": "deklaracja",
+     "on": "sierpniu",
+     "loop": false,
+     "dur": 0.9
+    },
+    {
+     "type": "card",
+     "at": "deklaracja",
+     "lines": [
+      "Deklaracja praw",
+      "człowieka i obywatela"
+     ],
+     "on": "Deklaracja",
+     "date": "26 sierpnia 1789",
+     "dx": -30
+    }
+   ]
+  },
+  {
+   "say": "Styczeń 1793. I wtedy… zostaje stracony król, {Ludwik XVI.|Ludwik Szesnasty.}",
+   "tts": "[serious] Styczeń 1793. I wtedy… [slowly] zostaje stracony król, Ludwik Szesnasty.",
+   "cam": {
+    "to": "ludwik",
+    "zoom": 1.6,
+    "y": 0.5,
+    "dur": 1.1
+   },
+   "actions": [
+    {
+     "type": "tone",
+     "sat": 0.7,
+     "t": 0.3,
+     "sfx": "none"
+    },
+    {
+     "type": "cam",
+     "t": 1.2,
+     "to": "ludwik",
+     "zoom": 2.0,
+     "dur": 6.0,
+     "ease": "io",
+     "sfx": "none",
+     "dx": 12,
+     "y": 0.5
+    },
+    {
+     "type": "label",
+     "at": "ludwik",
+     "text": "stracenie Ludwika XVI",
+     "on": "stracony",
+     "dx": -30,
+     "sfx": "none",
+     "date": "21 stycznia 1793"
+    },
+    {
+     "type": "strike",
+     "at": "ludwik",
+     "fall": true,
+     "noX": true,
+     "on": "Ludwik",
+     "sfx": "none"
+    }
+   ],
+   "hold": 0.3
+  },
+  {
+   "say": "Potem terror jakobinów i {Robespierre.|Robespjer.} A finał? 1799: zamach stanu Napoleona Bonapartego. Dziesięć lat rewolucji i taki koniec. Mówiłem: odlot!",
+   "tts": "[nervous] Potem terror jakobinów i Robespjer. [excited] A finał? 1799: zamach stanu Napoleona Bonapartego! [dramatically] Dziesięć lat rewolucji i TAKI koniec. [laughs] Mówiłem: odlot!",
+   "cam": {
+    "to": "terror",
+    "zoom": 1.9,
+    "y": 0.55
+   },
+   "actions": [
+    {
+     "type": "card",
+     "at": "terror",
+     "date": "1793–1794",
+     "lines": [
+      "terror jakobinów",
+      {
+       "t": "(Robespierre)",
+       "on": "Robespierre"
+      }
+     ],
+     "on": "terror",
+     "dx": -50
+    },
+    {
+     "type": "tint",
+     "at": "terror",
+     "road": [
+      "ludwik",
+      "terror"
+     ],
+     "color": "#8E2A2A",
+     "on": "terror",
+     "off": "finał"
+    },
+    {
+     "type": "cam",
+     "on": "finał",
+     "to": "napoleon",
+     "zoom": 1.75,
+     "y": 0.55,
+     "dur": 1.4
+    },
+    {
+     "type": "packet",
+     "from": "terror",
+     "to": "napoleon",
+     "on": "finał",
+     "loop": false,
+     "dur": 1.4
+    },
+    {
+     "type": "prop",
+     "at": "napoleon",
+     "kind": "bicorne",
+     "drop": true,
+     "z": 2.02,
+     "w": 2.3,
+     "on": "zamach"
+    },
+    {
+     "type": "cam",
+     "on": "zamach",
+     "to": "napoleon",
+     "zoom": 2.3,
+     "dur": 0.42,
+     "punch": true
+    },
+    {
+     "type": "card",
+     "at": "napoleon",
+     "date": "9 listopada 1799",
+     "lines": [
+      "zamach stanu",
+      "Napoleona Bonapartego"
+     ],
+     "on": "stanu",
+     "dx": -30
+    },
+    {
+     "type": "cam",
+     "on": "Dziesięć",
+     "to": [
+      "stany",
+      "napoleon"
+     ],
+     "zoom": 0.72,
+     "y": 0.53,
+     "dur": 0.75,
+     "ease": "out"
+    },
+    {
+     "type": "recap",
+     "from": "stany",
+     "to": "napoleon",
+     "on": "Dziesięć",
+     "delay": 0.25,
+     "step": 0.15,
+     "label": "1789–1799 · 10 lat",
+     "off": "taki"
+    },
+    {
+     "type": "cam",
+     "on": "taki",
+     "to": "napoleon",
+     "zoom": 2.3,
+     "y": 0.55,
+     "dur": 0.05,
+     "lead": 0.02,
+     "punch": true,
+     "flash": false,
+     "sfx": "none"
+    },
+    {
+     "type": "burst",
+     "at": "napoleon",
+     "kind": "spark",
+     "on": "odlot",
+     "af": 0.92
+    },
+    {
+     "type": "fox",
+     "pose": "celebrate",
+     "side": "right",
+     "on": "Mówiłem",
+     "dur": 1.5
+    }
+   ]
+  },
+  {
+   "say": "I co zostało po tej jeździe? Koniec monarchii absolutnej i przywilejów stanowych. Równość wobec prawa. Suwerenność narodu.",
+   "tts": "[curious] I co zostało po tej jeździe? [excited] Koniec monarchii absolutnej i przywilejów stanowych. RÓWNOŚĆ wobec prawa. Suwerenność narodu.",
+   "cam": {
+    "to": [
+     "rownosc",
+     "narod",
+     "swiat"
+    ],
+    "y": 0.55
+   },
+   "actions": [
+    {
+     "type": "chapter",
+     "n": 3,
+     "text": "Skutki",
+     "t": 0.1
+    },
+    {
+     "type": "cam",
+     "on": "Koniec",
+     "to": "ludwik",
+     "zoom": 1.9,
+     "y": 0.6,
+     "dx": 16,
+     "dur": 0.6
+    },
+    {
+     "type": "card",
+     "at": "ludwik",
+     "title": "Koniec",
+     "lines": [
+      {
+       "t": "monarchii absolutnej",
+       "on": "monarchii"
+      },
+      {
+       "t": "i przywilejów stanowych",
+       "on": "przywilejów"
+      }
+     ],
+     "on": "Koniec",
+     "dy": -70
+    },
+    {
+     "type": "cam",
+     "on": "Równość",
+     "to": "rownosc",
+     "zoom": 2.0,
+     "y": 0.55,
+     "dur": 0.55
+    },
+    {
+     "type": "highlight",
+     "at": "rownosc",
+     "on": "Równość"
+    },
+    {
+     "type": "label",
+     "at": "rownosc",
+     "text": "równość wobec prawa",
+     "on": "Równość",
+     "dx": 20
+    },
+    {
+     "type": "cam",
+     "on": "Suwerenność",
+     "to": "narod",
+     "zoom": 2.0,
+     "y": 0.55,
+     "dur": 0.5
+    },
+    {
+     "type": "label",
+     "at": "narod",
+     "text": "suwerenność narodu",
+     "on": "Suwerenność"
+    }
+   ]
+  },
+  {
+   "say": "I jeszcze: wzór dla ruchów rewolucyjnych w {XIX|dziewiętnastym} wieku.",
+   "tts": "[dramatically] I jeszcze: WZÓR dla ruchów rewolucyjnych w dziewiętnastym wieku.",
+   "cam": {
+    "to": "swiat",
+    "zoom": 1.9,
+    "y": 0.55
+   },
+   "actions": [
+    {
+     "type": "cam",
+     "on": "wzór",
+     "to": "swiat",
+     "zoom": 2.3,
+     "dur": 0.25,
+     "punch": true,
+     "flash": false
+    },
+    {
+     "type": "highlight",
+     "at": "swiat",
+     "on": "wzór"
+    },
+    {
+     "type": "label",
+     "at": "swiat",
+     "text": "wzór dla XIX wieku",
+     "on": "wzór",
+     "style": "accent"
+    },
+    {
+     "type": "packet",
+     "from": "narod",
+     "to": "swiat",
+     "on": "ruchów",
+     "n": 3,
+     "color": "#E9A23B"
+    }
+   ]
+  },
+  {
+   "say": "Na sprawdzian: daty z tabeli, trzy przyczyny, dwa skutki. A teraz pytanie. Dasz radę?",
+   "tts": "[excited] Na sprawdzian: daty z tabeli, trzy przyczyny, dwa skutki. [mischievously] A teraz pytanie. Dasz radę?",
+   "cam": {
+    "to": "all",
+    "y": 0.42
+   },
+   "actions": [
+    {
+     "type": "cutaway",
+     "kind": "phone",
+     "t": 0.05,
+     "app": "Cramfox",
+     "title": "Na sprawdzian",
+     "sub": "Z Twoich notatek, klasa 2",
+     "rows": [
+      {
+       "t": "Daty z tabeli",
+       "on": "daty"
+      },
+      {
+       "t": "3 z 4 przyczyn",
+       "on": "trzy"
+      },
+      {
+       "t": "2 skutki",
+       "on": "dwa"
+      }
+     ]
+    },
+    {
+     "type": "fox",
+     "pose": "thumbs",
+     "side": "right",
+     "on": "pytanie",
+     "dur": 2.4
+    }
+   ],
+   "hold": 1.2
+  }
+ ],
+ "quiz": {
+  "q": "Co wydarzyło się 20 czerwca 1789 roku?",
+  "a": [
+   "Zwołanie Stanów Generalnych",
+   "Przysięga w sali do gry w piłkę",
+   "Zdobycie Bastylii",
+   "Deklaracja praw człowieka i obywatela"
+  ],
+  "c": 1,
+  "e": "20 czerwca 1789 to przysięga w sali do gry w piłkę. Stany Generalne zwołano 5 maja, Bastylię zdobyto 14 lipca, a Deklarację ogłoszono 26 sierpnia 1789."
+ }
+}

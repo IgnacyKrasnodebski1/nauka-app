@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Rolka — Cramfox (prototyp)</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../../fonts/fonts.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div id="stage" aria-label="Rolka">
+  <svg id="world" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
+  <svg id="fg" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
+  <div class="vig"></div>
+  <svg id="ovl" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg>
+  <div id="hud"></div>
+  <div id="chap"></div>
+  <div id="cut"></div>
+  <div id="fox"></div>
+  <div id="cap" aria-live="off"></div>
+  <div id="flash"></div>
+  <div id="pause"><div class="pb"><svg viewBox="0 0 24 24" fill="#fff"><path d="M7 4.5v15l12.5-7.5z"/></svg></div></div>
+  <div id="top">
+    <div id="bars"></div>
+    <div id="bar2">
+      <div id="ttl"></div>
+      <button class="ib" id="bMute" type="button" aria-label="Wycisz lektora"></button>
+      <button class="ib" id="bRestart" type="button" aria-label="Od początku"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/></svg></button>
+    </div>
+  </div>
+  <div id="quiz"></div>
+  <div id="cover" class="off"></div>
+  <div id="err"></div>
+</div>
+<script src="engine.js"></script>
+</body>
+</html>

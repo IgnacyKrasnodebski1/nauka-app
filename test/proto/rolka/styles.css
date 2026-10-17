@@ -1,0 +1,199 @@
+/* ============================================================ CRAMFOX — ROLKA (prototyp)
+   Scena 390x844 (pion 9:16+). Wszystkie ruchy liczy engine.js z zegara t (deterministycznie) — tu NIE ma animacji CSS
+   poza przejściami przycisków. Kolory świata: jasny, spokojny; akcent limonkowy tylko do wyróżnień. */
+:root{
+  --ground:#ECE6D9; --gr:236 230 217; --ink:#17151F; --ink-2:#3B3846; --muted:#8C8778; --paper:#FFFFFF;
+  --acid:#B4FF3A; --acid-dark:#7FC400; --on-acid:#14210A;
+  --blue:#2F6BFF; --red:#E0483F; --green:#1F8A5B; --amber:#E9A23B;
+  --app-bg:#0E0C1C;
+  --font-display:'Bricolage Grotesque', system-ui, sans-serif;
+  --font-body:'Plus Jakarta Sans', system-ui, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--app-bg);overflow:hidden;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+body{font-family:var(--font-body);color:var(--ink);display:flex;align-items:center;justify-content:center}
+#stage{position:relative;width:390px;height:844px;flex:none;overflow:hidden;background:var(--ground);transform-origin:50% 50%;contain:strict}
+body.fit #stage{border-radius:28px;box-shadow:0 30px 80px rgba(0,0,0,.45)}
+#world,#ovl,#fg{position:absolute;inset:0;width:100%;height:100%;display:block}
+/* pierwszy plan (paralaksa): miękkie bryły widoczne tylko w przelotach kamery */
+#fg{pointer-events:none;filter:blur(2.2px);display:none}
+#flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:3}
+#ovl{pointer-events:none}
+.vig{position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 80% at var(--vx,50%) var(--vy,46%),rgb(var(--gr) / 0) 55%,rgb(var(--gr) / .55) 82%,rgb(var(--gr) / .92) 100%)}
+#hud,#cut,#fox,#cap,#chap{position:absolute;inset:0;pointer-events:none}
+
+/* ---------- etykiety (pigułki z linią) ---------- */
+.lbl{position:absolute;left:0;top:0;white-space:nowrap;background:var(--paper);color:var(--ink);font:700 15px/1 var(--font-body);
+  padding:8px 13px 9px;border-radius:999px;border:1.5px solid var(--ink);box-shadow:0 3px 0 rgba(23,21,31,.12);will-change:transform,opacity}
+.lbl.dark{background:var(--ink);color:#fff;border-color:var(--ink)}
+.lbl.accent{background:var(--acid);color:var(--on-acid);border-color:var(--on-acid)}
+.lbl .s{position:relative;color:var(--red)}
+.lbl .s::after{content:"";position:absolute;left:-2px;right:-2px;top:52%;height:2px;background:var(--red);transform-origin:0 50%;transform:scaleX(var(--k,1))}
+/* chip z datą — jeden styl dla etykiety zdarzenia i chipów podsumowania: ciemna część z datą + biała z nazwą */
+.lbl.dl{display:flex;align-items:stretch;padding:0;overflow:hidden}
+.lbl.dl .d{background:var(--ink);color:#fff;font-weight:800;padding:8px 10px 9px 12px;letter-spacing:.005em}
+.lbl.dl .n{padding:8px 13px 9px 9px}
+.lbl.dl.dark .n{color:#fff}
+.lbl .r,.card .r{display:inline-block;padding:0 .12em;letter-spacing:.03em}
+.lbl.rc{font-size:13.5px;box-shadow:0 2px 0 rgba(23,21,31,.14)}
+.lbl.rc .d{padding:6px 8px 7px 10px}
+.lbl.rc .n{padding:6px 10px 7px 8px}
+.lbl.span{font-size:15px;font-weight:800}
+/* etykieta z trendem: ikonka (chleb) + tekst + czerwona strzałka w górę, która „pnie się” w pętli */
+.lbl.tr{display:flex;align-items:center;gap:7px;padding:6px 12px 7px 10px}
+.lbl .ic{width:24px;height:18px;flex:none}
+.lbl .up{display:inline-grid;place-items:center;width:20px;height:22px;border-radius:7px;background:var(--red);color:#fff;flex:none}
+.lbl .up svg{width:10px;height:14px}
+.lbl .up.dn svg{transform:rotate(180deg)}
+
+/* ---------- karty informacyjne ---------- */
+.card{position:absolute;left:0;top:0;min-width:150px;max-width:300px;background:var(--paper);border-radius:14px;padding:11px 14px 12px;
+  border:1.5px solid rgba(23,21,31,.9);box-shadow:0 6px 18px rgba(40,32,18,.16),0 3px 0 rgba(23,21,31,.12);will-change:transform,opacity}
+.card .ct{font:800 13.5px/1.15 var(--font-body);letter-spacing:.06em;text-transform:uppercase;color:var(--ink);margin-bottom:6px}
+.card .ct.dt{letter-spacing:.005em;text-transform:none;margin-bottom:7px}
+.card .ct.dt .d{display:inline-block;background:var(--ink);color:#fff;font:800 14px/1 var(--font-body);padding:6px 10px 7px;border-radius:999px}
+.card .cl{font:800 19px/1.2 var(--font-display);color:var(--ink);position:relative;white-space:nowrap}
+.card .cl+.cl{margin-top:3px}
+.card .cl.small{font:700 14px/1.3 var(--font-body);white-space:normal}
+.card .cl.struck{color:var(--red)}
+.card .cl .tx{position:relative}
+.card .cl.struck .tx::after{content:"";position:absolute;left:0;top:53%;height:2.5px;width:calc(var(--sw,0) * 100%);background:var(--red);border-radius:2px}
+.card .cl.new{color:var(--green)}
+.card.big{padding:16px 20px 18px;border-width:2px;max-width:350px}
+.card.big .cl{font-size:24px}
+
+/* ---------- rozdział ---------- */
+.chip{position:absolute;left:0;top:0;display:flex;align-items:center;gap:9px;background:var(--paper);border:2px solid var(--ink);border-radius:999px;
+  padding:6px 16px 6px 6px;box-shadow:0 4px 0 rgba(23,21,31,.14);white-space:nowrap;transform-origin:50% 50%;will-change:transform,opacity}
+.chip b{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--ink);color:var(--acid);font:800 16px/1 var(--font-display)}
+.chip span{font:800 18px/1 var(--font-display);color:var(--ink)}
+
+/* ---------- napisy karaoke ---------- */
+#cap .box{position:absolute;left:50%;bottom:122px;transform:translateX(-50%);transform-origin:50% 100%;max-width:370px;background:rgba(23,21,31,.94);
+  color:rgba(255,255,255,.46);border-radius:16px;padding:7px 16px 10px;font:800 31px/1.15 var(--font-display);letter-spacing:-.01em;text-align:center;
+  white-space:nowrap;box-shadow:0 8px 20px rgba(23,21,31,.22);will-change:transform}
+#cap .w{display:inline-block;margin:0 .16em;transform-origin:50% 80%}
+#cap .w.on{color:#fff}
+#cap .w.now{color:var(--acid);text-shadow:0 0 14px rgba(180,255,58,.35)}
+/* słowo-uderzenie (WIELKIE w tts albo „!”): samo, 1,3× większe, limonkowa ramka, ciemny tekst */
+#cap .box.pw{background:var(--acid);color:var(--on-acid);border:2.5px solid var(--on-acid);font-size:40px;padding:6px 20px 9px;text-transform:uppercase;letter-spacing:.01em;
+  box-shadow:0 6px 0 var(--acid-dark),0 12px 26px rgba(23,21,31,.25)}
+#cap .box.pw .w.now{color:var(--on-acid);text-shadow:none}
+/* liść: wyróżnienia słoneczną żółcią (limonka ginie na zielonym) */
+#stage.th-leaf .lbl.accent{background:#E6B54E;color:#2A1F05;border-color:#2A1F05}
+
+/* ---------- lis ---------- */
+#fox svg{position:absolute;left:0;top:0;overflow:visible}
+
+/* ---------- przerywniki (cutaway) ---------- */
+.cut{position:absolute;left:0;right:0;top:0;bottom:0;will-change:transform,opacity}
+.cut .dim{position:absolute;inset:0;background:rgb(var(--gr) / .78)}
+.cut .panel{position:absolute;left:22px;right:22px;top:118px;background:var(--paper);border:2px solid var(--ink);border-radius:26px;padding:22px 20px;
+  box-shadow:0 14px 40px rgba(40,32,18,.22),0 5px 0 rgba(23,21,31,.15)}
+.cut .ph{font:800 12px/1 var(--font-body);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+.cut .pt{font:800 28px/1.1 var(--font-display);color:var(--ink);margin-bottom:14px}
+.cut svg{display:block;width:100%;height:auto;overflow:visible}
+/* telefon */
+.cut .phone{position:absolute;left:58px;right:58px;top:150px;background:#1E1C26;border-radius:40px;padding:12px;box-shadow:0 20px 50px rgba(40,32,18,.3)}
+.cut .phone .scr{position:relative;min-height:330px;background:#fff;border-radius:30px;padding:46px 20px 26px;overflow:hidden}
+.cut .phone .notch{position:absolute;left:50%;top:10px;width:84px;height:22px;margin-left:-42px;border-radius:12px;background:#1E1C26}
+.cut .phone .pt{font-size:25px;margin-bottom:6px}
+.cut .phone .psub{font:600 13px/1.3 var(--font-body);color:var(--muted);margin-bottom:16px}
+.cut .row{display:flex;align-items:center;gap:11px;padding:12px 2px;border-top:1.5px solid #EEE9DF;font:700 16px/1.25 var(--font-body);color:var(--ink)}
+.cut .row i{flex:none;display:grid;place-items:center;width:26px;height:26px;border-radius:8px;border:2px solid var(--ink);background:#fff}
+.cut .row i svg{width:15px;height:15px}
+.cut .row.ok i{background:var(--acid);border-color:var(--on-acid)}
+/* kropki proporcji */
+.cut .big{font:800 64px/1 var(--font-display);color:var(--ink);letter-spacing:-.02em}
+.cut .big small{font:800 22px/1 var(--font-display);color:var(--muted);margin-left:4px}
+.cut .note{font:700 15px/1.35 var(--font-body);color:var(--ink-2);margin-top:12px}
+/* klocki (tiles) */
+.cut .tiles{position:absolute;left:0;right:0;top:250px;display:flex;justify-content:center;align-items:flex-start;gap:6px;flex-wrap:wrap;padding:0 14px}
+.cut .tile{display:flex;flex-direction:column;align-items:center;gap:8px;will-change:transform,opacity}
+.cut .tile .blk{min-width:58px;height:62px;padding:0 9px;display:grid;place-items:center;background:#F7F3EA;border:2.5px solid var(--green);border-radius:10px;
+  font:800 22px/1 var(--font-display);color:var(--green);box-shadow:5px 6px 0 #C9BFAA}
+.cut .tile.op .blk{min-width:0;padding:0 2px;background:none;border:0;box-shadow:none;color:var(--ink);font-size:24px}
+.cut .tile .tc{font:700 12px/1 var(--font-body);color:var(--ink);background:#fff;border:1.5px solid var(--ink);border-radius:999px;padding:5px 8px 6px;white-space:nowrap}
+.cut .tbr{flex-basis:100%;height:4px}
+.cut .tiles-n{position:absolute;left:24px;right:24px;top:560px;text-align:center;font:700 15px/1.4 var(--font-body);color:var(--ink-2)}
+.cut .tile .tc.op{border:0;background:none;padding:0;font:800 15px/1.1 var(--font-body);color:var(--ink)}
+.cut .tile .blk .k{display:inline-block;margin-right:.18em;padding:0 .1em;border-radius:6px;transform-origin:50% 60%}
+.cut .tiles-h{position:absolute;left:0;right:0;top:170px;text-align:center;font:800 26px/1.1 var(--font-display);color:var(--ink)}
+/* przybliżenie (drzewo → liść → komórka → chloroplast) */
+.cut .crumbs{position:absolute;left:12px;right:12px;top:118px;display:flex;justify-content:center;align-items:center;gap:4px;flex-wrap:wrap}
+.cut .crumbs span{font:800 13px/1 var(--font-body);color:var(--muted);padding:6px 9px 7px;border-radius:999px;border:1.5px solid transparent}
+.cut .crumbs span.done{color:var(--ink-2)}
+.cut .crumbs span.on{background:var(--acid);color:var(--on-acid);border-color:var(--on-acid)}
+.cut .crumbs i{font-style:normal;font:800 13px/1 var(--font-body);color:var(--muted)}
+.cut .zstep{position:absolute;left:45px;top:236px;width:300px;height:300px;will-change:transform,opacity}
+.cut .zstep svg{width:300px;height:300px}
+.cut .zlab{position:absolute;left:50%;top:556px;transform:translateX(-50%);white-space:nowrap;background:var(--paper);border:2px solid var(--ink);border-radius:999px;
+  padding:9px 18px 10px;font:800 24px/1 var(--font-display);color:var(--ink);box-shadow:0 4px 0 rgba(23,21,31,.14);opacity:0}
+/* mapa / łuk */
+.cut .map{position:absolute;inset:0}
+.cut .map-h{position:absolute;left:24px;right:24px;top:116px;font:800 26px/1.15 var(--font-display);color:var(--ink)}
+
+/* ---------- pasek u góry ---------- */
+#top{position:absolute;left:0;right:0;top:0;padding:14px 14px 26px;z-index:5;pointer-events:none;
+  background:linear-gradient(180deg,rgb(var(--gr) / .94) 0%,rgb(var(--gr) / .72) 58%,rgb(var(--gr) / 0) 100%)}
+#top .ib{pointer-events:auto}
+#bars{display:flex;gap:3px}
+#bars i{position:relative;flex:1;height:3.5px;border-radius:3px;background:rgba(23,21,31,.16);overflow:hidden}
+#bars i b{position:absolute;inset:0;background:var(--ink);transform-origin:0 50%;transform:scaleX(0)}
+#bar2{display:flex;align-items:center;gap:8px;margin-top:10px}
+#ttl b{display:inline-grid;place-items:center;width:20px;height:20px;margin-right:7px;border-radius:50%;background:var(--ink);color:var(--acid);font:800 11px/1 var(--font-display);vertical-align:1px}
+#ttl.ch{font-family:var(--font-display);font-size:15px;opacity:1}
+#ttl{flex:1;min-width:0;font:800 13px/1.2 var(--font-body);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.82}
+.ib{flex:none;width:36px;height:36px;display:grid;place-items:center;border-radius:12px;border:0;background:rgba(255,255,255,.82);color:var(--ink);
+  box-shadow:0 2px 0 rgba(23,21,31,.12);cursor:pointer;padding:0}
+.ib svg{width:19px;height:19px}
+.ib:active{transform:translateY(1px)}
+
+/* ---------- pauza / okładka ---------- */
+#pause{position:absolute;inset:0;display:grid;place-items:center;background:rgba(23,21,31,.18);z-index:4;pointer-events:none;opacity:0;transition:opacity .2s}
+#pause.on{opacity:1}
+#pause .pb{width:84px;height:84px;border-radius:50%;background:rgba(23,21,31,.82);display:grid;place-items:center}
+#pause svg{width:36px;height:36px;margin-left:5px}
+#cover{position:absolute;inset:0;z-index:8;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:0 26px 70px;
+  background:linear-gradient(180deg,rgb(var(--gr) / 0) 0%,rgb(var(--gr) / .7) 42%,rgb(var(--gr) / .97) 62%)}
+#cover.off{display:none}
+#cover .kick{font:800 12px/1 var(--font-body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+#cover h1{margin:0 0 8px;text-align:center;font:800 34px/1.05 var(--font-display);color:var(--ink);letter-spacing:-.01em}
+#cover p{margin:0 0 22px;text-align:center;font:600 15px/1.4 var(--font-body);color:var(--ink-2)}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:58px;border-radius:18px;border:2px solid var(--on-acid);background:var(--acid);
+  color:var(--on-acid);font:800 18px/1 var(--font-body);box-shadow:0 5px 0 var(--acid-dark);cursor:pointer}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--acid-dark)}
+.btn svg{width:20px;height:20px}
+.btn.ghost{background:#fff;border-color:var(--ink);color:var(--ink);box-shadow:0 4px 0 rgba(23,21,31,.18)}
+#cover .fx-cv{margin-bottom:6px}
+#cover .hint{margin-top:12px;font:600 12px/1.3 var(--font-body);color:var(--muted);text-align:center}
+
+/* ---------- quiz ---------- */
+#quiz{position:absolute;inset:0;z-index:6;display:none;pointer-events:auto}
+#quiz.on{display:block}
+#quiz .dim{position:absolute;inset:0;background:rgb(var(--gr) / .72)}
+#quiz .q{position:absolute;left:16px;right:16px;bottom:34px;background:var(--paper);border:2px solid var(--ink);border-radius:26px;padding:20px 18px 18px;
+  box-shadow:0 18px 44px rgba(40,32,18,.25),0 5px 0 rgba(23,21,31,.15)}
+#quiz .qk{display:inline-flex;align-items:center;gap:7px;font:800 12px/1 var(--font-body);letter-spacing:.1em;text-transform:uppercase;color:var(--on-acid);
+  background:var(--acid);border:1.5px solid var(--on-acid);border-radius:999px;padding:6px 11px 7px;margin-bottom:12px}
+#quiz .qq{font:800 23px/1.18 var(--font-display);color:var(--ink);margin-bottom:16px}
+#quiz .a{display:flex;align-items:center;gap:12px;width:100%;text-align:left;margin:0 0 9px;padding:13px 14px;border-radius:16px;border:2px solid #D9D2C3;background:#FBF9F4;
+  font:700 16px/1.25 var(--font-body);color:var(--ink);cursor:pointer;box-shadow:0 3px 0 #E4DDCF}
+#quiz .a b{flex:none;display:grid;place-items:center;width:28px;height:28px;border-radius:9px;background:#fff;border:2px solid #CFC7B6;font:800 14px/1 var(--font-display);color:var(--ink-2)}
+#quiz .a.ok{border-color:var(--green);background:#E5F5EC;box-shadow:0 3px 0 #9CD3B6}
+#quiz .a.ok b{background:var(--green);border-color:var(--green);color:#fff}
+#quiz .a.bad{border-color:var(--red);background:#FCE9E7;box-shadow:0 3px 0 #EEB2AC}
+#quiz .a.bad b{background:var(--red);border-color:var(--red);color:#fff}
+#quiz .a.dis{opacity:.55}
+#quiz .fb{display:none;margin:4px 0 12px;font:700 15px/1.4 var(--font-body);color:var(--ink-2)}
+#quiz .fb.on{display:block}
+#quiz .fb strong{font-family:var(--font-display);font-size:18px;display:block;margin-bottom:2px}
+#quiz .fb.ok strong{color:var(--green)} #quiz .fb.bad strong{color:var(--red)}
+#quiz .again{display:none}
+#quiz .again.on{display:flex}
+#quiz .fox-q{position:absolute;right:14px;width:120px;pointer-events:none}
+
+/* ---------- błąd ładowania ---------- */
+#err{position:absolute;left:20px;right:20px;top:40%;display:none;background:#fff;border:2px solid var(--ink);border-radius:18px;padding:18px;font:700 15px/1.4 var(--font-body);z-index:9}
+#err.on{display:block}

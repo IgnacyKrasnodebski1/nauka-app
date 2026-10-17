@@ -1,0 +1,899 @@
+{
+ "title": "Fotosynteza",
+ "subject": "Biologia",
+ "intro": "Skąd roślina bierze budulec i skąd się bierze tlen. Na końcu jedno pytanie.",
+ "cover": {
+  "title": "Drzewo NIE je ziemi",
+  "sub": "Fotosynteza w {s} s · pytanie na końcu"
+ },
+ "lang": "pl-PL",
+ "world": {
+  "seed": 23,
+  "zones": [
+   {
+    "id": "chloroplast",
+    "x": 2,
+    "y": 2,
+    "r": 5.8,
+    "color": "#CFE3B2"
+   }
+  ],
+  "stations": [
+   {
+    "id": "jasna",
+    "kind": "cell",
+    "label": "Tylakoidy",
+    "x": -1,
+    "y": -1
+   },
+   {
+    "id": "k",
+    "kind": "gear",
+    "label": "Wiązanie CO₂",
+    "x": 4.5,
+    "y": 1.5,
+    "color": "#7FAE66"
+   },
+   {
+    "id": "r",
+    "kind": "factory",
+    "label": "Redukcja",
+    "x": 4,
+    "y": 5,
+    "color": "#DCE8CC"
+   },
+   {
+    "id": "g",
+    "kind": "recycle",
+    "label": "Regeneracja",
+    "x": 1,
+    "y": 3,
+    "color": "#5E9A5A"
+   },
+   {
+    "id": "slonce",
+    "kind": "sun",
+    "label": "Słońce",
+    "x": -8,
+    "y": -4,
+    "z": 5
+   },
+   {
+    "id": "woda",
+    "kind": "water",
+    "label": "Woda z gleby",
+    "x": -2.8,
+    "y": -6.2
+   },
+   {
+    "id": "tlen",
+    "kind": "bubbles",
+    "label": "Tlen",
+    "x": -4.0,
+    "y": -2.3,
+    "s": 0.85
+   },
+   {
+    "id": "co2",
+    "kind": "cloud",
+    "label": "CO₂ z powietrza",
+    "x": 3.5,
+    "y": -4.5,
+    "z": 3
+   },
+   {
+    "id": "glukoza",
+    "kind": "crate",
+    "label": "Glukoza",
+    "x": 5,
+    "y": 9
+   },
+   {
+    "id": "drzewo",
+    "kind": "tree",
+    "label": "Drzewo",
+    "x": -5.5,
+    "y": -8.5,
+    "s": 1.15
+   }
+  ],
+  "roads": [
+   [
+    "drzewo",
+    "woda"
+   ],
+   [
+    "woda",
+    "jasna"
+   ],
+   [
+    "jasna",
+    "tlen"
+   ],
+   [
+    "jasna",
+    "g"
+   ],
+   [
+    "k",
+    "r"
+   ],
+   [
+    "r",
+    "g"
+   ],
+   [
+    "g",
+    "k"
+   ],
+   [
+    "r",
+    "glukoza"
+   ],
+   [
+    "slonce",
+    "jasna"
+   ],
+   [
+    "co2",
+    "k"
+   ]
+  ],
+  "theme": "leaf"
+ },
+ "scenes": [
+  {
+   "say": "Czekaj… Myślisz, że drzewo rośnie, bo zjada ziemię? Nie, nie, NIE! Budulec bierze głównie z powietrza. Serio.",
+   "tts": "[excited] Czekaj… myślisz, że drzewo rośnie, bo zjada ziemię? [laughs softly] Nie, nie, NIE! Budulec bierze głównie z POWIETRZA. [whispers] Serio.",
+   "cam": {
+    "to": "drzewo",
+    "zoom": 2.1,
+    "y": 0.56
+   },
+   "actions": [
+    {
+     "type": "card",
+     "id": "mit",
+     "title": "Popularny mit",
+     "lines": [
+      "Drzewo je ziemię"
+     ],
+     "t": -0.6,
+     "y": 0.15,
+     "sfx": "none"
+    },
+    {
+     "type": "fox",
+     "pose": "shrug",
+     "side": "left",
+     "size": "big",
+     "on": "Nie,",
+     "dur": 1.6
+    },
+    {
+     "type": "cam",
+     "on": "nie#3",
+     "to": "drzewo",
+     "zoom": 2.4,
+     "dur": 0.2,
+     "punch": true,
+     "flash": false
+    },
+    {
+     "type": "strike",
+     "card": "mit",
+     "line": 0,
+     "text": "Budulec z powietrza: CO₂",
+     "on": "Budulec"
+    },
+    {
+     "type": "cam",
+     "on": "powietrza",
+     "to": "co2",
+     "zoom": 1.8,
+     "y": 0.56,
+     "dur": 0.6
+    },
+    {
+     "type": "label",
+     "at": "co2",
+     "text": "CO₂ z powietrza",
+     "on": "powietrza"
+    }
+   ]
+  },
+  {
+   "say": "To robota fotosyntezy. Roślina sama robi sobie jedzenie, na energii ze światła. Zostań do końca, bo zdradzę, skąd naprawdę bierze się tlen.",
+   "tts": "[excited] To robota fotosyntezy. Roślina sama robi sobie jedzenie, na energii ze ŚWIATŁA. [mischievously] Zostań do końca, bo zdradzę, skąd naprawdę bierze się tlen.",
+   "cam": {
+    "to": "all",
+    "y": 0.46
+   },
+   "actions": [
+    {
+     "type": "fox",
+     "pose": "point",
+     "side": "right",
+     "on": "fotosyntezy",
+     "dur": 2.6
+    },
+    {
+     "type": "label",
+     "at": "glukoza",
+     "text": "jedzenie = glukoza",
+     "on": "jedzenie"
+    },
+    {
+     "type": "label",
+     "at": "slonce",
+     "text": "energia ze światła",
+     "on": "energii",
+     "dy": 50,
+     "dx": 40
+    },
+    {
+     "type": "cam",
+     "on": "tlen",
+     "to": "tlen",
+     "zoom": 2.0,
+     "y": 0.56,
+     "dur": 0.5
+    },
+    {
+     "type": "label",
+     "at": "tlen",
+     "text": "tlen: skąd?",
+     "on": "tlen",
+     "style": "accent"
+    }
+   ]
+  },
+  {
+   "say": "Akcja dzieje się w chloroplastach. Siedzi tam chlorofil, zielony barwnik, który łapie światło.",
+   "tts": "[excited] Akcja dzieje się w chloroplastach. Siedzi tam chlorofil, ZIELONY barwnik, który łapie światło.",
+   "cam": {
+    "to": "jasna",
+    "zoom": 2.0,
+    "y": 0.56
+   },
+   "actions": [
+    {
+     "type": "cutaway",
+     "kind": "zoomin",
+     "on": "Akcja",
+     "off": "Siedzi",
+     "step": 0.36,
+     "steps": [
+      {
+       "icon": "tree",
+       "label": "drzewo"
+      },
+      {
+       "icon": "leaf",
+       "label": "liść"
+      },
+      {
+       "icon": "cell",
+       "label": "komórka"
+      },
+      {
+       "icon": "chloroplast",
+       "label": "chloroplast",
+       "on": "chloroplastach"
+      }
+     ]
+    },
+    {
+     "type": "label",
+     "at": "chloroplast",
+     "ang": -2.0,
+     "text": "chloroplast",
+     "style": "dark",
+     "on": "Siedzi",
+     "dy": -30
+    },
+    {
+     "type": "highlight",
+     "at": "jasna",
+     "on": "chlorofil"
+    },
+    {
+     "type": "card",
+     "at": "jasna",
+     "title": "Chlorofil",
+     "lines": [
+      "zielony barwnik",
+      {
+       "t": "pochłania światło",
+       "on": "łapie"
+      }
+     ],
+     "on": "chlorofil",
+     "dx": 60,
+     "dy": -80
+    },
+    {
+     "type": "packet",
+     "from": "slonce",
+     "to": "jasna",
+     "on": "światło",
+     "n": 3,
+     "color": "#F2B53A"
+    }
+   ]
+  },
+  {
+   "say": "Przepis? Trzy składniki. Światło. Woda, która płynie od korzeni naczyniami. I dwutlenek węgla, który wpada przez aparaty szparkowe.",
+   "tts": "[curious] Przepis? [excited] Trzy składniki. Światło. Woda, która płynie od korzeni naczyniami. I dwutlenek węgla, który wpada przez aparaty szparkowe.",
+   "cam": {
+    "to": [
+     "slonce",
+     "woda",
+     "co2",
+     "jasna",
+     "k"
+    ],
+    "y": 0.5
+   },
+   "actions": [
+    {
+     "type": "chapter",
+     "n": 1,
+     "text": "Składniki",
+     "on": "Przepis"
+    },
+    {
+     "type": "cam",
+     "on": "Światło",
+     "to": [
+      "slonce",
+      "jasna"
+     ],
+     "zoom": "fit",
+     "y": 0.52,
+     "dur": 0.55
+    },
+    {
+     "type": "packet",
+     "from": "slonce",
+     "to": "jasna",
+     "on": "Światło",
+     "n": 3,
+     "color": "#F2B53A"
+    },
+    {
+     "type": "label",
+     "at": "slonce",
+     "text": "światło",
+     "on": "Światło",
+     "dy": 60,
+     "dx": 50
+    },
+    {
+     "type": "cam",
+     "on": "Woda",
+     "to": [
+      "woda",
+      "jasna"
+     ],
+     "zoom": "fit",
+     "y": 0.55,
+     "dur": 0.55
+    },
+    {
+     "type": "tunnel",
+     "from": "woda",
+     "to": "jasna",
+     "on": "Woda"
+    },
+    {
+     "type": "packet",
+     "from": "woda",
+     "to": "jasna",
+     "on": "płynie",
+     "n": 3,
+     "color": "#2F6BFF",
+     "text": "H₂O"
+    },
+    {
+     "type": "label",
+     "at": [
+      -1.9,
+      -3.6,
+      1.1
+     ],
+     "text": "naczynia",
+     "on": "naczyniami",
+     "dx": 60
+    },
+    {
+     "type": "cam",
+     "on": "dwutlenek",
+     "to": [
+      "co2",
+      "k"
+     ],
+     "zoom": "fit",
+     "y": 0.55,
+     "dur": 0.55
+    },
+    {
+     "type": "packet",
+     "from": "co2",
+     "to": "k",
+     "on": "dwutlenek",
+     "n": 3,
+     "color": "#7D8796",
+     "text": "CO₂"
+    },
+    {
+     "type": "label",
+     "at": "co2",
+     "text": "aparaty szparkowe",
+     "on": "aparaty",
+     "style": "dark",
+     "dx": -40
+    }
+   ],
+   "hold": 0.4
+  },
+  {
+   "say": "Faza jasna, w tylakoidach. Światło rozbija cząsteczki wody i… uwalnia się tlen!",
+   "tts": "[dramatically] Faza jasna, w tylakoidach. Światło rozbija cząsteczki wody i… [excited] uwalnia się TLEN!",
+   "cam": {
+    "to": [
+     "woda",
+     "jasna",
+     "tlen"
+    ],
+    "zoom": 1.7,
+    "y": 0.55
+   },
+   "actions": [
+    {
+     "type": "chapter",
+     "n": 2,
+     "text": "Faza jasna",
+     "t": 0.2
+    },
+    {
+     "type": "label",
+     "at": "jasna",
+     "text": "tylakoidy",
+     "on": "tylakoidach",
+     "style": "accent",
+     "dx": 30
+    },
+    {
+     "type": "packet",
+     "from": "woda",
+     "via": [
+      "jasna"
+     ],
+     "to": "tlen",
+     "stop": "jasna",
+     "arrive": "rozbija",
+     "go": "uwalnia",
+     "text": "H₂O",
+     "color": "#2F6BFF",
+     "speed": 2.6,
+     "morph": {
+      "text": "O₂",
+      "color": "#59B7DA",
+      "ink": "#fff"
+     }
+    },
+    {
+     "type": "packet",
+     "style": "light",
+     "from": "slonce",
+     "to": "jasna",
+     "arrive": "rozbija",
+     "loop": false,
+     "n": 1,
+     "dur": 0.8,
+     "sfx": "none"
+    },
+    {
+     "type": "burst",
+     "at": "jasna",
+     "kind": "spark",
+     "color": "#F2B53A",
+     "flash": true,
+     "on": "rozbija",
+     "af": 0.7
+    },
+    {
+     "type": "label",
+     "at": "tlen",
+     "text": "H₂O → O₂",
+     "on": "tlen",
+     "style": "accent",
+     "dx": 40
+    },
+    {
+     "type": "impact",
+     "on": "tlen",
+     "flash": false
+    }
+   ]
+  },
+  {
+   "say": "Energia światła ląduje w nośnikach: {ATP|a te pe} i {NADPH.|en a de pe ha.} Takie naładowane baterie.",
+   "tts": "[excited] Energia światła ląduje w nośnikach: a te pe i en a de pe ha. [laughs softly] Takie naładowane baterie.",
+   "cam": {
+    "to": [
+     "jasna",
+     "g",
+     "r"
+    ],
+    "y": 0.52
+   },
+   "actions": [
+    {
+     "type": "packet",
+     "style": "battery",
+     "from": "jasna",
+     "via": [
+      "g"
+     ],
+     "to": "r",
+     "stop": "g",
+     "on": "ATP",
+     "go": "Dzięki@+1",
+     "charge": "naładowane",
+     "drain": true,
+     "text": "ATP",
+     "color": "#B4FF3A",
+     "lane": -14,
+     "speed": 2.4,
+     "sfx": "none"
+    },
+    {
+     "type": "packet",
+     "style": "battery",
+     "from": "jasna",
+     "via": [
+      "g"
+     ],
+     "to": "r",
+     "stop": "g",
+     "on": "NADPH",
+     "go": "ATP@+1",
+     "charge": "naładowane",
+     "drain": true,
+     "text": "NADPH",
+     "color": "#22D3EE",
+     "lane": 14,
+     "speed": 2.4,
+     "sfx": "none"
+    },
+    {
+     "type": "label",
+     "at": "jasna",
+     "text": "nośniki energii",
+     "on": "nośnikach",
+     "dx": -30
+    },
+    {
+     "type": "label",
+     "at": "g",
+     "text": "naładowane baterie",
+     "on": "baterie",
+     "style": "accent",
+     "dy": -70
+    }
+   ]
+  },
+  {
+   "say": "Potem cykl Calvina, w stromie. Ta faza nie korzysta bezpośrednio ze światła. Dzięki {ATP|a te pe} i {NADPH|en a de pe ha} wiąże dwutlenek węgla w cukier.",
+   "tts": "[excited] Potem cykl Calvina, w stromie. [curious] Ta faza nie korzysta bezpośrednio ze światła. [excited] Dzięki a te pe i en a de pe ha wiąże dwutlenek węgla w CUKIER.",
+   "cam": {
+    "to": [
+     "k",
+     "r",
+     "g"
+    ],
+    "y": 0.5
+   },
+   "actions": [
+    {
+     "type": "chapter",
+     "n": 3,
+     "text": "Cykl Calvina",
+     "t": 0.2
+    },
+    {
+     "type": "packet",
+     "from": "k",
+     "to": "k",
+     "via": [
+      "r",
+      "g"
+     ],
+     "on": "cykl",
+     "n": 5,
+     "color": "#4E9A4A",
+     "dur": 4.5
+    },
+    {
+     "type": "highlight",
+     "at": "chloroplast",
+     "style": "tint",
+     "color": "#8FC46A",
+     "on": "stromie",
+     "sfx": "none"
+    },
+    {
+     "type": "label",
+     "at": [
+      2.2,
+      -1.6,
+      0
+     ],
+     "text": "stroma",
+     "on": "stromie",
+     "style": "dark",
+     "dy": -24
+    },
+    {
+     "type": "cam",
+     "on": "korzysta",
+     "to": "jasna",
+     "zoom": 1.7,
+     "dy": -40,
+     "y": 0.52,
+     "dur": 0.55
+    },
+    {
+     "type": "strike",
+     "road": [
+      "slonce",
+      "jasna"
+     ],
+     "pos": 0.75,
+     "on": "bezpośrednio",
+     "off": "Dzięki"
+    },
+    {
+     "type": "fox",
+     "pose": "think",
+     "side": "right",
+     "on": "Ta",
+     "dur": 2.4
+    },
+    {
+     "type": "cam",
+     "on": "Dzięki",
+     "to": [
+      "g",
+      "r"
+     ],
+     "zoom": 1.7,
+     "y": 0.55,
+     "dur": 0.5
+    },
+    {
+     "type": "packet",
+     "from": "co2",
+     "to": "k",
+     "on": "wiąże",
+     "n": 3,
+     "color": "#7D8796",
+     "text": "CO₂"
+    },
+    {
+     "type": "cam",
+     "on": "wiąże",
+     "to": "k",
+     "zoom": 2.0,
+     "y": 0.56,
+     "dur": 0.45
+    },
+    {
+     "type": "label",
+     "at": "k",
+     "text": "wiązanie CO₂",
+     "on": "wiąże",
+     "dx": 40
+    },
+    {
+     "type": "cam",
+     "on": "cukier",
+     "to": "r",
+     "zoom": 2.1,
+     "y": 0.56,
+     "dur": 0.35,
+     "punch": true,
+     "flash": false
+    },
+    {
+     "type": "label",
+     "at": "r",
+     "text": "cukier",
+     "on": "cukier",
+     "style": "accent"
+    }
+   ]
+  },
+  {
+   "say": "Bilans? Sześć cząsteczek dwutlenku węgla plus sześć cząsteczek wody daje glukozę i sześć cząsteczek tlenu. I gotowe.",
+   "tts": "[curious] Bilans? [excited] Sześć cząsteczek dwutlenku węgla plus sześć cząsteczek wody daje glukozę i sześć cząsteczek tlenu. [laughs] I gotowe.",
+   "cam": {
+    "to": "glukoza",
+    "zoom": 1.9,
+    "y": 0.56
+   },
+   "actions": [
+    {
+     "type": "chapter",
+     "n": 4,
+     "text": "Bilans",
+     "t": 0,
+     "hold": 0.9
+    },
+    {
+     "type": "packet",
+     "from": "r",
+     "to": "glukoza",
+     "t": 0,
+     "n": 3,
+     "color": "#F4F1EA"
+    },
+    {
+     "type": "cutaway",
+     "kind": "tiles",
+     "on": "Bilans",
+     "title": "Bilans fotosyntezy",
+     "tiles": [
+      {
+       "k": "6",
+       "t": "CO₂",
+       "c": "dwutlenek węgla",
+       "on": "Sześć"
+      },
+      {
+       "op": "+",
+       "on": "plus"
+      },
+      {
+       "k": "6",
+       "t": "H₂O",
+       "c": "woda",
+       "on": "sześć#2"
+      },
+      {
+       "br": true
+      },
+      {
+       "op": "↓",
+       "c": "światło + chlorofil",
+       "on": "daje"
+      },
+      {
+       "br": true
+      },
+      {
+       "t": "C₆H₁₂O₆",
+       "c": "glukoza",
+       "on": "glukozę"
+      },
+      {
+       "op": "+",
+       "on": "i"
+      },
+      {
+       "k": "6",
+       "t": "O₂",
+       "c": "tlen",
+       "on": "sześć#3"
+      }
+     ],
+     "note": "Energię daje światło pochłaniane przez chlorofil.",
+     "dim": 0.97
+    }
+   ],
+   "hold": 0.6
+  },
+  {
+   "say": "Glukoza to paliwo i budulec rośliny. A tlen, którym właśnie oddychasz? Pochodzi z wody, nie z dwutlenku węgla. Produkt uboczny. Dzięki, roślinki!",
+   "tts": "[excited] Glukoza to paliwo i budulec rośliny. [mischievously] A tlen, którym właśnie oddychasz? [excited] Pochodzi z WODY, nie z dwutlenku węgla. [laughs softly] Produkt UBOCZNY. [laughs] Dzięki, roślinki!",
+   "cam": {
+    "to": "glukoza",
+    "zoom": 2.0,
+    "y": 0.56
+   },
+   "actions": [
+    {
+     "type": "label",
+     "at": "glukoza",
+     "text": "glukoza: paliwo i budulec",
+     "on": "Glukoza",
+     "dx": -40
+    },
+    {
+     "type": "cam",
+     "on": "tlen",
+     "to": [
+      "woda",
+      "jasna",
+      "tlen"
+     ],
+     "zoom": 1.7,
+     "y": 0.55,
+     "dur": 0.6
+    },
+    {
+     "type": "packet",
+     "from": "woda",
+     "via": [
+      "jasna"
+     ],
+     "to": "tlen",
+     "stop": "jasna",
+     "arrive": "wody",
+     "go": "nie",
+     "text": "H₂O",
+     "color": "#2F6BFF",
+     "speed": 3.2,
+     "morph": {
+      "text": "O₂",
+      "color": "#59B7DA",
+      "ink": "#fff"
+     }
+    },
+    {
+     "type": "label",
+     "at": "tlen",
+     "text": "H₂O → O₂",
+     "on": "Pochodzi",
+     "style": "accent",
+     "dx": 40
+    },
+    {
+     "type": "label",
+     "at": "tlen",
+     "text": "produkt uboczny",
+     "on": "Produkt",
+     "style": "dark",
+     "dx": 40,
+     "dy": -90
+    },
+    {
+     "type": "impact",
+     "on": "uboczny",
+     "flash": false
+    },
+    {
+     "type": "cam",
+     "on": "Dzięki",
+     "to": "all",
+     "zoom": "fit",
+     "y": 0.44,
+     "dur": 1.0
+    },
+    {
+     "type": "fox",
+     "pose": "thumbs",
+     "side": "right",
+     "size": "big",
+     "on": "Dzięki",
+     "dur": 2.4
+    }
+   ],
+   "hold": 0.6
+  }
+ ],
+ "quiz": {
+  "q": "Skąd pochodzi tlen uwalniany w fotosyntezie?",
+  "a": [
+   "Z dwutlenku węgla",
+   "Z wody",
+   "Z glukozy",
+   "Z gleby"
+  ],
+  "c": 1,
+  "e": "Tlen powstaje w fazie jasnej, gdy światło rozbija cząsteczki wody."
+ },
+ "rate": 1.12
+}
