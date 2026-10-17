@@ -695,7 +695,7 @@ function taskInfo(t){
   const short=sshort(s);const base={t,s,kind,reward:REWARD[kind]||0};
   const openAt=(tab,setup)=>()=>openSubject(sid,tab,setup);
   if(kind==='lesson'){if(!lv)return null;const nf=(lv.feed||[]).length,nq=(lv.quiz||[]).length,nt=(lv.tasks||[]).filter(t=>t&&TASKS[t.type]).length;
-    return {...base,icon:'book',title:'Roladka — '+noEmoji(lv.title),sub:`${nf} ${pl(nf,'dawka','dawki','dawek')} · ${nq} ${pl(nq,'pytanie','pytania','pytań')}${nt?` · ${nt} ${pl(nt,'zadanie','zadania','zadań')}`:''} · +15`,go:openAt('path')};}
+    return {...base,icon:'book',title:'Lekcja — '+noEmoji(lv.title),sub:`${nf} ${pl(nf,'dawka','dawki','dawek')} · ${nq} ${pl(nq,'pytanie','pytania','pytań')}${nt?` · ${nt} ${pl(nt,'zadanie','zadania','zadań')}`:''} · +15`,go:openAt('path')};}
   if(kind==='review'){const n=t.need||12,p=t.prog||0;const due=srsDue().filter(x=>x.s.id===sid).length;
     return {...base,icon:'refresh',title:`Powtórka — ${n} ${pl(n,'fiszka','fiszki','fiszek')}`,sub:p?`${p} z ${n} przejrzane · +20`:`${short} · ${due?due+' do powtórki dziś':Math.max(1,Math.round(n/4))+' min'} · +20`,
       go:()=>{const mine=srsDue().filter(x=>x.s.id===sid);if(mine.length)startReview(mine);else openAt('fiszki')();}};} // powtórka albo fiszki tego przedmiotu
@@ -920,7 +920,7 @@ function heatmap(){
 const CHANGELOG=[
   ['3.0','Konto i przedmioty z własnych materiałów: zdjęcia, PDF i tekst zamieniane w lekcje'],
   ['2.0','Egzamin próbny z oceną, plan do sprawdzianu, noc przed egzaminem, gemy, misje, album pojęć i boss rozdziału'],
-  ['1.0','Ścieżka poziomów, roladka, fiszki, quiz, zadania i powtórka na interwałach']
+  ['1.0','Ścieżka poziomów, lekcje z lisem, fiszki, quiz, zadania i powtórka na interwałach']
 ];
 function toggleBtn(on,label,onChange){const tg=el('button','toggle'+(on?' on':''),'<i></i>');tg.setAttribute('role','switch');tg.setAttribute('aria-checked',String(!!on));tg.setAttribute('aria-label',label);
   tg.onclick=()=>{const v=!tg.classList.contains('on');tg.classList.toggle('on',v);tg.setAttribute('aria-checked',String(v));onChange(v);};return tg;}
