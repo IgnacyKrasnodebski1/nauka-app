@@ -2666,7 +2666,8 @@ button.chip:active{transform:translateY(4px);box-shadow:none}
 .blank.ok{border-color:var(--acid);color:var(--acid);background:var(--tint-acid);border-radius:6px 6px 0 0}
 .blank.bad{border-color:var(--gold);color:var(--gold)}
 .cxp{display:inline-block;margin-left:8px;padding:2px 8px;border-radius:9px;background:var(--tint-acid);color:var(--acid);font-size:13px;font-weight:800;vertical-align:middle}
-.chatfoot{min-height:76px;display:flex;flex-direction:column;justify-content:center;border-top:2px solid var(--line-2);background:var(--bg)}
+.chatfoot{min-height:0;padding:10px 18px max(12px, env(safe-area-inset-bottom));display:flex;flex-direction:column;justify-content:center;border-top:2px solid var(--line-2);background:var(--bg)}
+.chatfoot>*{min-height:58px;display:flex;align-items:center}
 .chatwait{display:flex;align-items:center;gap:5px;color:var(--muted);font-size:13.5px;font-weight:700;align-self:flex-start;padding:0 4px}
 .chatwait span{margin-left:6px}
 .creplies{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
@@ -2676,6 +2677,10 @@ button.chip:active{transform:translateY(4px);box-shadow:none}
 .creply.ok{background:var(--tint-acid);border-color:var(--acid);box-shadow:0 4px 0 var(--tint-acid-line);color:var(--txt)}
 .creply.bad{background:var(--surface-2);border-color:var(--red);box-shadow:0 4px 0 var(--red-dark);color:var(--txt)}
 .creply:disabled{cursor:default}
+/* jeden główny przycisk (Dalej, Czas na pytania): pełna szerokość jak .pill w reszcie apki */
+.creplies.solo{width:100%}
+.creplies.solo .creply{width:100%;min-height:54px;border-radius:var(--r-md);font-size:15px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;box-shadow:0 var(--drop-btn) 0 var(--accent-dark)}
+.creplies.solo .creply:active{transform:translateY(var(--drop-btn));box-shadow:0 0 0 var(--accent-dark)}
 /* „prawda czy fałsz” w quizie, gdy poprawna odpowiedź odstaje długością */
 .qtfcand{margin:16px 0 14px;padding:16px 17px;border-radius:20px;background:var(--surface);border:2px solid var(--line-2);font-size:17px;line-height:1.45;font-weight:600}
 .qtfcand .lbl,.qtfright .lbl{display:block;font-size:11.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px}

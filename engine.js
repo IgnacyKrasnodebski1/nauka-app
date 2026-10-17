@@ -2173,7 +2173,7 @@ function chatShow(C,elm,top){ // nowy element ma być widoczny; nagłówek czę�
     if(y==null)return;y=Math.max(0,y);if(b.scrollTo)b.scrollTo({top:y,behavior:calmMotion()?'auto':'smooth'});else b.scrollTop=y;});}
 function chatFoot(C,items){ // items: [[label, fn, main?]] albo null = lis pisze
   C.foot.innerHTML='';if(!items){C.foot.appendChild(el('div','chatwait',`<i></i><i></i><i></i><span>lis pisze…</span>`));keyFn=e=>{if(e.key==='Enter'&&C.skip){e.preventDefault();C.skip();}};return;}
-  const row=el('div','creplies');items.forEach(([l,fn,main])=>{const b=el('button','creply a-pop'+(main?' main':''),l);b.onclick=()=>{if(b.disabled||!advOk())return;row.querySelectorAll('button').forEach(x=>x.disabled=true);fn(b);};row.appendChild(b);});
+  const row=el('div','creplies'+(items.length===1&&items[0][2]?' solo':''));items.forEach(([l,fn,main])=>{const b=el('button','creply a-pop'+(main?' main':''),l);b.onclick=()=>{if(b.disabled||!advOk())return;row.querySelectorAll('button').forEach(x=>x.disabled=true);fn(b);};row.appendChild(b);});
   C.foot.appendChild(row);const main=items.find(x=>x[2]);keyFn=e=>{if(e.key==='Enter'&&main){e.preventDefault();main[1]();}};
 }
 /* kawałek dawki → jak go pokazać: nagłówek („DESPEDIRSE (pożegnania):”), lista słówek („X — znaczenie • Y — …” jako kafelki),
