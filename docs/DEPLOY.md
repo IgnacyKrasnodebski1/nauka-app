@@ -18,6 +18,33 @@
 
 Zostało: merge do `main`, Google OAuth (1.4), przełączenie Stripe z test na live (klucze `sk_live`, nowy webhook), własna domena.
 
+## Centrum przedmiotu: kluczowe punkty, rolki, podcast, rozmowa z lisem (backend/0010) — kolejność wdrożenia
+
+Stan 2026-10-23: kod w drzewach roboczych, **niewdrożony**, migracja 0010 **niewgrana**. Plan i kontrakty: `nauka-app/docs/plan-media.md`; spec designu: `nauka-app/docs/design-centrum.md`; API: [API.md](API.md) („Kluczowe punkty” przy `/api/generate` i „Media i rozmowa z lisem”).
+
+Co zmienia backend:
+- `POST /api/generate` zapisuje w temacie opcjonalne `content.keyPoints` (6–15 kluczowych punktów, walidowane na serwerze; przy niespełnionych regułach temat zapisuje się bez punktów — generacja nigdy nie pada przez punkty) i `generations.quality.keyPoints`. Kształt żądania i odpowiedzi bez zmian.
+- Nowe trasy: `POST /api/media/reels`, `POST /api/media/podcast`, `POST /api/media/podcast/chapter`, `POST /api/fox`; `GET /api/me` dostaje addytywne pola `media`, `chat`, `features`.
+- Osobna pula tworzeń rolek i podcastu (nigdy nie zużywa 2 darmowych lekcji): `free_media_lifetime` = 3, `pro_media_month` = 30; rozmowa z lisem: `free_chat_daily` = 30, `pro_chat_daily` = 200 wiadomości na dobę (Europe/Warsaw). Wartości w `app_config`, zmiana bez migracji.
+
+**Kolejność** (każdy krok sprawdzić, zanim przejdziesz dalej):
+
+1. **Migracja 0010** (addytywna, idempotentna; wymaga 0007): `cd /Users/ignacykrasnodebski/nauka-app && supabase db query --linked -f backend/0010_media.sql`. Sekcja Storage (bucket `media` i polityki) jest ostatnia — gdy CLI odmówi polityk na `storage.objects`, wklej cały plik w SQL Editor. Sprawdzenie: `select public.media_quota('<uid>'::uuid, to_char(now(),'YYYY-MM'), 30);`, `select public.chat_quota('<uid>'::uuid);`, bucket `media` prywatny, job `cramfox-sweep-media` w `cron.job`. Sama 0010 bez nowego backendu niczego nie zmienia.
+2. **Zmienne środowiskowe na Vercelu** (tylko nazwy; wartości w panelu Vercela, nigdy w repo):
+   - `ELEVENLABS_API_KEY` — bez niej `features.reels = false`, trasy mediów 503 `tts_unavailable`;
+   - `ELEVENLABS_VOICE_REEL` — lektor rolek (domyślnie głos właściciela „Dawid”);
+   - `ELEVENLABS_VOICE_FOX`, `ELEVENLABS_VOICE_SZOP` — głosy podcastu, **bez wartości domyślnych**: bez nich `features.podcast = false`, trasy podcastu 503 `voices_missing`, a apka pokazuje „Podcast będzie dostępny wkrótce”;
+   - `ELEVENLABS_REEL_MODEL` (domyślnie `eleven_v4`), `ELEVENLABS_PODCAST_MODEL` (domyślnie `eleven_flash_v2_5`), `ELEVENLABS_REEL_TAGS` (domyślnie `1`);
+   - `CRAMFOX_MEDIA_MODEL`, `CRAMFOX_FOX_MODEL` (oba domyślnie `claude-sonnet-5`).
+3. **Wdrożenie backendu** (`apps/web/vercel.json`: `maxDuration` 300 / 300 / 120 / 60 dla reels / podcast / chapter / fox). Sprawdzenie: `GET /api/me` ma `media`, `chat`, `features`; build 7 apki dalej tworzy lekcje (nowe tematy mają `content.keyPoints`).
+4. **Build apki** z centrum przedmiotu (`node build.js`, `cd native && npm run sync`, TestFlight). Stara apka ignoruje nowe pola; nowa apka na backendzie bez 0010 ukrywa tworzenie rolek i podcastu oraz rozmowę z lisem.
+
+**Wyłączenie bez wdrożenia:** `media_global_daily_cap` = 0 (albo `media_global_daily_attempts` = 0) wstrzymuje tworzenie rolek i podcastów, `chat_global_daily_cap` = 0 — rozmowy z lisem (`app_config`, SQL Editor). Usunięcie klucza ElevenLabs wyłącza `features.reels`/`podcast` przy następnym `/api/me`.
+
+**Ryzyka:** limit równoległych żądań ElevenLabs na konto (5 na planie Creator; rolki używają 3 naraz, rozdziały 4) — dwa tworzenia naraz mogą dostać 429: jedno ponowienie wewnętrzne, potem zwrot tworzenia i `tts_unavailable`. Globalny budżet znaków syntezy `tts_global_daily_chars` (600 000 na dobę) chroni koszt. `apps/web/src/lib/media-db.ts` (wywołania Supabase) nie ma testu automatycznego — po wgraniu 0010 sprawdzić raz ręcznie na koncie testowym. Monitoring: `select kind, status, count(*), sum(cost_usd), sum(tts_chars) from media where created_at > now() - interval '1 day' group by 1, 2;`.
+
+**Testy lokalnie** (bez sieci, bez płatnych API): `npm test` (Anthropic i ElevenLabs zamockowane), `npm run test:db` (0010 wgrana dwa razy na tymczasowy Postgres), `npm run typecheck`, `npm run build -w @nauka/web` bez env (trasy 503 `no_config`).
+
 ## Build 7: bezpieczniki kosztów generacji (AUDYT §6.1 A) — kolejność wdrożenia
 
 Zmiany: rezerwacja limitu w jednej transakcji (`reserve_generation`, P0-1), **plan free = 2 generacje na zawsze** liczone po skrócie adresu e-mail (przeżywa usunięcie konta), **bez triala dla nowych kont**, limit globalny i limit darmowych generacji w tabeli `app_config` (domyślnie 30/dobę i 2; decyzja właściciela z 2026-10-15, AUDYT D3 / P0-2), `/api/tutor` wyłączony w produkcji (P1-1), `levels` z klienta ignorowane i `count_tokens` przed naliczeniem (P1-29), rozłożony start wywołań, żeby cache promptu był czytany (P1-2), kolumny kosztu i jakości (P1-3), termin 270 s, sprzątacz w pg_cron i zapis tematu z `done` w jednym RPC (P1-4), limity Storage i bazy na konto (P1-5). Kontrakt API dla buildu 6 bez zmian (szczegóły i nowe kody: `docs/API.md`). Migracje leżą w `nauka-app/backend/` (gałąź apki), nie w `supabase/migrations/` tego repo.

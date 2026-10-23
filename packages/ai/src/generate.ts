@@ -7,19 +7,24 @@ import {
   levelInstructions,
   GenerationOptionsSchema,
   OutlineSchema,
+  OutlineLooseSchema,
   LevelCoreGenSchema,
+  LevelCoreGenLooseSchema,
   LevelCoreGenVizSchema,
   LevelCoreGenVizLooseSchema,
   LevelTasksGenSchema,
+  LevelTasksGenLooseSchema,
   RAW_JSON_INSTRUCTION,
   expandGenTask,
   answerLengthBias,
   buildGenerationUserPrompt,
   maxLevelsFor,
   scopeCoverage,
-  finalizeGenerated,
   finalizeGeneratedWithStats,
+  normalizeOutlinePoints,
   type GeneratedTopic,
+  type GenPoint,
+  type KeyPointStats,
   type GenerationOptions,
   type Outline,
   type LevelGen,
@@ -96,6 +101,11 @@ export interface GenerationQuality {
   scopePoints: number;
   scopeUntaught: number;
   scopeUnchecked: number;
+  /**
+   * Key points of the topic (plan-media §2.1): how many were stored, items whose `p` tag was repaired, points merged
+   * or empty, and whether the topic went without them (`omitted` + `reason`).
+   */
+  keyPoints: KeyPointStats;
   /** ms spent waiting for the first stream events of level 1 before starting the other levels (prompt-cache warm-up) */
   warmupMs?: number;
   /** ms from the start of the AI part to the finished topic */
@@ -120,10 +130,14 @@ const NO_REVIEW: GenerationQuality = {
   scopePoints: 0,
   scopeUntaught: 0,
   scopeUnchecked: 0,
+  keyPoints: { keyPoints: 0, repaired: 0, merged: 0, empty: 0, omitted: true, reason: "no_points" },
 };
 
 /** Outline categories of a language-learning topic: the level prompts and the review then use the language rules. */
 const LANG_CATEGORIES = new Set(["inny-język", "angielski"]);
+
+/** Output cap (thinking included) of the outline call: metadata, level scopes and the 6–15 key points. */
+const OUTLINE_MAX_TOKENS = 10000;
 
 /**
  * Output cap (thinking included) of a level's core call. A cap, not a target: the prompt asks for up to 7 doses of
@@ -381,13 +395,14 @@ export async function runPreparedGeneration(prep: PreparedGeneration, ctx: { dea
   const { input, options } = prep;
   if (prep.demo) {
     const gen = demoGenerated(options.hint || input.text?.split("\n")[0] || "Demo", options.levels ?? 3);
+    const { content, keyPoints } = finalizeGeneratedWithStats(gen, options.stage, { lang: options.lang });
     return {
-      content: finalizeGenerated(gen, options.stage, { lang: options.lang }),
+      content,
       category: gen.category,
       model: "demo",
       usage: { input: 0, output: 0 },
       demo: true,
-      quality: { ...NO_REVIEW, vizDropped: { ...NO_REVIEW.vizDropped } },
+      quality: { ...NO_REVIEW, vizDropped: { ...NO_REVIEW.vizDropped }, keyPoints },
       cost: ctx.meter.summary(),
     };
   }
@@ -476,12 +491,20 @@ async function generateWithAi(prep: PreparedGeneration, client: Anthropic, deadl
 
   // ---- phase 1: outline (not cached, see above)
   input.onProgress?.("outline");
-  const outline = await start<Outline>(`${basePrompt}\n\n${OUTLINE_INSTRUCTIONS}`, betaZodOutputFormat(OutlineSchema), 8000, (t) => safeParse(OutlineSchema, t), false).done;
+  // 10k (was 8k): the outline now also lists the 6–15 key points; a truncated outline fails the whole generation
+  const outline = await start<Outline>(`${basePrompt}\n\n${OUTLINE_INSTRUCTIONS}`, betaZodOutputFormat(OutlineSchema), OUTLINE_MAX_TOKENS, (t) => safeParse(OutlineLooseSchema, t) as Outline | null, false).done;
   // `levels` is the usual count; a long material may use up to maxLevelsFor() levels, so nothing important is cut
   const maxLevels = Math.max(1, maxLevelsFor({ ...options, mode }));
+  // key points (plan-media §2.1): level numbers → 0-based indexes, read against the outline as the model wrote it
+  // (before the cut below); points of cut levels are dropped. Every level call lists its own points and tags each
+  // card / question / task with `p`. An outline without usable points still generates (the topic gets no keyPoints).
+  let points: GenPoint[] = normalizeOutlinePoints(outline.points, outline.levels.length)
+    .map((p) => ({ ...p, levels: p.levels.filter((l) => l < maxLevels) }))
+    .filter((p) => p.levels.length > 0);
   if (outline.levels.length > maxLevels) console.warn(`[generate] outline had ${outline.levels.length} levels, cut to ${maxLevels} — the end of the material is not covered`);
   outline.levels = outline.levels.slice(0, maxLevels);
   if (!outline.levels.length) throw new GenerationError("AI nie znalazło w materiałach treści do nauki.", "invalid_output");
+  const levelOutline = { name: outline.name, levels: outline.levels, points };
   // a language topic the client did not flag (Cramfox never sends `lang`): the level calls and the review use the
   // language rules; the stored `content.lang` stays as the client asked, so client behaviour does not change
   const lang = options.lang ?? LANG_CATEGORIES.has(outline.category);
@@ -493,11 +516,11 @@ async function generateWithAi(prep: PreparedGeneration, client: Anthropic, deadl
   const viz = options.viz === true;
   const coreSchema = viz ? LevelCoreGenVizSchema : LevelCoreGenSchema;
   // raw-text parsing (grammar fallback) is lenient about the viz fields: a missing / unknown viz_type must not fail the level
-  const coreParse = viz ? LevelCoreGenVizLooseSchema : LevelCoreGenSchema;
+  const coreParse = viz ? LevelCoreGenVizLooseSchema : LevelCoreGenLooseSchema;
   input.onProgress?.("levels", `${outline.levels.length} poziomów`);
   const runLevel = (i: number) => {
-    const core = start<LevelGen>(`${levelPrompt}\n\n${levelInstructions(outline, i, "core", viz ? { viz } : {})}`, betaZodOutputFormat(coreSchema), CORE_MAX_TOKENS, (t) => safeParse(coreParse, t), true);
-    const tasks = start(`${levelPrompt}\n\n${levelInstructions(outline, i, "tasks")}`, betaZodOutputFormat(LevelTasksGenSchema), 12000, (t) => safeParse(LevelTasksGenSchema, t), true);
+    const core = start<LevelGen>(`${levelPrompt}\n\n${levelInstructions(levelOutline, i, "core", viz ? { viz } : {})}`, betaZodOutputFormat(coreSchema), CORE_MAX_TOKENS, (t) => safeParse(coreParse, t), true);
+    const tasks = start(`${levelPrompt}\n\n${levelInstructions(levelOutline, i, "tasks")}`, betaZodOutputFormat(LevelTasksGenSchema), 12000, (t) => safeParse(LevelTasksGenLooseSchema, t), true);
     // tasks are an enhancement: a failed tasks call must not lose the level (refusals still abort)
     const tasksSafe = tasks.done.catch((e) => {
       if (e instanceof GenerationError && e.code !== "refusal") return { tasks: [] };
@@ -538,6 +561,8 @@ async function generateWithAi(prep: PreparedGeneration, client: Anthropic, deadl
     const why = settled.flatMap((r, i) => (r.status === "rejected" ? [`poziom ${i + 1}: ${(r.reason as GenerationError)?.detail ?? (r.reason as Error)?.message}`] : []));
     console.warn(`[generate] ${levelsFailed}/${outline.levels.length} levels failed and were left out — ${why.join("; ")}`);
     outline.levels = okIdx.map((i) => outline.levels[i]!);
+    // the planned levels of every key point follow the kept levels (a point of a failed level keeps only tagged items)
+    points = points.map((p) => ({ ...p, levels: p.levels.flatMap((l) => (okIdx.includes(l) ? [okIdx.indexOf(l)] : [])) }));
   }
   const levels = okIdx.map((i) => (settled[i] as PromiseFulfilledResult<LevelGen>).value);
 
@@ -598,11 +623,15 @@ async function generateWithAi(prep: PreparedGeneration, client: Anthropic, deadl
     category: outline.category,
     info_html: outline.info_html,
     levels: outline.levels.map((l, i) => ({ title: l.title, emoji: l.emoji, summary: l.summary, ...levels[i]! })),
+    points,
   };
   input.onProgress?.("done");
-  const { content, vizKept, vizDropped } = finalizeGeneratedWithStats(gen, options.stage, { lang: options.lang, viz });
+  const { content, vizKept, vizDropped, keyPoints } = finalizeGeneratedWithStats(gen, options.stage, { lang: options.lang, viz });
   quality.vizKept = vizKept;
   quality.vizDropped = vizDropped;
+  quality.keyPoints = keyPoints;
+  // one structured line per generation (prompt tuning: how often tags need repair, points merge or get omitted)
+  console.info(`[generate] keyPoints ${JSON.stringify({ outline: points.length, ...keyPoints })}`);
   quality.durationMs = Date.now() - startedAt;
   // one structured line per viz generation (prompt tuning reads these from the logs)
   if (viz) console.info(`[generate] viz ${JSON.stringify({ kept: vizKept, ...vizDropped, cleared: quality.vizCleared, doses: content.levels.reduce((n, l) => n + l.feed.length, 0) })}`);

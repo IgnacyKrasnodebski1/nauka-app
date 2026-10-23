@@ -7,7 +7,8 @@
  * release_generation — incident 2026-10-16),
  * the free plan's lifetime generations keyed by the e-mail hash (and their reset), no trial for new accounts, the
  * configurable global cap with its free pool (D3 / P0-2, owner decision 2026-10-15) and the account limits (P1-5),
- * including real parallel sessions racing for a reservation.
+ * including real parallel sessions racing for a reservation. When nauka-app/backend/0010_media.sql is present: the media
+ * creation pool, release / sweep, podcast chapter claims, the fox chat counter, the TTS budget, RLS and the media bucket.
  *
  *   npm run test:db                       # needs initdb / pg_ctl / psql (e.g. brew install postgresql@16)
  *   CRAMFOX_MIGRATIONS=../nauka-app/backend PG_BIN=/opt/homebrew/opt/postgresql@16/bin DB_TEST_DIR=/tmp/x node supabase/tests/db-test.mjs [--keep]
@@ -981,6 +982,618 @@ try {
       assert public.increment_usage(u, '2026-10', 'generations') = 2000000, 'generation_ledger counts too';
     end $$;`);
   });
+  /* ---------- 0010 (plan-media §3): reels / podcast creation pool, fox chat counter, TTS budget, podcast chapters, media bucket ---------- */
+  const m0010 = path.join(migrationsDir, "0010_media.sql");
+  if (!existsSync(m0010)) {
+    results.push("ok - 0010 # skip (no 0010_media.sql in the migrations directory)");
+  } else {
+    psqlFile(migration(m0010));
+    psqlFile(migration(m0010));
+    psqlFile(`
+      create function t.reset_media() returns void language sql as $$
+        truncate public.media, public.media_ledger, public.fox_usage, public.tts_ledger;
+        delete from public.app_config where key in ('free_media_lifetime', 'pro_media_month', 'media_daily_per_user', 'media_global_daily_cap', 'media_global_daily_attempts', 'free_chat_daily', 'pro_chat_daily', 'chat_global_daily_cap', 'tts_global_daily_chars');
+        insert into public.app_config (key, value) values ('free_media_lifetime', '3'), ('pro_media_month', '30'), ('media_daily_per_user', '5'), ('media_global_daily_cap', '60'), ('media_global_daily_attempts', '150'),
+          ('free_chat_daily', '30'), ('pro_chat_daily', '200'), ('chat_global_daily_cap', '5000'), ('tts_global_daily_chars', '600000');
+      $$;
+      create function t.new_topic(u uuid, s uuid) returns uuid language sql as $$
+        insert into public.topics (subject_id, owner_id, name, content) values (s, u, 'Wykład 1', '{"name":"Wykład 1","levels":[]}') returning id
+      $$;
+      -- a reservation (series of 5 reels) for a fresh topic of the account; returns the RPC answer
+      create function t.reserve(u uuid, p_kind text default 'reels', p_month text default '2026-10', p_id uuid default gen_random_uuid()) returns jsonb language plpgsql as $$
+      declare s uuid := t.new_subject(u); tp uuid := t.new_topic(u, s);
+      begin
+        return public.reserve_media(p_id, u, s, tp, p_kind, '{"types":["czym","kto","mit"],"progress":{"step":"plan","done":0,"total":3}}', p_month, 30);
+      end $$;
+      -- reserve + mark ready, so the account is not busy
+      create function t.reserve_done(u uuid, p_month text default '2026-10') returns jsonb language plpgsql as $$
+      declare r jsonb;
+      begin
+        r := t.reserve(u, 'reels', p_month);
+        if (r->>'ok')::boolean then perform public.finish_media((r->'media'->>'id')::uuid, '{"v":1,"kind":"reels","title":"Seria","reels":[]}', '{"model":"m","cost_usd":0.5,"tts_chars":0}'); end if;
+        return r;
+      end $$;
+    `);
+    const mcheck = (name, f) => check(name, async () => {
+      psql("select t.reset_media()");
+      await f();
+    });
+
+    await mcheck("0010: applies twice (idempotent); app_config defaults kept on re-run; privileges: RPCs only for service_role, ledgers hidden, media readable only by column", async () => {
+      psql(`update public.app_config set value = '7' where key = 'free_media_lifetime'`);
+      psqlFile(migration(m0010));
+      eq(psql(`select value::text from public.app_config where key = 'free_media_lifetime'`), "7", "owner's value kept");
+      psqlFile(`do $$ begin
+        assert not has_function_privilege('authenticated', 'public.reserve_media(uuid,uuid,uuid,uuid,text,jsonb,text,int)', 'execute'), 'authenticated reserve_media';
+        assert not has_function_privilege('anon', 'public.reserve_media(uuid,uuid,uuid,uuid,text,jsonb,text,int)', 'execute'), 'anon reserve_media';
+        assert has_function_privilege('service_role', 'public.reserve_media(uuid,uuid,uuid,uuid,text,jsonb,text,int)', 'execute'), 'service reserve_media';
+        assert not has_function_privilege('authenticated', 'public.release_media(uuid,text,jsonb)', 'execute'), 'authenticated release_media';
+        assert has_function_privilege('service_role', 'public.release_media(uuid,text,jsonb)', 'execute'), 'service release_media';
+        assert not has_function_privilege('authenticated', 'public.finish_media(uuid,jsonb,jsonb)', 'execute'), 'authenticated finish_media';
+        assert not has_function_privilege('authenticated', 'public.fail_media(uuid,text,jsonb)', 'execute'), 'authenticated fail_media';
+        assert not has_function_privilege('authenticated', 'public.media_quota(uuid,text,int)', 'execute'), 'authenticated media_quota';
+        assert not has_function_privilege('authenticated', 'public.claim_podcast_chapter(uuid,uuid,int)', 'execute'), 'authenticated claim';
+        assert not has_function_privilege('authenticated', 'public.set_podcast_chapter(uuid,int,jsonb)', 'execute'), 'authenticated set chapter';
+        assert not has_function_privilege('authenticated', 'public.release_podcast_chapter(uuid,int,boolean)', 'execute'), 'authenticated release chapter';
+        assert to_regprocedure('public.release_podcast_chapter(uuid,int)') is null, 'old 2-argument release_podcast_chapter dropped';
+        assert not has_function_privilege('authenticated', 'public.tts_refund(int,uuid,text)', 'execute'), 'authenticated tts_refund';
+        assert has_function_privilege('service_role', 'public.tts_refund(int,uuid,text)', 'execute'), 'service tts_refund';
+        assert not has_function_privilege('authenticated', 'public.media_busy(uuid)', 'execute'), 'authenticated media_busy';
+        assert not has_function_privilege('authenticated', 'public.media_free_used(uuid,text)', 'execute'), 'authenticated media_free_used';
+        assert not has_function_privilege('authenticated', 'public.media_attempts_last_day()', 'execute'), 'authenticated media_attempts_last_day';
+        assert not has_function_privilege('authenticated', 'public.media_tts_rest(jsonb)', 'execute'), 'authenticated media_tts_rest';
+        assert has_function_privilege('authenticated', 'public.delete_my_account(boolean)', 'execute'), 'delete_my_account still callable by the user';
+        assert not has_function_privilege('anon', 'public.delete_my_account(boolean)', 'execute'), 'delete_my_account not for anon';
+        assert not has_function_privilege('authenticated', 'public.tts_budget(int,uuid,text)', 'execute'), 'authenticated tts_budget';
+        assert not has_function_privilege('authenticated', 'public.reserve_chat(uuid)', 'execute'), 'authenticated reserve_chat';
+        assert not has_function_privilege('anon', 'public.reserve_chat(uuid)', 'execute'), 'anon reserve_chat';
+        assert not has_function_privilege('authenticated', 'public.release_chat(uuid,date)', 'execute'), 'authenticated release_chat';
+        assert not has_function_privilege('authenticated', 'public.chat_quota(uuid)', 'execute'), 'authenticated chat_quota';
+        assert not has_function_privilege('authenticated', 'public.sweep_stale_media()', 'execute'), 'authenticated sweep';
+        assert not has_function_privilege('authenticated', 'public.media_last_day()', 'execute'), 'authenticated media_last_day';
+        assert has_function_privilege('service_role', 'public.chat_quota(uuid)', 'execute'), 'service chat_quota';
+        assert not has_table_privilege('authenticated', 'public.media_ledger', 'select'), 'media_ledger hidden';
+        assert not has_table_privilege('authenticated', 'public.fox_usage', 'select'), 'fox_usage hidden';
+        assert not has_table_privilege('anon', 'public.tts_ledger', 'select'), 'tts_ledger hidden';
+        assert not has_table_privilege('authenticated', 'public.media', 'insert'), 'no insert';
+        assert not has_table_privilege('authenticated', 'public.media', 'update'), 'no update';
+        assert not has_table_privilege('authenticated', 'public.media', 'delete'), 'no delete';
+        assert not has_table_privilege('anon', 'public.media', 'select'), 'anon select';
+        assert has_column_privilege('authenticated', 'public.media', 'manifest', 'select'), 'manifest readable';
+        assert not has_column_privilege('authenticated', 'public.media', 'cost_usd', 'select'), 'cost hidden';
+        assert not has_column_privilege('authenticated', 'public.media', 'refunded_at', 'select'), 'refunded_at hidden';
+        assert (select schedule from cron.job where jobname = 'cramfox-sweep-media') = '*/5 * * * *', 'cron';
+        assert (select public = false and file_size_limit = 26214400 and allowed_mime_types = array['audio/mpeg','application/json'] from storage.buckets where id = 'media'), 'bucket';
+      end $$;`);
+    });
+
+    await mcheck("reserve_media: running row + ledger, client-shaped row; the same id again → existing (no second charge); another account's id → conflict; topic not owned → not_found", async () => {
+      psqlFile(`do $$ declare u uuid := t.new_free_user(); o uuid := t.new_free_user(); s uuid := t.new_subject(u); tp uuid := t.new_topic(u, s); mid uuid := gen_random_uuid(); r jsonb; m public.media%rowtype; begin
+        r := public.reserve_media(mid, u, s, tp, 'reels', '{"types":["czym","kto","mit"],"focusPointId":null,"progress":{"step":"plan","done":0,"total":3}}', '2026-10', 30);
+        assert (r->>'ok')::boolean and r->>'scope' = 'lifetime' and (r->>'used')::int = 1 and (r->>'limit')::int = 3, r::text;
+        assert r->'media'->>'status' = 'running' and r->'media'->>'kind' = 'reels' and (r->'media'->>'id')::uuid = mid, 'row in the answer';
+        assert r->'media'->'progress' = '{"step":"plan","done":0,"total":3}'::jsonb, 'progress';
+        assert not (r->'media' ? 'cost_usd') and not (r->'media'->'spec' ? 'progress'), 'client columns only, spec without progress';
+        select * into m from public.media x where x.id = mid;
+        assert m.owner_id = u and m.subject_id = s and m.topic_id = tp and m.phase = 'plan' and m.charged, 'row';
+        assert (select count(*) from public.media_ledger where media_id = mid and scope = 'lifetime' and user_id = u) = 1, 'ledger';
+        r := public.reserve_media(mid, u, s, tp, 'reels', '{}', '2026-10', 30);
+        assert (r->>'ok')::boolean and (r->>'existing')::boolean and (r->'media'->>'id')::uuid = mid, 'existing: ' || r::text;
+        assert (select count(*) from public.media_ledger where user_id = u) = 1, 'not charged twice';
+        r := public.reserve_media(mid, o, s, tp, 'reels', '{}', '2026-10', 30);
+        assert r = '{"ok": false, "reason": "conflict"}'::jsonb, r::text;
+        r := public.reserve_media(gen_random_uuid(), o, s, tp, 'reels', '{}', '2026-10', 30);
+        assert r = '{"ok": false, "reason": "not_found"}'::jsonb, 'foreign topic: ' || r::text;
+        begin
+          perform public.reserve_media(gen_random_uuid(), u, s, tp, 'video', '{}', '2026-10', 30);
+          assert false, 'bad kind must raise';
+        exception when raise_exception then null;
+        end;
+      end $$;`);
+    });
+
+    await mcheck("busy: one creation at a time (running < 330 s); an older running row does not block; the answer names the running one", async () => {
+      psqlFile(`do $$ declare u uuid := t.new_free_user(); r jsonb; f1 uuid; begin
+        r := t.reserve(u);
+        f1 := (r->'media'->>'id')::uuid;
+        r := t.reserve(u, 'podcast');
+        assert r->>'reason' = 'busy' and (r->'busy'->>'id')::uuid = f1 and r->'busy'->>'kind' = 'reels' and r->'busy'->>'topicId' is not null, r::text;
+        assert (select count(*) from public.media where owner_id = u) = 1, 'nothing written';
+        update public.media set created_at = now() - interval '331 seconds' where id = f1;
+        assert t.reserve(u, 'podcast')->>'reason' = 'busy', 'busy is read from media_ledger, not from the media row';
+        update public.media_ledger set created_at = now() - interval '331 seconds' where media_id = f1;
+        r := t.reserve(u, 'podcast');
+        assert (r->>'ok')::boolean, 'older running row does not block: ' || r::text;
+      end $$;`);
+    });
+
+    await mcheck("free pool: 3 creations for life (failed ones count, released ones do not); never the lesson generations; daily cap 5 per account counts released too", async () => {
+      psqlFile(`do $$ declare u uuid := t.new_free_user(); r jsonb; mid uuid; q jsonb; begin
+        r := t.reserve_done(u); assert (r->>'used')::int = 1, r::text;
+        r := t.reserve(u); mid := (r->'media'->>'id')::uuid;
+        perform public.fail_media(mid, 'refusal:x', null);                 -- refusal: stays charged
+        assert (select charged from public.media x where x.id = mid), 'fail keeps charged';
+        r := t.reserve(u); mid := (r->'media'->>'id')::uuid;
+        assert (r->>'used')::int = 3, 'third: ' || r::text;
+        assert (public.release_media(mid, 'ai_unavailable:x')->>'ok')::boolean, 'release';
+        q := public.media_quota(u, '2026-10', 30);
+        assert (q->>'used')::int = 2 and (q->>'remaining')::int = 1 and q->>'scope' = 'lifetime' and q->>'plan' = 'free', 'quota after release: ' || q::text;
+        r := t.reserve(u); mid := (r->'media'->>'id')::uuid;            -- the given-back one
+        perform public.finish_media(mid, '{"title":"x"}', '{}');
+        r := t.reserve(u);
+        assert r->>'reason' = 'lifetime' and (r->>'used')::int = 3 and (r->>'limit')::int = 3, '4th refused: ' || r::text;
+        assert (select generations from public.usage where user_id = u) is null, 'lesson counters untouched';
+        assert public.free_generations_used(u, public.account_email_hash(u)) = 0, 'free lesson ledger untouched';
+        -- daily cap: 4 rows of this account today (incl. failed + released); config 4 → refused even with lifetime left
+        update public.app_config set value = '10' where key = 'free_media_lifetime';
+        update public.app_config set value = '4' where key = 'media_daily_per_user';
+        r := t.reserve(u);
+        assert r->>'reason' = 'daily' and (r->>'limit')::int = 4, 'daily: ' || r::text;
+        q := public.media_quota(u, '2026-10', 30);
+        assert (q->>'dailyLeft')::int = 0, 'dailyLeft: ' || q::text;
+        update public.media set created_at = now() - interval '25 hours' where owner_id = u;
+        update public.media_ledger set created_at = now() - interval '25 hours' where user_id = u;
+        r := t.reserve(u);
+        assert (r->>'ok')::boolean, 'rolling 24 h: ' || r::text;
+      end $$;`);
+    });
+
+    await mcheck("pro pool: 30 a month (app_config, falls back to p_pro_limit), counted per p_month; free-era rows do not count for pro and month rows not for free", async () => {
+      psqlFile(`do $$ declare u uuid := t.new_user(); r jsonb; q jsonb; begin
+        update public.app_config set value = '2' where key = 'pro_media_month';
+        update public.app_config set value = '100' where key = 'media_daily_per_user';
+        r := t.reserve_done(u); assert r->>'scope' = 'month' and (r->>'limit')::int = 2 and r->>'plan' = 'pro', r::text;
+        r := t.reserve_done(u); assert (r->>'used')::int = 2, r::text;
+        r := t.reserve(u);
+        assert r->>'reason' = 'month' and (r->>'used')::int = 2 and (r->>'limit')::int = 2, 'month: ' || r::text;
+        r := t.reserve_done(u, '2026-11');
+        assert (r->>'ok')::boolean and (r->>'used')::int = 1, 'next month: ' || r::text;
+        delete from public.app_config where key = 'pro_media_month';
+        q := public.media_quota(u, '2026-10', 30);
+        assert (q->>'limit')::int = 30 and (q->>'used')::int = 2, 'missing config → p_pro_limit: ' || q::text;
+        -- trial ends: the month rows do not eat the free 3
+        update public.profiles set plan = 'free', trial_until = null where id = u;
+        q := public.media_quota(u, '2026-10', 30);
+        assert q->>'scope' = 'lifetime' and (q->>'used')::int = 0 and (q->>'remaining')::int = 3, 'free after pro: ' || q::text;
+      end $$;`);
+    });
+
+    await mcheck("global cap (app_config, default 60): refunded ones free their place; survives account deletion (media_ledger); 0 stops creation; quota shows globalOpen", async () => {
+      psqlFile(`do $$ declare a uuid := t.new_user(); u uuid := t.new_free_user(); v uuid := t.new_free_user(); r jsonb; mid uuid; begin
+        update public.app_config set value = '3' where key = 'media_global_daily_cap';
+        update public.app_config set value = '100' where key = 'media_daily_per_user';
+        update public.app_config set value = '100' where key = 'pro_media_month';
+        perform t.reserve_done(a); perform t.reserve_done(a);
+        r := t.reserve(a); mid := (r->'media'->>'id')::uuid;
+        r := t.reserve(u);
+        assert r->>'reason' = 'busy' or r->>'reason' = 'global', 'sanity: ' || r::text;
+        r := t.reserve(u);
+        assert r->>'reason' = 'global', 'cap 3 reached: ' || r::text;
+        assert not (public.media_quota(u, '2026-10', 30)->>'globalOpen')::boolean, 'quota closed';
+        perform public.release_media(mid, 'timeout:x');
+        r := t.reserve(u);
+        assert (r->>'ok')::boolean, 'refunded place is free again: ' || r::text;
+        -- deleting the account that made the others does not reset the cap
+        delete from auth.users where id = a;
+        assert (select count(*) from public.media) = 1, 'rows gone with the account';
+        r := t.reserve(v);
+        assert r->>'reason' = 'global', 'ledger survives deletion: ' || r::text;
+        update public.app_config set value = '0' where key = 'media_global_daily_cap';
+        assert not (public.media_quota(v, '2026-10', 30)->>'globalOpen')::boolean, '0 pauses';
+      end $$;`);
+    });
+
+    await mcheck("release_media / fail_media: refund in one transaction, idempotent, refuses ready; stats recorded; fail keeps the charge", async () => {
+      psqlFile(`do $$ declare u uuid := t.new_free_user(); r jsonb; mid uuid; m public.media%rowtype; begin
+        r := t.reserve(u); mid := (r->'media'->>'id')::uuid;
+        r := public.release_media(mid, 'tts_unavailable:401 [req-1]', '{"model":"claude-sonnet-5","cost_usd":0.1234,"tts_chars":900}');
+        assert (r->>'ok')::boolean and (r->>'ledger')::int = 1, r::text;
+        select * into m from public.media x where x.id = mid;
+        assert m.status = 'failed' and not m.charged and m.refunded_at is not null and m.error = 'released:tts_unavailable:401 [req-1]', 'row: ' || row_to_json(m)::text;
+        assert m.cost_usd = 0.1234 and m.tts_chars = 900 and m.model = 'claude-sonnet-5', 'stats';
+        assert (select voided_at is not null and refunded_at is not null from public.media_ledger where media_id = mid), 'ledger voided';
+        assert (select sum(chars) from public.tts_ledger where media_id = mid) = 900, 'spent characters counted for the TTS budget';
+        r := public.release_media(mid, 'again');
+        assert (r->>'already')::boolean, 'idempotent: ' || r::text;
+        assert (select count(*) from public.tts_ledger where media_id = mid) = 1, 'nothing twice';
+        r := t.reserve(u); mid := (r->'media'->>'id')::uuid;
+        assert (public.finish_media(mid, '{"v":1,"kind":"reels","title":"Seria A","reels":[]}', '{"model":"m","cost_usd":0.2,"tts_chars":1200}')->>'ok')::boolean, 'finish';
+        select * into m from public.media x where x.id = mid;
+        assert m.status = 'ready' and m.title = 'Seria A' and m.finished_at is not null and m.tts_chars = 1200 and m.phase = 'done', 'ready row';
+        assert (select count(*) from public.tts_ledger where media_id = mid and kind = 'reel' and chars = 1200) = 1, 'tts ledger on finish';
+        assert public.release_media(mid, 'x') = '{"ok": false, "reason": "done"}'::jsonb, 'ready is never refunded';
+        assert public.finish_media(mid, '{}', '{}')->>'reason' = 'not_running', 'finish twice';
+        assert public.fail_media(mid, 'x', null)->>'reason' = 'not_running', 'fail on ready';
+        assert public.release_media(gen_random_uuid(), 'x') = '{"ok": false, "reason": "not_found"}'::jsonb, 'unknown id';
+        begin
+          perform public.release_media(mid, '  ');
+          assert false, 'empty reason must raise';
+        exception when raise_exception then null;
+        end;
+      end $$;`);
+    });
+
+    await mcheck("sweep_stale_media: running > 8 min → refunded (timeout:sweeper), fresh untouched; chapter stuck in synth > 5 min → script", async () => {
+      psqlFile(`do $$ declare u uuid := t.new_free_user(); v uuid := t.new_free_user(); old uuid; fresh uuid; p uuid; r jsonb; n int; begin
+        r := t.reserve(u); old := (r->'media'->>'id')::uuid;
+        update public.media set created_at = now() - interval '9 minutes' where id = old;
+        update public.media_ledger set created_at = now() - interval '9 minutes' where media_id = old;
+        r := t.reserve(u); fresh := (r->'media'->>'id')::uuid;
+        r := t.reserve(v, 'podcast'); p := (r->'media'->>'id')::uuid;
+        perform public.finish_media(p, jsonb_build_object('v',1,'kind','podcast','title','P','chapters', jsonb_build_array(
+          jsonb_build_object('n',1,'status','synth','synthAt', now() - interval '6 minutes'),
+          jsonb_build_object('n',2,'status','synth','synthAt', now() - interval '1 minute'),
+          jsonb_build_object('n',3,'status','ready'))), '{}');
+        n := public.sweep_stale_media();
+        assert n = 1, 'swept ' || n;
+        assert (select status = 'failed' and not charged and error = 'released:timeout:sweeper' from public.media where id = old), 'refunded';
+        assert (select status from public.media where id = fresh) = 'running', 'fresh untouched';
+        assert (select manifest->'chapters'->0->>'status' = 'script' and not (manifest->'chapters'->0 ? 'synthAt') from public.media where id = p), 'stuck chapter back';
+        assert (select manifest->'chapters'->1->>'status' from public.media where id = p) = 'synth', 'recent claim kept';
+        assert (select manifest->'chapters'->2->>'status' from public.media where id = p) = 'ready', 'ready kept';
+        assert (select count(*) from public.media_ledger where media_id = old and refunded_at is not null and finished_at is not null) = 1, 'ledger refunded';
+        assert (select finished_at is null from public.media_ledger where media_id = fresh), 'fresh still open in the ledger';
+      end $$;`);
+    });
+
+    await mcheck("podcast chapters: claim states (not_found / not_ready / claimed / busy / ready), set + release; 6 parallel claims → exactly one", async () => {
+      const u = psql("select t.new_free_user()");
+      const o = psql("select t.new_free_user()");
+      const p = psql(`select t.reserve('${u}', 'podcast')->'media'->>'id'`);
+      psqlFile(`do $$ declare u uuid := '${u}'; o uuid := '${o}'; p uuid := '${p}'; c jsonb; begin
+        assert public.claim_podcast_chapter(p, u, 1) = 'not_ready', 'running podcast';
+        perform public.finish_media(p, '{"v":1,"kind":"podcast","title":"P","files":{"script":"script.json"},"chapters":[{"n":1,"status":"script","files":null,"durSec":null},{"n":2,"status":"script","files":null,"durSec":null}]}', '{}');
+        assert public.claim_podcast_chapter(p, o, 1) = 'not_found', 'another account';
+        assert public.claim_podcast_chapter(p, u, 3) = 'not_found', 'out of range';
+        assert public.claim_podcast_chapter(p, u, 0) = 'not_found', 'zero';
+        assert public.claim_podcast_chapter(p, u, 1) = 'claimed', 'claim';
+        assert public.claim_podcast_chapter(p, u, 1) = 'busy', 'second claim while synthesizing';
+        perform public.release_podcast_chapter(p, 1);
+        assert (select manifest->'chapters'->0->>'status' from public.media where id = p) = 'script', 'released';
+        assert public.claim_podcast_chapter(p, u, 1) = 'claimed', 'claim again';
+        c := public.set_podcast_chapter(p, 1, '{"status":"ready","durSec":191.4,"files":{"audio":"c1.mp3","timing":"c1.json"}}');
+        assert c->>'status' = 'ready' and not (c ? 'synthAt') and (c->>'durSec')::numeric = 191.4 and c->'files'->>'audio' = 'c1.mp3', 'set: ' || c::text;
+        assert public.claim_podcast_chapter(p, u, 1) = 'ready', 'cached';
+        perform public.release_podcast_chapter(p, 1);
+        assert (select manifest->'chapters'->0->>'status' from public.media where id = p) = 'ready', 'release does not touch a ready chapter';
+        assert public.set_podcast_chapter(p, 9, '{}') is null, 'set out of range';
+        update public.media set manifest = jsonb_set(manifest, '{chapters,1,synthAt}', to_jsonb(now() - interval '4 minutes')) || '{}'::jsonb where id = p;
+        update public.media set manifest = jsonb_set(manifest, '{chapters,1,status}', '"synth"') where id = p;
+        assert public.claim_podcast_chapter(p, u, 2) = 'claimed', 'a synth claim older than 3 min can be taken over';
+        perform public.release_podcast_chapter(p, 2);
+      end $$;`);
+      const out = await Promise.all(Array.from({ length: 6 }, () => psqlAsync(`select public.claim_podcast_chapter('${p}', '${u}', 2)`)));
+      const errs = out.filter((x) => x.code !== 0);
+      if (errs.length) throw new Error(errs.map((e) => e.err).join("\n"));
+      const states = out.map((x) => x.out).sort();
+      eq(states.filter((s) => s === "claimed").length, 1, `one claim (${states.join(",")})`);
+      eq(states.filter((s) => s === "busy").length, 5, "the rest busy");
+    });
+
+    await mcheck("reserve_media race: 8 parallel sessions of one account → exactly one creation (the rest busy)", async () => {
+      const u = psql("select t.new_free_user()");
+      const pairs = Array.from({ length: 8 }, () => {
+        const s = psql(`select t.new_subject('${u}')`);
+        return { s, tp: psql(`select t.new_topic('${u}', '${s}')`) };
+      });
+      const holder = psqlAsync(`begin; select pg_advisory_xact_lock(hashtext('cramfox:media:user'), hashtext('${u}')); select pg_sleep(0.8); commit;`);
+      await sleep(200);
+      const out = await Promise.all(pairs.map(({ s, tp }) => psqlAsync(`select coalesce(public.reserve_media(gen_random_uuid(), '${u}', '${s}', '${tp}', 'reels', '{}', '2026-10', 30)->>'reason', 'ok')`)));
+      await holder;
+      const errs = out.filter((x) => x.code !== 0);
+      if (errs.length) throw new Error(errs.map((e) => e.err).join("\n"));
+      const reasons = out.map((x) => x.out).sort();
+      eq(reasons.filter((r) => r === "ok").length, 1, `one (${reasons.join(",")})`);
+      eq(reasons.filter((r) => r === "busy").length, 7, "the rest busy");
+      eq(psql(`select count(*) from public.media_ledger where user_id = '${u}'`), 1, "charged once");
+    });
+
+    await mcheck("material deleted during a job (review F1): still busy and counted (media_ledger), finish → not_found, release refunds by the ledger, refusal closes it, the sweeper refunds orphans; ready-then-deleted stays charged; the requestId is not reusable", async () => {
+      psqlFile(`do $$ declare u uuid := t.new_free_user(); s uuid := t.new_subject(u); tp uuid := t.new_topic(u, s); mid uuid := gen_random_uuid(); m2 uuid; r jsonb; q jsonb; begin
+        r := public.reserve_media(mid, u, s, tp, 'reels', '{}', '2026-10', 30);
+        assert (r->>'ok')::boolean, r::text;
+        delete from public.topics where id = tp;
+        assert not exists (select 1 from public.media where id = mid), 'row gone with the topic (cascade)';
+        r := t.reserve(u, 'podcast');
+        assert r->>'reason' = 'busy' and (r->'busy'->>'id')::uuid = mid and r->'busy'->>'kind' = 'reels' and r->'busy'->'topicId' = 'null'::jsonb, 'still busy: ' || r::text;
+        q := public.media_quota(u, '2026-10', 30);
+        assert (q->'busy'->>'id')::uuid = mid and (q->>'used')::int = 1 and (q->>'dailyLeft')::int = 4, 'quota while the orphan runs: ' || q::text;
+        r := public.reserve_media(mid, u, s, t.new_topic(u, s), 'reels', '{}', '2026-10', 30);
+        assert r = '{"ok": false, "reason": "conflict"}'::jsonb, 'requestId of a deleted row is not reused: ' || r::text;
+        assert public.finish_media(mid, '{"title":"x"}', '{"tts_chars":500}')->>'reason' = 'not_found', 'finish on a deleted row';
+        r := public.release_media(mid, 'deleted:topic', '{"tts_chars":500}');
+        assert (r->>'ok')::boolean and (r->>'orphan')::boolean, 'orphan release: ' || r::text;
+        assert (select voided_at is not null and refunded_at is not null and finished_at is not null from public.media_ledger where media_id = mid), 'ledger refunded and closed';
+        assert (select sum(chars) from public.tts_ledger where media_id = mid) = 500, 'spent characters counted for the TTS budget';
+        assert (public.release_media(mid, 'again')->>'already')::boolean, 'idempotent';
+        q := public.media_quota(u, '2026-10', 30);
+        assert q->'busy' = 'null'::jsonb and (q->>'used')::int = 0 and (q->>'dailyLeft')::int = 4, 'after the refund (the attempt still counts for the day): ' || q::text;
+        -- ready, then the material deleted: never refunded
+        r := t.reserve_done(u); m2 := (r->'media'->>'id')::uuid;
+        delete from public.topics where id = (select topic_id from public.media where id = m2);
+        assert public.release_media(m2, 'x') = '{"ok": false, "reason": "done"}'::jsonb, 'finished work stays charged';
+        assert (public.media_quota(u, '2026-10', 30)->>'used')::int = 1, 'still used';
+        -- refusal on a deleted row: closed in the ledger, stays charged
+        r := t.reserve(u); m2 := (r->'media'->>'id')::uuid;
+        delete from public.subjects where id = (select subject_id from public.media where id = m2);
+        r := public.fail_media(m2, 'refusal:x', null);
+        assert (r->>'ok')::boolean and (r->>'orphan')::boolean, 'orphan fail: ' || r::text;
+        assert (select finished_at is not null and voided_at is null from public.media_ledger where media_id = m2), 'charged, closed';
+        -- the sweeper refunds an orphaned reservation nobody closed
+        r := t.reserve(u); m2 := (r->'media'->>'id')::uuid;
+        delete from public.subjects where id = (select subject_id from public.media where id = m2);
+        update public.media_ledger set created_at = now() - interval '9 minutes' where media_id = m2;
+        assert public.sweep_stale_media() = 1, 'orphan swept';
+        assert (select refunded_at is not null and finished_at is not null from public.media_ledger where media_id = m2), 'orphan refunded';
+        assert public.sweep_stale_media() = 0, 'nothing left to sweep';
+        -- the daily cap still sees all 4 attempts although every media row is gone
+        assert (select count(*) from public.media where owner_id = u) = 0, 'no media rows left';
+        update public.app_config set value = '4' where key = 'media_daily_per_user';
+        r := t.reserve(u);
+        assert r->>'reason' = 'daily', 'deleting materials does not reset the daily cap: ' || r::text;
+      end $$;`);
+    });
+
+    await mcheck("global attempts cap (media_global_daily_attempts, default 150) counts refunded attempts too; 0 stops creation", async () => {
+      psqlFile(`do $$ declare a uuid := t.new_free_user(); b uuid := t.new_free_user(); r jsonb; begin
+        update public.app_config set value = '3' where key = 'media_global_daily_attempts';
+        r := t.reserve(a); perform public.release_media((r->'media'->>'id')::uuid, 'invalid_output:x');
+        r := t.reserve(a); perform public.release_media((r->'media'->>'id')::uuid, 'invalid_output:x');
+        r := t.reserve(b); perform public.release_media((r->'media'->>'id')::uuid, 'invalid_output:x');
+        assert public.media_last_day() = 0, 'no creation counted (all refunded)';
+        r := t.reserve(b);
+        assert r->>'reason' = 'global', 'refunded attempts fill the attempts cap: ' || r::text;
+        assert not (public.media_quota(b, '2026-10', 30)->>'globalOpen')::boolean, 'quota closed';
+        assert (public.media_quota(b, '2026-10', 30)->>'remaining')::int = 3, 'nothing charged';
+        update public.app_config set value = '150' where key = 'media_global_daily_attempts';
+        assert (t.reserve(b)->>'ok')::boolean, 'open again';
+      end $$;`);
+    });
+
+    await mcheck("free media pool keyed by the e-mail hash (review F2): delete the account + re-register with the same address → still used; another address starts at 0", async () => {
+      const u = psql("select t.new_free_user('Media.Ola@Test.local')");
+      psqlFile(`do $$ declare r jsonb; begin
+        r := t.reserve_done('${u}'); r := t.reserve_done('${u}');
+        assert (r->>'used')::int = 2, r::text;
+        assert (select count(*) from public.media_ledger where email_hash = public.email_hash('media.ola@test.local')) = 2, 'hash stored';
+      end $$;`);
+      psqlFile(`set role authenticated; select set_config('request.jwt.claim.sub', '${u}', false); select public.delete_my_account(false);`);
+      psqlFile(`do $$ declare v uuid; w uuid; r jsonb; q jsonb; begin
+        assert not exists (select 1 from auth.users where id = '${u}') and (select count(*) from public.media_ledger where user_id is null) = 2, 'ledger survives (user_id → null)';
+        v := t.new_free_user('  MEDIA.OLA@test.local ');
+        q := public.media_quota(v, '2026-10', 30);
+        assert (q->>'used')::int = 2 and (q->>'remaining')::int = 1 and (q->>'dailyLeft')::int = 5, 'same address: ' || q::text;
+        r := t.reserve_done(v); assert (r->>'used')::int = 3, r::text;
+        r := t.reserve(v); assert r->>'reason' = 'lifetime', 'pool used up: ' || r::text;
+        w := t.new_free_user('media.ola2@test.local');
+        assert (public.media_quota(w, '2026-10', 30)->>'used')::int = 0, 'another address';
+        -- the e-mail changed in Auth: the account's own rows still count (user_id)
+        update auth.users set email = 'inny.adres@test.local' where id = v;
+        assert (public.media_quota(v, '2026-10', 30)->>'used')::int = 1, 'own rows by user_id';
+      end $$;`);
+    });
+
+    await mcheck("delete_my_account (replaced in 0010): files left in the media bucket → files_remaining; without them the account goes", async () => {
+      const u = psql("select t.new_free_user()");
+      psql(`insert into storage.objects (bucket_id, name) values ('media', '${u}/11111111-2222-4333-8444-555555555555/r1.mp3')`);
+      let refused = false;
+      try {
+        psqlFile(`set role authenticated; select set_config('request.jwt.claim.sub', '${u}', false); select public.delete_my_account(false);`);
+      } catch (e) {
+        refused = /files_remaining/.test(e.message);
+      }
+      if (!refused) throw new Error("delete_my_account must refuse while media files remain");
+      psqlFile(`set role authenticated; select set_config('request.jwt.claim.sub', '${u}', false); select public.delete_my_account(true);`);
+      eq(psql(`select count(*) from auth.users where id = '${u}'`), 1, "dry run and refusal keep the account");
+      psql(`delete from storage.objects where bucket_id = 'media' and name like '${u}/%'`);
+      psqlFile(`set role authenticated; select set_config('request.jwt.claim.sub', '${u}', false); select public.delete_my_account(false);`);
+      eq(psql(`select count(*) from auth.users where id = '${u}'`), 0, "deleted once the files are gone");
+    });
+
+    await mcheck("TTS budget bookkeeping (review F3, F4): tts_refund gives back at most what the media reserved; finish / release / fail add only the characters not reserved yet (tts_logged)", async () => {
+      psqlFile(`do $$ declare u uuid := t.new_free_user(); m uuid := gen_random_uuid(); r jsonb; mid uuid; begin
+        update public.app_config set value = '1000' where key = 'tts_global_daily_chars';
+        assert public.tts_budget(600, m, 'chapter'), 'reserve';
+        assert public.tts_refund(1000, m, 'chapter') = 600, 'refund capped at what was reserved';
+        assert public.tts_refund(10, m, 'chapter') = 0, 'nothing more to give back';
+        assert (select sum(chars) from public.tts_ledger) = 0, 'budget whole again';
+        assert public.tts_budget(1000, m, 'chapter'), 'the full budget is free again';
+        assert public.tts_refund(5, gen_random_uuid(), 'chapter') = 0, 'unknown media';
+        begin
+          perform public.tts_refund(-1, m, 'chapter');
+          assert false, 'negative must raise';
+        exception when raise_exception then null;
+        end;
+        update public.app_config set value = '600000' where key = 'tts_global_daily_chars';
+        r := t.reserve(u); mid := (r->'media'->>'id')::uuid;
+        assert public.tts_budget(700, mid, 'reel'), 'reel reserved before synthesis';
+        perform public.finish_media(mid, '{"title":"x"}', '{"tts_chars":1000,"tts_logged":700}');
+        assert (select sum(chars) from public.tts_ledger where media_id = mid) = 1000, 'only the rest added on finish';
+        assert (select tts_chars from public.media where id = mid) = 1000, 'the row has the total';
+        r := t.reserve(u); mid := (r->'media'->>'id')::uuid;
+        assert public.tts_budget(400, mid, 'reel'), 'reserved';
+        perform public.release_media(mid, 'tts_budget:x', '{"tts_chars":400,"tts_logged":400}');
+        assert (select sum(chars) from public.tts_ledger where media_id = mid) = 400, 'release: nothing twice';
+      end $$;`);
+    });
+
+    await mcheck("podcast chapter failures (review F4): 3 failed recordings in a UTC day → failing (no more paid tries today); a budget refusal is not a failure; a new day or a ready chapter clears it", async () => {
+      const u = psql("select t.new_free_user()");
+      const p = psql(`select t.reserve('${u}', 'podcast')->'media'->>'id'`);
+      psqlFile(`do $$ declare u uuid := '${u}'; p uuid := '${p}'; c jsonb; begin
+        perform public.finish_media(p, '{"v":1,"kind":"podcast","title":"P","files":{"script":"script.json"},"chapters":[{"n":1,"status":"script","files":null,"durSec":null}]}', '{}');
+        assert public.claim_podcast_chapter(p, u, 1) = 'claimed', 'claim 1';
+        perform public.release_podcast_chapter(p, 1);             -- budget refusal: not a failure
+        assert not ((select manifest->'chapters'->0 from public.media where id = p) ? 'fails'), 'no failure counted';
+        assert public.claim_podcast_chapter(p, u, 1) = 'claimed', 'claim 2';
+        perform public.release_podcast_chapter(p, 1, true);
+        assert public.claim_podcast_chapter(p, u, 1) = 'claimed', 'claim 3';
+        perform public.release_podcast_chapter(p, 1, true);
+        assert public.claim_podcast_chapter(p, u, 1) = 'claimed', 'claim 4';
+        perform public.release_podcast_chapter(p, 1, true);
+        c := (select manifest->'chapters'->0 from public.media where id = p);
+        assert (c->>'fails')::int = 3 and c->>'status' = 'script' and not (c ? 'synthAt'), 'counted: ' || c::text;
+        assert public.claim_podcast_chapter(p, u, 1) = 'failing', 'refused after 3 failures today';
+        update public.media set manifest = jsonb_set(manifest, '{chapters,0,failDay}', '"2000-01-01"') where id = p;
+        assert public.claim_podcast_chapter(p, u, 1) = 'claimed', 'a new day';
+        perform public.release_podcast_chapter(p, 1, true);
+        c := (select manifest->'chapters'->0 from public.media where id = p);
+        assert (c->>'fails')::int = 1 and c->>'failDay' = to_char(now() at time zone 'UTC', 'YYYY-MM-DD'), 'counter restarts: ' || c::text;
+        assert public.claim_podcast_chapter(p, u, 1) = 'claimed', 'claim';
+        c := public.set_podcast_chapter(p, 1, '{"status":"ready","durSec":10,"files":{"audio":"c1.mp3","timing":"c1.json"}}');
+        assert not (c ? 'fails') and not (c ? 'failDay'), 'ready clears the counter: ' || c::text;
+      end $$;`);
+    });
+
+    await mcheck("fox chat: messages per Warsaw day — free 30 / pro 200 (app_config), refused before counting, release −1 (not below 0), global cap, chat_quota", async () => {
+      psqlFile(`do $$ declare f uuid := t.new_free_user(); p uuid := t.new_user(); r jsonb; q jsonb; d date := (now() at time zone 'Europe/Warsaw')::date; begin
+        update public.app_config set value = '3' where key = 'free_chat_daily';
+        r := public.reserve_chat(f);
+        assert (r->>'ok')::boolean and (r->>'used')::int = 1 and (r->>'limit')::int = 3 and (r->>'remaining')::int = 2 and (r->>'day')::date = d, r::text;
+        perform public.reserve_chat(f); perform public.reserve_chat(f);
+        r := public.reserve_chat(f);
+        assert r->>'reason' = 'chat_daily' and (r->>'used')::int = 3, 'limit: ' || r::text;
+        assert (select messages from public.fox_usage where user_id = f and day = d) = 3, 'refusal does not count';
+        perform public.release_chat(f, d);
+        q := public.chat_quota(f);
+        assert (q->>'used')::int = 2 and (q->>'remaining')::int = 1 and (q->>'globalOpen')::boolean and (q->>'day')::date = d, 'quota: ' || q::text;
+        perform public.release_chat(f); perform public.release_chat(f); perform public.release_chat(f);
+        assert (select messages from public.fox_usage where user_id = f and day = d) = 0, 'never below 0';
+        -- yesterday does not count today
+        insert into public.fox_usage (user_id, day, messages) values (f, d - 1, 3);
+        assert (public.reserve_chat(f)->>'ok')::boolean, 'new day';
+        -- pro limit
+        assert (public.reserve_chat(p)->>'limit')::int = 200, 'pro 200';
+        -- global cap
+        update public.app_config set value = '2' where key = 'chat_global_daily_cap';
+        r := public.reserve_chat(p);
+        assert r->>'reason' = 'chat_global', 'global: ' || r::text;
+        assert not (public.chat_quota(p)->>'globalOpen')::boolean, 'quota closed';
+      end $$;`);
+    });
+
+    await mcheck("tts_budget: global characters in a rolling 24 h — refused over the budget (nothing written), older rows ignored; finish/release add spent characters", async () => {
+      psqlFile(`do $$ declare m uuid := gen_random_uuid(); begin
+        update public.app_config set value = '1000' where key = 'tts_global_daily_chars';
+        assert public.tts_budget(600, m, 'chapter'), 'first';
+        assert not public.tts_budget(401, m, 'chapter'), 'over';
+        assert (select count(*) from public.tts_ledger) = 1, 'refusal writes nothing';
+        assert public.tts_budget(400, m, 'chapter'), 'exactly the budget';
+        update public.tts_ledger set created_at = now() - interval '25 hours';
+        assert public.tts_budget(1000, m, 'reel'), 'yesterday does not count';
+        begin
+          perform public.tts_budget(10, m, 'video');
+          assert false, 'bad kind must raise';
+        exception when raise_exception then null;
+        end;
+      end $$;`);
+    });
+
+    await mcheck("RLS on media: the owner reads the client columns of own rows only; cost / refunded_at / select * denied; no insert / update / delete; ledgers unreadable", async () => {
+      const u = psql("select t.new_free_user()");
+      const o = psql("select t.new_free_user()");
+      psql(`select t.reserve_done('${u}')`);
+      psql(`select t.reserve_done('${o}')`);
+      const asU = (sql) => psqlFile(`set role authenticated; select set_config('request.jwt.claim.sub', '${u}', false); ${sql}`).split("\n").pop();
+      eq(asU(`select count(*) from (select id, owner_id, subject_id, topic_id, kind, status, phase, progress, title, spec, manifest, error, charged, created_at, finished_at from public.media) x`), 1, "own row only");
+      eq(asU(`select count(*) from public.media where owner_id = '${o}'`), 0, "other account's rows hidden");
+      for (const sql of [
+        "select cost_usd from public.media",
+        "select refunded_at from public.media",
+        "select * from public.media",
+        `insert into public.media (id, owner_id, subject_id, topic_id, kind) select gen_random_uuid(), owner_id, subject_id, topic_id, 'reels' from public.media limit 1`,
+        "update public.media set status = 'ready'",
+        "delete from public.media",
+        "select * from public.media_ledger",
+        "select * from public.fox_usage",
+        "select * from public.tts_ledger",
+        `select public.reserve_media(gen_random_uuid(), '${u}', gen_random_uuid(), gen_random_uuid(), 'reels', '{}', '2026-10', 30)`,
+        `select public.reserve_chat('${u}')`,
+      ]) {
+        let denied = false;
+        try {
+          asU(sql);
+        } catch (e) {
+          denied = /permission denied/.test(e.message);
+        }
+        if (!denied) throw new Error(`authenticated may: ${sql}`);
+      }
+      eq(psql(`select count(*) from public.media where owner_id = '${u}' and status = 'ready'`), 1, "nothing changed");
+    });
+
+    await mcheck("storage bucket media: the owner reads and deletes own files; another account sees nothing; no insert / update for users (only the service role writes)", async () => {
+      const u = psql("select t.new_free_user()");
+      const o = psql("select t.new_free_user()");
+      const id = "11111111-2222-4333-8444-555555555555";
+      psql(`insert into storage.objects (bucket_id, name) values ('media', '${u}/${id}/r1.mp3'), ('media', '${u}/${id}/r1.json'), ('media', '${o}/${id}/r1.mp3')`);
+      const as = (who, sql) => psqlFile(`set role authenticated; select set_config('request.jwt.claim.sub', '${who}', false); ${sql}`).split("\n").pop();
+      eq(as(u, `select count(*) from storage.objects where bucket_id = 'media'`), 2, "own files");
+      eq(as(o, `select count(*) from storage.objects where bucket_id = 'media' and name like '${u}/%'`), 0, "foreign files hidden");
+      eq(as(o, `with d as (delete from storage.objects where bucket_id = 'media' and name like '${u}/%' returning 1) select count(*) from d`), 0, "cannot delete foreign files");
+      eq(as(u, `with d as (delete from storage.objects where bucket_id = 'media' and name = '${u}/${id}/r1.json' returning 1) select count(*) from d`), 1, "deletes own file");
+      for (const sql of [`insert into storage.objects (bucket_id, name) values ('media', '${u}/${id}/x.mp3')`, `update storage.objects set name = name || '2' where bucket_id = 'media'`]) {
+        let denied = false;
+        try {
+          const n = as(u, sql.startsWith("update") ? `with x as (${sql} returning 1) select count(*) from x` : sql);
+          denied = sql.startsWith("update") && n === "0";
+        } catch (e) {
+          denied = /row-level security|permission denied/.test(e.message);
+        }
+        if (!denied) throw new Error(`authenticated may: ${sql}`);
+      }
+      eq(psql(`select count(*) from storage.objects where bucket_id = 'media'`), 2, "service role sees the rest");
+    });
+
+    await mcheck("0010 SECURITY DEFINER functions work under a non-superuser owner with BYPASSRLS (like Supabase's postgres)", async () => {
+      psqlFile(`
+        do $$ begin if not exists (select 1 from pg_roles where rolname = 'supa_postgres') then create role supa_postgres nologin nosuperuser bypassrls; end if; end $$;
+        grant usage on schema public, auth, storage, cron to supa_postgres;
+        grant all on all tables in schema public to supa_postgres;
+        grant all on all sequences in schema public to supa_postgres;
+        grant select on auth.users to supa_postgres;
+        grant execute on all functions in schema auth to supa_postgres;
+        alter function public.reserve_media(uuid, uuid, uuid, uuid, text, jsonb, text, int) owner to supa_postgres;
+        alter function public.finish_media(uuid, jsonb, jsonb) owner to supa_postgres;
+        alter function public.release_media(uuid, text, jsonb) owner to supa_postgres;
+        alter function public.fail_media(uuid, text, jsonb) owner to supa_postgres;
+        alter function public.media_quota(uuid, text, int) owner to supa_postgres;
+        alter function public.media_last_day() owner to supa_postgres;
+        alter function public.media_row(public.media) owner to supa_postgres;
+        alter function public.claim_podcast_chapter(uuid, uuid, int) owner to supa_postgres;
+        alter function public.set_podcast_chapter(uuid, int, jsonb) owner to supa_postgres;
+        alter function public.release_podcast_chapter(uuid, int, boolean) owner to supa_postgres;
+        alter function public.tts_refund(int, uuid, text) owner to supa_postgres;
+        alter function public.media_tts_rest(jsonb) owner to supa_postgres;
+        alter function public.media_busy(uuid) owner to supa_postgres;
+        alter function public.media_free_used(uuid, text) owner to supa_postgres;
+        alter function public.media_attempts_last_day() owner to supa_postgres;
+        alter function public.account_email_hash(uuid) owner to supa_postgres;
+        alter function public.email_hash(text) owner to supa_postgres;
+        alter function public.tts_budget(int, uuid, text) owner to supa_postgres;
+        alter function public.reserve_chat(uuid) owner to supa_postgres;
+        alter function public.release_chat(uuid, date) owner to supa_postgres;
+        alter function public.chat_quota(uuid) owner to supa_postgres;
+        alter function public.sweep_stale_media() owner to supa_postgres;
+        alter function public.app_config_int(text, int) owner to supa_postgres;`);
+      const u = psql("select t.new_free_user()");
+      const s = psql(`select t.new_subject('${u}')`);
+      const tp = psql(`select t.new_topic('${u}', '${s}')`);
+      psqlFile(`set role service_role; do $$ declare u uuid := '${u}'; r jsonb; mid uuid; begin
+        r := public.reserve_media(gen_random_uuid(), u, '${s}', '${tp}', 'podcast', '{}', '2026-10', 30);
+        assert (r->>'ok')::boolean, r::text;
+        mid := (r->'media'->>'id')::uuid;
+        assert (public.media_quota(u, '2026-10', 30)->>'used')::int = 1, 'quota';
+        assert (public.release_media(mid, 'timeout:x', '{"tts_chars":5}')->>'ok')::boolean, 'release';
+        assert (public.reserve_chat(u)->>'ok')::boolean, 'chat';
+        perform public.release_chat(u);
+        assert (public.chat_quota(u)->>'used')::int = 0, 'chat quota';
+        assert public.tts_budget(10, mid, 'chapter'), 'tts budget';
+        assert public.tts_refund(10, mid, 'chapter') = 10, 'tts refund';
+        assert public.sweep_stale_media() = 0, 'sweep';
+      end $$;`);
+    });
+  }
+
   // LAST (changes function owners): on Supabase the migrations run as `postgres`, which is NOT a superuser (it has BYPASSRLS;
   // storage.objects belongs to supabase_storage_admin). The SECURITY DEFINER functions must work under such an owner.
   await check("SECURITY DEFINER under a non-superuser owner with BYPASSRLS (like Supabase's postgres): reserve, finish, caps, storage cap", async () => {

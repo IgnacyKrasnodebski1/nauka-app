@@ -6,9 +6,11 @@ import { generateTopic } from "./generate.js";
 import { setClientForTests } from "./client.js";
 
 /**
- * Viz rollout guard (plan C2): a generation WITHOUT `options.viz` sends exactly the same requests (system prompt,
- * user text, output grammar, model params) as before the viz feature. Recorded from the pre-viz code; the Anthropic
- * client is mocked (no network). UPDATE_SNAPSHOTS=1 rewrites the snapshot — only for an intentional non-viz change.
+ * Viz rollout guard (plan C2): a generation WITHOUT `options.viz` sends exactly the recorded requests (system prompt,
+ * user text, output grammar, model params). Recorded from the pre-viz code; re-recorded deliberately on 2026-10-22 for
+ * key points (docs/plan-media.md §2.1: outline `points` + max_tokens 10000, the level prompts' point list, `p` in the
+ * card / question / task grammars). The Anthropic client is mocked (no network). UPDATE_SNAPSHOTS=1 rewrites the
+ * snapshot — only for an intentional non-viz change.
  */
 const SNAP = new URL("../src/__snapshots__/generate-viz-off.json", import.meta.url);
 
@@ -22,6 +24,12 @@ const OUTLINE = {
   levels: [
     { title: "Faza jasna", emoji: "☀️", summary: "światło", scope: "- chlorofil\n- ATP" },
     { title: "Cykl Calvina", emoji: "🔁", summary: "CO2", scope: "- RuBisCO" },
+  ],
+  // as the model writes them: level NUMBERS from 1
+  points: [
+    { key: "p1", title: "Chlorofil i pochłanianie światła", short: "Chlorofil", summary: "Wiesz, które światło pochłania chlorofil.", levels: [1] },
+    { key: "p2", title: "ATP i NADPH z fazy jasnej", short: "ATP i NADPH", summary: "Wiesz, co powstaje w fazie jasnej.", levels: [1] },
+    { key: "p3", title: "Cykl Calvina: RuBisCO", short: "Cykl Calvina", summary: "Wiesz, co robi RuBisCO.", levels: [2] },
   ],
 };
 
@@ -108,7 +116,7 @@ afterEach(() => {
   setClientForTests(null);
 });
 
-test("viz off: generation requests are byte-for-byte the pre-viz ones", async () => {
+test("viz off: generation requests are byte-for-byte the recorded ones (pre-viz + key points)", async () => {
   process.env.ANTHROPIC_API_KEY = "test-key-not-used";
   const runs: unknown[] = [];
   for (const options of [

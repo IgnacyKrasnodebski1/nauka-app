@@ -3,6 +3,10 @@
   "framework": "nextjs",
   "functions": {
     "src/app/api/generate/route.ts": { "maxDuration": 300 },
-    "src/app/api/tutor/route.ts": { "maxDuration": 60 }
+    "src/app/api/tutor/route.ts": { "maxDuration": 60 },
+    "src/app/api/media/reels/route.ts": { "maxDuration": 300 },
+    "src/app/api/media/podcast/route.ts": { "maxDuration": 300 },
+    "src/app/api/media/podcast/chapter/route.ts": { "maxDuration": 120 },
+    "src/app/api/fox/route.ts": { "maxDuration": 60 }
   }
 }

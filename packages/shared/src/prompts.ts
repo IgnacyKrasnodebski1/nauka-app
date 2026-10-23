@@ -107,11 +107,16 @@ export function buildGenerationUserPrompt(opts: GenerationOptions, materialsSumm
   return parts.join("\n");
 }
 
-/** Phase 1 (outline): appended to the user prompt. Output = OutlineSchema. `scope` doubles as the level's checklist of key points. */
-export const OUTLINE_INSTRUCTIONS = `FAZA 1 — KONSPEKT. Zwróć TYLKO metadane tematu (name, short, emoji, tagline, category, info_html) i listę poziomów. Nie generuj feed, fiszek, quizu ani gier.
+/**
+ * Phase 1 (outline): appended to the user prompt. Output = OutlineSchema. `scope` doubles as the level's checklist of
+ * key points; `points` (step 4) groups them into the 6–15 „punkty do opanowania” stored as `TopicContent.keyPoints`.
+ */
+export const OUTLINE_INSTRUCTIONS = `FAZA 1 — KONSPEKT. Zwróć TYLKO metadane tematu (name, short, emoji, tagline, category, info_html), listę poziomów i listę punktów do opanowania (points). Nie generuj feed, fiszek, quizu ani gier.
 1. Najpierw przejrzyj CAŁY materiał od początku do końca (każdą stronę, slajd i zdjęcie; bez materiałów — zakres tematu w podstawie programowej) i ustal wszystkie punkty kluczowe: pojęcia i definicje, modele i teorie, listy i klasyfikacje, mechanizmy (przyczyna → skutek), kluczowe liczby i daty, przykłady i badania — wszystko, co materiał wyróżnia nagłówkiem, definicją, tabelą, listą, pogrubieniem albo powtórzeniem. Jeśli materiał ma listę celów, podsumowanie albo listę „na kolokwium/egzamin”, każda jej pozycja jest punktem kluczowym. Sprawy organizacyjne (zaliczenie, obecności, terminy) nie są punktami — trafiają tylko do info_html.
 2. Przydziel każdy punkt do dokładnie jednego poziomu; nic, co materiał wyróżnia, nie może wypaść. Zachowaj kolejność i podział materiału. Poziom to jedna sesja nauki: najwyżej ok. 10 punktów (w temacie językowym ok. 20 nowych słów i zwrotów albo 2–3 reguły); poziomy mają podobną ilość treści. Gdy treści jest więcej, dodaj poziom w limicie liczby poziomów; gdy limit nie wystarcza, łącz drobne szczegóły w jeden punkt, ale nie pomijaj wyróżnionych pojęć. Motyw powracający w kilku częściach przypisz do poziomu, w którym pojawia się pierwszy raz.
-3. Dla każdego poziomu: title, emoji, summary (1 zdanie) oraz scope = lista punktów kluczowych tego poziomu, 3–10 linii, każda zaczyna się od „- ” i nazywa konkretną rzecz (dobrze: „- efekt posiadania: bardziej cenimy to, co już mamy”; źle: „- pojęcia behawioralne”).`;
+3. Dla każdego poziomu: title, emoji, summary (1 zdanie) oraz scope = lista punktów kluczowych tego poziomu, 3–10 linii, każda zaczyna się od „- ” i nazywa konkretną rzecz (dobrze: „- efekt posiadania: bardziej cenimy to, co już mamy”; źle: „- pojęcia behawioralne”).
+4. Na końcu points = 6–15 punktów do opanowania z całego materiału: po nich uczeń widzi, co już umie (przy bardzo małym materiale wystarczą 3–5). Punkt do opanowania to większa całość na sprawdzian, zwykle 2–4 linie scope jednego poziomu: pojęcie z definicją i przykładami, model albo teoria, mechanizm, klasyfikacja, porównanie. Nie za drobny (jedna data, jedno nazwisko) i nie za szeroki (cały poziom). Punkty się nie pokrywają, razem obejmują wszystkie linie scope i idą w kolejności materiału; każdy poziom ma co najmniej jeden punkt, zwykle 2–3.
+   Pola: key = "p1", "p2"… po kolei; title = konkretna nazwa, najwyżej 120 znaków (dobrze: „MFW: rola Międzynarodowego Funduszu Walutowego”; źle: „Instytucje”); short = etykieta, najwyżej 24 znaki („MFW”, „MSG a MSP”); summary = 1 zdanie: co uczeń ma umieć; levels = numery poziomów (od 1), w których punkt jest uczony, zwykle jeden. Każdy punkt musi dać się sprawdzić co najmniej 3 fiszkami i pytaniami. Bez emoji.`;
 
 /**
  * Phase 2 (one level): appended to the user prompt. Two calls per level, because the flat task schema makes a single
@@ -120,7 +125,7 @@ export const OUTLINE_INSTRUCTIONS = `FAZA 1 — KONSPEKT. Zwróć TYLKO metadane
  * The other levels are listed with their scope (not only titles), so parallel level calls do not teach the same points.
  */
 export function levelInstructions(
-  outline: { name: string; levels: { title: string; scope: string }[] },
+  outline: { name: string; levels: { title: string; scope: string }[]; points?: PromptPoint[] },
   index: number,
   part: "core" | "tasks" | "all" = "all",
   opts: { viz?: boolean } = {},
@@ -135,13 +140,47 @@ export function levelInstructions(
     part === "core"
       ? `${cover} Zwróć TYLKO feed, flashcards, quiz i games dla tego poziomu (bez tasks).`
       : part === "tasks"
-        ? "Dawki tego poziomu powstają równolegle z tego samego zakresu: zadania sprawdzają WYŁĄCZNIE punkty zakresu powyżej (nic spoza niego), najlepiej listy, mechanizmy, przykłady i zastosowania, których zwykłe pytanie quizu nie obejmie. Zwróć TYLKO tasks: 4–6 zadań dla tego poziomu (typ dobrany do treści, najlepiej różne typy), każde jako {type, title, e, payload, src_page, src_quote}, gdzie payload to STRING z poprawnym JSON-em pól danego typu."
+        ? "Dawki tego poziomu powstają równolegle z tego samego zakresu: zadania sprawdzają WYŁĄCZNIE punkty zakresu powyżej (nic spoza niego), najlepiej listy, mechanizmy, przykłady i zastosowania, których zwykłe pytanie quizu nie obejmie. Zwróć TYLKO tasks: 4–6 zadań dla tego poziomu (typ dobrany do treści, najlepiej różne typy), każde jako {p, type, title, e, payload, src_page, src_quote}, gdzie payload to STRING z poprawnym JSON-em pól danego typu."
         : `${cover} Zwróć feed, flashcards, quiz, games i tasks (4–6 zadań dobranych do treści) dla tego poziomu.`;
   return `FAZA 2 — JEDEN POZIOM. Temat: „${outline.name}”.
 Generujesz WYŁĄCZNIE poziom ${index + 1} z ${outline.levels.length}: „${l.title}”.
 Zakres tego poziomu (punkty kluczowe):
 ${l.scope}
-${others ? `Pozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n${others}\n` : ""}${ret}${opts.viz === true && part !== "tasks" ? `\n\n${VIZ_RULES}` : ""}`;
+${others ? `Pozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n${others}\n` : ""}${pointRules(outline.points ?? [], index, part)}
+${ret}${opts.viz === true && part !== "tasks" ? `\n\n${VIZ_RULES}` : ""}`;
+}
+
+/**
+ * Key point of the outline as the level prompts list it (plan-media §2.1): `key` is what the model writes into `p`,
+ * `levels` = 0-based level indexes (after `normalizeOutlinePoints()`).
+ */
+export interface PromptPoint {
+  key: string;
+  title: string;
+  summary?: string;
+  levels: number[];
+}
+
+/** One listed point: key, title and (shortened) summary on one line. */
+function pointLine(p: PromptPoint): string {
+  const sum = (p.summary ?? "").replace(/\s+/g, " ").trim();
+  return `- ${p.key}: ${p.title}${sum ? ` — ${sum.length > 160 ? `${sum.slice(0, 159).trimEnd()}…` : sum}` : ""}`;
+}
+
+/**
+ * The `p` rules of a level call: the points of this level (every flashcard / question / task names the one it checks),
+ * the other points' keys as allowed values, and the coverage rule (≥3 cards + questions per point, ≥1 question).
+ * Without points (outline without `points`): `p` stays "".
+ */
+function pointRules(points: PromptPoint[], index: number, part: "core" | "tasks" | "all"): string {
+  const what = part === "core" ? "Każda fiszka i każde pytanie quizu" : part === "tasks" ? "Każde zadanie" : "Każda fiszka, każde pytanie quizu i każde zadanie";
+  if (!points.length) return `Pole p: ${what[0]!.toLowerCase()}${what.slice(1)} ma p = "" (pusty string).`;
+  const own = points.filter((p) => p.levels.includes(index));
+  if (!own.length) return `PUNKTY DO OPANOWANIA (pole p) całego materiału:\n${points.map(pointLine).join("\n")}\n${what} ma p = klucz punktu, którego dotyczy (najbliższego z listy).`;
+  const others = points.filter((p) => !p.levels.includes(index)).map((p) => p.key);
+  const cover = part === "tasks" ? "" : " Każdy punkt z tej listy sprawdzają co najmniej 3 fiszki i pytania quizu razem, w tym co najmniej 1 pytanie.";
+  const rest = others.length ? ` Klucz punktu z innego poziomu (${others.join(", ")}) wpisz tylko wtedy, gdy element naprawdę dotyczy tamtego punktu.` : "";
+  return `PUNKTY DO OPANOWANIA (pole p) na tym poziomie:\n${own.map(pointLine).join("\n")}\n${what} ma p = klucz punktu, który sprawdza (np. "${own[0]!.key}").${cover}${rest}`;
 }
 
 /** A level's scope on one line (other levels' list in a level prompt), capped so 8 levels stay short. */

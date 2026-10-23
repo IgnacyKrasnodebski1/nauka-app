@@ -16,8 +16,10 @@ import type { GenerationOptions } from "./types.js";
 
 /**
  * Viz rollout guard (plan C2): with `options.viz` not set, every prompt and every structured-output grammar must stay
- * byte-for-byte what it was before the viz feature. The snapshot was recorded from the pre-viz code
- * (UPDATE_SNAPSHOTS=1 rewrites it — only do that for an intentional change of the non-viz prompt).
+ * byte-for-byte what was recorded. Recorded from the pre-viz code; re-recorded deliberately on 2026-10-22 for key
+ * points (docs/plan-media.md §2.1: outline step 4 + `points`, the „PUNKTY DO OPANOWANIA” block of the level prompts,
+ * `p` on cards / questions / tasks) — nothing else changed. UPDATE_SNAPSHOTS=1 rewrites it — only do that for an
+ * intentional change of the non-viz prompt.
  */
 const SNAP = new URL("../src/__snapshots__/prompts-viz-off.json", import.meta.url);
 
@@ -26,6 +28,12 @@ const outline = {
   levels: [
     { title: "Faza jasna", scope: "- chlorofil\n- ATP" },
     { title: "Cykl Calvina", scope: "- RuBisCO\n- 3 CO2" },
+  ],
+  // key points as generate.ts passes them (0-based levels, after normalizeOutlinePoints)
+  points: [
+    { key: "p1", title: "Chlorofil i pochłanianie światła", summary: "Wiesz, które światło pochłania chlorofil.", levels: [0] },
+    { key: "p2", title: "ATP i NADPH z fazy jasnej", levels: [0] },
+    { key: "p3", title: "Cykl Calvina: RuBisCO i wiązanie CO2", summary: "", levels: [1] },
   ],
 };
 
@@ -42,6 +50,9 @@ function snapshot() {
     buildGenerationUserPrompt({ ...o, viz: false } as GenerationOptions, "2 zdj., 1 PDF"),
   ]);
   const levelPrompts = [0, 1].flatMap((i) => (["core", "tasks", "all"] as const).map((p) => levelInstructions(outline, i, p)));
+  // an outline without usable points (raw-JSON fallback, old callers): `p` stays ""
+  const noPoints = { name: outline.name, levels: outline.levels };
+  const levelPromptsNoPoints = (["core", "tasks", "all"] as const).map((p) => levelInstructions(noPoints, 0, p));
   const review = buildReviewUserPrompt({
     stage: "liceum",
     lang: true,
@@ -55,6 +66,7 @@ function snapshot() {
     raw: RAW_JSON_INSTRUCTION,
     userPrompts,
     levelPrompts,
+    levelPromptsNoPoints,
     reviewSystem: REVIEW_QUESTIONS_PROMPT,
     review,
     grammars: {
@@ -65,7 +77,7 @@ function snapshot() {
   };
 }
 
-test("viz off: prompts and grammars are byte-for-byte the pre-viz ones", () => {
+test("viz off: prompts and grammars are byte-for-byte the recorded ones (pre-viz + key points)", () => {
   const now = JSON.stringify(snapshot(), null, 1);
   if (process.env.UPDATE_SNAPSHOTS === "1") writeFileSync(SNAP, now + "\n");
   const want = readFileSync(SNAP, "utf8").trimEnd();

@@ -4,7 +4,7 @@
    "kind": "outline",
    "request": {
     "model": "claude-opus-5",
-    "max_tokens": 8000,
+    "max_tokens": 10000,
     "thinking": {
      "type": "adaptive"
     },
@@ -59,6 +59,40 @@
            "scope"
           ]
          }
+        },
+        "points": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "key": {
+            "type": "string"
+           },
+           "title": {
+            "type": "string"
+           },
+           "short": {
+            "type": "string"
+           },
+           "summary": {
+            "type": "string"
+           },
+           "levels": {
+            "type": "array",
+            "items": {
+             "type": "number"
+            }
+           }
+          },
+          "additionalProperties": false,
+          "required": [
+           "key",
+           "title",
+           "short",
+           "summary",
+           "levels"
+          ]
+         }
         }
        },
        "additionalProperties": false,
@@ -69,7 +103,8 @@
         "tagline",
         "category",
         "info_html",
-        "levels"
+        "levels",
+        "points"
        ],
        "description": "{$schema: \"https://json-schema.org/draft/2020-12/schema\"}"
       }
@@ -87,7 +122,7 @@
       "content": [
        {
         "type": "text",
-        "text": "Odbiorca: licealista / uczeń technikum (matura). Poziom podręcznika, przystępnie i konkretnie. Pytania w stylu maturalnym (podstawa + trochę rozszerzenia), wyjaśnienia pokazują tok rozumowania.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 1 — KONSPEKT. Zwróć TYLKO metadane tematu (name, short, emoji, tagline, category, info_html) i listę poziomów. Nie generuj feed, fiszek, quizu ani gier.\n1. Najpierw przejrzyj CAŁY materiał od początku do końca (każdą stronę, slajd i zdjęcie; bez materiałów — zakres tematu w podstawie programowej) i ustal wszystkie punkty kluczowe: pojęcia i definicje, modele i teorie, listy i klasyfikacje, mechanizmy (przyczyna → skutek), kluczowe liczby i daty, przykłady i badania — wszystko, co materiał wyróżnia nagłówkiem, definicją, tabelą, listą, pogrubieniem albo powtórzeniem. Jeśli materiał ma listę celów, podsumowanie albo listę „na kolokwium/egzamin”, każda jej pozycja jest punktem kluczowym. Sprawy organizacyjne (zaliczenie, obecności, terminy) nie są punktami — trafiają tylko do info_html.\n2. Przydziel każdy punkt do dokładnie jednego poziomu; nic, co materiał wyróżnia, nie może wypaść. Zachowaj kolejność i podział materiału. Poziom to jedna sesja nauki: najwyżej ok. 10 punktów (w temacie językowym ok. 20 nowych słów i zwrotów albo 2–3 reguły); poziomy mają podobną ilość treści. Gdy treści jest więcej, dodaj poziom w limicie liczby poziomów; gdy limit nie wystarcza, łącz drobne szczegóły w jeden punkt, ale nie pomijaj wyróżnionych pojęć. Motyw powracający w kilku częściach przypisz do poziomu, w którym pojawia się pierwszy raz.\n3. Dla każdego poziomu: title, emoji, summary (1 zdanie) oraz scope = lista punktów kluczowych tego poziomu, 3–10 linii, każda zaczyna się od „- ” i nazywa konkretną rzecz (dobrze: „- efekt posiadania: bardziej cenimy to, co już mamy”; źle: „- pojęcia behawioralne”)."
+        "text": "Odbiorca: licealista / uczeń technikum (matura). Poziom podręcznika, przystępnie i konkretnie. Pytania w stylu maturalnym (podstawa + trochę rozszerzenia), wyjaśnienia pokazują tok rozumowania.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 1 — KONSPEKT. Zwróć TYLKO metadane tematu (name, short, emoji, tagline, category, info_html), listę poziomów i listę punktów do opanowania (points). Nie generuj feed, fiszek, quizu ani gier.\n1. Najpierw przejrzyj CAŁY materiał od początku do końca (każdą stronę, slajd i zdjęcie; bez materiałów — zakres tematu w podstawie programowej) i ustal wszystkie punkty kluczowe: pojęcia i definicje, modele i teorie, listy i klasyfikacje, mechanizmy (przyczyna → skutek), kluczowe liczby i daty, przykłady i badania — wszystko, co materiał wyróżnia nagłówkiem, definicją, tabelą, listą, pogrubieniem albo powtórzeniem. Jeśli materiał ma listę celów, podsumowanie albo listę „na kolokwium/egzamin”, każda jej pozycja jest punktem kluczowym. Sprawy organizacyjne (zaliczenie, obecności, terminy) nie są punktami — trafiają tylko do info_html.\n2. Przydziel każdy punkt do dokładnie jednego poziomu; nic, co materiał wyróżnia, nie może wypaść. Zachowaj kolejność i podział materiału. Poziom to jedna sesja nauki: najwyżej ok. 10 punktów (w temacie językowym ok. 20 nowych słów i zwrotów albo 2–3 reguły); poziomy mają podobną ilość treści. Gdy treści jest więcej, dodaj poziom w limicie liczby poziomów; gdy limit nie wystarcza, łącz drobne szczegóły w jeden punkt, ale nie pomijaj wyróżnionych pojęć. Motyw powracający w kilku częściach przypisz do poziomu, w którym pojawia się pierwszy raz.\n3. Dla każdego poziomu: title, emoji, summary (1 zdanie) oraz scope = lista punktów kluczowych tego poziomu, 3–10 linii, każda zaczyna się od „- ” i nazywa konkretną rzecz (dobrze: „- efekt posiadania: bardziej cenimy to, co już mamy”; źle: „- pojęcia behawioralne”).\n4. Na końcu points = 6–15 punktów do opanowania z całego materiału: po nich uczeń widzi, co już umie (przy bardzo małym materiale wystarczą 3–5). Punkt do opanowania to większa całość na sprawdzian, zwykle 2–4 linie scope jednego poziomu: pojęcie z definicją i przykładami, model albo teoria, mechanizm, klasyfikacja, porównanie. Nie za drobny (jedna data, jedno nazwisko) i nie za szeroki (cały poziom). Punkty się nie pokrywają, razem obejmują wszystkie linie scope i idą w kolejności materiału; każdy poziom ma co najmniej jeden punkt, zwykle 2–3.\n   Pola: key = \"p1\", \"p2\"… po kolei; title = konkretna nazwa, najwyżej 120 znaków (dobrze: „MFW: rola Międzynarodowego Funduszu Walutowego”; źle: „Instytucje”); short = etykieta, najwyżej 24 znaki („MFW”, „MSG a MSP”); summary = 1 zdanie: co uczeń ma umieć; levels = numery poziomów (od 1), w których punkt jest uczony, zwykle jeden. Każdy punkt musi dać się sprawdzić co najmniej 3 fiszkami i pytaniami. Bez emoji."
        }
       ]
      }
@@ -141,6 +176,9 @@
          "items": {
           "type": "object",
           "properties": {
+           "p": {
+            "type": "string"
+           },
            "t": {
             "type": "string"
            },
@@ -150,6 +188,7 @@
           },
           "additionalProperties": false,
           "required": [
+           "p",
            "t",
            "d"
           ]
@@ -160,6 +199,9 @@
          "items": {
           "type": "object",
           "properties": {
+           "p": {
+            "type": "string"
+           },
            "q": {
             "type": "string"
            },
@@ -184,6 +226,7 @@
           },
           "additionalProperties": false,
           "required": [
+           "p",
            "q",
            "a",
            "c",
@@ -326,7 +369,7 @@
       "content": [
        {
         "type": "text",
-        "text": "Odbiorca: licealista / uczeń technikum (matura). Poziom podręcznika, przystępnie i konkretnie. Pytania w stylu maturalnym (podstawa + trochę rozszerzenia), wyjaśnienia pokazują tok rozumowania.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 1 z 2: „Faza jasna”.\nZakres tego poziomu (punkty kluczowe):\n- chlorofil\n- ATP\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n2. Cykl Calvina (RuBisCO)\nKażdy punkt zakresu: co najmniej jedna dawka, która go wyjaśnia, i co najmniej jedno pytanie quizu albo zadanie, które go sprawdza. Zwróć TYLKO feed, flashcards, quiz i games dla tego poziomu (bez tasks)."
+        "text": "Odbiorca: licealista / uczeń technikum (matura). Poziom podręcznika, przystępnie i konkretnie. Pytania w stylu maturalnym (podstawa + trochę rozszerzenia), wyjaśnienia pokazują tok rozumowania.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 1 z 2: „Faza jasna”.\nZakres tego poziomu (punkty kluczowe):\n- chlorofil\n- ATP\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n2. Cykl Calvina (RuBisCO)\nPUNKTY DO OPANOWANIA (pole p) na tym poziomie:\n- p1: Chlorofil i pochłanianie światła — Wiesz, które światło pochłania chlorofil.\n- p2: ATP i NADPH z fazy jasnej — Wiesz, co powstaje w fazie jasnej.\nKażda fiszka i każde pytanie quizu ma p = klucz punktu, który sprawdza (np. \"p1\"). Każdy punkt z tej listy sprawdzają co najmniej 3 fiszki i pytania quizu razem, w tym co najmniej 1 pytanie. Klucz punktu z innego poziomu (p3) wpisz tylko wtedy, gdy element naprawdę dotyczy tamtego punktu.\nKażdy punkt zakresu: co najmniej jedna dawka, która go wyjaśnia, i co najmniej jedno pytanie quizu albo zadanie, które go sprawdza. Zwróć TYLKO feed, flashcards, quiz i games dla tego poziomu (bez tasks)."
        }
       ]
      }
@@ -380,6 +423,9 @@
          "items": {
           "type": "object",
           "properties": {
+           "p": {
+            "type": "string"
+           },
            "t": {
             "type": "string"
            },
@@ -389,6 +435,7 @@
           },
           "additionalProperties": false,
           "required": [
+           "p",
            "t",
            "d"
           ]
@@ -399,6 +446,9 @@
          "items": {
           "type": "object",
           "properties": {
+           "p": {
+            "type": "string"
+           },
            "q": {
             "type": "string"
            },
@@ -423,6 +473,7 @@
           },
           "additionalProperties": false,
           "required": [
+           "p",
            "q",
            "a",
            "c",
@@ -565,7 +616,7 @@
       "content": [
        {
         "type": "text",
-        "text": "Odbiorca: licealista / uczeń technikum (matura). Poziom podręcznika, przystępnie i konkretnie. Pytania w stylu maturalnym (podstawa + trochę rozszerzenia), wyjaśnienia pokazują tok rozumowania.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 2 z 2: „Cykl Calvina”.\nZakres tego poziomu (punkty kluczowe):\n- RuBisCO\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n1. Faza jasna (chlorofil; ATP)\nKażdy punkt zakresu: co najmniej jedna dawka, która go wyjaśnia, i co najmniej jedno pytanie quizu albo zadanie, które go sprawdza. Zwróć TYLKO feed, flashcards, quiz i games dla tego poziomu (bez tasks)."
+        "text": "Odbiorca: licealista / uczeń technikum (matura). Poziom podręcznika, przystępnie i konkretnie. Pytania w stylu maturalnym (podstawa + trochę rozszerzenia), wyjaśnienia pokazują tok rozumowania.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 2 z 2: „Cykl Calvina”.\nZakres tego poziomu (punkty kluczowe):\n- RuBisCO\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n1. Faza jasna (chlorofil; ATP)\nPUNKTY DO OPANOWANIA (pole p) na tym poziomie:\n- p3: Cykl Calvina: RuBisCO — Wiesz, co robi RuBisCO.\nKażda fiszka i każde pytanie quizu ma p = klucz punktu, który sprawdza (np. \"p3\"). Każdy punkt z tej listy sprawdzają co najmniej 3 fiszki i pytania quizu razem, w tym co najmniej 1 pytanie. Klucz punktu z innego poziomu (p1, p2) wpisz tylko wtedy, gdy element naprawdę dotyczy tamtego punktu.\nKażdy punkt zakresu: co najmniej jedna dawka, która go wyjaśnia, i co najmniej jedno pytanie quizu albo zadanie, które go sprawdza. Zwróć TYLKO feed, flashcards, quiz i games dla tego poziomu (bez tasks)."
        }
       ]
      }
@@ -592,6 +643,9 @@
          "items": {
           "type": "object",
           "properties": {
+           "p": {
+            "type": "string"
+           },
            "type": {
             "type": "string",
             "description": "{enum: [\"tf\",\"fill\",\"typeterm\",\"swipe\",\"thesis\",\"scenario\",\"finderror\",\"timeline\",\"chain\",\"match\",\"order\",\"sort\"]}"
@@ -614,6 +668,7 @@
           },
           "additionalProperties": false,
           "required": [
+           "p",
            "type",
            "title",
            "e",
@@ -647,7 +702,7 @@
       "content": [
        {
         "type": "text",
-        "text": "Odbiorca: licealista / uczeń technikum (matura). Poziom podręcznika, przystępnie i konkretnie. Pytania w stylu maturalnym (podstawa + trochę rozszerzenia), wyjaśnienia pokazują tok rozumowania.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 1 z 2: „Faza jasna”.\nZakres tego poziomu (punkty kluczowe):\n- chlorofil\n- ATP\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n2. Cykl Calvina (RuBisCO)\nDawki tego poziomu powstają równolegle z tego samego zakresu: zadania sprawdzają WYŁĄCZNIE punkty zakresu powyżej (nic spoza niego), najlepiej listy, mechanizmy, przykłady i zastosowania, których zwykłe pytanie quizu nie obejmie. Zwróć TYLKO tasks: 4–6 zadań dla tego poziomu (typ dobrany do treści, najlepiej różne typy), każde jako {type, title, e, payload, src_page, src_quote}, gdzie payload to STRING z poprawnym JSON-em pól danego typu."
+        "text": "Odbiorca: licealista / uczeń technikum (matura). Poziom podręcznika, przystępnie i konkretnie. Pytania w stylu maturalnym (podstawa + trochę rozszerzenia), wyjaśnienia pokazują tok rozumowania.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 1 z 2: „Faza jasna”.\nZakres tego poziomu (punkty kluczowe):\n- chlorofil\n- ATP\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n2. Cykl Calvina (RuBisCO)\nPUNKTY DO OPANOWANIA (pole p) na tym poziomie:\n- p1: Chlorofil i pochłanianie światła — Wiesz, które światło pochłania chlorofil.\n- p2: ATP i NADPH z fazy jasnej — Wiesz, co powstaje w fazie jasnej.\nKażde zadanie ma p = klucz punktu, który sprawdza (np. \"p1\"). Klucz punktu z innego poziomu (p3) wpisz tylko wtedy, gdy element naprawdę dotyczy tamtego punktu.\nDawki tego poziomu powstają równolegle z tego samego zakresu: zadania sprawdzają WYŁĄCZNIE punkty zakresu powyżej (nic spoza niego), najlepiej listy, mechanizmy, przykłady i zastosowania, których zwykłe pytanie quizu nie obejmie. Zwróć TYLKO tasks: 4–6 zadań dla tego poziomu (typ dobrany do treści, najlepiej różne typy), każde jako {p, type, title, e, payload, src_page, src_quote}, gdzie payload to STRING z poprawnym JSON-em pól danego typu."
        }
       ]
      }
@@ -674,6 +729,9 @@
          "items": {
           "type": "object",
           "properties": {
+           "p": {
+            "type": "string"
+           },
            "type": {
             "type": "string",
             "description": "{enum: [\"tf\",\"fill\",\"typeterm\",\"swipe\",\"thesis\",\"scenario\",\"finderror\",\"timeline\",\"chain\",\"match\",\"order\",\"sort\"]}"
@@ -696,6 +754,7 @@
           },
           "additionalProperties": false,
           "required": [
+           "p",
            "type",
            "title",
            "e",
@@ -729,7 +788,7 @@
       "content": [
        {
         "type": "text",
-        "text": "Odbiorca: licealista / uczeń technikum (matura). Poziom podręcznika, przystępnie i konkretnie. Pytania w stylu maturalnym (podstawa + trochę rozszerzenia), wyjaśnienia pokazują tok rozumowania.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 2 z 2: „Cykl Calvina”.\nZakres tego poziomu (punkty kluczowe):\n- RuBisCO\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n1. Faza jasna (chlorofil; ATP)\nDawki tego poziomu powstają równolegle z tego samego zakresu: zadania sprawdzają WYŁĄCZNIE punkty zakresu powyżej (nic spoza niego), najlepiej listy, mechanizmy, przykłady i zastosowania, których zwykłe pytanie quizu nie obejmie. Zwróć TYLKO tasks: 4–6 zadań dla tego poziomu (typ dobrany do treści, najlepiej różne typy), każde jako {type, title, e, payload, src_page, src_quote}, gdzie payload to STRING z poprawnym JSON-em pól danego typu."
+        "text": "Odbiorca: licealista / uczeń technikum (matura). Poziom podręcznika, przystępnie i konkretnie. Pytania w stylu maturalnym (podstawa + trochę rozszerzenia), wyjaśnienia pokazują tok rozumowania.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 2 z 2: „Cykl Calvina”.\nZakres tego poziomu (punkty kluczowe):\n- RuBisCO\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n1. Faza jasna (chlorofil; ATP)\nPUNKTY DO OPANOWANIA (pole p) na tym poziomie:\n- p3: Cykl Calvina: RuBisCO — Wiesz, co robi RuBisCO.\nKażde zadanie ma p = klucz punktu, który sprawdza (np. \"p3\"). Klucz punktu z innego poziomu (p1, p2) wpisz tylko wtedy, gdy element naprawdę dotyczy tamtego punktu.\nDawki tego poziomu powstają równolegle z tego samego zakresu: zadania sprawdzają WYŁĄCZNIE punkty zakresu powyżej (nic spoza niego), najlepiej listy, mechanizmy, przykłady i zastosowania, których zwykłe pytanie quizu nie obejmie. Zwróć TYLKO tasks: 4–6 zadań dla tego poziomu (typ dobrany do treści, najlepiej różne typy), każde jako {p, type, title, e, payload, src_page, src_quote}, gdzie payload to STRING z poprawnym JSON-em pól danego typu."
        }
       ]
      }
@@ -956,7 +1015,7 @@
    "kind": "outline",
    "request": {
     "model": "claude-opus-5",
-    "max_tokens": 8000,
+    "max_tokens": 10000,
     "thinking": {
      "type": "adaptive"
     },
@@ -1011,6 +1070,40 @@
            "scope"
           ]
          }
+        },
+        "points": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "key": {
+            "type": "string"
+           },
+           "title": {
+            "type": "string"
+           },
+           "short": {
+            "type": "string"
+           },
+           "summary": {
+            "type": "string"
+           },
+           "levels": {
+            "type": "array",
+            "items": {
+             "type": "number"
+            }
+           }
+          },
+          "additionalProperties": false,
+          "required": [
+           "key",
+           "title",
+           "short",
+           "summary",
+           "levels"
+          ]
+         }
         }
        },
        "additionalProperties": false,
@@ -1021,7 +1114,8 @@
         "tagline",
         "category",
         "info_html",
-        "levels"
+        "levels",
+        "points"
        ],
        "description": "{$schema: \"https://json-schema.org/draft/2020-12/schema\"}"
       }
@@ -1039,7 +1133,7 @@
       "content": [
        {
         "type": "text",
-        "text": "Odbiorca: student. Precyzyjna terminologia, definicje jak na kolokwium/egzaminie, ale tłumaczone 'po ludzku'. Pytania w stylu testu egzaminacyjnego: wymagające, ale uczciwe — dystraktory oparte na typowych błędach w rozumieniu, nie na pułapkach w sformułowaniu.\nPrzedmiot ucznia: Biologia.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 1 — KONSPEKT. Zwróć TYLKO metadane tematu (name, short, emoji, tagline, category, info_html) i listę poziomów. Nie generuj feed, fiszek, quizu ani gier.\n1. Najpierw przejrzyj CAŁY materiał od początku do końca (każdą stronę, slajd i zdjęcie; bez materiałów — zakres tematu w podstawie programowej) i ustal wszystkie punkty kluczowe: pojęcia i definicje, modele i teorie, listy i klasyfikacje, mechanizmy (przyczyna → skutek), kluczowe liczby i daty, przykłady i badania — wszystko, co materiał wyróżnia nagłówkiem, definicją, tabelą, listą, pogrubieniem albo powtórzeniem. Jeśli materiał ma listę celów, podsumowanie albo listę „na kolokwium/egzamin”, każda jej pozycja jest punktem kluczowym. Sprawy organizacyjne (zaliczenie, obecności, terminy) nie są punktami — trafiają tylko do info_html.\n2. Przydziel każdy punkt do dokładnie jednego poziomu; nic, co materiał wyróżnia, nie może wypaść. Zachowaj kolejność i podział materiału. Poziom to jedna sesja nauki: najwyżej ok. 10 punktów (w temacie językowym ok. 20 nowych słów i zwrotów albo 2–3 reguły); poziomy mają podobną ilość treści. Gdy treści jest więcej, dodaj poziom w limicie liczby poziomów; gdy limit nie wystarcza, łącz drobne szczegóły w jeden punkt, ale nie pomijaj wyróżnionych pojęć. Motyw powracający w kilku częściach przypisz do poziomu, w którym pojawia się pierwszy raz.\n3. Dla każdego poziomu: title, emoji, summary (1 zdanie) oraz scope = lista punktów kluczowych tego poziomu, 3–10 linii, każda zaczyna się od „- ” i nazywa konkretną rzecz (dobrze: „- efekt posiadania: bardziej cenimy to, co już mamy”; źle: „- pojęcia behawioralne”)."
+        "text": "Odbiorca: student. Precyzyjna terminologia, definicje jak na kolokwium/egzaminie, ale tłumaczone 'po ludzku'. Pytania w stylu testu egzaminacyjnego: wymagające, ale uczciwe — dystraktory oparte na typowych błędach w rozumieniu, nie na pułapkach w sformułowaniu.\nPrzedmiot ucznia: Biologia.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 1 — KONSPEKT. Zwróć TYLKO metadane tematu (name, short, emoji, tagline, category, info_html), listę poziomów i listę punktów do opanowania (points). Nie generuj feed, fiszek, quizu ani gier.\n1. Najpierw przejrzyj CAŁY materiał od początku do końca (każdą stronę, slajd i zdjęcie; bez materiałów — zakres tematu w podstawie programowej) i ustal wszystkie punkty kluczowe: pojęcia i definicje, modele i teorie, listy i klasyfikacje, mechanizmy (przyczyna → skutek), kluczowe liczby i daty, przykłady i badania — wszystko, co materiał wyróżnia nagłówkiem, definicją, tabelą, listą, pogrubieniem albo powtórzeniem. Jeśli materiał ma listę celów, podsumowanie albo listę „na kolokwium/egzamin”, każda jej pozycja jest punktem kluczowym. Sprawy organizacyjne (zaliczenie, obecności, terminy) nie są punktami — trafiają tylko do info_html.\n2. Przydziel każdy punkt do dokładnie jednego poziomu; nic, co materiał wyróżnia, nie może wypaść. Zachowaj kolejność i podział materiału. Poziom to jedna sesja nauki: najwyżej ok. 10 punktów (w temacie językowym ok. 20 nowych słów i zwrotów albo 2–3 reguły); poziomy mają podobną ilość treści. Gdy treści jest więcej, dodaj poziom w limicie liczby poziomów; gdy limit nie wystarcza, łącz drobne szczegóły w jeden punkt, ale nie pomijaj wyróżnionych pojęć. Motyw powracający w kilku częściach przypisz do poziomu, w którym pojawia się pierwszy raz.\n3. Dla każdego poziomu: title, emoji, summary (1 zdanie) oraz scope = lista punktów kluczowych tego poziomu, 3–10 linii, każda zaczyna się od „- ” i nazywa konkretną rzecz (dobrze: „- efekt posiadania: bardziej cenimy to, co już mamy”; źle: „- pojęcia behawioralne”).\n4. Na końcu points = 6–15 punktów do opanowania z całego materiału: po nich uczeń widzi, co już umie (przy bardzo małym materiale wystarczą 3–5). Punkt do opanowania to większa całość na sprawdzian, zwykle 2–4 linie scope jednego poziomu: pojęcie z definicją i przykładami, model albo teoria, mechanizm, klasyfikacja, porównanie. Nie za drobny (jedna data, jedno nazwisko) i nie za szeroki (cały poziom). Punkty się nie pokrywają, razem obejmują wszystkie linie scope i idą w kolejności materiału; każdy poziom ma co najmniej jeden punkt, zwykle 2–3.\n   Pola: key = \"p1\", \"p2\"… po kolei; title = konkretna nazwa, najwyżej 120 znaków (dobrze: „MFW: rola Międzynarodowego Funduszu Walutowego”; źle: „Instytucje”); short = etykieta, najwyżej 24 znaki („MFW”, „MSG a MSP”); summary = 1 zdanie: co uczeń ma umieć; levels = numery poziomów (od 1), w których punkt jest uczony, zwykle jeden. Każdy punkt musi dać się sprawdzić co najmniej 3 fiszkami i pytaniami. Bez emoji."
        }
       ]
      }
@@ -1093,6 +1187,9 @@
          "items": {
           "type": "object",
           "properties": {
+           "p": {
+            "type": "string"
+           },
            "t": {
             "type": "string"
            },
@@ -1102,6 +1199,7 @@
           },
           "additionalProperties": false,
           "required": [
+           "p",
            "t",
            "d"
           ]
@@ -1112,6 +1210,9 @@
          "items": {
           "type": "object",
           "properties": {
+           "p": {
+            "type": "string"
+           },
            "q": {
             "type": "string"
            },
@@ -1136,6 +1237,7 @@
           },
           "additionalProperties": false,
           "required": [
+           "p",
            "q",
            "a",
            "c",
@@ -1278,7 +1380,7 @@
       "content": [
        {
         "type": "text",
-        "text": "Odbiorca: student. Precyzyjna terminologia, definicje jak na kolokwium/egzaminie, ale tłumaczone 'po ludzku'. Pytania w stylu testu egzaminacyjnego: wymagające, ale uczciwe — dystraktory oparte na typowych błędach w rozumieniu, nie na pułapkach w sformułowaniu.\nPrzedmiot ucznia: Biologia.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 1 z 2: „Faza jasna”.\nZakres tego poziomu (punkty kluczowe):\n- chlorofil\n- ATP\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n2. Cykl Calvina (RuBisCO)\nKażdy punkt zakresu: co najmniej jedna dawka, która go wyjaśnia, i co najmniej jedno pytanie quizu albo zadanie, które go sprawdza. Zwróć TYLKO feed, flashcards, quiz i games dla tego poziomu (bez tasks)."
+        "text": "Odbiorca: student. Precyzyjna terminologia, definicje jak na kolokwium/egzaminie, ale tłumaczone 'po ludzku'. Pytania w stylu testu egzaminacyjnego: wymagające, ale uczciwe — dystraktory oparte na typowych błędach w rozumieniu, nie na pułapkach w sformułowaniu.\nPrzedmiot ucznia: Biologia.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 1 z 2: „Faza jasna”.\nZakres tego poziomu (punkty kluczowe):\n- chlorofil\n- ATP\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n2. Cykl Calvina (RuBisCO)\nPUNKTY DO OPANOWANIA (pole p) na tym poziomie:\n- p1: Chlorofil i pochłanianie światła — Wiesz, które światło pochłania chlorofil.\n- p2: ATP i NADPH z fazy jasnej — Wiesz, co powstaje w fazie jasnej.\nKażda fiszka i każde pytanie quizu ma p = klucz punktu, który sprawdza (np. \"p1\"). Każdy punkt z tej listy sprawdzają co najmniej 3 fiszki i pytania quizu razem, w tym co najmniej 1 pytanie. Klucz punktu z innego poziomu (p3) wpisz tylko wtedy, gdy element naprawdę dotyczy tamtego punktu.\nKażdy punkt zakresu: co najmniej jedna dawka, która go wyjaśnia, i co najmniej jedno pytanie quizu albo zadanie, które go sprawdza. Zwróć TYLKO feed, flashcards, quiz i games dla tego poziomu (bez tasks)."
        }
       ]
      }
@@ -1332,6 +1434,9 @@
          "items": {
           "type": "object",
           "properties": {
+           "p": {
+            "type": "string"
+           },
            "t": {
             "type": "string"
            },
@@ -1341,6 +1446,7 @@
           },
           "additionalProperties": false,
           "required": [
+           "p",
            "t",
            "d"
           ]
@@ -1351,6 +1457,9 @@
          "items": {
           "type": "object",
           "properties": {
+           "p": {
+            "type": "string"
+           },
            "q": {
             "type": "string"
            },
@@ -1375,6 +1484,7 @@
           },
           "additionalProperties": false,
           "required": [
+           "p",
            "q",
            "a",
            "c",
@@ -1517,7 +1627,7 @@
       "content": [
        {
         "type": "text",
-        "text": "Odbiorca: student. Precyzyjna terminologia, definicje jak na kolokwium/egzaminie, ale tłumaczone 'po ludzku'. Pytania w stylu testu egzaminacyjnego: wymagające, ale uczciwe — dystraktory oparte na typowych błędach w rozumieniu, nie na pułapkach w sformułowaniu.\nPrzedmiot ucznia: Biologia.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 2 z 2: „Cykl Calvina”.\nZakres tego poziomu (punkty kluczowe):\n- RuBisCO\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n1. Faza jasna (chlorofil; ATP)\nKażdy punkt zakresu: co najmniej jedna dawka, która go wyjaśnia, i co najmniej jedno pytanie quizu albo zadanie, które go sprawdza. Zwróć TYLKO feed, flashcards, quiz i games dla tego poziomu (bez tasks)."
+        "text": "Odbiorca: student. Precyzyjna terminologia, definicje jak na kolokwium/egzaminie, ale tłumaczone 'po ludzku'. Pytania w stylu testu egzaminacyjnego: wymagające, ale uczciwe — dystraktory oparte na typowych błędach w rozumieniu, nie na pułapkach w sformułowaniu.\nPrzedmiot ucznia: Biologia.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 2 z 2: „Cykl Calvina”.\nZakres tego poziomu (punkty kluczowe):\n- RuBisCO\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n1. Faza jasna (chlorofil; ATP)\nPUNKTY DO OPANOWANIA (pole p) na tym poziomie:\n- p3: Cykl Calvina: RuBisCO — Wiesz, co robi RuBisCO.\nKażda fiszka i każde pytanie quizu ma p = klucz punktu, który sprawdza (np. \"p3\"). Każdy punkt z tej listy sprawdzają co najmniej 3 fiszki i pytania quizu razem, w tym co najmniej 1 pytanie. Klucz punktu z innego poziomu (p1, p2) wpisz tylko wtedy, gdy element naprawdę dotyczy tamtego punktu.\nKażdy punkt zakresu: co najmniej jedna dawka, która go wyjaśnia, i co najmniej jedno pytanie quizu albo zadanie, które go sprawdza. Zwróć TYLKO feed, flashcards, quiz i games dla tego poziomu (bez tasks)."
        }
       ]
      }
@@ -1544,6 +1654,9 @@
          "items": {
           "type": "object",
           "properties": {
+           "p": {
+            "type": "string"
+           },
            "type": {
             "type": "string",
             "description": "{enum: [\"tf\",\"fill\",\"typeterm\",\"swipe\",\"thesis\",\"scenario\",\"finderror\",\"timeline\",\"chain\",\"match\",\"order\",\"sort\"]}"
@@ -1566,6 +1679,7 @@
           },
           "additionalProperties": false,
           "required": [
+           "p",
            "type",
            "title",
            "e",
@@ -1599,7 +1713,7 @@
       "content": [
        {
         "type": "text",
-        "text": "Odbiorca: student. Precyzyjna terminologia, definicje jak na kolokwium/egzaminie, ale tłumaczone 'po ludzku'. Pytania w stylu testu egzaminacyjnego: wymagające, ale uczciwe — dystraktory oparte na typowych błędach w rozumieniu, nie na pułapkach w sformułowaniu.\nPrzedmiot ucznia: Biologia.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 1 z 2: „Faza jasna”.\nZakres tego poziomu (punkty kluczowe):\n- chlorofil\n- ATP\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n2. Cykl Calvina (RuBisCO)\nDawki tego poziomu powstają równolegle z tego samego zakresu: zadania sprawdzają WYŁĄCZNIE punkty zakresu powyżej (nic spoza niego), najlepiej listy, mechanizmy, przykłady i zastosowania, których zwykłe pytanie quizu nie obejmie. Zwróć TYLKO tasks: 4–6 zadań dla tego poziomu (typ dobrany do treści, najlepiej różne typy), każde jako {type, title, e, payload, src_page, src_quote}, gdzie payload to STRING z poprawnym JSON-em pól danego typu."
+        "text": "Odbiorca: student. Precyzyjna terminologia, definicje jak na kolokwium/egzaminie, ale tłumaczone 'po ludzku'. Pytania w stylu testu egzaminacyjnego: wymagające, ale uczciwe — dystraktory oparte na typowych błędach w rozumieniu, nie na pułapkach w sformułowaniu.\nPrzedmiot ucznia: Biologia.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 1 z 2: „Faza jasna”.\nZakres tego poziomu (punkty kluczowe):\n- chlorofil\n- ATP\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n2. Cykl Calvina (RuBisCO)\nPUNKTY DO OPANOWANIA (pole p) na tym poziomie:\n- p1: Chlorofil i pochłanianie światła — Wiesz, które światło pochłania chlorofil.\n- p2: ATP i NADPH z fazy jasnej — Wiesz, co powstaje w fazie jasnej.\nKażde zadanie ma p = klucz punktu, który sprawdza (np. \"p1\"). Klucz punktu z innego poziomu (p3) wpisz tylko wtedy, gdy element naprawdę dotyczy tamtego punktu.\nDawki tego poziomu powstają równolegle z tego samego zakresu: zadania sprawdzają WYŁĄCZNIE punkty zakresu powyżej (nic spoza niego), najlepiej listy, mechanizmy, przykłady i zastosowania, których zwykłe pytanie quizu nie obejmie. Zwróć TYLKO tasks: 4–6 zadań dla tego poziomu (typ dobrany do treści, najlepiej różne typy), każde jako {p, type, title, e, payload, src_page, src_quote}, gdzie payload to STRING z poprawnym JSON-em pól danego typu."
        }
       ]
      }
@@ -1626,6 +1740,9 @@
          "items": {
           "type": "object",
           "properties": {
+           "p": {
+            "type": "string"
+           },
            "type": {
             "type": "string",
             "description": "{enum: [\"tf\",\"fill\",\"typeterm\",\"swipe\",\"thesis\",\"scenario\",\"finderror\",\"timeline\",\"chain\",\"match\",\"order\",\"sort\"]}"
@@ -1648,6 +1765,7 @@
           },
           "additionalProperties": false,
           "required": [
+           "p",
            "type",
            "title",
            "e",
@@ -1681,7 +1799,7 @@
       "content": [
        {
         "type": "text",
-        "text": "Odbiorca: student. Precyzyjna terminologia, definicje jak na kolokwium/egzaminie, ale tłumaczone 'po ludzku'. Pytania w stylu testu egzaminacyjnego: wymagające, ale uczciwe — dystraktory oparte na typowych błędach w rozumieniu, nie na pułapkach w sformułowaniu.\nPrzedmiot ucznia: Biologia.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 2 z 2: „Cykl Calvina”.\nZakres tego poziomu (punkty kluczowe):\n- RuBisCO\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n1. Faza jasna (chlorofil; ATP)\nDawki tego poziomu powstają równolegle z tego samego zakresu: zadania sprawdzają WYŁĄCZNIE punkty zakresu powyżej (nic spoza niego), najlepiej listy, mechanizmy, przykłady i zastosowania, których zwykłe pytanie quizu nie obejmie. Zwróć TYLKO tasks: 4–6 zadań dla tego poziomu (typ dobrany do treści, najlepiej różne typy), każde jako {type, title, e, payload, src_page, src_quote}, gdzie payload to STRING z poprawnym JSON-em pól danego typu."
+        "text": "Odbiorca: student. Precyzyjna terminologia, definicje jak na kolokwium/egzaminie, ale tłumaczone 'po ludzku'. Pytania w stylu testu egzaminacyjnego: wymagające, ale uczciwe — dystraktory oparte na typowych błędach w rozumieniu, nie na pułapkach w sformułowaniu.\nPrzedmiot ucznia: Biologia.\nDocelowa liczba poziomów: 2 (mniej, jeśli materiału jest mało; nigdy nie rozwadniaj).\nTemat do opracowania: \"fotosynteza\".\n\nFAZA 2 — JEDEN POZIOM. Temat: „Fotosynteza”.\nGenerujesz WYŁĄCZNIE poziom 2 z 2: „Cykl Calvina”.\nZakres tego poziomu (punkty kluczowe):\n- RuBisCO\nPozostałe poziomy — ich zakresu tu nie ucz i nie sprawdzaj:\n1. Faza jasna (chlorofil; ATP)\nPUNKTY DO OPANOWANIA (pole p) na tym poziomie:\n- p3: Cykl Calvina: RuBisCO — Wiesz, co robi RuBisCO.\nKażde zadanie ma p = klucz punktu, który sprawdza (np. \"p3\"). Klucz punktu z innego poziomu (p1, p2) wpisz tylko wtedy, gdy element naprawdę dotyczy tamtego punktu.\nDawki tego poziomu powstają równolegle z tego samego zakresu: zadania sprawdzają WYŁĄCZNIE punkty zakresu powyżej (nic spoza niego), najlepiej listy, mechanizmy, przykłady i zastosowania, których zwykłe pytanie quizu nie obejmie. Zwróć TYLKO tasks: 4–6 zadań dla tego poziomu (typ dobrany do treści, najlepiej różne typy), każde jako {p, type, title, e, payload, src_page, src_quote}, gdzie payload to STRING z poprawnym JSON-em pól danego typu."
        }
       ]
      }

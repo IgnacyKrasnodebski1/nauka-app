@@ -26,3 +26,4 @@ export * from "./tasks.js";
 export * from "./boss.js";
 export * from "./ghost.js";
 export * from "./album.js";
+export * from "./media.js";

@@ -1,4 +1,4 @@
-import { blankGenTask, type GeneratedTopic } from "@nauka/shared";
+import { blankGenTask, type GeneratedTopic, type GenPoint } from "@nauka/shared";
 
 /**
  * Demo generator used when no ANTHROPIC_API_KEY is configured — lets the whole flow
@@ -6,6 +6,9 @@ import { blankGenTask, type GeneratedTopic } from "@nauka/shared";
  */
 export function demoGenerated(topic: string, levels: number): GeneratedTopic {
   const t = topic.trim().slice(0, 60) || "Twój materiał";
+  const count = Math.max(1, Math.min(levels, 4));
+  // three key points per level (plan-media §2.1), so the demo topic carries valid keyPoints: keys p1, p2, p3 for level 1, p4… for level 2
+  const key = (n: number, k: 0 | 1 | 2) => `p${(n - 1) * 3 + k + 1}`;
   const mk = (n: number): GeneratedTopic["levels"][number] => ({
     title: `${t} — część ${n}`,
     emoji: ["🧩", "🔎", "⚙️", "🚀", "🧠", "🎯", "🏁", "✨"][(n - 1) % 8]!,
@@ -16,16 +19,16 @@ export function demoGenerated(topic: string, levels: number): GeneratedTopic {
       { title: "Co liczy XP", body: "Poprawne odpowiedzi, przejście poziomu, perfekcyjny wynik i codzienna seria 🔥.", real: "Grasz codziennie = rośnie streak.", mnemo: "" },
     ],
     flashcards: [
-      { t: "Roladka", d: "Krótkie porcje wiedzy do przewijania przed quizem." },
-      { t: "Fiszka", d: "Termin z jednej strony, definicja z drugiej. Oznaczasz „umiem / jeszcze nie”." },
-      { t: "Powtórki (SRS)", d: "Aplikacja przypomina fiszki w rosnących odstępach czasu." },
-      { t: "Poziom", d: "Spójny temat; odblokowuje się po zaliczeniu poprzedniego." },
+      { p: key(n, 0), t: "Roladka", d: "Krótkie porcje wiedzy do przewijania przed quizem." },
+      { p: key(n, 1), t: "Fiszka", d: "Termin z jednej strony, definicja z drugiej. Oznaczasz „umiem / jeszcze nie”." },
+      { p: key(n, 1), t: "Powtórki (SRS)", d: "Aplikacja przypomina fiszki w rosnących odstępach czasu." },
+      { p: key(n, 2), t: "Poziom", d: "Spójny temat; odblokowuje się po zaliczeniu poprzedniego." },
     ],
     quiz: [
-      { q: "Jaki wynik quizu zalicza poziom?", a: ["≥ 30%", "≥ 50%", "≥ 90%", "100%"], c: 1, e: "Próg zaliczenia poziomu to 50%. 70% daje 2 gwiazdki, 90% trzy." },
-      { q: "Co robi tryb demo?", a: ["Wysyła materiały do AI", "Pokazuje przykładowy przedmiot bez klucza API", "Kasuje postępy", "Nic"], c: 1, e: "Bez ANTHROPIC_API_KEY apka generuje przykładową treść, żeby dało się przetestować cały flow." },
-      { q: "Kolejność w lekcji to…", a: ["Quiz → fiszki → roladka", "Roladka → fiszki → gry → quiz", "Gry → quiz → roladka", "Fiszki → egzamin"], c: 1, e: "Najpierw czytasz mikro-dawki, potem utrwalasz fiszkami i grami, na końcu quiz." },
-      { q: "Ile gwiazdek daje 75%?", a: ["0", "1", "2", "3"], c: 2, e: "≥70% = 2 gwiazdki, ≥90% = 3." },
+      { p: key(n, 2), q: "Jaki wynik quizu zalicza poziom?", a: ["≥ 30%", "≥ 50%", "≥ 90%", "100%"], c: 1, e: "Próg zaliczenia poziomu to 50%. 70% daje 2 gwiazdki, 90% trzy." },
+      { p: key(n, 0), q: "Co robi tryb demo?", a: ["Wysyła materiały do AI", "Pokazuje przykładowy przedmiot bez klucza API", "Kasuje postępy", "Nic"], c: 1, e: "Bez ANTHROPIC_API_KEY apka generuje przykładową treść, żeby dało się przetestować cały flow." },
+      { p: key(n, 0), q: "Kolejność w lekcji to…", a: ["Quiz → fiszki → roladka", "Roladka → fiszki → gry → quiz", "Gry → quiz → roladka", "Fiszki → egzamin"], c: 1, e: "Najpierw czytasz mikro-dawki, potem utrwalasz fiszkami i grami, na końcu quiz." },
+      { p: key(n, 2), q: "Ile gwiazdek daje 75%?", a: ["0", "1", "2", "3"], c: 2, e: "≥70% = 2 gwiazdki, ≥90% = 3." },
     ],
     games: [
       { type: "match", title: "Dopasuj pojęcia", pairs: [{ l: "XP", r: "punkty doświadczenia" }, { l: "Streak", r: "seria dni z rzędu" }, { l: "SRS", r: "powtórki w odstępach" }, { l: "Egzamin", r: "20 losowych pytań na czas" }], cloze: [], tf: [], prompt: "", steps: [] },
@@ -36,6 +39,7 @@ export function demoGenerated(topic: string, levels: number): GeneratedTopic {
     tasks: [
       blankGenTask({
         type: "tf",
+        p: key(n, 2),
         seconds: 45,
         e: "Próg to 50%, seria rośnie codziennie, a serca odnawiają się co 30 minut.",
         statements: [
@@ -47,6 +51,7 @@ export function demoGenerated(topic: string, levels: number): GeneratedTopic {
       }),
       blankGenTask({
         type: "fill",
+        p: key(n, 2),
         title: "Uzupełnij zasady",
         text: "Poziom zaliczasz od {0} procent, a trzy gwiazdki dostajesz od {1} procent.",
         blanks: ["50", "90"],
@@ -56,6 +61,7 @@ export function demoGenerated(topic: string, levels: number): GeneratedTopic {
       }),
       blankGenTask({
         type: "typeterm",
+        p: key(n, 1),
         definition: "Metoda powtórek, w której odstępy między kolejnymi powtórzeniami rosną.",
         answer: "SRS",
         accept: ["spaced repetition", "powtórki w odstępach"],
@@ -63,6 +69,7 @@ export function demoGenerated(topic: string, levels: number): GeneratedTopic {
       }),
       blankGenTask({
         type: "swipe",
+        p: key(n, 2),
         left: "Nagroda",
         right: "Kara",
         cards: [
@@ -74,6 +81,7 @@ export function demoGenerated(topic: string, levels: number): GeneratedTopic {
       }),
       blankGenTask({
         type: "scenario",
+        p: key(n, 1),
         scene: `Kasia ma sprawdzian z „${t}” za 3 dni i dwa niezaliczone poziomy.`,
         q: "Co podpowie jej plan do sprawdzianu?",
         a: ["Po jednym poziomie dziennie, ostatni dzień tylko powtórka", "Wszystko ostatniej nocy", "Tylko egzamin próbny", "Nic — plan liczy jedynie XP"],
@@ -82,6 +90,7 @@ export function demoGenerated(topic: string, levels: number): GeneratedTopic {
       }),
       blankGenTask({
         type: "order",
+        p: key(n, 0),
         title: "Kolejność lekcji",
         items: ["Roladka", "Fiszki", "Zadania i quiz", "Wynik poziomu"],
         e: "Najpierw czytasz, potem utrwalasz, na końcu sprawdzasz.",
@@ -95,6 +104,16 @@ export function demoGenerated(topic: string, levels: number): GeneratedTopic {
     tagline: `DEMO — dodaj ANTHROPIC_API_KEY, żeby AI zrobiło prawdziwe lekcje z Twoich materiałów.`,
     category: "inne",
     info_html: `<div class="zbox"><h3>Tryb demo</h3><p>Ten przedmiot powstał bez klucza AI. Skonfiguruj <b>ANTHROPIC_API_KEY</b> w API weba i wygeneruj ponownie.</p></div>`,
-    levels: Array.from({ length: Math.max(1, Math.min(levels, 4)) }, (_, i) => mk(i + 1)),
+    levels: Array.from({ length: count }, (_, i) => mk(i + 1)),
+    points: Array.from({ length: count }, (_, i): GenPoint[] => {
+      const n = i + 1;
+      const part = count > 1 ? ` (część ${n})` : "";
+      const tag = count > 1 ? ` ${n}` : "";
+      return [
+        { key: key(n, 0), title: `Jak wygląda lekcja${part}`, short: `Kolejność lekcji${tag}`, summary: "Wiesz, co robi tryb demo i w jakiej kolejności idą części lekcji.", levels: [i] },
+        { key: key(n, 1), title: `Fiszki i powtórki w odstępach${part}`, short: `Fiszki i SRS${tag}`, summary: "Wiesz, czym jest fiszka i dlaczego powtórki wracają w rosnących odstępach.", levels: [i] },
+        { key: key(n, 2), title: `Progi zaliczenia i nagrody${part}`, short: `Progi i nagrody${tag}`, summary: "Znasz próg zaliczenia poziomu, progi gwiazdek oraz nagrody i kary.", levels: [i] },
+      ];
+    }).flat(),
   };
 }

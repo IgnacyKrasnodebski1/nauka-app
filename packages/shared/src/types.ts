@@ -319,6 +319,37 @@ export interface TopicContent {
   /** HTML info block(s) */
   info: string;
   levels: Level[];
+  /**
+   * Key points of the material (docs/plan-media.md §1.1), 3–15, in display order. Optional: topics generated before
+   * key points (or whose points failed validation) have none — clients then use one point per level.
+   * Invariants (enforced by `buildKeyPoints()`): every quiz question and flashcard is in exactly one point, every task
+   * in at most one; every ref exists; every point has ≥3 items, ≥2 of them quiz / flashcard.
+   */
+  keyPoints?: KeyPoint[];
+}
+
+/** One element of a key point: a flashcard, quiz question or task of the same topic. */
+export interface KeyPointItem {
+  kind: "quiz" | "flashcard" | "task";
+  /** Level.id of this topic ("l1", "l2", …) */
+  level: string;
+  /** index in levels[level].quiz | .flashcards | .tasks */
+  index: number;
+}
+
+/** Key point of a material („MFW: rola Międzynarodowego Funduszu Walutowego”) — KeyPointSchema in schema.ts. */
+export interface KeyPoint {
+  /** "p1".."p15", unique in the topic, in display order */
+  id: string;
+  /** up to 120 chars */
+  title: string;
+  /** chip label, up to 24 chars („MFW”) */
+  short: string;
+  /** one sentence, up to 300 chars */
+  summary?: string;
+  /** level ids the items live in, in level order */
+  levels: string[];
+  items: KeyPointItem[];
 }
 /** @deprecated use TopicContent */
 export type SubjectContent = TopicContent;

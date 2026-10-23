@@ -66,6 +66,19 @@ PPTX `@nauka/ai` (`prepareMaterials` → `extractPptx`, bez natywnych zależnoś
 Teksty są zwykłym tekstem (bez HTML i emoji), ale klient i tak musi je escapować. Serwer (`parseViz`) przycina teksty do limitów, waliduje (`VizSchema`), sprawdza ugruntowanie (etykiety w tekście poziomu, liczby i daty w `body`/`real` tej dawki) i zostawia najwyżej ceil(liczba dawek / 2) wizualizacji na poziom; reszta jest odrzucana bez błędu. Statystyki trafiają do logu jako jedna linia `[generate] viz {"kept",…,"schema","grounding","cap","cleared","doses"}`. Starsze tematy i klienci bez obsługi `viz` działają bez zmian (pole jest opcjonalne; `vizText()` daje wersję tekstową, której używa m.in. korepetytor).
 Gdy brak `ANTHROPIC_API_KEY` → tryb demo (przykładowy temat, `tagline` „DEMO”).
 
+**Kluczowe punkty (`content.keyPoints`, Cramfox, od backend/0010).** Opcjonalne pole tematu zapisywane w tej samej generacji (bez osobnego wywołania i bez zmiany kształtu żądania/odpowiedzi — punkty po prostu są w zwróconym temacie i w `topics.content`). Konspekt wypisuje 6–15 „punktów do opanowania” całego materiału; każda fiszka, pytanie i zadanie dostaje w generacji tag `p` (klucz punktu); `buildKeyPoints()` w `finalize.ts` składa punkty **po** filtrowaniu, więc indeksy są ostateczne.
+
+| Pole | Reguła |
+|---|---|
+| `id` | `p1`…`p15`, unikalne, w kolejności wyświetlania |
+| `title` | 1–120, zwykły tekst |
+| `short` | 1–24 (etykieta chipa) |
+| `summary?` | ≤ 300 |
+| `levels` | id poziomów tego tematu, w których leżą elementy punktu (kolejność poziomów) |
+| `items` | `[{ kind: "quiz" \| "flashcard" \| "task", level, index }]`, ≥ 3, w tym ≥ 2 pytania lub fiszki |
+
+Niezmienniki: każde pytanie i fiszka tematu w dokładnie jednym punkcie, zadanie w najwyżej jednym; 6–15 punktów (3–15, gdy temat ma < 18 pytań i fiszek). Naprawa: nieznany/pusty `p` → pierwszy punkt konspektu z tym poziomem; za mały punkt łączony z sąsiadem; > 15 → scalanie najmniejszych; id numerowane od nowa. Gdy reguł nie da się spełnić, temat zapisuje się **bez** `keyPoints` (generacja nigdy nie pada przez punkty). Stare tematy i tematy bez punktów: klient i serwer liczą punkt zastępczy na poziom (id `L<levelId>`), identycznie w `topicPoints()` (`@nauka/shared` `media.ts`) i `mapPoints()` (Cramfox `cloud.js`). Statystyki: `generations.quality.keyPoints = { keyPoints, repaired, merged, empty, omitted, reason? }` i jedna linia logu `[generate] keyPoints {…}`.
+
 ## GET /api/generate?id=<generationId>
 Status joba: `{ status, topicId?, error? }`.
 
@@ -112,3 +125,67 @@ STRIPE_PRICE_YEARLY=price_...
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 Mobile (apps/mobile/.env): `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL` (URL weba).
+
+## Media i rozmowa z lisem (Cramfox, backend/0010)
+
+Rolki (seria 45–60-sekundowych rolek z jednego materiału), podcast „Lis i Szop” (20–30 min, 8 rozdziałów) i rozmowa z lisem (trzy tryby tekstowe). Plan i kontrakty: `nauka-app/docs/plan-media.md` §2–3. Kod: `@nauka/ai` `src/media/*` (cała logika z wstrzykiwanymi zależnościami — `handlers.ts`), trasy `apps/web/src/app/api/media/**`, `apps/web/src/app/api/fox`, dostęp do bazy `apps/web/src/lib/media-db.ts`. Wspólny kontrakt (typy, manifesty, sanitizer scenariusza, schematy wyjścia AI): `@nauka/shared` `media.ts`.
+
+**Kolejność wdrożenia:** `backend/0010_media.sql` (nauka-app) → backend (te trasy + pola w `/api/me`) → apka. Backend bez 0010: `/api/me` ma `media: null`, `chat: null`, `features` wyłączone; trasy mediów odpowiadają 503 `media_unavailable`. 0010 bez backendu: nic się nie zmienia.
+
+**Wspólne:** `Authorization: Bearer <access_token>`, bez CORS, błędy `{ error /* po polsku, można pokazać */, code, ...extra }`. Błędy tras tworzenia i lisa mają `charged: false` (przed 202 nic nie jest naliczane). Żaden klient nie ponawia automatycznie `POST` tych tras — tylko po stuknięciu użytkownika (nowy `requestId`).
+
+### POST /api/media/reels — seria rolek (albo jedna rolka) — `maxDuration = 300`
+Body: `{ "requestId": "uuid", "topicId": "uuid", "types": ["czym","kto","mit","porownanie","sprawdzian"], "focusPointId": "p3" }`.
+- `types`: różne, z `czym | kto | mit | porownanie | pulapki | sprawdzian`; seria 3–6; z `focusPointId` (pojedyncza rolka „ZRÓB ROLKĘ Z TEGO”) dokładnie 1.
+- `focusPointId`: surowe id punktu (`p3`, przy starym temacie `L<levelId>`), opcjonalne.
+- `requestId` = `media.id` = klucz idempotencji: ten sam użytkownik i ten sam id → **200** `{ media }` bez naliczenia i bez nowej pracy.
+
+Kolejność (przed jakimkolwiek kosztem): 503 `no_config` → 503 `ai_unavailable` (brak klucza Anthropic) → 503 `tts_unavailable` (brak `ELEVENLABS_API_KEY`) → 401 `unauthorized` → 400 `bad_request` → idempotencja (200 / 409 `conflict` dla cudzego id) → 404 `not_found` (temat nie należy do konta) → 400 `no_quiz` (temat bez pytań: każda rolka kończy się pytaniem) → 400 `bad_point` → RPC `reserve_media`:
+
+| Odpowiedź | Kiedy |
+|---|---|
+| 202 `{ media }` | naliczone; `media.status = "running"`, `progress = { step: "plan", done: 0, total: N }`, praca w `after()` |
+| 409 `busy` + `busy: { id, kind, topicId }` | konto ma już tworzenie w toku (< 5,5 min; liczone z `media_ledger`, więc usunięcie materiału w trakcie pracy go nie kończy — wtedy `topicId: null`) |
+| 402 `limit_reached` + `reason: "lifetime" \| "month"`, `scope`, `used`, `limit` | pula tworzeń (free: 3 na zawsze, pro: 30 w miesiącu UTC; `app_config`) |
+| 402 `limit_reached` + `reason: "daily"` | bezpiecznik: 5 tworzeń na konto w kroczącej dobie (liczą się też nieudane) |
+| 402 `limit_reached` + `reason: "global"` | limit serwera (60 / krocząca doba, `app_config`) |
+| 503 `media_unavailable` | baza bez 0010 |
+| 500 `reserve_failed` | inny błąd bazy |
+
+Praca (do startu żądania + 270 s): plan serii (1 wywołanie Claude, `CRAMFOX_MEDIA_MODEL`) → scenariusze (N równoległych, wspólny prefiks w cache promptu; scenariusz sprawdza `sanitizeStoryboard`, przy błędzie jedna ponowna prośba o tę rolkę; muszą zdążyć 75 s przed terminem) → lektor (ElevenLabs `ELEVENLABS_REEL_MODEL`, głos `ELEVENLABS_VOICE_REEL`, po 3 naraz; przed każdą rolką RPC `tts_budget` — ponad dzienny budżet znaków rolka wypada, a gdy zostanie ich za mało, porażka `tts_budget` ze zwrotem) → pliki → `finish_media` (gdy wiersza już nie ma — materiał usunięty w trakcie — pliki są kasowane, a `release_media` zwraca tworzenie po `media_ledger`). Postęp w wierszu: `progress.step` `plan` → `script` (done/total) → `voice` (done/total) → `save`. Mniej niż 3 dobre rolki w serii (0 przy pojedynczej) = porażka. **Porażka:** odmowa AI → `fail_media` (tworzenie naliczone, `charged: true`); każda inna (AI albo lektor niedostępne, zła odpowiedź AI po jednej poprawce, termin, Storage) → `release_media`: zwrot (`charged: false`, `error` = `released:<kod>:<szczegół>`), pliki usunięte. Kody w `error`: `ai_unavailable`, `tts_unavailable`, `tts_budget`, `invalid_output`, `refusal`, `timeout`, `storage_failed`, `not_finished`. Wiersz `running` starszy niż 8 min zwraca sprzątacz (`timeout:sweeper`).
+
+**ReelsManifest** (`media.manifest`): `{ v: 1, kind: "reels", title, topicId, coverage: { points, covered }, reels: [{ n, type, title, durSec /* długość przy rate */, pointIds, quizRef: { level, index }, feedRef: { level, index } | null, files: { storyboard: "rN.json", audio: "rN.mp3", words: "rN.words.json" }, rate: 1.15, thumb: "#2F6BFF" }] }`. Pytanie końcowe = istniejące pytanie quizu `levels[level].quiz[index]` (zapis do SRS robi apka). Nazwy plików zachowują numer rolki z planu (po odrzuceniu rolki `n` jest przenumerowane, nazwy nie).
+
+Pliki w Storage (prywatny bucket `media`, ścieżka `{owner_id}/{mediaId}/{plik}`, właściciel czyta i usuwa, pisze tylko serwer):
+- `rN.json` — scenariusz w formacie prototypu (`test/proto/rolka/README.md`), oczyszczony (`sanitizeStoryboard`: tylko znane pola, kolory `#hex`, liczby przycięte, teksty bez `<>` i emoji), bez `quiz` / `cover` / `voice`, z `audio: { src: "rN.mp3", words: "rN.words.json", rate: 1.15 }`; sceny mają `say` (napisy, `{pokaz|wymowa}`) i `tts` (te same słowa + dozwolone znaczniki);
+- `rN.mp3` — lektor (mp3_44100_64);
+- `rN.words.json` — `{ v: 1, duration, words: [{ w, start, end, tag? }] }` (czasy z wyrównania znaków ElevenLabs; znaczniki `[excited]` mają `tag: true`; `duration` z ramek MP3). Apka i tak oczyszcza scenariusz przy wczytaniu.
+
+### POST /api/media/podcast — scenariusz podcastu — `maxDuration = 300`
+Body `{ "requestId": "uuid", "topicId": "uuid" }`. Jak rolki, ale po `tts_unavailable` (przed logowaniem): 503 `voices_missing`, gdy brak `ELEVENLABS_VOICE_FOX` albo `ELEVENLABS_VOICE_SZOP` (apka: „Podcast będzie dostępny wkrótce”). Jedno tworzenie z tej samej puli co rolki. Praca: plan odcinka (8 rozdziałów; 6–8, gdy temat ma < 8 punktów; każdy punkt w co najmniej jednym rozdziale; w każdym rozdziale inne istniejące pytanie quizu na pauzę) → 8 dialogów równolegle (350–520 słów, 18–40 kwestii, `**termin**`; jedna poprawka na rozdział; < 6 dobrych = porażka) → `script.json` → `finish_media`. **Audio nie powstaje tutaj.**
+
+**PodcastManifest:** `{ v: 1, kind: "podcast", title, topicId, estSec, files: { script: "script.json" }, chapters: [{ n, title, pointIds, levelIds, estSec, durSec: null, status: "script", pauses: [{ afterLine /* indeks kwestii Szopa (od 0), po której pauza */, quizRef, pointId, lead }], files: null }] }`. `script.json` = `{ v: 1, title, chapters: [{ n, title, lines: [{ s: "lis" | "szop", t }] }] }`.
+
+### POST /api/media/podcast/chapter — audio jednego rozdziału — `maxDuration = 120`, synchronicznie
+Body `{ "mediaId": "uuid", "chapter": 1 }`. Nie zużywa puli tworzeń. Kolejność: 503 `no_config` / `tts_unavailable` / `voices_missing` → 401 → 400 → 404 `not_found` (nie Twój, nie podcast, rozdział spoza zakresu) → 409 `not_ready` (podcast nie gotowy) → RPC `claim_podcast_chapter`: rozdział gotowy → **200** z cache (bez syntezy); nagrywa go inne żądanie (< 3 min) → 409 `chapter_busy` (apka sprawdza wiersz co 3 s, do 120 s); 3 nieudane nagrania tego rozdziału w tej dobie UTC → 429 `chapter_failing` („Tego rozdziału dziś nie nagram. Spróbuj jutro.”); przejęty → kwestia bez litery i cyfry (np. `** **`) → 500 `synth_failed` bez syntezy i bez budżetu → RPC `tts_budget` (globalny budżet znaków na dobę, `app_config.tts_global_daily_chars`) → odmowa: 429 `tts_budget` (rozdział zwolniony) → synteza: jedno wywołanie ElevenLabs na kwestię (`ELEVENLABS_PODCAST_MODEL`, głos lisa / szopa, po 4 naraz, wewnętrznie najwyżej jedna ponowna próba przy 429 / 5xx / sieci) → części MP3 sklejone (bez ID3 / Xing) → `cN.mp3` + `cN.json` = `{ v: 1, duration, lines: [{ i, s, start, end, words: [{ w, start, end }] }], pauses: [{ afterLine, at }] }` → `set_podcast_chapter` → **200** `{ chapter }` (`status: "ready"`, `durSec`, `files: { audio: "cN.mp3", timing: "cN.json" }`). Porażka: rozdział wraca do `script` (`release_podcast_chapter(…, p_failed)` liczy porażkę, gdy kosztowała znaki albo powtórzy się tak samo), znaki zarezerwowane, a nienagrane wracają do budżetu (`tts_refund`), 503 `tts_unavailable` (klucz, konto ElevenLabs, sieć, termin 110 s) albo 500 `synth_failed`. Rozdział „nagrywany” dłużej niż 5 min wraca do `script` (sprzątacz).
+
+### Odczyt mediów (bez endpointu)
+PostgREST z kluczem użytkownika (RLS: tylko własne): `GET /rest/v1/media?select=id,owner_id,subject_id,topic_id,kind,status,phase,progress,title,spec,manifest,error,charged,created_at,finished_at&order=created_at.asc` (opcjonalnie `&subject_id=eq.X`, `&id=eq.X`). Wybierz dokładnie te kolumny — `select=*` jest odrzucane (koszt, model i znaki są tylko dla serwera). Pliki: `GET /storage/v1/object/authenticated/media/{owner_id}/{id}/{plik}` z tokenem użytkownika. Przed usunięciem konta apka sama usuwa swoje pliki z bucketu `media` (`delete_my_account` sprawdza tylko `materials`).
+
+### POST /api/fox — jedna tura rozmowy z lisem — `maxDuration = 60`, synchronicznie
+Body: `{ "subjectId": "uuid", "topicIds": ["uuid"], "pointIds": ["<topicId>:p3"], "mode": "explain" | "quiz" | "exam", "step": "start" | "answer" | "hint" | "idk" | "finish", "messages": [{ "role": "fox" | "user", "text": "…" }] }`. `topicIds` 1–8 (tematy tego przedmiotu), `pointIds` ≤ 20 z wybranych tematów (`explain`: dokładnie 1), `messages` ≤ 30, tekst ≤ 1500. Serwer jest bezstanowy: klient przysyła całą rozmowę, a **liczbę tur liczy serwer**: każda wiadomość `user` to odpowiedź, poza samym „Podpowiedz”; samo „Nie wiem” liczy się jako odpowiedź. Klient powinien po turze `hint` / `idk` dopisać tekst chipa jako wiadomość `user` (wtedy liczenie jest dokładne; bez tego `idk` liczy pominięcie tylko w bieżącym żądaniu).
+
+Kolejność: 503 `no_config` / `ai_unavailable` → 401 → 400 `bad_request` → 400 `too_many_turns` (rozmowa już się skończyła) / `bad_step` (np. `answer` bez odpowiedzi ucznia na końcu) → `finish` bez żadnej odpowiedzi (i `finish` w `explain`): **200** `{ reply, next: "end", quota }` bez AI i bez liczenia → 404 `not_found` (przedmiot / tematy nie Twoje) → 400 `bad_point` → RPC `reserve_chat` → 402 `limit_reached` + `reason: "chat_daily" | "chat_global"`, `used`, `limit` → AI (`CRAMFOX_FOX_MODEL`, termin 50 s, cache promptu na system + kontekst) → 200. Porażka AI: wiadomość wraca do licznika (`release_chat`), 503 `ai_unavailable` albo 500 `fox_failed`, `charged: false`.
+
+Tryby (decyduje serwer): **explain** — `start` → prośba o wyjaśnienie punktu; 1. odpowiedź → `verdict` + `feedback { good, gap, wrong, source? }` + dopytanie (`next: "followup"`); 2. → `next: "end"`; `idk` → krótkie wyjaśnienie, `end`. **quiz** — 5 pytań otwartych; każda odpowiedź → `verdict` + komentarz w `reply` + następne `question`; po 5. (albo `finish`) → `next: "finish"` + `result`. **exam** — 3 pytania, każde z dokładnie jednym dopytaniem (bez ocen po drodze); po 3. dopytaniu (albo `finish`) → `result` z `pct`. Ocenę w skali przedmiotu liczy apka (`gradeFor`); serwer daje tylko `pct` = średnia punktów 0–100 z modelu.
+
+Odpowiedź 200: `{ reply, next: "question" | "followup" | "finish" | "end", question?: { n, text }, pointId?: "<topicId>:p3", verdict?: "ok" | "partial" | "wrong", feedback?: { good[], gap[], wrong[], source?: { topicId, level, feed } }, result?: { pct, score: { ok, total }, perQuestion: [{ q, verdict: "DOBRZE" | "PRAWIE" | "ŹLE", note, pointId? }], gaps: [{ title, topicId, level, feed, pointId? }] }, quota: { day, used, limit, remaining } }`. Teksty: zwykły tekst bez `<>` i emoji, ≤ 600 znaków (apka i tak je escapuje). Werdykt pytania z punktów: ≥ 70 DOBRZE, ≥ 40 PRAWIE, mniej ŹLE. Etykiety z kontekstu (`T1.l2.f1`, `T1.p3`) serwer zamienia na id i odrzuca, gdy nie istnieją. Model odpowiada wyłącznie z materiału ucznia; tekst ucznia trafia do promptu jako dane (JSON w `<rozmowa>`), nigdy jako polecenie.
+
+### GET /api/me — pola dodane (addytywne)
+`media: { plan, scope: "lifetime" | "month", used, limit, remaining, dailyLeft, globalOpen, busy: { id, kind, topicId } | null }`, `chat: { day /* Europe/Warsaw */, used, limit, remaining, globalOpen }`, `features: { reels /* klucz Anthropic + ElevenLabs + 0010 */, podcast /* reels + oba głosy */, fox /* klucz Anthropic + 0010 */ }`. Bez 0010 albo przy błędzie RPC: `media: null`, `chat: null`, wszystkie `features` false; pozostałe pola bez zmian.
+
+### Limity i konfiguracja (backend/0010, `app_config`, zmiana bez migracji)
+`free_media_lifetime` 3 (liczone po skrócie adresu e-mail jak darmowe lekcje — usunięcie konta i ponowna rejestracja nie odnawia), `pro_media_month` 30, `media_daily_per_user` 5 (z `media_ledger`: także nieudane, zwrócone i z usuniętych materiałów), `media_global_daily_cap` 60 (bez zwróconych; 0 = wstrzymane), `media_global_daily_attempts` 150 (próby, także zwrócone), `free_chat_daily` 30, `pro_chat_daily` 200 (doba w strefie `Europe/Warsaw`), `chat_global_daily_cap` 5000, `tts_global_daily_chars` 600 000. Pula rolek i podcastu jest osobna — nigdy nie zużywa darmowych tworzeń lekcji. RPC (tylko service role): `reserve_media`, `finish_media`, `release_media`, `fail_media`, `media_quota`, `claim_podcast_chapter`, `set_podcast_chapter`, `release_podcast_chapter`, `tts_budget`, `tts_refund`, `reserve_chat`, `release_chat`, `chat_quota`, `sweep_stale_media` (pg_cron `cramfox-sweep-media` co 5 min). Testy: `npm run test:db` (sekcja 0010).
+
+### Env mediów (tylko nazwy)
+`ELEVENLABS_API_KEY` (brak = rolki i podcast wyłączone), `ELEVENLABS_VOICE_REEL` (domyślnie głos „Dawid”), `ELEVENLABS_VOICE_FOX`, `ELEVENLABS_VOICE_SZOP` (bez domyślnych; brak = podcast wyłączony), `ELEVENLABS_REEL_MODEL` (domyślnie `eleven_v4`), `ELEVENLABS_PODCAST_MODEL` (domyślnie `eleven_flash_v2_5`), `ELEVENLABS_REEL_TAGS` (`0` = bez znaczników w narracji rolek), `CRAMFOX_MEDIA_MODEL`, `CRAMFOX_FOX_MODEL` (domyślnie `claude-sonnet-5`). ElevenLabs: `POST /v1/text-to-speech/{voice_id}/with-timestamps?output_format=mp3_44100_64`, nagłówek `xi-api-key` (https://elevenlabs.io/docs/api-reference/text-to-speech/convert-with-timestamps).

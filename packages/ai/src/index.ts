@@ -41,3 +41,5 @@ export { extractPptx, pptxToText, PptxError, PPTX_LIMITS, type PptxErrorCode, ty
 export { intakeMaterials, type IntakeRow, type IntakeFailure, type IntakeDeps, type IntakeResult } from "./intake.js";
 export { aiConfigured, modelId } from "./client.js";
 export { demoGenerated } from "./demo.js";
+/* media: reel series, Lis + Szop podcast, fox conversation (plan-media §2) */
+export * from "./media/index.js";

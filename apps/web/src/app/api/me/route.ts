@@ -3,6 +3,8 @@ import { getUserFromRequest, jsonError, NO_SUPABASE } from "@/lib/auth";
 import { hasServiceRole, hasSupabaseEnv } from "@/lib/env";
 import { getGenerationQuota, getProfile, getUsage } from "@/lib/plan";
 import { getAdminSupabase } from "@/lib/supabase/admin";
+import { buildMeMedia, mediaConfig } from "@nauka/ai";
+import { chatQuotaRpc, mediaQuotaRpc } from "@/lib/media-db";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,11 @@ export const dynamic = "force-dynamic";
  * For a `lifetime` quota `usage.generations` and `limits.generationsPerMonth` carry the same numbers, so older clients
  * (Cramfox build 6, Recall web) block at "2 of 2". `quota` is null when it cannot be read (no service role key, database
  * without 0007) — then the other fields are exactly as before.
+ *
+ * Media (additive, backend/0010, plan-media §2.7): `media` = the reels / podcast creation pool
+ * `{ plan, scope, used, limit, remaining, dailyLeft, globalOpen, busy }`, `chat` = today's fox messages
+ * `{ day, used, limit, remaining, globalOpen }`, `features` = `{ reels, podcast, fox }`. Without 0010 (or on an RPC
+ * error) `media` and `chat` are null and the features false; the fields above do not change.
  */
 export async function GET(req: Request) {
   if (!hasSupabaseEnv()) return jsonError(NO_SUPABASE, 503, { code: "no_config" });
@@ -36,6 +43,11 @@ export async function GET(req: Request) {
     }
   }
   const plan = quota?.plan ?? (profile?.plan === "pro" ? "pro" : "free");
+  const mediaFields = await buildMeMedia({
+    config: mediaConfig(),
+    mediaQuota: admin ? () => mediaQuotaRpc(admin, ctx.user.id) : null,
+    chatQuota: admin ? () => chatQuotaRpc(admin, ctx.user.id) : null,
+  });
   const legacy = legacyQuotaFields(plan, usage.generations, quota);
   return Response.json({
     profile,
@@ -44,5 +56,6 @@ export async function GET(req: Request) {
     limits: legacy.limits,
     quota,
     subscription: sub ?? null,
+    ...mediaFields,
   });
 }

@@ -268,6 +268,37 @@ export const LevelSchema = z.object({
   fromMaterial: z.string().max(80).optional(),
 });
 
+/* ---------------- key points (plan-media §1.1) ---------------- */
+
+/** Limits of a stored key point's strings — `buildKeyPoints()` cuts to these before validating. */
+export const KEY_POINT_LIMITS = { title: 120, short: 24, summary: 300, points: 15, minPoints: 3, items: 120 } as const;
+
+/** One element of a key point: a flashcard, quiz question or task of THIS topic, by level id and array index. */
+export const KeyPointItemSchema = z.object({
+  kind: z.enum(["quiz", "flashcard", "task"]),
+  /** Level.id of this topic ("l1", "l2", …) */
+  level: z.string().min(1).max(40),
+  /** index in levels[level].quiz | .flashcards | .tasks */
+  index: z.number().int().min(0).max(59),
+});
+
+/**
+ * Key point of a material ("MFW: rola Międzynarodowego Funduszu Walutowego"): a group of the topic's flashcards,
+ * questions and tasks whose mastery the app tracks together. Shape only — the cross-checks (refs exist, every quiz /
+ * flashcard in exactly one point, ≥3 items with ≥2 quiz / flashcard) are enforced by `buildKeyPoints()` in finalize.
+ */
+export const KeyPointSchema = z.object({
+  /** "p1".."p15", unique in the topic, in display order */
+  id: z.string().regex(/^p\d{1,2}$/),
+  title: z.string().min(1).max(KEY_POINT_LIMITS.title),
+  /** chip label („MFW”) */
+  short: z.string().min(1).max(KEY_POINT_LIMITS.short),
+  summary: z.string().max(KEY_POINT_LIMITS.summary).optional(),
+  /** levels the items live in, in level order */
+  levels: z.array(z.string().min(1).max(40)).min(1).max(30),
+  items: z.array(KeyPointItemSchema).min(3).max(KEY_POINT_LIMITS.items),
+});
+
 export const GradingSchema = z.object({
   pass: z.number().min(0).max(100),
   examMin: z.number().int().min(1).max(240),
@@ -286,6 +317,8 @@ export const TopicContentSchema = z.object({
   grading: GradingSchema,
   info: z.string().max(20000),
   levels: z.array(LevelSchema).min(1).max(30),
+  /** key points of the material (docs/plan-media.md §1.1); optional — older topics have none and fall back to one point per level */
+  keyPoints: z.array(KeyPointSchema).min(3).max(15).optional(),
 });
 
 /** @deprecated use TopicContentSchema */
@@ -316,6 +349,8 @@ export type GenGame = z.infer<typeof GenGameSchema>;
  */
 export const GenTaskSchema = z.object({
   type: z.enum(AI_TASK_TYPES),
+  /** key point tag (see GenQuizSchema); optional in the flat shape — copied from the compact task by expandGenTask() */
+  p: z.string().optional().catch(undefined),
   title: z.string(),
   /** explanation for the feedback panel */
   e: z.string(),
@@ -369,6 +404,8 @@ export type GenTask = z.infer<typeof GenTaskSchema>;
  * `payload` is a JSON string with the type-specific fields (same names as GenTaskSchema). Expanded by `expandGenTask()`.
  */
 export const GenTaskCompactSchema = z.object({
+  /** key point tag (see GenQuizSchema) */
+  p: z.string(),
   type: z.enum(AI_TASK_TYPES),
   title: z.string(),
   e: z.string(),
@@ -378,10 +415,32 @@ export const GenTaskCompactSchema = z.object({
 });
 export type GenTaskCompact = z.infer<typeof GenTaskCompactSchema>;
 export const LevelTasksGenSchema = z.object({ tasks: z.array(GenTaskCompactSchema) });
+/** Parser for a tasks answer read from raw text (grammar fallback): a task without `p` stays valid. Never an output format. */
+export const LevelTasksGenLooseSchema = z.object({ tasks: z.array(GenTaskCompactSchema.extend({ p: z.string().optional().catch(undefined) })) });
 
-const GenQuizSchema = z.object({ q: z.string(), a: z.array(z.string()), c: z.number(), e: z.string(), src_page: z.number(), src_quote: z.string() });
+/**
+ * `p` (first field, so the model picks the point before writing the item) = the `key` of the outline key point the
+ * flashcard / question / task checks ("" = none). Required in the output grammars; optional in the parsed shapes
+ * (`…OutSchema`, GeneratedTopicSchema), so older fixtures and a raw-JSON answer without it stay valid —
+ * `buildKeyPoints()` repairs a missing / unknown tag.
+ */
+const GenQuizSchema = z.object({ p: z.string(), q: z.string(), a: z.array(z.string()), c: z.number(), e: z.string(), src_page: z.number(), src_quote: z.string() });
 const GenFeedSchema = z.object({ title: z.string(), body: z.string(), real: z.string(), mnemo: z.string() });
-const GenCardSchema = z.object({ t: z.string(), d: z.string() });
+const GenCardSchema = z.object({ p: z.string(), t: z.string(), d: z.string() });
+/** Parsed (not grammar) shapes: `p` optional; a non-string `p` is dropped instead of failing the level. */
+const optP = z.string().optional().catch(undefined);
+const GenQuizOutSchema = GenQuizSchema.extend({ p: optP });
+const GenCardOutSchema = GenCardSchema.extend({ p: optP });
+
+/** A key point carried from the outline to finalize: `levels` = 0-based indexes into `GeneratedTopic.levels`. */
+export const GenPointSchema = z.object({
+  key: z.string(),
+  title: z.string(),
+  short: z.string().optional(),
+  summary: z.string().optional(),
+  levels: z.array(z.number()),
+});
+export type GenPoint = z.infer<typeof GenPointSchema>;
 
 /** `viz_type` values in the viz-mode grammar ("none" = no visual for this dose). */
 export const VIZ_GEN_TYPES = ["none", ...VIZ_TYPES] as const;
@@ -412,13 +471,18 @@ export const GeneratedTopicSchema = z.object({
       emoji: z.string(),
       summary: z.string(),
       feed: z.array(GenFeedOutSchema),
-      flashcards: z.array(GenCardSchema),
-      quiz: z.array(z.object({ q: z.string(), a: z.array(z.string()), c: z.number(), e: z.string(), src_page: z.number().optional(), src_quote: z.string().optional() })),
+      flashcards: z.array(GenCardOutSchema),
+      quiz: z.array(z.object({ p: optP, q: z.string(), a: z.array(z.string()), c: z.number(), e: z.string(), src_page: z.number().optional(), src_quote: z.string().optional() })),
       games: z.array(GenGameSchema),
       /** tasks 2.0 (optional here so older callers / fixtures stay valid) */
       tasks: z.array(GenTaskSchema).optional(),
     }),
   ),
+  /**
+   * Key points of the outline (generate.ts: normalized with `normalizeOutlinePoints()`), `levels` = 0-based indexes
+   * into `levels` above. Optional: without it finalize stores no `keyPoints` (the client falls back per level).
+   */
+  points: z.array(GenPointSchema).optional(),
 });
 export type GeneratedTopic = z.infer<typeof GeneratedTopicSchema>;
 /** @deprecated */
@@ -453,19 +517,30 @@ export const OutlineSchema = z.object({
       scope: z.string(),
     }),
   ),
+  /**
+   * 6–15 key points of the whole material (plan-media §2.1), after `levels` so the model writes them knowing the
+   * levels. `levels` here = level NUMBERS from 1, as the prompts count levels („poziom 1 z 4”);
+   * `normalizeOutlinePoints()` turns them into 0-based indexes and drops what is unusable.
+   */
+  points: z.array(z.object({ key: z.string(), title: z.string(), short: z.string(), summary: z.string(), levels: z.array(z.number()) })),
 });
 export type Outline = z.infer<typeof OutlineSchema>;
+/**
+ * Parser for an outline read from raw text (grammar fallback): an outline without `points` (or with a malformed list)
+ * stays valid — the topic is then stored without key points. Never an output format.
+ */
+export const OutlineLooseSchema = OutlineSchema.extend({ points: OutlineSchema.shape.points.optional().catch(undefined) });
 
 /** Phase 2 of generation: content of ONE level (generated in parallel per level). */
 export const LevelGenSchema = z.object({
   feed: z.array(GenFeedOutSchema),
-  flashcards: z.array(GenCardSchema),
-  quiz: z.array(GenQuizSchema),
+  flashcards: z.array(GenCardOutSchema),
+  quiz: z.array(GenQuizOutSchema),
   games: z.array(GenGameSchema),
   tasks: z.array(GenTaskSchema).optional(),
 });
 export type LevelGen = z.infer<typeof LevelGenSchema>;
-/** Core level content without tasks — used as the structured-output format of the level call (pre-viz grammar, unchanged). */
+/** Core level content without tasks — the structured-output format of the level call (no viz fields; `p` on cards and questions). */
 export const LevelCoreGenSchema = z.object({
   feed: z.array(GenFeedSchema),
   flashcards: z.array(GenCardSchema),
@@ -475,11 +550,16 @@ export const LevelCoreGenSchema = z.object({
 /** Same as LevelCoreGenSchema plus `viz_type` / `viz` (JSON string) on every dose — the format when `options.viz`. */
 export const LevelCoreGenVizSchema = LevelCoreGenSchema.extend({ feed: z.array(GenFeedVizSchema) });
 /**
+ * Parser for level output read from raw text (no grammar, e.g. the fallback when the grammar is rejected): a card or
+ * question without `p` stays valid (repaired in finalize). Never used as an output format.
+ */
+export const LevelCoreGenLooseSchema = LevelCoreGenSchema.extend({ flashcards: z.array(GenCardOutSchema), quiz: z.array(GenQuizOutSchema) });
+/**
  * Parser for viz-mode level output read from raw text (no grammar, e.g. the fallback when the grammar is rejected):
  * a dose without `viz_type` / `viz`, or with a value outside the enum, keeps the dose and just has no visual —
  * `parseViz()` validates whatever is there. Never used as an output format.
  */
-export const LevelCoreGenVizLooseSchema = LevelCoreGenSchema.extend({
+export const LevelCoreGenVizLooseSchema = LevelCoreGenLooseSchema.extend({
   feed: z.array(GenFeedSchema.extend({ viz_type: z.enum(VIZ_GEN_TYPES).optional().catch(undefined), viz: z.string().optional().catch(undefined) })),
 });
 

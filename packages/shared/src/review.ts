@@ -119,14 +119,15 @@ export function plainText(html: string): string {
 
 /**
  * A generated task as the reviewer sees it: type, title, e and the type's non-empty payload fields (empty strings and
- * arrays of the flat shape, source fields and unused zero indexes left out).
+ * arrays of the flat shape, source fields, the key-point tag `p` and unused zero indexes left out). The review only
+ * keeps or drops tasks, so the tag travels with the kept task untouched (`applyReview()` filters the original objects).
  */
 export function taskForReview(t: Record<string, unknown> & { type: string }): Record<string, unknown> {
   // numeric fields that mean something for the type (the flat shape has every field, unused ones are 0)
   const numeric: Record<string, string[]> = { scenario: ["c"], thesis: ["c"], finderror: ["wrong"], tf: ["seconds"] };
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(t)) {
-    if (k === "src_page" || k === "src_quote") continue;
+    if (k === "src_page" || k === "src_quote" || k === "p") continue;
     if (typeof v === "number") {
       if ((numeric[t.type] ?? []).includes(k) && (k !== "seconds" || v > 0)) out[k] = v;
       continue;
