@@ -1,0 +1,64 @@
+{
+  "v": 1,
+  "title": "Kto naprawdę rządzi gospodarką świata?",
+  "chapters": [
+    { "n": 1, "title": "Czym są MSGiP", "lines": [
+      { "s": "lis", "t": "Cześć! Dziś rozbieramy na części **MSGiP**, czyli międzynarodowe stosunki gospodarcze i polityczne." },
+      { "s": "szop", "t": "Ja wiem, ja wiem! **MSG** i **MSP** to dokładnie to samo, tylko ktoś lubi długie skróty." },
+      { "s": "lis", "t": "Nie do końca. **MSG** to wymiana gospodarcza ponad granicami: towary, usługi, kapitał i technologie." },
+      { "s": "lis", "t": "A **MSP** to władza, bezpieczeństwo i dyplomacja. Przenikają się, ale patrzą na co innego." },
+      { "s": "szop", "t": "Czyli sankcje to gospodarka czy polityka?" },
+      { "s": "lis", "t": "Jedno i drugie: cel polityczny, narzędzie gospodarcze. Dlatego uczymy się ich razem." }
+    ] },
+    { "n": 2, "title": "Globalizacja i kryzysy", "lines": [
+      { "s": "lis", "t": "Globalizacja to nie tylko handel. To też przepływy kapitału, idei i decyzji politycznych." },
+      { "s": "szop", "t": "A kryzys? To jak ktoś zapomni zapłacić rachunek za prąd?" },
+      { "s": "lis", "t": "Kryzys bilansu płatniczego to sytuacja, gdy kraj nie ma czym zapłacić za import ani za długi." },
+      { "s": "szop", "t": "Aha, to wtedy dzwoni do **Banku Światowego** po szybką pożyczkę!" },
+      { "s": "lis", "t": "W kryzysie płatniczym pomaga **MFW**. Bank Światowy finansuje rozwój: drogi i szkoły." },
+      { "s": "szop", "t": "No dobra, MFW gasi pożar, Bank Światowy buduje nowy dom." }
+    ] },
+    { "n": 3, "title": "Handel i inwestycje", "lines": [
+      { "s": "lis", "t": "Kraje specjalizują się według **przewagi komparatywnej**." },
+      { "s": "szop", "t": "Czyli każdy robi wszystko sam, żeby nie musieć kupować?" },
+      { "s": "lis", "t": "Odwrotnie: robisz to, co ci wychodzi relatywnie najtaniej, a resztę kupujesz." },
+      { "s": "szop", "t": "A fabryka z Niemiec w Polsce to co?" },
+      { "s": "lis", "t": "To **bezpośrednia inwestycja zagraniczna**, bo daje trwałą kontrolę nad firmą." }
+    ] },
+    { "n": 4, "title": "Państwo i suwerenność", "lines": [
+      { "s": "lis", "t": "Państwo to **terytorium**, **ludność** i **suwerenna władza**." },
+      { "s": "szop", "t": "I jeszcze flaga, bez flagi nie ma państwa!" },
+      { "s": "lis", "t": "Flaga jest miła, ale prawo międzynarodowe liczy tylko te trzy elementy." },
+      { "s": "szop", "t": "Suwerenność to znaczy, że nikt mi nie każe sprzątać?" },
+      { "s": "lis", "t": "Prawie: władza państwa nie podlega innym państwom." }
+    ] },
+    { "n": 5, "title": "ONZ i WTO", "lines": [
+      { "s": "lis", "t": "**ONZ** powstała w 1945 roku, żeby pilnować pokoju." },
+      { "s": "szop", "t": "Sankcje nakłada Zgromadzenie Ogólne, bo tam są wszyscy." },
+      { "s": "lis", "t": "Wiążące sankcje nakłada **Rada Bezpieczeństwa**. W Zgromadzeniu każde państwo ma jeden głos." },
+      { "s": "szop", "t": "A **WTO** to taki sędzia od handlu?" },
+      { "s": "lis", "t": "Tak: ustala zasady i rozstrzyga spory handlowe." }
+    ] },
+    { "n": 6, "title": "MFW i Bank Światowy", "lines": [
+      { "s": "lis", "t": "Oba powstały w **Bretton Woods** w 1944 roku." },
+      { "s": "szop", "t": "MFW buduje szkoły, a Bank Światowy ratuje w kryzysie." },
+      { "s": "lis", "t": "Na odwrót. **MFW** ratuje w kryzysie, **Bank Światowy** finansuje rozwój." },
+      { "s": "szop", "t": "A skąd MFW ma pieniądze?" },
+      { "s": "lis", "t": "Z **kwot** wpłacanych przez państwa członkowskie." }
+    ] },
+    { "n": 7, "title": "Korporacje transnarodowe", "lines": [
+      { "s": "lis", "t": "**Korporacja transnarodowa** ma siedzibę w jednym kraju, a produkcję w wielu." },
+      { "s": "szop", "t": "Korporacje to tylko firmy, polityka ich nie dotyczy." },
+      { "s": "lis", "t": "Dotyczy: przez inwestycje, miejsca pracy i **lobbing** wpływają na decyzje państw." },
+      { "s": "szop", "t": "Niektóre zarabiają więcej niż całe kraje?" },
+      { "s": "lis", "t": "Tak, przychody największych przewyższają PKB wielu państw." }
+    ] },
+    { "n": 8, "title": "Unia Europejska i NGO", "lines": [
+      { "s": "lis", "t": "**Unia Europejska** to 27 państw i instytucje ponad państwami." },
+      { "s": "szop", "t": "A NGO to agenda rządu, prawda?" },
+      { "s": "lis", "t": "Nie: **NGO** działa niezależnie od państw i nie dla zysku." },
+      { "s": "szop", "t": "Czyli państw tam nie ma wcale?" },
+      { "s": "lis", "t": "Właśnie. Państwa zrzeszają organizacje międzyrządowe, jak ONZ czy WTO." }
+    ] }
+  ]
+}

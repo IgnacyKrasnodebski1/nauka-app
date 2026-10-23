@@ -1,0 +1,46 @@
+{
+  "title": "Rolka <img src=x onerror=\"window.__pwned=1\"> 🔥",
+  "cover": { "title": "<svg onload=window.__pwned=1>", "sub": "\"><img src=x onerror=window.__pwned=1>" },
+  "maxLabels": 99999,
+  "audio": { "src": "javascript:window.__pwned=1", "words": "../../../etc/passwd", "rate": 1e9 },
+  "voice": { "provider": "x", "voice_id": "<b>" },
+  "quiz": { "q": "<img src=x onerror=window.__pwned=1>", "a": ["a", "b"], "c": 0, "e": "x" },
+  "camDur": "<b>1</b>",
+  "onload": "window.__pwned=1",
+  "world": {
+    "seed": 5,
+    "theme": "<img src=x onerror=window.__pwned=1>",
+    "stations": [
+      { "id": "a", "kind": "evil<script>", "label": "Stacja <img src=x onerror=\"window.__pwned=1\">", "x": 1e9, "y": -1e9, "color": "red;background:url(javascript:window.__pwned=1)", "onclick": "window.__pwned=1" },
+      { "id": "b\"><img src=x onerror=window.__pwned=1>", "kind": "house", "label": "🔥🔥 Druga 🔥", "x": 2, "y": 2, "color": "#2F6BFF", "colors": ["#FFF", "javascript:x", "rgb(1,2,3)"] },
+      { "id": "c", "kind": "billboard", "label": "Billboard", "text": "</script><script>window.__pwned=1</script>", "x": 4, "y": 4 }
+    ],
+    "roads": [["a", "c"], { "from": "a", "to": "c", "style": "<img>", "color": "url(javascript:1)" }],
+    "zones": [{ "id": "z", "x": 0, "y": 0, "r": 1e12, "color": "expression(alert(1))" }]
+  },
+  "scenes": [
+    {
+      "say": "Pierwsza <img src=x onerror=\"window.__pwned=1\"> scena 🔥 z XSS.",
+      "tts": "[excited] Pierwsza <img src=x onerror=\"window.__pwned=1\"> scena z XSS.",
+      "cam": { "to": "a", "zoom": 1e9, "y": 1e9, "dx": -1e9 },
+      "hold": 1e9,
+      "actions": [
+        { "type": "label", "at": "a", "text": "<img src=x onerror=\"window.__pwned=1\">", "on": "Pierwsza", "dx": 1e9, "style": "<b>" },
+        { "type": "card", "title": "<svg onload=window.__pwned=1>", "lines": ["<img src=x onerror=window.__pwned=1>", { "t": "\"><script>window.__pwned=1</script>", "on": "scena" }], "on": "scena" },
+        { "type": "cutaway", "kind": "phone", "app": "<img src=x onerror=window.__pwned=1>", "title": "Telefon 🔥", "sub": "<b>sub</b>", "rows": ["<img src=x onerror=window.__pwned=1>", { "t": "rząd", "on": "XSS" }], "on": "z" },
+        { "type": "eval", "code": "window.__pwned=1" },
+        { "type": "fox", "pose": "<img src=x onerror=window.__pwned=1>", "side": "left", "on": "Pierwsza", "dur": 1e9 },
+        { "type": "chapter", "n": "<b>1</b>", "text": "Rozdział <img src=x onerror=\"window.__pwned=1\">", "on": "Pierwsza" },
+        { "type": "packet", "from": "a", "to": "c", "text": "<img src=x onerror=window.__pwned=1>", "color": "javascript:x", "n": 1e9, "on": "scena" }
+      ]
+    },
+    {
+      "say": "Druga scena bez niczego groźnego.",
+      "tts": "Druga scena bez niczego groźnego.",
+      "cam": { "to": "all" },
+      "actions": [
+        { "type": "cutaway", "kind": "dots", "head": "<img src=x onerror=window.__pwned=1>", "total": 1e9, "hit": 5, "value": "<b>97</b>", "unit": "%", "label": "x", "note": "<svg onload=window.__pwned=1>", "on": "Druga" }
+      ]
+    }
+  ]
+}

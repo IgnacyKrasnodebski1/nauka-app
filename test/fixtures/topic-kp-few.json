@@ -1,0 +1,216 @@
+{
+  "name": "Punkty — za mało poprawnych",
+  "short": "Za mało",
+  "tagline": "",
+  "grading": {
+    "pass": 50,
+    "examMin": 20,
+    "scale": [
+      [
+        90,
+        "5"
+      ],
+      [
+        80,
+        "4,5"
+      ],
+      [
+        70,
+        "4"
+      ],
+      [
+        60,
+        "3,5"
+      ],
+      [
+        50,
+        "3"
+      ]
+    ],
+    "failLabel": "2"
+  },
+  "levels": [
+    {
+      "id": "a1",
+      "title": "Poziom A1",
+      "emoji": "🧪",
+      "feed": [
+        {
+          "title": "Część 1",
+          "body": "Treść części 1."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "Pojęcie a1.0",
+          "d": "Definicja a1.0"
+        },
+        {
+          "t": "Pojęcie a1.1",
+          "d": "Definicja a1.1"
+        },
+        {
+          "t": "Pojęcie a1.2",
+          "d": "Definicja a1.2"
+        },
+        {
+          "t": "Pojęcie a1.3",
+          "d": "Definicja a1.3"
+        },
+        {
+          "t": "Pojęcie a1.4",
+          "d": "Definicja a1.4"
+        },
+        {
+          "t": "Pojęcie a1.5",
+          "d": "Definicja a1.5"
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Pytanie a1.0?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a1.1?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a1.2?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a1.3?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a1.4?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a1.5?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        }
+      ],
+      "tasks": [
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "Zdanie",
+              "v": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "keyPoints": [
+    {
+      "id": "p1",
+      "title": "Jedyny dobry punkt",
+      "short": "Dobry",
+      "levels": [
+        "a1"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "a1",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "a1",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "a1",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "title": "Zły punkt (nieznany poziom)",
+      "short": "Zły",
+      "levels": [
+        "zz"
+      ],
+      "items": [
+        {
+          "kind": "quiz",
+          "level": "zz",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "zz",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "zz",
+          "index": 2
+        }
+      ]
+    },
+    {
+      "id": "p3",
+      "title": "Za mały punkt",
+      "short": "Mały",
+      "levels": [
+        "a1"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "a1",
+          "index": 2
+        },
+        {
+          "kind": "quiz",
+          "level": "a1",
+          "index": 1
+        }
+      ]
+    }
+  ]
+}

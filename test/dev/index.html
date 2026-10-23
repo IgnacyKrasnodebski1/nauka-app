@@ -8,14 +8,17 @@
 <title>Cramfox — dev (atrapa backendu)</title>
 <link rel="stylesheet" href="../../fonts/fonts.css">
 <link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../media.css">
 </head>
 <body>
 <div id="app"></div>
-<!-- jak /index.html, ale najpierw atrapa backendu (podmienia fetch: Supabase i API nie wychodzą do sieci). Kolejność ma znaczenie. -->
+<!-- jak /index.html, ale najpierw atrapa backendu (podmienia fetch: Supabase i API nie wychodzą do sieci). Kolejność ma znaczenie (docs/plan-media.md §4.2):
+     cloud-config → cloud → engine → media (rolki, podcast, rozmowa z lisem) → cloud-ui -->
 <script src="mock-backend.js"></script>
 <script src="../../cloud-config.js"></script>
 <script src="../../cloud.js"></script>
 <script src="../../engine.js"></script>
+<script src="../../media.js"></script>
 <script src="../../cloud-ui.js"></script>
 </body>
 </html>

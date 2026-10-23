@@ -76,6 +76,29 @@ function fixProgress(){
   if(P.themes!=null)P.themes=Array.isArray(P.themes)?P.themes.filter(t=>own(GLASSES,t)):[];
   const H=objOr('history');if(H)Object.keys(H).forEach(k=>{if(!isDate(k)||!isObj(H[k]))delete H[k];});
   if(P.lessonSave!=null&&(typeof P.lessonSave!=='string'||P.lessonSave.length>40000))delete P.lessonSave; // P1-11: przerwane lekcje (napis JSON, wpisy sprawdza lessonLoad)
+  fixMediaProgress(P,isObj);
+}
+/* plan-media §1.7: nowe, opcjonalne pola postępów (rolki, podcast, rozmowa z lisem, ukryte punkty) — z synchronizacji niezaufane:
+   nieznane kształty wypadają, liczby w zakresie, daty yyyy-mm-dd; tekst do DOM liczony z danych (ocena z pct), nigdy brany z zapisu */
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,PKEY_RE=/^[A-Za-z0-9_-]{1,64}:[A-Za-z0-9_-]{1,64}$/,CP_RE=/^([1-9]|1\d|20):(\d{1,4})$/;
+const intSet=(a,lo,hi)=>Array.isArray(a)?[...new Set(a.filter(x=>Number.isInteger(x)&&x>=lo&&x<=hi))].slice(0,40):[];
+function fixMediaProgress(P,isObj){
+  const drop=k=>{delete P[k];};
+  if(P.media!=null){if(!isObj(P.media))drop('media');else{const M=P.media;Object.keys(M).forEach(id=>{const m=M[id];if(!UUID_RE.test(id)||!isObj(m)){delete M[id];return;}
+    const o={};const w=intSet(m.w,1,20);if(w.length)o.w=w;const dn=intSet(m.done,1,20);if(dn.length)o.done=dn;
+    if(isObj(m.q)){const q={};Object.keys(m.q).forEach(k=>{if(/^c?\d{1,2}$/.test(k)&&(m.q[k]===0||m.q[k]===1))q[k]=m.q[k];});if(Object.keys(q).length)o.q=q;}
+    if(Number.isInteger(m.ch)&&m.ch>=1&&m.ch<=20)o.ch=m.ch;if(num(m.pos)&&m.pos>=0)o.pos=Math.min(7200,m.pos);
+    if(typeof m.cp==='string'&&CP_RE.test(m.cp)&&+m.cp.split(':')[1]<=7200)o.cp=m.cp; // podcast: „<rozdział>:<sekunda>” jako jedna wartość (mediaState)
+    if(isDate(m.at))o.at=m.at;M[id]=o;});
+    const ks=Object.keys(M);if(ks.length>200)ks.slice(0,ks.length-200).forEach(k=>{delete M[k];});}}
+  if(P.oral!=null){if(!isObj(P.oral))drop('oral');else Object.keys(P.oral).forEach(k=>{const e=P.oral[k];if(!PKEY_RE.test(k)||!isObj(e)||!isDate(e.at))delete P.oral[k];else P.oral[k]={at:e.at,ok:e.ok===true};});}
+  if(P.ptHide!=null){if(!isObj(P.ptHide))drop('ptHide');else Object.keys(P.ptHide).forEach(k=>{if(!PKEY_RE.test(k)||!isDate(P.ptHide[k]))delete P.ptHide[k];});}
+  if(P.fox!=null){if(!isObj(P.fox))drop('fox');else Object.keys(P.fox).forEach(k=>{const f=P.fox[k];if(!/^(s:)?[A-Za-z0-9_-]{1,64}$/.test(k)||!isObj(f)){delete P.fox[k];return;}
+    const o={};const I=(v,hi)=>Number.isInteger(v)&&v>=0&&v<=hi;
+    if(isObj(f.explain)&&isDate(f.explain.at))o.explain={at:f.explain.at,gaps:I(f.explain.gaps,50)?f.explain.gaps:0};
+    if(isObj(f.quiz)&&isDate(f.quiz.at)&&I(f.quiz.n,50))o.quiz={at:f.quiz.at,n:f.quiz.n,ok:I(f.quiz.ok,f.quiz.n)?f.quiz.ok:0};
+    if(isObj(f.exam)&&isDate(f.exam.at)&&num(f.exam.pct))o.exam={at:f.exam.at,pct:Math.max(0,Math.min(100,Math.round(f.exam.pct)))}; // ocena liczona z pct przy wyświetlaniu (gradeFor)
+    if(Object.keys(o).length)P.fox[k]=o;else delete P.fox[k];});}
 }
 /* poprawka pytania (PROGRESS.overrides) — surowy tekst wpisany przez użytkownika; z synchronizacji niezaufana, więc kształt sprawdzany przy każdym użyciu */
 function ovOk(o){return !!o&&typeof o==='object'&&typeof o.q==='string'&&Array.isArray(o.a)&&o.a.length>=2&&o.a.length<=5&&o.a.every(x=>typeof x==='string')&&Number.isInteger(o.c)&&o.c>=0&&o.c<o.a.length&&(o.e==null||typeof o.e==='string');}
@@ -94,6 +117,8 @@ function fixMeta(m){
   if(m.frozenDays!=null)m.frozenDays=Array.isArray(m.frozenDays)?m.frozenDays.filter(isDate).slice(-14):[];
   if(m.ms!=null&&(typeof m.ms!=='object'||Array.isArray(m.ms)))delete m.ms;
   if(m.reduceMotion!=null)m.reduceMotion=!!m.reduceMotion;
+  if(m.mediaPrefs!=null){const p=m.mediaPrefs;if(!p||typeof p!=='object'||Array.isArray(p))delete m.mediaPrefs; // plan-media §1.7: tempo podcastu, pytania na końcu, podpowiedź pauzy
+    else m.mediaPrefs={rate:[1,1.25,1.5].indexOf(p.rate)>=0?p.rate:1,qEnd:p.qEnd===true,hint:p.hint===true};}
   return m;
 }
 function loadMeta(){try{const m=JSON.parse(STORE.getItem(MKEY)||'{}');return m&&typeof m==='object'&&!Array.isArray(m)?fixMeta(m):{};}catch(e){return {};}}
@@ -144,7 +169,8 @@ const SUBJECTS = (window.SUBJECTS||[]).filter(s=>s&&s.id&&s.name&&Array.isArray(
 const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
 const shuffle=a=>{a=[...a];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}; // Fisher–Yates (sort z losowym porównaniem nie tasuje równo)
 const keys=['A','B','C','D','E'];
-let app, current=null, curTab='path';
+let app, current=null, curTab='hub';
+let curTopic=null,subjFrom='subjects',tabFrom='hub',toolTopic=null; // centrum przedmiotu: otwarty materiał, skąd wejście do przedmiotu (wstecz z centrum), skąd narzędzie (wstecz z fiszek itd.), zakres narzędzia (materiał)
 
 /* ---------- ikony: inline SVG (ścieżki z design/preview/*.html), zero emoji w UI ----------
    icon(name,{size,stroke,fill,cls}) → string <svg class="ic" …>. 24×24 viewBox,
@@ -218,7 +244,27 @@ const ICONS={
   share:{d:'<circle cx="18" cy="5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="19" r="2.5"/><path d="M8.2 10.8l7.6-4.6M8.2 13.2l7.6 4.6"/>',w:2.4},
   trend:{d:'M3 17l6-6 4 4 8-8M15 7h6v6',w:2.8},
   trash:{d:'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6',w:2.4},
-  slides:{d:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 16v4M8 20h8M7 12l3-3 2 2 4-4"/>',w:2.4}
+  slides:{d:'<rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 16v4M8 20h8M7 12l3-3 2 2 4-4"/>',w:2.4},
+  /* centrum przedmiotu, rolki, podcast, rozmowa z lisem (design/centrum, design-centrum.md §4: stroke 2.6, okrągłe końce) */
+  dots:{d:'M5 12h.01M12 12h.01M19 12h.01',w:3.6},
+  reel:{d:'<rect x="5" y="2.5" width="14" height="19" rx="3.5"/><path d="M10.2 9.3v5.4l4.4-2.7z"/>'},
+  headphones:{d:'<path d="M3.5 17v-5a8.5 8.5 0 0 1 17 0v5"/><rect x="3" y="13.5" width="5" height="7" rx="2"/><rect x="16" y="13.5" width="5" height="7" rx="2"/>'},
+  timer:{d:'<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V10M9.5 2.5h5"/>'},
+  chat:{d:'M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.6A8.5 8.5 0 1 1 20.5 11.5z'},
+  'help-bubble':{d:'<path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.6A8.5 8.5 0 1 1 20.5 11.5z"/><path d="M9.8 9.3a2.3 2.3 0 0 1 4.4.9c0 1.5-2.2 1.8-2.2 3.2M12 16h.01"/>'},
+  lightbulb:{d:'<path d="M9 18h6M10 21.5h4"/><path d="M12 2.5a6.5 6.5 0 0 0-3.9 11.7c.6.5.9 1.2.9 2v.3h6v-.3c0-.8.3-1.5.9-2A6.5 6.5 0 0 0 12 2.5z"/>'},
+  play:{d:'M8 5.5v13l10.5-6.5z',fill:true},
+  pause:{d:'<rect x="6" y="4.5" width="4.2" height="15" rx="1.6"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="1.6"/>',fill:true},
+  'rewind-15':{d:'<path d="M12 3.5a8.5 8.5 0 1 1-8.5 8.5"/><path d="M14.5 1L12 3.5L14.5 6"/><text x="12" y="15" text-anchor="middle" font-size="7.6" font-weight="800" fill="currentColor" stroke="none">15</text>',w:2.2},
+  'forward-15':{d:'<path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5"/><path d="M9.5 1L12 3.5L9.5 6"/><text x="12" y="15" text-anchor="middle" font-size="7.6" font-weight="800" fill="currentColor" stroke="none">15</text>',w:2.2},
+  send:{d:'M12 19V5M6 11l6-6 6 6',w:2.8},
+  'skip-down':{d:'M7 6l5 5 5-5M7 13l5 5 5-5'},
+  speaker:{d:'<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9.2a4 4 0 0 1 0 5.6M18.4 6.5a8 8 0 0 1 0 11"/>'},
+  'speaker-off':{d:'<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>'},
+  clipboard:{d:'<rect x="8.5" y="2.5" width="7" height="4" rx="1.2"/><path d="M15.5 4.5h1.5a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-13a2 2 0 0 1 2-2h1.5"/>'},
+  stop:{d:'<rect x="6" y="6" width="12" height="12" rx="2.5"/>',fill:true},
+  'scrubber-diamond':{d:'M12 3.5l8.5 8.5-8.5 8.5-8.5-8.5z',fill:true},
+  bars:{d:'M6 14v5M12 5v14M18 9v10',w:3.2}
 };
 function icon(name,o){
   o=o||{};const ic=own(ICONS,name)?ICONS[name]:ICONS.alert;
@@ -568,6 +614,7 @@ const TOAST_TONE={check:'acid',flame:'flame',close:'red','x-circle':'red',lock:'
    Pozycja nad dolnym paskiem (styles.css), a przy otwartym arkuszu nad nim. {go} = toast klikalny (akcja). */
 let toastBox=null; // jeden trwały #toast: shell() wstawia go z powrotem, więc komunikat przeżywa przerysowanie ekranu
 const toastQ=[];let toastCur=null,toastTimer=null,toastWake=null;
+const TOAST_TOP=new Set(['reelplay','podcast','foxchat','foxresult','foxmodes','reelseries']);
 const TOAST_AVOID='.nav,.lesson.open .lessonfoot,.egfoot,.cfadd-foot,.today.empty .efoot,#subjscreen .fbtns,.quizview .qcheck:not(.hide)';
 function toastEl(){if(!toastBox){toastBox=el('div','toast','');toastBox.id='toast';}return toastBox;}
 function toastMs(t,act){return act?8000:Math.min(5000,1500+40*String(t).length);} // z akcją (np. „Lekcja gotowa — dotknij”) dłużej: to często jedyna droga do ekranu
@@ -582,8 +629,10 @@ function toastShow(it){
   toastCur={...it,at:Date.now()};clearTimeout(toastTimer);toastTimer=setTimeout(toastHide,toastMs(it.t,!!it.go));return true;
 }
 function toastPlace(){ // nad arkuszem albo nad najwyższym przyciskiem przy dole ekranu (stopka lekcji, ocena fiszki, nawigacja) — nie na nich
-  const box=toastBox;if(!box)return;box.style.bottom='';if(!app||!box.parentNode)return;
+  const box=toastBox;if(!box)return;box.style.bottom='';box.style.top='';box.classList.remove('top');if(!app||!box.parentNode)return;
   const ar=app.getBoundingClientRect(),sh=document.getElementById('sheet');let top=Infinity;
+  // pełnoekranowe odtwarzacze (rolka, podcast, rozmowa z lisem) nie mają dolnego paska, a na dole mają główny przycisk i wyjaśnienie odpowiedzi — komunikat u góry
+  if(!sh&&TOAST_TOP.has(view)){box.classList.add('top');return;}
   if(sh){const t=sh.offsetParent===app?ar.top+sh.offsetTop:sh.getBoundingClientRect().top;if(sh.offsetHeight&&t>ar.top+80)top=t;} // offsetTop: bez przesunięcia z animacji wjazdu
   else document.querySelectorAll(TOAST_AVOID).forEach(e=>{const r=e.getBoundingClientRect();if(r.height&&r.top>ar.top+ar.height*.45&&r.top<top)top=r.top;});
   if(top<Infinity)box.style.bottom=Math.round(ar.bottom-top+12)+'px';
@@ -623,7 +672,10 @@ function applyTheme(s){
   set('--accent2', s&&(s.accent2||s.accent));
   set('--accent-dark', s&&s.accentDark);   // brak = color-mix z --accent w styles.css
   set('--on-accent', s&&s.onAccent);
+  const t=s&&ACC_TINT[String(s.accent||'').toUpperCase()]; // tinty z design-centrum §4 (karta „Na teraz”, kafel „Dodaj materiał”)
+  set('--acc-bg',t&&t[0]);set('--acc-line',t&&t[1]);
 }
+const ACC_TINT={'#B4FF3A':['#1F2A12','#4E6B24'],'#FF2E93':['#241536','#46216B'],'#22D3EE':['#0E2430','#1A4C5E'],'#FFC043':['#2A2110','#574319'],'#FFA023':['#2A1C10','#5C3812'],'#A855F7':['#22163A','#4A2A78']};
 
 /* ============================================================ KROK 3: „Dziś”, plan dnia, kafle, dolna nawigacja
    Router widoków głównych: today (start) · subjects · profile · settings · streak.
@@ -631,18 +683,22 @@ function applyTheme(s){
 const VIEWS={today:renderToday,review:renderReview,cards:renderCardsHub,subjects:renderSubjects,profile:renderProfile,settings:renderSettings,streak:renderStreak,testplan:renderTestPlan,
   shop:renderShop,missions:renderMissions,album:renderAlbum,comeback:renderComeBack, // krok 8
   levelpick:renderLevelPick,onboarding:renderOnboarding,weekly:renderWeekly,cram:renderCram,error:renderErrorView}; // krok 9
-let view='today';const navHist=[]; // skąd przyszedł użytkownik: {view} albo {sid,tab} (wstecz w Albumie, Plecaku, Serii)
+let view='today';const navHist=[]; // skąd przyszedł użytkownik: {view} albo {sid,tab,topic} (wstecz w Albumie, Plecaku, Serii, z ekranów rolek i podcastu)
+/* registerView(k, fn, {leave}): leave() woła się przed narysowaniem innego ekranu, gdy opuszczamy k (media.js: zatrzymanie rolki, zapis pozycji podcastu) */
+const VIEW_LEAVE={};let shown=null; // klucz widoku na ekranie (null = przedmiot albo nic)
+function leaveShown(){const k=shown;shown=null;const f=k&&VIEW_LEAVE[k];if(f)try{f();}catch(e){try{console.error('Cramfox: leave',k,e);}catch(x){}}}
 function go(v,back){
   if(!back&&(current||v!==view)){const top=navHist[navHist.length-1]; // przejście na poprzedni ekran = powrót; ekran błędu ma własny powrót, więc nie trafia na stos
-    if(top&&!top.sid&&top.view===v)navHist.pop();else if(current||view!=='error'){navHist.push(current?{sid:current.id,tab:curTab}:{view});if(navHist.length>20)navHist.shift();}}
-  view=VIEWS[v]?v:'today';
+    if(top&&!top.sid&&top.view===v)navHist.pop();else if(current||view!=='error'){navHist.push(current?{sid:current.id,tab:curTab,topic:curTopic,from:tabFrom}:{view});if(navHist.length>20)navHist.shift();}}
+  const nv=VIEWS[v]?v:'today';if(shown!==nv||current)leaveShown();
+  view=nv;
   if(/^(today|review|cards|profile|subjects)$/.test(view))navHist.length=0; // ekran z dolnej nawigacji = początek ścieżki (bez starych wpisów, np. przedmiotu po jego „wstecz”)
   current=null;applyTheme(null);
   try{clearInterval(cwInt);clearInterval(exInt);clearInterval(nhInt);clearInterval(bossInt);clearInterval(ghostInt);clearInterval(cramInt);}catch(e){}
   keyFn=null;lessonState=null;rvState=null;exState=null;bossState=null;cramState=null;taskCleanup();
-  VIEWS[view]();
+  shown=view;VIEWS[view]();
 }
-function goBack(fb){const p=navHist.pop();if(p&&p.sid)openSubject(p.sid,p.tab);else go(p&&VIEWS[p.view]?p.view:fb,true);}
+function goBack(fb){const p=navHist.pop();if(p&&p.sid){curTopic=p.topic||null;if(p.from)tabFrom=p.from;openSubject(p.sid,p.tab,null,{restore:true});}else go(p&&VIEWS[p.view]?p.view:fb,true);}
 const renderHome=()=>go('today'); // stary punkt wejścia
 
 /* --- polskie daty i liczebniki --- */
@@ -658,7 +714,7 @@ function hasProgress(s){const st=PROGRESS[s.id];return !!st&&(((st.xp||0)>0)||Ob
 function applyMotion(){let sys=false;try{sys=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);}catch(e){}document.documentElement.classList.toggle('reduce-motion',!!META.reduceMotion||sys);} // P2-9: przełącznik w apce albo ustawienie telefonu
 
 /* --- plan dnia: PROGRESS.daily = {date, goal, xp, tasks:[{id, done, need?, prog?}]} (DESIGN.md §4.3, ten sam klucz) --- */
-const REWARD={lesson:15,review:20,quiz:25,exam:40,weak:20};
+const REWARD={lesson:15,review:20,quiz:25,exam:40,weak:20,szop:20,reels:15,cram:20,oral:25,warmup:15,plan:20}; // plan-media §1.7: nowe rodzaje (dawne quiz/exam zostają dla zapisanych dni)
 function daily(){
   const t=todayStr();let d=PROGRESS.daily;
   if(!d||d.date!==t||!Array.isArray(d.tasks)){syncTests();d=PROGRESS.daily={date:t,goal:goalXP(),xp:0,tasks:buildDailyTasks()};saveProgress();} // krok 7: nowy dzień = przeliczenie planów do sprawdzianu; krok 9: cel z PROGRESS.goal
@@ -669,43 +725,87 @@ function daily(){
   }
   return d;
 }
-function buildDailyTasks(){
+function planSubs(){
   let subs=SUBJECTS.filter(hasProgress);
   if(!subs.length){const mine=SUBJECTS.filter(s=>subjLevel(s)===META.level);subs=(mine.length?mine:SUBJECTS).slice(0,1);} // bez postępów: pierwszy przedmiot z etapu użytkownika
-  subs=[...subs].sort((a,b)=>((PROGRESS[b.id]||{}).xp||0)-((PROGRESS[a.id]||{}).xp||0)).slice(0,2); // plan z 2 przedmiotów o największym XP
+  return [...subs].sort((a,b)=>((PROGRESS[b.id]||{}).xp||0)-((PROGRESS[a.id]||{}).xp||0)).slice(0,2); // plan z 2 przedmiotów o największym XP
+}
+/* dzisiejszy krok planu do sprawdzianu, gdy jest co robić (od D−2; D−1 i dzień sprawdzianu mają noc / rozgrzewkę). Krok „nauka” prowadzi wiersz lekcji
+   (lekcja z kroku), więc osobnego wiersza nie ma; „słabe punkty” z talią błędów — wiersz „Powtórz błędy z egzaminu”. */
+function testStep(s){
+  const t=testFor(s.id),N=t?dayDiff(todayStr(),t.date):null;if(!t||!(N>1))return null;
+  const r=(t.plan||[]).find(x=>x.date===todayStr());if(!r||r.done||r.kind==='rest'||!own(TP_LABEL,r.kind))return null;
+  return {t,r,N,row:r.kind!=='learn'&&!(r.kind==='weak'&&hasDeck(s.id))};
+}
+/* następna lekcja do zrobienia: z kroku „nauka” planu do sprawdzianu, inaczej pierwsza niezrobiona w kolejności materiałów */
+function nextLesson(s,skip){
+  const st=subjState(s.id),open=l=>!!l&&l!==skip&&!(st.levels[l.id]||{}).done;const ts=testStep(s);
+  const fromTest=ts&&ts.r.kind==='learn'?(ts.r.lv||[]).map(id=>s.levels.find(l=>l.id===id)).find(open):null;
+  return fromTest||s.levels.find(open)||null;
+}
+function buildDailyTasks(){
   const tasks=[];
-  subs.forEach((s,i)=>{
-    const st=subjState(s.id);
-    const open=s.levels.find((l,i)=>levelUnlocked(s,i)&&!(st.levels[l.id]||{}).done);
-    if(open)tasks.push({id:s.id+':lesson:'+open.id,done:false});
-    const n=Math.min(12,allCards(s).length);
-    if(n)tasks.push({id:s.id+':review',done:false,need:n,prog:0});
-    const doneLv=[...s.levels].reverse().find(l=>(st.levels[l.id]||{}).done)||s.levels[0];
-    if(doneLv&&(doneLv.quiz||[]).length)tasks.push({id:s.id+':quiz:'+doneLv.id,done:false});
-    if(!i&&allQuiz(s).length>=5)tasks.push({id:s.id+':exam',done:false}); // egzamin tylko dla głównego przedmiotu
+  /* plan dnia z „NA TERAZ” przedmiotów (D5, Dzis.dc.html): powtórka, lekcja (dokończ albo następna), krok planu do sprawdzianu, rolki, Szop (≥ 2 punkty,
+     jak karta w centrum); dzień sprawdzianu i dzień przed: rozgrzewka / noc + powtórka i Szop, bez nowych lekcji i rolek; wszystko w „Umiem” → egzamin ustny
+     (gdy /api/me przyjdzie po ułożeniu planu, dopisuje go planAddMedia). Nowe plany nie mają już wierszy quiz / exam (stare dni dalej się wyświetlają — taskInfo). */
+  planSubs().forEach((s,i)=>{
+    const t=testFor(s.id),N=t?dayDiff(todayStr(),t.date):null,eve=N===0||N===1;
+    if(N===0)tasks.push({id:s.id+':warmup',done:false});else if(N===1)tasks.push({id:s.id+':cram',done:false});
+    const n=Math.min(12,allCards(s).length+allQuiz(s).length);
+    if(n&&srsEntries().some(x=>x.s.id===s.id))tasks.push({id:s.id+':review',done:false,need:Math.min(12,Math.max(1,srsDue().filter(x=>x.s.id===s.id).length||n)),prog:0});
+    if(!eve){const rs=lastResume(s),open=rs?rs.lv:nextLesson(s);
+      if(open)tasks.push({id:s.id+':lesson:'+open.id,done:false});}
+    const ts=testStep(s);if(ts&&ts.row)tasks.push({id:s.id+':plan',done:false});
+    const rl=!eve&&!i&&nextReel(s);if(rl)tasks.push({id:s.id+':reels:'+rl.m.id,done:false});
+    if(masteryOf(s).refresh>=2)tasks.push({id:s.id+':szop',done:false});
+    if(!i&&oralReady(s))tasks.push({id:s.id+':oral',done:false});
     if(hasDeck(s.id))tasks.push({id:s.id+':weak',done:false}); // krok 7: talia błędów z ostatniego egzaminu
   });
   return tasks;
+}
+/* rejestr mediów albo funkcje z /api/me przyszły po ułożeniu planu (chmura odpowiada po starcie): dopisz głównemu przedmiotowi planu wiersz
+   „Rolki — …” (nie w dniu sprawdzianu ani dzień przed) i „Egzamin ustny z lisem” (wszystkie punkty w „Umiem”, D5 #7) — jak buildDailyTasks */
+function planAddMedia(){
+  const d=PROGRESS.daily;if(!d||d.date!==todayStr()||!Array.isArray(d.tasks))return;
+  const s=planSubs()[0];if(!s)return;
+  const t=testFor(s.id),N=t?dayDiff(todayStr(),t.date):null;let ch=false;
+  if(!d.tasks.some(x=>/:reels:/.test(x.id))&&N!==0&&N!==1){const rl=nextReel(s);if(rl){d.tasks.push({id:s.id+':reels:'+rl.m.id,done:false});ch=true;}}
+  if(!d.tasks.some(x=>x.id===s.id+':oral')&&oralReady(s)){d.tasks.push({id:s.id+':oral',done:false});ch=true;}
+  if(ch)saveProgress();
 }
 /* opis zadania z jego id (etykiety liczone z danych, więc w storage siedzi tylko id + done) */
 function taskInfo(t){
   const parts=t.id.split(':');const sid=parts[0],kind=parts[1],lvId=parts[2];
   const s=SUBJECTS.find(x=>x.id===sid);if(!s)return null;
   const lv=lvId?s.levels.find(l=>l.id===lvId):null;
-  const short=sshort(s);const base={t,s,kind,reward:REWARD[kind]||0};
+  const short=sshort(s);const base={t,s,kind,reward:REWARD[kind]||0,min:0};
   const openAt=(tab,setup)=>()=>openSubject(sid,tab,setup);
-  if(kind==='lesson'){if(!lv)return null;const nf=(lv.feed||[]).length,nq=(lv.quiz||[]).length,nt=(lv.tasks||[]).filter(t=>t&&TASKS[t.type]).length;
-    return {...base,icon:'book',title:'Lekcja — '+noEmoji(lv.title),sub:`${nf} ${pl(nf,'dawka','dawki','dawek')} · ${nq} ${pl(nq,'pytanie','pytania','pytań')}${nt?` · ${nt} ${pl(nt,'zadanie','zadania','zadań')}`:''} · +15`,go:openAt('path')};}
+  if(kind==='lesson'){if(!lv)return null;const sv=lessonLoad(s,lv),m=sv?resumeMinutes(lv,sv):lessonMinutes(lv);
+    return {...base,icon:'book',tone:'pink',min:m,title:'Lekcja — '+noEmoji(lv.title),sub:`${short} · ${sv?'dokończ, ':''}ok. ${m} min`,go:()=>openLessonAt(sid,lv.id,null,{resume:true})};}
   if(kind==='review'){const n=t.need||12,p=t.prog||0;const due=srsDue().filter(x=>x.s.id===sid).length;
-    return {...base,icon:'refresh',title:`Powtórka — ${n} ${pl(n,'fiszka','fiszki','fiszek')}`,sub:p?`${p} z ${n} przejrzane · +20`:`${short} · ${due?due+' do powtórki dziś':Math.max(1,Math.round(n/4))+' min'} · +20`,
+    return {...base,icon:'refresh',tone:'cyan',min:Math.max(1,Math.round(n/4)),title:'Powtórka',sub:p&&!t.done?`${short} · ${p} z ${n} przejrzane`:`${short} · ${n} ${pl(n,'fiszka i pytanie','fiszki i pytania','fiszek i pytań')}`,
       go:()=>{const mine=srsDue().filter(x=>x.s.id===sid);if(mine.length)startReview(mine);else openAt('fiszki')();}};} // powtórka albo fiszki tego przedmiotu
+  if(kind==='reels'){const m=mediaById(lvId);const man=m&&m.manifest;if(!m||m.status!=='ready'||!man||!Array.isArray(man.reels))return null;
+    const rl=nextReel(s,m),N=man.reels.length;const at=rl?rl.r.n:N;
+    return {...base,icon:'reel',tone:'amber',min:rl?Math.max(1,N-rl.k):0,title:'Rolki — '+(man.title||'seria'),sub:`${short} · ${at} z ${N}${rl?` · ok. ${Math.max(1,N-rl.k)} min`:''}`,
+      go:()=>mediaCall('openReels',sid,m.topic_id,{mediaId:m.id,reel:rl?rl.r.n:1})};}
+  if(kind==='szop'){const ref=masteryOf(s).list.filter(x=>x.r.st==='refresh');if(!ref.length&&!t.done)return null;const k=ref.length;
+    return {...base,icon:'refresh',raccoon:true,min:practiceMinutes(s,ref.map(x=>x.p)),title:t.done?'Punkty odzyskane od Szopa':`Odzyskaj ${k} ${pl(k,'punkt','punkty','punktów')} od Szopa`,
+      sub:`${short} · ${ref.slice(0,2).map(x=>x.p.s).join(', ')}${k>2?' i '+(k-2)+' '+pl(k-2,'inny','inne','innych'):''}`,go:()=>{inSubj(sid);practice(s,ref.map(x=>x.p.id));}};}
+  if(kind==='cram')return {...base,icon:'moon',tone:'violet',min:20,title:'Noc przed sprawdzianem',sub:`${short} · 4 bloki po 5 minut, potem spać`,go:()=>openCram(sid)};
+  if(kind==='warmup')return {...base,icon:'bolt',tone:'gold',min:5,title:'Rozgrzewka przed sprawdzianem',sub:`${short} · 5 min, bez nowych rzeczy`,go:()=>startWarmup(s)};
+  if(kind==='plan'){const tt=testFor(sid),r=tt&&(tt.plan||[]).find(x=>x.date===todayStr());
+    if(!tt||!r||r.kind==='rest'||!own(TP_LABEL,r.kind))return null;
+    return {...base,icon:TP_ICON[r.kind]||'calendar',tone:'violet',min:r.minutes||10,title:'Do sprawdzianu — '+tpTitle(tt,r),sub:`${short} · ${tpSub(r,tt)}`,go:()=>r.done?openTestPlan(tt.id):testAction(tt,r)};}
+  if(kind==='oral'){if(!mediaOn('fox')&&!t.done)return null;
+    return {...base,icon:'chat',tone:'acid',min:10,title:'Egzamin ustny z lisem',sub:`${short} · 3 pytania z dopytaniem · ok. 10 min`,go:()=>mediaCall('openFox',sid,{mode:'exam'})};}
   if(kind==='quiz'){if(!lv)return null;const n=(lv.quiz||[]).length,m=Math.max(1,Math.round(n*0.5));
-    return {...base,icon:'question',title:'Quiz — '+noEmoji(lv.title),sub:`${n} ${pl(n,'pytanie','pytania','pytań')} · ${short} · ${m} min · +25`,
+    return {...base,icon:'question',tone:'violet',min:m,title:'Quiz — '+noEmoji(lv.title),sub:`${short} · ${n} ${pl(n,'pytanie','pytania','pytań')} · ok. ${m} min`,
       go:openAt('quiz',()=>{qState={subj:sid,lvl:lv.id,list:null,idx:0,score:0,answered:false};})};}
   if(kind==='exam'){const N=Math.min(20,allQuiz(s).length);
-    return {...base,icon:'file',title:'Egzamin próbny',sub:`${N} ${pl(N,'pytanie','pytania','pytań')} · opcjonalnie · +40`,go:openAt('egzamin')};}
+    return {...base,icon:'timer',tone:'pink',min:Math.max(5,Math.round(N/2)),title:'Egzamin próbny',sub:`${short} · ${N} ${pl(N,'pytanie','pytania','pytań')} · opcjonalnie`,go:openAt('egzamin')};}
   if(kind==='weak'){const n=deckKeys(sid).filter(k=>srsResolve(k)).length;if(!n&&!t.done)return null; // krok 7: talia błędów z egzaminu
-    return {...base,icon:'alert',title:'Powtórz błędy z egzaminu',sub:`${n} ${pl(n,'pytanie','pytania','pytań')} · ${short} · +20`,go:()=>startExamDeck(sid)};}
+    return {...base,icon:'alert',tone:'red',min:Math.max(1,Math.round(n/3)),title:'Powtórz błędy z egzaminu',sub:`${short} · ${n} ${pl(n,'pytanie','pytania','pytań')}`,go:()=>startExamDeck(sid)};}
   return null;
 }
 /* zaliczenie zadania: lesson (z id poziomu), quiz / exam / review (po przedmiocie); nagroda idzie przez addXP */
@@ -728,13 +828,15 @@ function tickDaily(sid,kind,n){
 /* --- wspólna skorupa widoków głównych: topbar + ekran + dolna nawigacja + toast --- */
 function renderNav(active){
   const nav=el('nav','nav');nav.setAttribute('aria-label','Nawigacja');
-  const tab=(k,ic,lab)=>{const b=el('button',k===active?'active':'',icon(ic,{size:24,stroke:2.4})+'<span>'+lab+'</span>');if(k===active)b.setAttribute('aria-current','page');b.onclick=()=>go(k);return b;};
-  nav.appendChild(tab('today','home','Dziś'));nav.appendChild(tab('review','refresh','Powtórka'));
-  // krok 6: uniesiony plus 62 px na środku — „Dodaj materiał” z każdego ekranu (DESIGN.md §0)
-  const plus=el('button','navplus a-pulse',icon('plus',{size:30,stroke:3.2}));plus.setAttribute('aria-label','Dodaj materiał');plus.onclick=()=>openQuickAdd();nav.appendChild(plus);
-  nav.appendChild(tab('cards','cards','Fiszki'));nav.appendChild(tab('profile','user','Profil'));
+  const tab=(k,ic,lab)=>{const b=el('button',k===active?'active':'',icon(ic,{size:22,stroke:2.4})+'<span>'+lab+'</span>');if(k===active)b.setAttribute('aria-current','page');b.onclick=()=>go(k);return b;};
+  // D6: Dziś · Przedmioty · [+] · Powtórka · Profil — fiszki są w centrum przedmiotu, codzienna powtórka w „Powtórce” (widok cards zostaje dla starych odnośników)
+  nav.appendChild(tab('today','home','Dziś'));nav.appendChild(tab('subjects','grid','Przedmioty'));
+  const plus=el('button','navplus',icon('plus',{size:26,stroke:3.4}));plus.setAttribute('aria-label','Dodaj materiał');plus.onclick=()=>openQuickAdd();nav.appendChild(plus);
+  nav.appendChild(tab('review','refresh','Powtórka'));nav.appendChild(tab('profile','user','Profil'));
   return nav;
 }
+/* mini-odtwarzacz podcastu (media.js) nad dolnym paskiem — element albo null; bez media.js nic */
+function miniSlot(){try{const M=window.NaukaMedia;const m=M&&typeof M.miniPlayer==='function'?M.miniPlayer():null;return m&&m.nodeType===1?m:null;}catch(e){return null;}}
 function shell(active,o){
   o=o||{};app.innerHTML='';
   const top=el('div','topbar');
@@ -753,7 +855,7 @@ function shell(active,o){
   const sc=el('div','screen active');
   const scroll=el('div','scroll'+(o.cls?' '+o.cls:''));
   sc.appendChild(scroll);app.appendChild(sc);
-  if(active)app.appendChild(renderNav(active));
+  if(active){const mp=miniSlot();if(mp){app.appendChild(mp);scroll.classList.add('withmini');}app.appendChild(renderNav(active));}
   app.appendChild(toastEl());
   return scroll;
 }
@@ -771,7 +873,7 @@ function openQuickAdd(){
     <button class="qatest a-up d3" id="qa-test">${icon('calendar',{size:20,stroke:2.4})}<span>Mam sprawdzian — ułóż mi plan</span>${icon('chevron-right',{size:18,stroke:2.6,cls:'chev'})}</button>`);
   sheetBack();document.getElementById('sheetback').onclick=closeSheet;
   s.querySelector('#qaclose').onclick=closeSheet;
-  s.querySelector('#qa-test').onclick=()=>{if(!SUBJECTS.length){toast('Najpierw dodaj materiał — plan układa się z poziomów','info');return;}openTestSheet(current?current.id:null);}; // krok 7
+  s.querySelector('#qa-test').onclick=()=>{if(!SUBJECTS.length){toast('Najpierw dodaj materiał — plan układa się z lekcji','info');return;}openTestSheet(current?current.id:null);}; // krok 7
   s.querySelector('#qa-photo').onclick=()=>{closeSheet();hook('addPhoto',into);};
   s.querySelector('#qa-file').onclick=()=>{closeSheet();hook('addFile',into);};
   s.querySelector('#qa-text').onclick=()=>{closeSheet();hook('addText',into);};
@@ -787,8 +889,8 @@ function subjectGrid(list,withAdd){
     const t=el('button','subjtile themed');
     t.style.setProperty('--accent',s.accent);if(s.onAccent)t.style.setProperty('--on-accent',s.onAccent);
     t.innerHTML=`${mono(initials(s),'solid')}<div class="name">${noEmoji(s.name)}</div>
-      <div class="bar"><i class="a-grow d${Math.min(6,i+2)}" style="width:${pct}%"></i></div><small>${done}/${total} ${pl(total,'poziom','poziomy','poziomów')}</small>`;
-    t.setAttribute('aria-label',txt(s.name)+', '+done+' z '+total+' poziomów');
+      <div class="bar"><i class="a-grow d${Math.min(6,i+2)}" style="width:${pct}%"></i></div><small>${done}/${total} ${pl(total,'lekcja','lekcje','lekcji')}</small>`;
+    t.setAttribute('aria-label',txt(s.name)+', '+done+' z '+total+' lekcji');
     t.onclick=()=>openSubject(s.id);
     grid.appendChild(t);
   });
@@ -798,42 +900,32 @@ function subjectGrid(list,withAdd){
   }
   return grid;
 }
-/* karta „Plan na dziś”: zrobione (przekreślone, check), bieżące (tint przedmiotu, pulsujący kafel), późniejsze (wyciszone) */
+/* karta „PLAN DNIA” (Dzis.dc.html): wiersze 68 px — kafel 44 z ikoną (zrobione: limonkowy z ptaszkiem), tytuł, podpis, po prawej „ZROBIONE” albo „+15 XP”.
+   Klasa .plan zostaje (kontrole i hook todayTop szukają karty planu). */
 function renderPlan(items){
-  const card=el('div','plan a-up d2');
-  if(!items.length){card.innerHTML=`<div class="plan-row later"><div class="plan-tile">${icon('bulb',{size:18})}</div><div class="pt"><div class="t">Brak zadań na dziś</div><div class="s">dodaj materiał, a plan ułoży się sam</div></div></div>`;return card;}
-  let cur=false;
-  items.forEach((x,i)=>{
-    if(i)card.appendChild(el('div','plan-sep'));
-    let state='later';if(x.t.done)state='done';else if(!cur&&!x.info){cur=true;state='cur';} // info = wiersz „Sprawdzian dziś” (nie jest zadaniem)
-    const row=el('button','plan-row '+state+' themed');
-    row.style.setProperty('--accent',x.s.accent);if(x.s.onAccent)row.style.setProperty('--on-accent',x.s.onAccent);
-    row.dataset.task=x.t.id;
-    row.innerHTML=`<div class="plan-tile${state==='cur'?' a-pulse':''}">${state==='done'?icon('check',{size:19,stroke:3.4}):icon(x.icon,{size:19,stroke:state==='cur'?3:2.6})}</div>
-      <div class="pt"><div class="t">${x.title}</div>${state==='done'?'':`<div class="s">${x.sub}</div>`}</div>
-      ${state==='done'?(x.reward?`<span class="rw">+${x.reward}</span>`:''):icon('chevron-right',{size:20,cls:'chev'})}`;
-    row.setAttribute('aria-label',(state==='done'?'Zrobione: ':'')+txt(x.title));
-    row.onclick=x.go;
-    card.appendChild(row);
+  const card=el('div','plan dplan a-up d2');
+  if(!items.length){card.innerHTML=`<div class="drow later"><div class="dtile">${icon('lightbulb',{size:20})}</div><div class="dt"><div class="t">Brak zadań na dziś</div><div class="s">dodaj materiał, a plan ułoży się sam</div></div></div>`;return card;}
+  items.forEach(x=>{
+    const done=!!x.t.done;const row=el('button','drow'+(done?' done':''));row.dataset.task=x.t.id;
+    const tile=done?`<div class="dtile ok">${icon('check',{size:20,stroke:3.4})}</div>`:x.raccoon?`<div class="dtile rc">${raccoon('idle',40)}</div>`:`<div class="dtile ${x.tone||'pink'}">${icon(x.icon,{size:20,stroke:2.6})}</div>`;
+    row.innerHTML=`${tile}<div class="dt"><div class="t">${x.title}</div><div class="s">${x.sub}</div></div>${done?'<span class="hchip acid">ZROBIONE</span>':x.reward?`<span class="hchip gold">+${x.reward}&nbsp;XP</span>`:icon('chevron-right',{size:18,cls:'chev'})}`;
+    row.setAttribute('aria-label',(done?'Zrobione: ':'')+txt(x.title));row.onclick=x.go;card.appendChild(row);
   });
   return card;
 }
-
-/* ============================================================ DZIŚ (ekran startowy, Main.html) */
+const minTxt=m=>`ok. ${m} min`;
+/* ============================================================ DZIŚ (Dzis.dc.html): plan dnia z „NA TERAZ” przedmiotów, sprawdziany, POZA PLANEM (podcast, propozycja lisa), przedmioty */
 function renderToday(){
   if(!SUBJECTS.length)return renderEmpty();
   const scroll=shell('today',{cls:'today'});
   syncTests();
-  const d=daily();const items=tests().map(testTodayItem).filter(Boolean).concat(d.tasks.map(taskInfo).filter(Boolean)); // krok 7: wiersz „Do sprawdzianu” na górze
-  const done=items.filter(x=>x.t.done).length,total=items.filter(x=>!x.info).length;
-  scroll.appendChild(el('div','todayhead',`<div class="eyebrow">${dateHeader()}</div><h1>Plan na dziś</h1><div class="todayfox">${fox('idle',66)}</div>`));liveFoxes(scroll);
-  hook('todayTop',scroll); // cloud-ui.js: wiersz „Tworzę lekcję…” albo karta nieudanej próby (P1-22)
-  scroll.appendChild(el('div','planbar',`<div class="bar"><i class="a-grow" style="width:${total?done/total*100:0}%"></i></div><span>${done} z ${total}</span>`));
-  const g=d.goal||goalXP(); // krok 9: cel dzienny XP (Onboarding) — pasek pod planem, tap = zmiana celu
-  const gr=el('button','goalrow a-up d1',icon('bolt',{size:15,cls:'ic-gold'})+`<div class="bar"><i class="a-grow d2" style="width:${Math.min(100,d.xp/g*100)}%"></i></div><span>${d.xp} / ${g} XP</span>`);
-  gr.setAttribute('aria-label',`Cel dzienny: ${d.xp} z ${g} XP`);gr.onclick=()=>openOnboarding('today');scroll.appendChild(gr);
+  const d=daily();const items=d.tasks.map(taskInfo).filter(Boolean);
+  const done=items.filter(x=>x.t.done).length,total=items.length,left=items.filter(x=>!x.t.done).reduce((a,x)=>a+(x.min||0),0);
+  scroll.appendChild(el('div','todayhead',`<div class="grow"><div class="eyebrow">${dateHeader()}</div><h1>Plan na dziś</h1>
+    <div class="planbar"><div class="bar" role="progressbar" aria-label="Plan na dziś: zrobione ${done} z ${total}" aria-valuemin="0" aria-valuemax="${total}" aria-valuenow="${done}"><i class="a-grow" style="width:${total?done/total*100:0}%"></i></div><span>${done} z ${total}</span></div></div><div class="todayfox">${fox('idle',66)}</div>`));liveFoxes(scroll);
+  hook('todayTop',scroll); // cloud-ui.js: wiersz „Tworzę lekcję…” albo karta nieudanej próby (P1-22) — tuż pod nagłówkiem
   const mini=el('div','minitiles'); // krok 8: Misje → ekran misji, Album → album pojęć
-  const m1=el('button','minitile gold a-up d1',icon('star',{size:17,fill:false,stroke:2.6,cls:'ic-gold'})+`<span id="missionTile">${missionLabel()}</span>`);
+  const m1=el('button','minitile gold a-up d1',icon('star',{size:17,fill:true,cls:'ic-gold'})+`<span id="missionTile">${missionLabel()}</span>`);
   m1.onclick=()=>go('missions');mini.appendChild(m1);
   const n=streakDisplay();
   const m2=el('button','minitile amber a-up d2',icon('flame',{size:17,cls:'ic-flame'})+`<span>Seria ${n}</span>`);
@@ -842,12 +934,48 @@ function renderToday(){
   const m3=el('button','minitile cyan a-up d3',icon('cards',{size:17,stroke:2.6,cls:'ic-cyan'})+`<span>Album ${alb.n}</span>`);
   m3.setAttribute('aria-label',`Album pojęć: ${alb.n} z ${alb.m}`);m3.onclick=()=>go('album');mini.appendChild(m3);
   scroll.appendChild(mini);
+  // sprawdziany: najbliższe (maks. 2) — gotowość i dzisiejsza porcja przedmiotu
+  tests().slice().filter(t=>testSubject(t)&&dayDiff(todayStr(),t.date)>=0).sort((a,b)=>a.date<b.date?-1:1).slice(0,2).forEach(t=>{
+    const s=testSubject(t),N=dayDiff(todayStr(),t.date),rd=readiness(s,t.levels);const mins=subjectTodayMinutes(s,items);
+    const c=el('button','dexam a-up d2');c.style.setProperty('--accent',s.accent);if(s.onAccent)c.style.setProperty('--on-accent',s.onAccent);
+    c.innerHTML=`${mono(initials(s),'solid')}<div class="grow"><div class="t">${acroName(s)?'Sprawdzian z '+acroName(s)+' '+inDays(N):sshort(s)+': sprawdzian '+inDays(N)}</div><div class="s">${rd.pct==null?'Gotowość: jeszcze nie wiem':'Gotowość '+rd.pct+'%'}${mins?' · plan na dziś: '+minTxt(mins):''}</div></div>${icon('chevron-right',{size:20,cls:'chev'})}`;
+    c.setAttribute('aria-label',txt(`${sshort(s)}: sprawdzian ${inDays(N)}`));c.onclick=()=>openSubject(s.id);scroll.appendChild(c);});
+  const ph=el('div','hlbl','<span>Plan dnia</span>'+(left?`<small>zostało ${minTxt(left)}</small>`:''));scroll.appendChild(ph);
   scroll.appendChild(renderPlan(items));
-  const hdr=el('div','sechdr','<span class="eyebrow">Twoje przedmioty</span>');
+  todayExtras(scroll);
+  const hdr=el('div','hlbl sechdr','<span>Twoje przedmioty</span>');
   const all=el('button','link','Wszystkie '+icon('chevron-right',{size:14,stroke:3}));all.onclick=()=>go('subjects');hdr.appendChild(all);
   scroll.appendChild(hdr);
   const withP=SUBJECTS.filter(hasProgress),rest=SUBJECTS.filter(s=>!hasProgress(s)).sort((a,b)=>(subjLevel(b)===META.level)-(subjLevel(a)===META.level)); // bez postępu: najpierw z etapu użytkownika
-  scroll.appendChild(subjectGrid(withP.concat(rest).slice(0,3),true));
+  withP.concat(rest).slice(0,3).forEach((s,i)=>scroll.appendChild(subjectCard(s,i)));
+  const add=el('button','dadd a-up d4',icon('plus',{size:20,stroke:3,cls:'ic-acid'})+'<span>Dodaj materiał</span>');add.onclick=()=>openQuickAdd();scroll.appendChild(add);
+}
+/* minuty niezrobionych wierszy planu dnia danego przedmiotu */
+function subjectTodayMinutes(s,items){return (items||daily().tasks.map(taskInfo).filter(Boolean)).filter(x=>x.s.id===s.id&&!x.t.done).reduce((a,x)=>a+(x.min||0),0);}
+/* karta przedmiotu na Dziś: monogram, „Umiesz 8 z 27 · sprawdzian za 6 dni”, mini pasek opanowania */
+function subjectCard(s,i){
+  const m=masteryOf(s),t=testFor(s.id),N=t?dayDiff(todayStr(),t.date):null;
+  const b=el('button','dsubj themed a-up d'+Math.min(6,i+3));b.style.setProperty('--accent',s.accent);if(s.onAccent)b.style.setProperty('--on-accent',s.onAccent);if(s.accentDark)b.style.setProperty('--accent-dark',s.accentDark);
+  const seen=m.known+m.learning+m.refresh;
+  const sub=(seen?`Umiesz ${m.known} z ${m.total}`:`${m.total} ${pl(m.total,'punkt','punkty','punktów')} przed Tobą`)+(N!=null&&N>=0?' · sprawdzian '+inDays(N):'');
+  b.innerHTML=`${mono(initials(s),'solid')}<div class="grow"><div class="t nm">${sshort(s)}</div><div class="s">${sub}</div>${masteryBar(m,{h:6})}</div>${icon('chevron-right',{size:20,cls:'chev'})}`;
+  b.setAttribute('aria-label',txt(s.name)+': '+txt(sub));b.onclick=()=>openSubject(s.id);return b;
+}
+/* „POZA PLANEM”: podcast w toku (albo przed sprawdzianem) i „Propozycja lisa” (przepytaj się z materiału, którego lekcje są prawie za Tobą) */
+function todayExtras(scroll){
+  const cards=[];
+  const pod=SUBJECTS.map(s=>({s,p:podcastInfo(s)})).find(x=>x.p&&x.p.started&&!x.p.finished);
+  if(pod){const {s,p}=pod,t=testFor(s.id),near=t&&dayDiff(todayStr(),t.date)>=0&&dayDiff(todayStr(),t.date)<=7;
+    const c=el('div','dpod a-up');c.innerHTML=`<div class="duo">${fox('idle',30)}${raccoon('idle',30)}</div><div class="grow"><div class="t">Podcast — Lis i Szop: ${p.short}</div><div class="s">Zostało ${fmtTime(p.left)}${near?' · dobry na drogę przed sprawdzianem':''}</div></div>`;
+    const pb=el('button','hplay',icon('play',{size:20}));pb.setAttribute('aria-label','Słuchaj dalej: '+txt(p.title));pb.onclick=()=>mediaCall('openPodcast',s.id,p.m.topic_id,{mediaId:p.m.id,play:true});c.appendChild(pb);cards.push(c);}
+  if(mediaOn('fox')){
+    let best=null;SUBJECTS.forEach(s=>topicList(s).forEach(tp=>{const st=subjState(s.id);const dn=tp.levels.filter(l=>(st.levels[l.id]||{}).done).length;if(!tp.levels.length||dn/tp.levels.length<.5)return;
+      const f=foxState(tp.id).quiz;if(f&&dayDiff(f.at,todayStr())<3)return;const sc=dn/tp.levels.length;if(!best||sc>best.sc)best={s,tp,sc,all:dn===tp.levels.length};}));
+    if(best){const c=el('div','dsugg a-up');
+      c.innerHTML=`<div class="eyebrow">Propozycja lisa</div><h3>Przepytaj się z „${topicShort(best.tp.name)}”</h3><p>${best.all?'Lekcje masz za sobą.':'Lekcje masz prawie za sobą.'} 5 pytań otwartych pokaże, co już się trzyma.</p><div class="dsfox">${fox('think',72)}</div>`;
+      const b=el('button','hghost sm','PRZEPYTAJ MNIE · 8 MIN');b.onclick=()=>mediaCall('openFox',best.s.id,{topicId:best.tp.id,mode:'quiz'});c.insertBefore(b,c.querySelector('.dsfox'));cards.push(c);}}
+  if(!cards.length)return;
+  scroll.appendChild(el('div','hlbl','<span>Poza planem</span>'));cards.forEach(c=>scroll.appendChild(c));liveFoxes(scroll);
 }
 
 /* ============================================================ PRZEDMIOTY (dawny wybór przedmiotu → kafle) */
@@ -1035,7 +1163,7 @@ function renderStreak(){
 /* ============================================================ PUSTY STAN (EmptyState.html) — nowe konto bez przedmiotów; część ekranu Dziś, z dolną nawigacją */
 function renderEmpty(){
   const scroll=shell('today',{cls:'today empty'});
-  const steps=[['Dodajesz zdjęcia, pliki i notatki','strona z podręcznika, PDF, wklejony tekst'],['Powstają poziomy, fiszki i pytania','pytania poprawisz w trakcie nauki'],['Uczysz się po 10 minut dziennie','materiał wraca tuż przed zapomnieniem']];
+  const steps=[['Dodajesz zdjęcia, pliki i notatki','strona z podręcznika, PDF, wklejony tekst'],['Powstają lekcje, fiszki i pytania','pytania poprawisz w trakcie nauki'],['Uczysz się po 10 minut dziennie','materiał wraca tuż przed zapomnieniem']];
   scroll.innerHTML=`<div class="emptyfox">${fox('idle',150)}</div>
     <div class="a-up d1"><h1>Zacznij od pierwszego przedmiotu</h1><p>Dodaj materiały z zajęć. Reszta powstanie sama.</p></div>
     <div id="emptytop"></div>
@@ -1843,6 +1971,12 @@ function renderReviewSession(){
   head.appendChild(el('div','rvcount',`${rv.idx+1} z ${rv.items.length}`));
   L.appendChild(head);
   const body=el('div','lessonbody');L.appendChild(body);
+  if(it.kind==='note'){ // ćwiczenie punktu (plan-media §1.6): przypomnienie z lekcji — bez oceny, tylko „Dalej”
+    body.appendChild(el('div','rvnote a-up',`<div class="heb">Przypomnienie · ${it.pt||''}</div><h2>${it.title||'Z lekcji'}</h2><div class="rvnb">${it.html||''}</div><div class="rvnsrc">${icon('book',{size:14,stroke:2.6})}<span>Lekcja ${it.n}, część ${it.part}</span></div>`));
+    const foot=el('div','lessonfoot');const b=el('button','pill a-glow','DALEJ');b.id='rvnext';
+    b.onclick=()=>{if(rvState!==rv||!advOk())return;rv.marks[rv.idx]='on';rv.idx++;renderReviewSession();};foot.appendChild(b);L.appendChild(foot);
+    keyFn=e=>{if(e.key==='Enter'){e.preventDefault();b.click();}};return;
+  }
   if(it.kind==='card'){
     const c=it.c;
     // karta w kolorze przedmiotu (Flashcards.html): tap = odwróć, przeciągnięcie w lewo = jeszcze nie, w prawo = umiem
@@ -1878,6 +2012,8 @@ function renderReviewSession(){
 /* koniec powtórki (FlashcardsDone.html): pierścień celności, umiem / do powtórki / +XP, lista „wracają dziś” albo najbliższy termin, karta serii */
 function finishReview(L){
   const rv=rvState;closeSheet();keyFn=null;
+  if(rv.practice)return finishPractice(rv);
+  if(rv.warmup&&rv.ok+rv.bad)completeDaily(rv.warmup,'warmup');
   const total=rv.ok+rv.bad;const pct=total?Math.round(rv.ok/total*100):0;
   // plan dnia: „Powtórka” to jedna czynność — zalicz wiersze przedmiotów z sesji, a gdy żaden nie pasuje, pierwszy oczekujący wiersz Powtórki
   const deck=rv.deck||null;
@@ -1892,7 +2028,7 @@ function finishReview(L){
   }
   if(!L){app.innerHTML='';L=el('div','lesson open rvrun');app.appendChild(L);app.appendChild(el('div','toast',''));app.lastChild.id='toast';}else L.innerHTML='';
   const body=el('div','lessonbody done');if(pct>=50)body.appendChild(confetti(6));
-  const done=rv.items.slice(0,rv.idx);const cards=done.filter(x=>x.kind==='card').length,qs=done.length-cards; // tylko to, co przejrzane (sesję można przerwać)
+  const done=rv.items.slice(0,rv.idx);const cards=done.filter(x=>x.kind==='card').length,qs=done.filter(x=>x.kind==='quiz').length; // tylko to, co przejrzane (sesję można przerwać)
   const subsTxt=[...rv.subs].map(id=>{const s=SUBJECTS.find(x=>x.id===id);return s?sshort(s):'';}).filter(Boolean).join(' · ');
   const R=52,C=Math.round(2*Math.PI*R*10)/10;const nd=nextDueText();const n=streakDisplay();
   const lc=el('div','lc');
@@ -1911,11 +2047,33 @@ function finishReview(L){
   body.appendChild(lc);L.appendChild(body);
   const foot=el('div','lessonfoot col');
   const main=el('button','pill cyan a-glow',rv.wrong.length?`POWTÓRZ TE ${rv.wrong.length}`:'GOTOWE');main.id='rvmain';
-  const wrong=rv.wrong.slice();main.onclick=wrong.length?()=>{startReview(wrong);if(deck)rvState.deck=deck;}:()=>go('review');
-  const alt=el('button','pill text','NA DZIŚ WYSTARCZY');alt.id='rvdone';alt.onclick=()=>go('review');
+  const back=rv.back||(()=>go('review'));
+  const wrong=rv.wrong.slice();main.onclick=wrong.length?()=>{startReview(wrong);if(deck)rvState.deck=deck;rvState.back=rv.back;}:back;
+  const alt=el('button','pill text','NA DZIŚ WYSTARCZY');alt.id='rvdone';alt.onclick=back;
   foot.appendChild(main);foot.appendChild(alt);L.appendChild(foot);
   rvState=null;
   keyFn=e=>{if(e.key==='Enter')main.click();};
+}
+/* koniec ćwiczenia punktu: wynik i zmiana stanu punktów („MFW: Do odświeżenia → W trakcie”), plan dnia „Szop” */
+function finishPractice(rv){
+  const P=rv.practice,s=SUBJECTS.find(x=>x.id===P.sid);closeSheet();keyFn=null;
+  const total=rv.ok+rv.bad;if(total&&s)completeDaily(s.id,'szop');
+  app.innerHTML='';const L=el('div','lesson open rvrun pract');app.appendChild(L);app.appendChild(toastEl());
+  const body=el('div','lessonbody done');if(total&&rv.ok/total>=.5)body.appendChild(confetti(6));
+  const res=s?P.pids.map(id=>{const p=pointById(s,id);return p?{p,b:P.before[id],a:pointState(s,p).st}:null;}).filter(Boolean):[];
+  const szop=res.some(x=>x.b==='refresh'),won=res.every(x=>x.a!=='refresh');
+  const lc=el('div','lc');
+  lc.innerHTML=`<div class="lcfox">${szop?raccoon(won?'dizzy':'laugh',124):fox(rv.bad?'think':'happy',124)}</div>
+    <div class="lctxt a-up d2"><div class="lct">${szop?(won?'Odzyskane od Szopa':'Szop jeszcze się nie poddaje'):'Punkt przećwiczony'}</div><div class="lcs">${rv.ok} z ${total} dobrze${rv.xp?' · +'+rv.xp+' XP':''}</div></div>
+    <div class="setcard prows a-up d3">${res.map(x=>`<div class="setrow">${masteryMarker(x.a)}<span class="t grow"><b>${x.p.s}</b>: ${ST_LABEL[x.b]} → ${ST_LABEL[x.a]}</span></div>`).join('<div class="setsep"></div>')}</div>`;
+  body.appendChild(lc);L.appendChild(body);
+  const done=()=>{rvState=null;if(P.onDone)try{P.onDone();return;}catch(e){}if(current)renderSubject();else go('today');};
+  const foot=el('div','lessonfoot col');const wrong=rv.wrong.slice();
+  const main=el('button','pill a-glow',wrong.length?`POWTÓRZ TE ${wrong.length}`:'GOTOWE');main.id='rvmain';
+  main.onclick=wrong.length?()=>{startReview(wrong);rvState.practice=P;}:done;
+  const alt=el('button','pill text',wrong.length?'NA DZIŚ WYSTARCZY':'WRÓĆ DO PRZEDMIOTU');alt.id='rvdone';alt.onclick=done;
+  foot.appendChild(main);foot.appendChild(alt);L.appendChild(foot);liveFoxes(lc);
+  rvState=null;keyFn=e=>{if(e.key==='Enter')main.click();};
 }
 /* zakładka „Fiszki” w nawigacji: przedmioty z liczbą fiszek i pojęć do powtórki → zakładka Fiszki przedmiotu */
 function renderCardsHub(){
@@ -1934,142 +2092,685 @@ function renderCardsHub(){
   scroll.appendChild(card);
 }
 
-/* ============================================================ SUBJECT shell (Path.html: pas nagłówka w --surface-2 + chipy zakładek) */
-function openSubject(id,tab,setup){
-  current=SUBJECTS.find(s=>s.id===id);
-  if(!current)return go('today');
-  applyTheme(current);
-  curTab=tab||'path';
+/* ============================================================ PRZEDMIOT: kontekst + ekrany (design-centrum.md §5.1–5.3, plan-media §1.2–1.6, §4.3–4.4, §5)
+   Kontekst przedmiotu zostaje jak dawniej (current, kontener #lesson), więc lekcje, fiszki, quiz, ćwiczenia, egzamin, boss i info działają bez zmian.
+   curTab: hub (centrum: Main albo Centrum-Nowy; dawne „path” to alias) · material (curTopic: Centrum-Material) · narzędzia fiszki / quiz / cwicz / egzamin / info
+   (pas z „wstecz” do miejsca, z którego je otwarto — tabFrom; toolTopic = zakres jednego materiału). Bez ścieżki, skrzyń i blokad lekcji. */
+const TOOL_TABS={fiszki:'Fiszki',quiz:'Quiz',cwicz:'Ćwiczenia',egzamin:'Egzamin próbny',info:'Zasady i oceny'};
+function openSubject(id,tab,setup,o){
+  const s=SUBJECTS.find(x=>x.id===id);
+  if(!s)return go('today');
+  o=o||{};
+  if(!current||current.id!==id){ // wejście do przedmiotu z zewnątrz (nie powrót z ekranu rolek / podcastu)
+    if(!o.restore){if(!current&&(view==='today'||view==='subjects'))subjFrom=view;tabFrom='hub';toolTopic=null;}
+  }
+  leaveShown();
+  current=s;applyTheme(s);
+  let t=tab||'hub';if(t==='path')t='hub';
+  if(t==='material'&&!topicList(s).some(x=>x.id===curTopic))t='hub';
+  curTab=t;
   if(setup)setup();
   renderSubject();
 }
-/* cloud-ui.js „ZACZNIJ NAUKĘ” (P1-22): ścieżka przedmiotu i od razu ten poziom — tylko gdy jest odblokowany (inaczej sama ścieżka) */
+/* cloud-ui.js „ZACZNIJ NAUKĘ” (P1-22): centrum przedmiotu i od razu ta lekcja (bez blokad) */
 function openLevel(sid,lid){
   const s=SUBJECTS.find(x=>x.id===sid);if(!s)return go('today');
-  openSubject(sid,'path');
-  const i=s.levels.findIndex(l=>l.id===lid);
-  if(i>=0&&current===s&&levelUnlocked(s,i))startLesson(s.levels[i]);
+  openSubject(sid,'hub');
+  const lv=s.levels.find(l=>l.id===lid);
+  if(lv&&current===s)startLesson(lv);
 }
+/* narzędzie z centrum albo z materiału (topicId = tylko ten materiał) */
+function openTool(tab,topicId){
+  if(!current)return;tabFrom=curTab==='material'?'material':'hub';toolTopic=topicId||null;
+  if(tab==='fiszki')fState=null;if(tab==='quiz')qState=null;
+  curTab=tab;renderSubject();
+}
+function toolBack(){curTab=tabFrom==='material'&&curTopic?'material':'hub';toolTopic=null;renderSubject();}
+/* zakres narzędzia: cały przedmiot albo jeden materiał (te same id, klucze SRS bez zmian) */
+function scoped(s){if(!toolTopic)return s;const lv=s.levels.filter(l=>(l.topicId||'_'+s.id)===toolTopic);return lv.length?{...s,levels:lv}:s;}
+function openMaterial(sid,topicId){
+  const s=SUBJECTS.find(x=>x.id===sid);if(!s)return;
+  if(!topicList(s).some(t=>t.id===topicId))return openSubject(sid,'hub');
+  curTopic=topicId;
+  if(current&&current.id===sid){curTab='material';closeSheet();renderSubject();}
+  else openSubject(sid,'material');
+}
+function inSubj(sid){if(!current||current.id!==sid)openSubject(sid,'hub');return current&&current.id===sid;}
 function renderSubject(){
-  const s=current;const st=subjState(s.id);
+  const s=current;if(!s)return go('today');
   try{clearInterval(cwInt);clearInterval(exInt);}catch(e){}
   closeSheet();keyFn=null;taskCleanup();
+  if(curTab==='hub'||curTab==='material')return renderCentrum();
+  if(!TOOL_TABS[curTab])curTab='hub';
   app.innerHTML='';
-  const total=s.levels.length,done=s.levels.filter(l=>(st.levels[l.id]||{}).done).length,pct=total?Math.round(done/total*100):0;
-  const band=el('div','band');
+  const band=el('div','band tool');
   const row=el('div','brow');
-  const back=el('button','backbtn',icon('back',{size:20,stroke:3}));back.setAttribute('aria-label','Wróć do planu dnia');back.onclick=()=>go('today');row.appendChild(back);
-  row.appendChild(el('div','bmeta',`<div class="bname">${mono(initials(s),'xs solid')}<span>${noEmoji(s.name)}</span></div>
-    <div class="bprog"><div class="bar"><i class="a-grow" style="width:${pct}%"></i></div><span>${done}/${total} · <b id="xpNum">${st.xp}</b> xp</span></div>`));
-  const info=el('button','infobtn'+(curTab==='info'?' active':''),icon('info',{size:19}));info.setAttribute('aria-label','Zasady zaliczenia');info.onclick=()=>{curTab='info';renderSubject();};row.appendChild(info);
-  row.appendChild(gemPill());row.appendChild(heartsPill({iconBeat:true})); // krok 8: gemy w pasie przedmiotu
-  band.appendChild(row);
-  // krok 7: chip „Sprawdzian za N dni” z dzisiejszym punktem planu → ekran planu
-  const tst=testFor(s.id);
-  if(tst){syncTests();const N=dayDiff(todayStr(),tst.date);const r=(tst.plan||[]).find(x=>x.date===todayStr());
-    const chip=el('button','bandtest',icon('calendar',{size:15,stroke:2.6})+`<span>Sprawdzian ${inDays(N)}</span>`+(N>0&&r?`<small>· dziś: ${tpTitle(tst,r).toLowerCase()}${r.done?' (zrobione)':''}</small>`:'<small></small>')+icon('chevron-right',{size:16,cls:'chev'}));
-    chip.onclick=()=>openTestPlan(tst.id,'subject');band.appendChild(chip);}
-  const tabs=el('div','subtabs');
-  [['path','map','Ścieżka'],['fiszki','cards','Fiszki'],['quiz','brain','Quiz'],['cwicz','edit','Ćwiczenia'],['egzamin','target','Egzamin']].forEach(([k,ic,lab])=>{
-    const b=el('button','subtab'+(curTab===k?' active':''),icon(ic,{size:15})+'<span>'+lab+'</span>');
-    if(curTab===k)b.setAttribute('aria-current','page');
-    b.onclick=()=>{curTab=k;renderSubject();};
-    tabs.appendChild(b);
-  });
-  band.appendChild(tabs);app.appendChild(band);
-
+  const back=el('button','backbtn',icon('back',{size:20,stroke:3}));back.setAttribute('aria-label',tabFrom==='material'?'Wróć do materiału':'Wróć do przedmiotu');back.onclick=toolBack;row.appendChild(back);
+  const tp=toolTopic?topicList(s).find(x=>x.id===toolTopic):null;
+  row.appendChild(el('div','bmeta',`<div class="bname">${mono(initials(s),'xs solid')}<span>${noEmoji(s.name)}</span></div><div class="btool">${TOOL_TABS[curTab]}${tp?' · '+topicShort(tp.name):''}</div>`));
+  row.appendChild(heartsPill({iconBeat:true}));
+  band.appendChild(row);app.appendChild(band);
   const sc=el('div','screen active');sc.id='subjscreen';
   app.appendChild(sc);
-  if(curTab==='path')renderPath(sc);
-  else if(curTab==='fiszki')renderFiszki(sc);
+  if(curTab==='fiszki')renderFiszki(sc);
   else if(curTab==='quiz')renderQuiz(sc);
   else if(curTab==='cwicz')renderCwicz(sc);
   else if(curTab==='egzamin')renderEgzamin(sc);
   else if(curTab==='info')renderInfo(sc);
-
-  // toast + lesson container
-  app.appendChild(el('div','toast',''));app.lastChild.id='toast';
+  app.appendChild(toastEl());
   const lesson=el('div','lesson');lesson.id='lesson';app.appendChild(lesson);
 }
+function levelUnlocked(){return true;} // D1/§2: bez blokad lekcji (boss nadal czeka na wszystkie lekcje)
 
-/* ---------- ŚCIEŻKA (Path.html): karta rozdziału, wężyk węzłów (offset --x per węzeł, łączniki w połowie drogi), skrzynia co 3 poziomy ---------- */
-function levelUnlocked(s,idx){
-  if(idx===0||(s.levels[idx]&&s.levels[idx].chapter))return true; // nowy materiał = nowy rozdział, dostępny od razu
-  const prev=s.levels[idx-1];
-  const st=subjState(s.id);
-  return !!(st.levels[prev.id]&&st.levels[prev.id].done);
+/* ---------- dane: materiały (tematy) i kluczowe punkty ---------- */
+const TL=new WeakMap(); // przedmiot → lista materiałów (liczona raz na obiekt; setSubjects podmienia obiekty)
+const tid8=t=>String(t||'').replace(/-/g,'').slice(0,8);
+const safeId=v=>String(v==null?'':v).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,40);
+function cutTxt(t,n){const a=[...String(t)];return a.length>n?a.slice(0,n-1).join('').trimEnd()+'…':String(t);}
+/* krótka nazwa materiału: część przed dwukropkiem („Wykład 1–2: pojęcia…” → „Wykład 1–2”) albo początek do 26 znaków; wynik escapowany */
+function topicShort(name){const t=txt(name).replace(/\s+/g,' ').trim();const c=t.indexOf(':');return esc(cutTxt(c>1&&c<=28?t.slice(0,c):t,26));}
+function topicList(s){
+  let c=TL.get(s);if(c)return c;
+  const key=l=>l.topicId||'_'+s.id,order=[],by={};
+  s.levels.forEach(l=>{const k=key(l);if(!by[k]){by[k]=[];order.push(k);}by[k].push(l);});
+  const meta=Array.isArray(s.topics)?s.topics:[],allPts=Array.isArray(s.points)?s.points:null;
+  c=order.map((k,i)=>{const m=meta.find(t=>t&&t.id===k)||{};const levels=by[k];
+    const pts=allPts?allPts.filter(p=>p&&p.topicId===k):[];
+    return {id:k,name:m.name||(order.length===1?s.name:'Materiał '+(i+1)),n:i+1,levels,points:pts.length?pts:fbPoints(s,k,levels),source:m.source||null,createdAt:m.createdAt||null};});
+  TL.set(s,c);return c;
 }
-const PATH_OFF=[-104,8,96,-28]; // poziome przesunięcia kolejnych węzłów (px), cyklicznie
-/* droga ścieżki: gładka krzywa przez środki węzłów (po layoucie), przebyty odcinek w kolorze przedmiotu */
-function drawTrail(path){
-  if(!path.isConnected)return;const old=path.querySelector('svg.trail');if(old)old.remove();
-  const btns=[...path.querySelectorAll('.nodebtn')];if(btns.length<2)return;
-  const pr=path.getBoundingClientRect();
-  const pts=btns.map(b=>{const r=b.getBoundingClientRect();return {x:r.left-pr.left+r.width/2,y:r.top-pr.top+r.height/2,done:/node-done|opened|beaten/.test(b.className)};});
-  const seg=(a,b)=>{const dy=(b.y-a.y)/2;return `C${a.x.toFixed(1)} ${(a.y+dy).toFixed(1)} ${b.x.toFixed(1)} ${(b.y-dy).toFixed(1)} ${b.x.toFixed(1)} ${b.y.toFixed(1)}`;};
-  let all=`M${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`,done=all,k=0;
-  for(let i=1;i<pts.length;i++){all+=seg(pts[i-1],pts[i]);if(pts[i-1].done&&k===i-1){done+=seg(pts[i-1],pts[i]);k=i;}}
-  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('class','trail');svg.setAttribute('aria-hidden','true');
-  svg.setAttribute('width',Math.ceil(pr.width));svg.setAttribute('height',Math.ceil(path.scrollHeight));
-  svg.innerHTML=`<path class="tr-sh" d="${all}"/><path class="tr-base" d="${all}"/><path class="tr-dash" d="${all}"/>${k?`<path class="tr-done" d="${done}"/><path class="tr-dash done" d="${done}"/>`:''}`;
-  path.insertBefore(svg,path.firstChild);
+/* punkt zastępczy: jeden na lekcję (stare tematy bez keyPoints, przedmioty bez punktów) — ten sam kształt co cloud.js mapPoints */
+function fbPoints(s,k,levels){ // lekcja bez fiszek i pytań nie ma czego „umieć” (stan zawsze „Nowe”) — bez punktu, jak cloud.js mapPoints
+  return levels.map((l,j)=>{const raw='L'+safeId(l.raw||l.id),title=txt(l.title).replace(/\s+/g,' ').trim()||('Lekcja '+(j+1));
+    const fc=(l.flashcards||[]).map((_,i)=>[l.id,i]),q=(l.quiz||[]).map((_,i)=>[l.id,i]),tk=(l.tasks||[]).map((t,i)=>t&&TASKS[t.type]?[l.id,i]:null).filter(Boolean);
+    return {id:'t'+tid8(k)+'_'+raw,raw,topicId:k,t:esc(cutTxt(title,120)),s:esc(cutTxt(title,24)),sum:'',lv:[l.id],fc,q,tk,fb:true};}).filter(p=>p.fc.length+p.q.length>0).map((p,i)=>({...p,n:i+1}));
 }
-function renderPath(sc){
-  const s=current;const st=subjState(s.id);
-  const isDone=lv=>!!(st.levels[lv.id]||{}).done;
-  const wrap=el('div','scroll pathview');
-  const curIdx=s.levels.findIndex((l,i)=>levelUnlocked(s,i)&&!isDone(l));
-  const all=curIdx<0;
-  const brec=bossRec(s.id);
-  wrap.appendChild(el('div','chapter a-up',`<i></i><div class="grow"><div class="eyebrow">Rozdział ${all?s.levels.length:curIdx+1}</div><div class="t">${all?(brec.done?'Wszystko zaliczone':'Boss rozdziału czeka'):noEmoji(s.levels[curIdx].title)}</div></div>${icon(all&&!brec.done?'boss':'list',{size:18})}`));
-  const path=el('div','path');
+function topicOfLevel(s,lv){return topicList(s).find(t=>t.levels.indexOf(lv)>=0)||null;}
+function lessonNo(s,lv){const tp=topicOfLevel(s,lv);return tp?tp.levels.indexOf(lv)+1:s.levels.indexOf(lv)+1;}
+function ptHidden(s,p){const H=PROGRESS.ptHide;return !!(H&&typeof H==='object'&&H[s.id+':'+p.id]);}
+function visiblePoints(s,topicId){const out=[];topicList(s).forEach(t=>{if(topicId&&t.id!==topicId)return;t.points.forEach(p=>{if(!ptHidden(s,p))out.push(p);});});return out;}
+function pointById(s,pid){for(const t of topicList(s)){const p=t.points.find(x=>x.id===pid);if(p)return p;}return null;}
+function pointKeys(s,p){return p.fc.map(([l,i])=>s.id+':'+l+':'+i).concat(p.q.map(([l,i])=>s.id+':'+l+':q'+i));}
+/* D1: stan punktu — czysta funkcja istniejących kluczy SRS (plan-media §1.3); XP, seria i oglądanie nic nie zmieniają */
+function pointState(s,p,today){
+  today=today||todayStr();const S=srs(),keys=pointKeys(s,p),n=keys.length;let seen=0,firm=0,overdue=0,maxOverdue=0;
+  keys.forEach(k=>{const e=S[k];if(!e||!(e.seen>0))return;seen++;if((e.box|0)>=2)firm++;const d=dayDiff(e.due,today);if(d>2)overdue++;if(d>maxOverdue)maxOverdue=d;});
+  let st;
+  if(!n)st='new';
+  else if(!seen){const o=PROGRESS.oral&&PROGRESS.oral[s.id+':'+p.id];st=o&&o.ok===true?'learning':'new';}
+  else if(firm/n>=.7&&!overdue)st='known';
+  else if(overdue/n>=1/3)st='refresh';
+  else st='learning';
+  return {st,n,seen,firm,overdue,maxOverdue,last:null};
+}
+function masteryOf(s,topicId){
+  const list=visiblePoints(s,topicId).map(p=>({p,r:pointState(s,p)}));
+  const c={known:0,learning:0,refresh:0,fresh:0,total:list.length,list};
+  list.forEach(x=>{if(x.r.st==='new')c.fresh++;else c[x.r.st]++;});return c;
+}
+/* D3: gotowość = 70% × punkty „Umiem” w zakresie + 30% × najlepszy egzamin próbny; poniżej 10 odpowiedzi w przedmiocie „?” (pct:null) */
+function readiness(s,levelIds){
+  const pts=visiblePoints(s).filter(p=>!levelIds||p.lv.some(l=>levelIds.indexOf(l)>=0));
+  let known=0;pts.forEach(p=>{if(pointState(s,p).st==='known')known++;});
+  const S=srs(),pre=s.id+':';let answers=0;Object.keys(S).forEach(k=>{if(k.indexOf(pre)===0)answers+=(S[k].seen|0);});
+  const ex=(PROGRESS[s.id]||{}).exam,mock=ex&&ex.best&&num(ex.best.pct)?ex.best.pct:null,total=pts.length;
+  if(answers<10||!total)return {pct:null,known,total,mock,answers};
+  const share=known/total;return {pct:mock==null?Math.round(100*share):Math.round(70*share+.3*mock),known,total,mock,answers};
+}
+const ST_LABEL={known:'Umiem',learning:'W trakcie',refresh:'Do odświeżenia',new:'Nowe'};
+function masteryMarker(st){st=ST_LABEL[st]?st:'new';
+  const inner=st==='known'?icon('check',{size:14,stroke:3.6}):st==='refresh'?icon('refresh',{size:12,stroke:3.4}):st==='learning'?'<i></i>':'';
+  return `<span class="mk ${st}" role="img" aria-label="${ST_LABEL[st]}">${inner}</span>`;}
+function masteryBar(c,o){o=o||{};const seg=[['known',c.known],['learning',c.learning],['refresh',c.refresh],['new',c.fresh!=null?c.fresh:c.new]];
+  const lab=`Umiem ${c.known|0}, w trakcie ${c.learning|0}, do odświeżenia ${c.refresh|0}, nowe ${seg[3][1]|0}`;
+  return `<div class="mbar a-grow" role="img" aria-label="${lab}" style="height:${o.h||12}px">${seg.filter(x=>x[1]>0).map(x=>`<span class="${x[0]}" style="flex:${x[1]}"></span>`).join('')}</div>`;}
+function lessonMinutes(lv){const nt=(lv.tasks||[]).filter(t=>t&&TASKS[t.type]).length;return Math.max(3,Math.round(1.2*(lv.feed||[]).length+.4*(Math.min(6,(lv.quiz||[]).length)+nt)));}
+function resumeMinutes(lv,sv){const nf=(lv.feed||[]).length,ni=sv.items.length; // reszta lekcji: bieżąca część w połowie, pytania jak w lessonMinutes
+  return sv.phase==='feed'?Math.max(1,Math.round(1.2*Math.max(.5,nf-sv.feedIdx-.5)+.25*Math.min(6,ni))):Math.max(1,Math.round(.4*Math.min(6,ni-sv.qIdx)));}
+function practiceMinutes(s,pts){const n=pts.reduce((a,p)=>a+Math.min(4,p.q.length)+Math.min(3,p.fc.length),0);return Math.min(10,Math.max(2,Math.ceil(n/3)));}
+/* ostatnia przerwana lekcja przedmiotu (najnowszy wpis lessonSave, sprawdzony jak przy wznowieniu) */
+function lastResume(s){const all=lsaves(),st=subjState(s.id);let best=null;
+  Object.keys(all).forEach(k=>{if(k.indexOf(s.id+':')!==0)return;const lv=s.levels.find(l=>l.id===k.slice(s.id.length+1));if(!lv)return;
+    if((st.levels[lv.id]||{}).done)return; // zrobiona lekcja (powtórka, zajrzenie do części, zapis z Build 7) to nie „Dokończ lekcję” — wznowi się po jej otwarciu
+    const sv=lessonLoad(s,lv,all);if(!sv||sv.replay)return;
+    const at=+all[k].at||0;if(!best||at>best.at)best={lv,sv,at};});return best;}
+function agoTxt(ts){const k=ts?dayDiff(dstr(new Date(ts)),todayStr()):0;return k<=0?'dziś':k===1?'wczoraj':`${k} dni temu`;}
+function namesTxt(pts){const n=pts.map(p=>p.s);if(n.length<=1)return n[0]||'';if(n.length===2)return n[0]+' i '+n[1];if(n.length===3)return n[0]+', '+n[1]+' i '+n[2];const k=n.length-2;return n[0]+', '+n[1]+' i '+k+' '+pl(k,'inny','inne','innych');}
+/* „Od ostatniej powtórki minęły 4 dni” — ostatnia odpowiedź = termin − odstęp pudełka (SRS_INT) */
+function sinceTxt(s,pts){let d=0;pts.forEach(p=>{d=Math.max(d,pointState(s,p).maxOverdue);});d=Math.max(1,d); // jak „Termin powtórki minął N dni temu” w arkuszu punktu
+  return `${pl(d,'minął','minęły','minęło')} ${d} ${pl(d,'dzień','dni','dni')}`;}
+const byOverdue=(s,list)=>list.slice().sort((a,b)=>b.r.maxOverdue-a.r.maxOverdue); // najdłużej zaległe najpierw („MFW i Zarządzanie kryzysami”)
+const pad2=n=>String(n).padStart(2,'0');
+function fmtTime(sec){sec=Math.round(+sec||0);const neg=sec<0;sec=Math.abs(sec);const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),x=sec%60;
+  return (neg?'-':'')+(h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0');}
+function dec(n,d){d=d==null?1:d;const k=Math.pow(10,d);return String(Math.round((+n||0)*k)/k).replace('.',',');}
+/* skrót, który da się wstawić po „z” / „do” bez odmiany („MSGiP”, „WOS”); inna nazwa → null (zdanie bez nazwy) */
+function acroName(s){const t=txt(sshort(s));return /^[\p{L}\p{N}]{2,8}$/u.test(t)&&(t.match(/\p{Lu}/gu)||[]).length>=2?esc(t):null;}
+function stageTxt(s){return s.level&&s.level!=='inne'&&LEVEL_NAME[s.level]?LEVEL_NAME[s.level]:'';}
+
+/* ---------- media (rejestr z chmury) i funkcje ---------- */
+let MEDIA=[],mediaSig='';
+function meNow(){try{const C=window.NAUKA_CLOUD;return C&&typeof C.meCached==='function'?C.meCached():null;}catch(e){return null;}}
+/* funkcja włączona: media.js na miejscu i /api/me mówi features[f] (bez danych = ukryte; po odpowiedzi serwera ekran się przerysuje) */
+function mediaOn(f){const M=window.NaukaMedia;if(!M)return false;const me=meNow();return !!(me&&me.features&&me.features[f]===true);}
+/* zaproszenia „PRZYGOTUJ”: tylko gdy zostało tworzenie (nieznany limit = pokaż — serwer i tak sprawdza; D4) */
+function canCreate(){const me=meNow();const q=me&&me.media;return !(q&&typeof q.remaining==='number'&&q.remaining<=0);}
+function mediaCall(fn,...a){const M=window.NaukaMedia;if(M&&typeof M[fn]==='function'){try{return M[fn](...a);}catch(e){try{console.error('Cramfox: NaukaMedia.'+fn,e);}catch(x){}}}toast('Ta funkcja jest chwilowo niedostępna','info');return null;}
+function mediaFor(sid,topicId){return MEDIA.filter(r=>r.subject_id===sid&&(!topicId||r.topic_id===topicId)).sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));}
+function mediaById(id){return MEDIA.find(r=>r.id===id)||null;}
+/* stan mediów: podcast trzyma rozdział i pozycję razem jako cp „<rozdział>:<sekunda>” (scalanie bierze napis w całości — rozdział jednego urządzenia
+   z pozycją drugiego wskazywałby poza koniec rozdziału); ch / pos ze starszych zapisów tej wersji, gdy cp brak */
+function mediaState(id){const M=PROGRESS.media;const m=M&&typeof M==='object'&&M[id];if(!m||typeof m!=='object')return {};const o=JSON.parse(JSON.stringify(m));
+  const c=typeof o.cp==='string'&&CP_RE.exec(o.cp);if(c){o.ch=+c[1];o.pos=+c[2];}return o;}
+function setMediaState(id,patch,o){
+  if(!UUID_RE.test(String(id||''))||!patch||typeof patch!=='object')return;
+  if(!PROGRESS.media||typeof PROGRESS.media!=='object'||Array.isArray(PROGRESS.media))PROGRESS.media={};
+  PROGRESS.media[id]={...(PROGRESS.media[id]||{}),...patch,at:todayStr()};
+  fixMediaProgress(PROGRESS,v=>!!v&&typeof v==='object'&&!Array.isArray(v));
+  if(!o||o.save!==false)saveProgress();
+}
+function foxState(key){const F=PROGRESS.fox;const f=F&&typeof F==='object'&&F[key];return f&&typeof f==='object'?JSON.parse(JSON.stringify(f)):{};}
+function setFoxState(key,mode,value){
+  if(['explain','quiz','exam'].indexOf(mode)<0||!value||typeof value!=='object')return;
+  if(!PROGRESS.fox||typeof PROGRESS.fox!=='object'||Array.isArray(PROGRESS.fox))PROGRESS.fox={};
+  const k=String(key||'');PROGRESS.fox[k]={...(PROGRESS.fox[k]||{}),[mode]:{...value,at:value.at||todayStr()}};
+  fixMediaProgress(PROGRESS,v=>!!v&&typeof v==='object'&&!Array.isArray(v));saveProgress();
+}
+function markOral(sid,pid,ok){if(!PKEY_RE.test(sid+':'+pid))return;if(!PROGRESS.oral||typeof PROGRESS.oral!=='object'||Array.isArray(PROGRESS.oral))PROGRESS.oral={};
+  const k=sid+':'+pid,prev=PROGRESS.oral[k];PROGRESS.oral[k]={at:todayStr(),ok:ok===true||!!(prev&&prev.ok&&prev.at===todayStr())};saveProgress();}
+function completeTask(sid,kind,x){if(!own(REWARD,kind))return false;return completeDaily(sid,kind,x||undefined);}
+/* następna nieobejrzana rolka (najnowsza gotowa seria przedmiotu albo podana) */
+function nextReel(s,m0){const list=m0?[m0]:mediaFor(s.id).filter(r=>r.kind==='reels'&&r.status==='ready');
+  for(const m of list){const man=m.manifest;if(!man||!Array.isArray(man.reels)||!man.reels.length)continue;const w=mediaState(m.id).w||[];
+    const k=man.reels.findIndex(r=>w.indexOf(r.n)<0);if(k>=0)return {m,man,r:man.reels[k],k,N:man.reels.length};if(m0)return null;}
+  return null;}
+function podcastInfo(s,topicId){
+  const m=mediaFor(s.id,topicId).find(r=>r.kind==='podcast'&&r.status==='ready'&&r.manifest&&Array.isArray(r.manifest.chapters)&&r.manifest.chapters.length);if(!m)return null;
+  const man=m.manifest,st=mediaState(m.id),done=st.done||[];
+  const dur=c=>c&&num(c.durSec)&&c.durSec>0?c.durSec:c&&num(c.estSec)?c.estSec:0;
+  const total=man.chapters.reduce((a,c)=>a+dur(c),0)||(num(man.estSec)?man.estSec:0);
+  let heard=man.chapters.filter(c=>done.indexOf(c.n)>=0).reduce((a,c)=>a+dur(c),0);
+  if(st.ch&&done.indexOf(st.ch)<0)heard+=Math.min(st.pos||0,dur(man.chapters.find(c=>c.n===st.ch)));
+  const tp=topicList(s).find(t=>t.id===m.topic_id);
+  return {m,man,title:man.title||'Podcast',short:tp?topicShort(tp.name):'',total,heard,left:Math.max(0,total-heard),started:!!(st.ch||st.pos||done.length),finished:done.length>=man.chapters.length,chapters:man.chapters.length};
+}
+function reelsInfo(s,topicId){const m=mediaFor(s.id,topicId).find(r=>r.kind==='reels'&&r.status==='ready'&&r.manifest&&Array.isArray(r.manifest.reels)&&r.manifest.reels.length);if(!m)return null;
+  const man=m.manifest,w=mediaState(m.id).w||[];return {m,man,N:man.reels.length,watched:man.reels.filter(r=>w.indexOf(r.n)>=0).length,dur:man.reels.reduce((a,r)=>a+(num(r.durSec)?r.durSec:0),0),w};}
+function oralReady(s){const m=masteryOf(s);return m.total>0&&m.known===m.total&&mediaOn('fox');}
+/* rejestr mediów z chmury (cloud-ui: mediaList / mediaWatch); przerysowanie centrum albo Dziś, gdy zmienił się stan i nic nie jest otwarte */
+function mediaSigNow(){const me=meNow(),f=me&&me.features||{},q=me&&me.media;return MEDIA.map(r=>r.id+':'+r.status).join(',')+'|'+[f.reels,f.podcast,f.fox].join(',')+'|'+(q?q.remaining:'');}
+function setMedia(rows){
+  MEDIA=(Array.isArray(rows)?rows:[]).filter(r=>r&&typeof r.id==='string'&&UUID_RE.test(r.id)&&(r.kind==='reels'||r.kind==='podcast'));
+  const sig=mediaSigNow();if(sig===mediaSig)return;mediaSig=sig;
+  if(!booted)return;
+  try{planAddMedia();}catch(e){}
+  refreshVisible();
+}
+function refreshVisible(){
+  if(!app||document.getElementById('sheet')||lessonState||rvState||exState||bossState||cramState||document.querySelector('.lesson.open'))return;
+  const sc=document.querySelector('.screen.active .scroll'),top=sc?sc.scrollTop:0;
+  if(current&&(curTab==='hub'||curTab==='material'))renderSubject();
+  else if(!current&&view==='today'&&shown==='today')go('today',true);
+  else return;
+  const sc2=document.querySelector('.screen.active .scroll');if(sc2)sc2.scrollTop=top;
+}
+
+/* ---------- oceny w polskiej skali (egzamin ustny z lisem: serwer daje %, ocenę liczy klient) ---------- */
+const GRADE_NAME={studia:{'2':'niedostateczny','3':'dostateczny','3,5':'dostateczny plus','4':'dobry','4,5':'dobry plus','5':'bardzo dobry'},
+  school:{'1':'niedostateczny','2':'dopuszczający','3':'dostateczny','4':'dobry','5':'bardzo dobry','6':'celujący'}};
+function gradeFor(sid,pct){const s=SUBJECTS.find(x=>x.id===sid);if(!s)return {label:'',name:''};const label=gradeParts(exGrade(s,Math.round(+pct||0)))[0];
+  const tbl=s.level==='studia'?GRADE_NAME.studia:(s.level==='liceum'||s.level==='podstawowka')?GRADE_NAME.school:null;
+  return {label,name:tbl&&own(tbl,txt(label))?tbl[txt(label)]:''};}
+function gradeScale(sid){const s=SUBJECTS.find(x=>x.id===sid);if(!s)return [];return [gradeParts(exFailLabel(s))[0]].concat(exScale(s).slice().sort((a,b)=>a[0]-b[0]).map(x=>gradeParts(x[1])[0]));}
+
+/* ---------- pytania z quizu dla rolek, pauz podcastu i luk z rozmowy (D2: odpowiedź zapisuje SRS jak zakładka Quiz) ---------- */
+function quizItem(sid,lid,qi){const s=SUBJECTS.find(x=>x.id===sid);const lv=s&&s.levels.find(l=>l.id===lid);if(!lv||!Number.isInteger(qi))return null;
+  const q=qOf(s,lv,qi);if(!q)return null;return {q:q.q,a:q.a.slice(),c:q.c,e:q.e||'',pm:q.pm,src:q.src||null};}
+function dueText(due){const k=dayDiff(todayStr(),due);return k<=0?'dziś':k===1?'jutro':`za ${k} ${pl(k,'dzień','dni','dni')}`;}
+function recordAnswer(sid,lid,qi,ok){
+  const s=SUBJECTS.find(x=>x.id===sid);if(!s||!s.levels.some(l=>l.id===lid&&(l.quiz||[])[qi]))return null;
+  const e=srsTouch(sid,lid,'q'+qi,!!ok);if(ok)addXP(sid,3);okRun(!!ok);saveProgress();
+  return {due:e.due,box:e.box,dueText:dueText(e.due)};
+}
+function makeDue(sid,pid){const s=SUBJECTS.find(x=>x.id===sid);const p=s&&pointById(s,pid);if(!p)return 0;const S=srs(),t=todayStr();
+  const keys=pointKeys(s,p);keys.forEach(k=>{const e=S[k]||{box:0,due:t,seen:0,lapses:0};if(e.due>t)e.due=t;S[k]=e;});saveProgress();return keys.length;}
+function isDue(sid,pid){const s=SUBJECTS.find(x=>x.id===sid);const p=s&&pointById(s,pid);if(!p)return false;const S=srs(),t=todayStr();const keys=pointKeys(s,p);
+  return keys.length>0&&keys.every(k=>S[k]&&S[k].due<=t);}
+/* kawałek lekcji: tytuł i treść dawki (HTML już po clean()) + „lekcja N, część M” */
+function lessonChunk(sid,lid,fi){const s=SUBJECTS.find(x=>x.id===sid);const lv=s&&s.levels.find(l=>l.id===lid);const f=lv&&(lv.feed||[])[fi|0];if(!f)return null;
+  return {title:noEmoji(f.title||''),html:f.body||'',lesson:lessonNo(s,lv),part:(fi|0)+1,parts:(lv.feed||[]).length};}
+/* najlepiej pasująca część lekcji do punktu (wspólne słowa tytułu punktu i dawki; bez trafienia — pierwsza część) */
+function pointChunk(s,p){
+  const lv=s.levels.find(l=>l.id===p.lv[0]);if(!lv||!(lv.feed||[]).length)return null;
+  // słowa tytułu punktu i haseł jego fiszek (skróty 3-literowe jak „MFW” też; dłuższe po 5 pierwszych literach — polska odmiana)
+  const key=w=>w.length>=6?w.slice(0,5):w,toks=new Set(),add=t=>fold(txt(t)).split(' ').forEach(w=>{if(w.length>=3&&!STOP.has(w))toks.add(key(w));});
+  add(p.t);add(p.s);p.fc.forEach(([l,i])=>{if(l===lv.id&&lv.flashcards[i])add(lv.flashcards[i].t);});
+  let best=0,bi=0;
+  (lv.feed||[]).forEach((f,i)=>{const ws=new Set(fold(txt(String(f.title||'')+' '+String(f.body||'').replace(/<[^>]+>/g,' '))).split(' ').map(key));let k=0;toks.forEach(t=>{if(ws.has(t))k++;});if(k>best){best=k;bi=i;}});
+  return {lv,fi:bi,f:lv.feed[bi],n:lessonNo(s,lv)};
+}
+function openLessonAt(sid,lid,part,o){
+  o=o||{};const s=SUBJECTS.find(x=>x.id===sid);const lv=s&&s.levels.find(l=>l.id===lid);if(!lv)return;
+  if(!inSubj(sid))return;closeSheet();
+  const done=!!(subjState(sid).levels[lid]||{}).done;
+  if(part!=null&&done&&part>=0&&part<(lv.feed||[]).length)return startLesson(lv,{fresh:true,part});
+  if(o.resume){const sv=lessonLoad(s,lv);if(sv)return resumeLesson(lv,sv);}
+  startLesson(lv);
+}
+
+/* ---------- „NA TERAZ” (D5, plan-media §1.5): uporządkowane propozycje; [0] = karta główna, „Inna propozycja” przechodzi dalej ---------- */
+function naTeraz(s){
+  const out=[],alts=[],today=todayStr(),st=subjState(s.id),t=testFor(s.id),N=t?dayDiff(today,t.date):null,tps=topicList(s);
+  const m=masteryOf(s),ref=byOverdue(s,m.list.filter(x=>x.r.st==='refresh')).map(x=>x.p);
+  const done=l=>!!(st.levels[l.id]||{}).done,anyDone=s.levels.some(done);
+  const inT=lv=>{if(tps.length<2)return '';const tp=topicOfLevel(s,lv);return tp?' z „'+topicShort(tp.name)+'”':'';};
+  const push=(L,a)=>{if(!out.concat(alts).some(x=>x.id===a.id))L.push({eyebrow:'Na teraz',minutes:0,fox:'think',...a});};
+  if(N===0)push(out,{id:'warmup',kind:'warmup',title:'Rozgrzewka · 5 min',body:'Sprawdzian dziś. Krótka powtórka najważniejszego, bez nowych rzeczy.',cta:'ROZGRZEWKA · 5 MIN',minutes:5,fox:'happy',go:()=>startWarmup(s)});
+  else if(N===1)push(out,{id:'cram',kind:'cram',title:'Noc przed sprawdzianem · 20 min',body:'Sprawdzian jutro. Cztery bloki po 5 minut, potem spać — sen utrwala to, co powtórzysz.',cta:'ZACZYNAM · 20 MIN',minutes:20,go:()=>openCram(s.id)});
+  const rs=lastResume(s);
+  if(rs){const nf=(rs.lv.feed||[]).length,sv=rs.sv,mins=resumeMinutes(rs.lv,sv);
+    const part=sv.phase==='feed'?`część ${sv.feedIdx+1} z ${nf}`:`pytanie ${Math.min(sv.qIdx+1,sv.items.length)} z ${sv.items.length}`;
+    push(out,{id:'resume',kind:'resume',title:`Dokończ lekcję ${lessonNo(s,rs.lv)}${inT(rs.lv)}`,body:`${noEmoji(rs.lv.title)} · ${part}. Przerwane ${agoTxt(rs.at)}, ${pl(mins,'została','zostały','zostało')} ok. ${mins} ${pl(mins,'minuta','minuty','minut')}.`,
+      cta:'DOKOŃCZ LEKCJĘ',minutes:mins,go:()=>openLessonAt(s.id,rs.lv.id,null,{resume:true})});}
+  if(ref.length>=2){const mins=practiceMinutes(s,ref),k=ref.length;
+    push(out,{id:'szop',kind:'szop',title:`Odzyskaj ${k} ${pl(k,'punkt','punkty','punktów')} od Szopa`,body:`${namesTxt(ref)}. Od ostatniej powtórki ${sinceTxt(s,ref)}.`,cta:`ODZYSKAJ · ${mins} MIN`,minutes:mins,go:()=>{if(inSubj(s.id))practice(s,ref.map(p=>p.id));}});}
+  const ts=testStep(s); // ten sam warunek co wiersz „Do sprawdzianu — …” w planie dnia (krok „nauka” = karta lekcji niżej)
+  if(ts&&ts.row){const r=ts.r;push(out,{id:'plan',kind:'plan',eyebrow:'Plan do sprawdzianu',title:tpTitle(t,r),body:`Sprawdzian ${inDays(N)}. Dzisiejszy krok planu: ${tpSub(r,t)}.`,cta:'ZACZNIJ',minutes:r.minutes||10,go:()=>testAction(t,r)});}
+  const nx=nextLesson(s,rs&&rs.lv);
+  if(nx){const n=lessonNo(s,nx),nf=(nx.feed||[]).length,mins=lessonMinutes(nx);
+    const body=`${noEmoji(nx.title)} · ${nf?nf+' '+pl(nf,'część','części','części')+' i kilka pytań':'pytania'} · ok. ${mins} min`;
+    if(!anyDone&&!rs)push(out,{id:'lesson',kind:'lesson',eyebrow:'Na start',title:`Zacznij od lekcji ${n}`+inT(nx),body,cta:`ZACZNIJ LEKCJĘ ${n}`,minutes:mins,fox:'happy',first:true,go:()=>openLessonAt(s.id,nx.id)});
+    else push(out,{id:'lesson',kind:'lesson',title:`Zacznij lekcję ${n}`+inT(nx),body,cta:`ZACZNIJ LEKCJĘ ${n}`,minutes:mins,go:()=>openLessonAt(s.id,nx.id)});}
+  if(t&&N>=1&&N<=3&&!(((PROGRESS[s.id]||{}).exam||{}).n)){const q=Math.min(20,allQuiz(s).length);
+    if(q)push(out,{id:'mock',kind:'mock',title:'Egzamin próbny',body:`Sprawdzian ${inDays(N)}, a egzaminu próbnego jeszcze nie było. ${q} ${pl(q,'pytanie','pytania','pytań')} na czas, jak na prawdziwym.`,cta:'EGZAMIN PRÓBNY',minutes:examMin(s),go:()=>{if(inSubj(s.id))openTool('egzamin');}});}
+  if(m.total&&m.known===m.total&&mediaOn('fox')){
+    // egzamin ustny dziś: z całego przedmiotu (klucz s:<id>) albo z materiału (klucz = id tematu, media.js foxKey)
+    const oralToday=['s:'+s.id].concat(tps.map(x=>x.id)).some(k=>{const e=foxState(k).exam;return !!e&&e.at===today;});
+    if(oralToday)push(out,{id:'rest',kind:'rest',title:'Na dziś wystarczy',body:'Egzamin ustny za Tobą. Wróć jutro — powtórka sama da znać, co odświeżyć.',cta:'',fox:'sleep',go:null});
+    else push(out,{id:'oral',kind:'oral',title:'Egzamin ustny z lisem',body:'Wszystkie punkty masz w „Umiem”. Sprawdź się jak przed komisją: 3 pytania, każde z dopytaniem.',cta:'EGZAMIN USTNY · 10 MIN',minutes:10,fox:'happy',go:()=>mediaCall('openFox',s.id,{mode:'exam'})});}
+  // dopisane propozycje (rolka i podcast nigdy nie są główną kartą)
+  const due=srsDue().filter(x=>x.s.id===s.id);
+  const review={id:'review',kind:'review',title:`Powtórka · ${due.length} na dziś`,body:'Pojęcia, które właśnie wracają. Kilka minut, zanim uciekną.',cta:'ZACZNIJ POWTÓRKĘ',minutes:Math.max(2,Math.round(due.length/4)),go:()=>startReview(due)};
+  if(!out.length){if(due.length)push(out,review);else push(out,{id:'rest',kind:'rest',title:'Na dziś wystarczy',body:'Wszystko na bieżąco. Wróć jutro — powtórka sama da znać, co odświeżyć.',cta:'',fox:'sleep',go:null});}
+  if(ref.length===1){const mins=practiceMinutes(s,ref);push(alts,{id:'szop1',kind:'szop',title:'Odzyskaj punkt od Szopa',body:`${ref[0].s}. Od ostatniej powtórki ${sinceTxt(s,ref)}.`,cta:`ODZYSKAJ · ${mins} MIN`,minutes:mins,go:()=>{if(inSubj(s.id))practice(s,[ref[0].id]);}});}
+  const rl=nextReel(s);
+  if(rl&&mediaOn('reels'))push(alts,{id:'reel',kind:'reel',title:`Obejrzyj rolkę ${rl.r.n}/${rl.N}: ${rl.r.title||''}`,body:`${rl.man.title||'Seria rolek'} · ${fmtTime(rl.r.durSec||0)}`,cta:'OBEJRZYJ ROLKĘ',minutes:1,fox:'happy',go:()=>mediaCall('openReels',s.id,rl.m.topic_id,{mediaId:rl.m.id,reel:rl.r.n})});
+  const pd=podcastInfo(s);
+  if(pd&&pd.started&&!pd.finished&&window.NaukaMedia)push(alts,{id:'podcast',kind:'podcast',title:`Słuchaj dalej: ${pd.title}`,body:`Podcast z lisem i szopem · zostało ${fmtTime(pd.left)}`,cta:'SŁUCHAJ DALEJ',minutes:Math.ceil(pd.left/60),fox:'happy',go:()=>mediaCall('openPodcast',s.id,pd.m.topic_id,{mediaId:pd.m.id,play:true})});
+  if(due.length)push(alts,review);
+  return out.concat(alts);
+}
+
+/* ---------- ekrany: centrum (Main / Centrum-Nowy) i materiał (Centrum-Material) ---------- */
+function centrumChrome(o){
+  app.innerHTML='';
+  const top=el('header','htop');
+  const b=el('button','hicon',icon('back',{size:20,stroke:3}));b.setAttribute('aria-label',o.backLabel);b.onclick=o.back;top.appendChild(b);
+  top.appendChild(el('div','httl',o.title));
+  const m=el('button','hicon',icon('dots',{size:22}));m.setAttribute('aria-label',o.menuLabel);m.onclick=o.menu;top.appendChild(m);
+  app.appendChild(top);
+  const sc=el('div','screen active');sc.id='subjscreen';const scroll=el('div','scroll hub');sc.appendChild(scroll);app.appendChild(sc);
+  const mp=miniSlot();if(mp){app.appendChild(mp);scroll.classList.add('withmini');}
+  app.appendChild(renderNav('subjects'));
+  app.appendChild(toastEl());
+  const lesson=el('div','lesson');lesson.id='lesson';app.appendChild(lesson);
+  return scroll;
+}
+function renderCentrum(){
+  const s=current;
+  const amber=String(s.accent||'').toUpperCase()==='#FFA023'; // akcent przedmiotu = kolor „do odświeżenia” → odświeżenie na czerwono
+  let scroll;
+  if(curTab==='material'){
+    const tp=topicList(s).find(x=>x.id===curTopic);if(!tp){curTab='hub';return renderCentrum();}
+    scroll=centrumChrome({title:topicShort(tp.name),backLabel:'Wróć do: '+txt(sshort(s)),back:()=>{curTab='hub';renderSubject();},menuLabel:'Więcej opcji materiału',menu:()=>materialMenu(s,tp)});
+    renderMaterial(scroll,s,tp);
+  }else{
+    scroll=centrumChrome({title:sshort(s),backLabel:'Wróć do: '+(subjFrom==='today'?'Dziś':'Przedmioty'),back:()=>go(subjFrom==='today'?'today':'subjects'),menuLabel:'Więcej opcji przedmiotu',menu:()=>hubMenu(s)});
+    renderHub(scroll,s);
+  }
+  if(amber)scroll.classList.add('amberacc');
+  liveFoxes(scroll);
+}
+function hlabel(t,right){const h=el('div','hlbl',`<span>${t}</span>`);if(right)h.appendChild(right);return h;}
+function hlink(t,fn){const b=el('button','hlink',t);b.type='button';b.onclick=fn;return b;}
+function masterySection(s,m,o){
+  o=o||{};const seen=m.known+m.learning+m.refresh;const box=el('section','hmast a-up d1');
+  if(!seen){
+    box.classList.add('zero'); // nie .empty (kolizja z pustym stanem Dziś)
+    box.innerHTML=`<div class="hmrow"><p>${m.total} ${pl(m.total,'punkt','punkty','punktów')} przed Tobą</p></div><div class="mbar"></div><p class="hmtxt">Pasek zapełni się, gdy zaczniesz odpowiadać. Punkt jest Twój, gdy umiesz go w dwa różne dni.</p>`;
+  }else{
+    const leg=[[m.learning,'learning',`${m.learning} w trakcie`],[m.refresh,'refresh',`${m.refresh} do odświeżenia`],[m.fresh,'new',`${m.fresh} ${pl(m.fresh,'nowy','nowe','nowych')}`]].filter(x=>x[0]>0);
+    box.innerHTML=`<div class="hmrow"><p>Umiesz <b>${m.known}</b> z ${m.total} ${pl(m.total,'punktu','punktów','punktów')}</p></div>${masteryBar(m,{h:12})}${leg.length?`<div class="hleg">${leg.map(x=>`<span><i class="${x[1]}"></i>${x[2]}</span>`).join('')}</div>`:''}`;
+  }
+  box.querySelector('.hmrow').appendChild(hlink('Jak to liczę?',openHowSheet));
+  return box;
+}
+const WD2=['ND','PN','WT','ŚR','CZ','PT','SO'];
+const TP_GLYPH={learn:'book',review:'refresh',rest:'moon',mock:'target',weak:'clipboard'};
+const TASK_WORD={lesson:'lekcja',review:'powtórka',reels:'rolka',cram:'noc przed sprawdzianem',warmup:'rozgrzewka',oral:'egzamin ustny',weak:'błędy z egzaminu',quiz:'quiz',exam:'egzamin próbny',plan:'krok planu do sprawdzianu'};
+function andJoin(a){return a.length<2?(a[0]||''):a.slice(0,-1).join(', ')+' i '+a[a.length-1];}
+function todaySummary(s){
+  const its=daily().tasks.map(taskInfo).filter(x=>x&&x.s.id===s.id&&!x.t.done);if(!its.length)return 'Dziś: plan zrobiony';
+  const w=its.map(x=>{if(x.kind==='szop'){const k=masteryOf(s).refresh;return `${k} ${pl(k,'punkt','punkty','punktów')} od Szopa`;}return TASK_WORD[x.kind]||'';}).filter(Boolean);
+  const mins=its.reduce((a,x)=>a+(x.min||0),0);return `Dziś: ${andJoin(w)}${mins?' · ok. '+mins+' min':''}`;
+}
+function examCard(s,t){
+  const N=dayDiff(todayStr(),t.date),d=dateOf(t.date),rd=readiness(s,t.levels),C=179.1;
+  const big=N<=0?'<span class="b w">dziś</span>':N===1?'<span class="b w">jutro</span>':`<span class="s">za </span><span class="b">${N}</span><span class="s"> ${pl(N,'dzień','dni','dni')}</span>`;
+  const arc=rd.pct?`<circle cx="32" cy="32" r="28.5" fill="none" stroke="var(--accent)" stroke-width="7" stroke-linecap="round" stroke-dasharray="${Math.round(C*rd.pct/100*10)/10} ${C}" transform="rotate(-90 32 32)"/>`:'';
+  const box=el('section','hexam a-up d2');
+  const cells=[];for(let i=0;i<Math.min(7,Math.max(1,N+1));i++){const ds=addDays(todayStr(),i),dd=dateOf(ds),r=(t.plan||[]).find(x=>x.date===ds);
+    const exam=ds===t.date,today=i===0;const g=exam?'<span class="spr">SPR</span>':r?icon(TP_GLYPH[r.kind]||'book',{size:14,stroke:2.6}):icon('book',{size:14,stroke:2.6,cls:'off'});
+    const lab=(today?'dziś':DAYS[dd.getDay()].toLowerCase()+' '+dd.getDate())+': '+(exam?'sprawdzian':r?tpTitle(t,r).toLowerCase():'—');
+    cells.push(`<li class="${exam?'exam':''}${today?' now':''}" aria-label="${attr(lab)}"><span class="wd">${WD2[dd.getDay()]}</span><span class="dn">${dd.getDate()}</span>${g}</li>`);}
+  box.innerHTML=`<div class="hxtop"><div><h2>Sprawdzian</h2><p class="hxbig">${big}</p><p class="hxdate">${DAYS[d.getDay()].toLowerCase()}, ${d.getDate()} ${MONTHS[d.getMonth()]}</p></div>
+    <div class="hring"><div class="hringv" role="img" aria-label="Gotowość ${rd.pct==null?'jeszcze nieznana':rd.pct+'%'}"><svg width="64" height="64" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="28.5" fill="none" stroke="#241F45" stroke-width="7"/>${arc}</svg><span aria-hidden="true">${rd.pct==null?'?':rd.pct+'%'}</span></div><small>Gotowość</small></div></div>
+    <ol class="hdays" aria-label="Plan do sprawdzianu">${cells.join('')}</ol><div class="hxfoot"><p>${todaySummary(s)}</p></div>`;
+  box.querySelector('.hxfoot').appendChild(hlink('Plan ›',()=>openTestPlan(t.id,'hub')));
+  return box;
+}
+function nowCard(s,acts,isNew){
+  const box=el('section','hnow a-up d2');let k=0;
+  const draw=()=>{const a=acts[k];
+    box.innerHTML=`<div class="hnfox">${fox(a.fox||'think',80)}</div><div class="heb">${a.eyebrow}</div><h2>${a.title}</h2><p>${a.body}</p>`;
+    if(a.cta&&a.go){const b=el('button','hbtn',a.cta);b.id='hnow-go';b.onclick=()=>{if(!advOk())return;a.go();};box.appendChild(b);}
+    if(acts.length>1&&!isNew){const o=el('button','hother',icon('refresh',{size:16,stroke:2.6})+'<span>Inna propozycja</span>');
+      o.onclick=()=>{k=(k+1)%acts.length;draw();const n=box.querySelector('.hother');if(n)n.focus();};box.appendChild(o);} // fokus zostaje na przycisku (klawiatura, VoiceOver)
+    box.classList.toggle('nobtn',!(a.cta&&a.go));liveFoxes(box);};
+  box.setAttribute('aria-live','polite');draw();return box;
+}
+function szopStrip(s,m,acts){
+  const ref=byOverdue(s,m.list.filter(x=>x.r.st==='refresh')).map(x=>x.p);if(!ref.length||acts[0].kind==='szop')return null;
+  const k=ref.length,mins=practiceMinutes(s,ref),box=el('section','hszop a-up d3');
+  box.innerHTML=`<div class="hszrc">${raccoon('laugh',64)}</div><div class="grow"><h2 aria-label="Szop Zapominalski podkrada ${k} ${pl(k,'punkt','punkty','punktów')}">Szop podkrada ${k} ${pl(k,'punkt','punkty','punktów')}</h2><p>${namesTxt(ref)}. Od ostatniej powtórki ${sinceTxt(s,ref)}.</p></div>`;
+  const b=el('button','hszbtn',`ODZYSKAJ · ${mins} MIN`);b.onclick=()=>{if(!advOk())return;practice(s,ref.map(p=>p.id));};box.querySelector('.grow').appendChild(b);
+  return box;
+}
+function dateCard(s){
+  const box=el('section','hdate a-up d3','<h2>Masz sprawdzian z tego przedmiotu?</h2><p>Podaj datę, a rozłożę naukę na dni.</p><div class="hdchips"></div>');
+  const row=box.querySelector('.hdchips');
+  const set=days=>{const t=createTest(s.id,addDays(todayStr(),days),s.levels.map(l=>l.id));toast('Plan gotowy: sprawdzian '+fmtDate(t.date),'calendar');renderSubject();};
+  [['Za tydzień',()=>set(7)],['Za 2 tygodnie',()=>set(14)],['Wybierz datę',()=>openTestSheet(s.id)]].forEach(([l,fn])=>{const b=el('button','hdchip',l);b.onclick=fn;row.appendChild(b);});
+  return box;
+}
+function lessonsDone(s,levels){const st=subjState(s.id);return levels.filter(l=>(st.levels[l.id]||{}).done).length;}
+function fpill(ic,tone,label){return `<span class="fpill">${icon(ic,{size:14,stroke:2.6,cls:'ic-'+tone})}${label}</span>`;}
+function mediaPills(s,tp){
+  const rows=mediaFor(s.id,tp.id),out=[];
+  const rr=rows.find(r=>r.kind==='reels'&&r.status==='running'),ri=reelsInfo(s,tp.id);
+  if(ri)out.push(fpill('reel','amber',`Rolki ${ri.watched}/${ri.N}`));else if(rr)out.push('<span class="fpill gen"><i class="a-blink"></i>Rolki · przygotowuję</span>');
+  const pr=rows.find(r=>r.kind==='podcast'&&r.status==='running'),pi=podcastInfo(s,tp.id);
+  if(pi)out.push(fpill('headphones','cyan',`Podcast ${fmtTime(pi.heard)}/${fmtTime(pi.total)}`));else if(pr)out.push('<span class="fpill gen"><i class="a-blink"></i>Podcast · przygotowuję</span>');
+  return out.join('');
+}
+function chapterCard(s,tp,i){
+  const m=masteryOf(s,tp.id),seen=m.known+m.learning+m.refresh,dn=lessonsDone(s,tp.levels);
+  const b=el('button','hchap a-up d'+Math.min(6,i+3));
+  const right=seen?`Umiesz ${m.known} z ${m.total}`:`${m.total} ${pl(m.total,'nowy','nowe','nowych')}`;
+  b.innerHTML=`<div class="hcrow"><span class="hcn">${pad2(tp.n)}</span><h3>${noEmoji(tp.name)}</h3>${icon('chevron-right',{size:20,cls:'chev'})}</div>
+    <div class="hcsq"><span class="sqs" role="img" aria-label="${attr(`Umiem ${m.known}, w trakcie ${m.learning}, do odświeżenia ${m.refresh}, nowe ${m.fresh}`)}">${m.list.map(x=>`<i class="${x.r.st}"></i>`).join('')}</span><span class="hcr">${right}</span></div>
+    <div class="hcpills">${fpill('book','pink',`Lekcje ${dn}/${tp.levels.length}`)}${mediaPills(s,tp)}</div>`;
+  b.setAttribute('aria-label',`Rozdział ${pad2(tp.n)}: ${txt(tp.name)}. ${right}.`);
+  b.onclick=()=>openMaterial(s.id,tp.id);return b;
+}
+function toolTile(o){
+  const b=el('button','htile'+(o.dim?' dim':''),`<span class="hti ${o.tone||'plain'}">${o.rc?raccoon('idle',28):icon(o.ic,{size:16,stroke:2.8})}</span><span class="htt"><b>${o.title}</b><small>${o.sub}</small></span>`);
+  if(o.id)b.id=o.id;b.onclick=o.go;return b;
+}
+function addRow(s,tps,isNew){
+  const w=el('div','haddw');
+  const a=el('button','hadd',`<span class="hai">${icon('plus',{size:22,stroke:3})}</span><span class="grow"><b>${isNew?'Dodaj następny materiał':'Dodaj materiał do '+(acroName(s)||'przedmiotu')}</b><small>${isNew?'Kolejny':'Następny'} wykład, notatki albo prezentacja. Zostanie rozdziałem ${pad2(tps.length+1)}.</small></span>`);
+  a.onclick=()=>openQuickAdd();w.appendChild(a);
+  if(isNew){const q=hook('quotaLine');if(typeof q==='string'&&q){const p=el('p','hquota');p.textContent=q;w.appendChild(p);}}
+  return w;
+}
+function renderHub(sc,s){
+  const tps=topicList(s),m=masteryOf(s),st=subjState(s.id),isNew=!lessonsDone(s,s.levels),t=testFor(s.id),stg=stageTxt(s);
+  sc.appendChild(el('section','hhead a-up',`<div class="heb">${isNew?'Nowy przedmiot':'Przedmiot'}${stg?' · '+stg:''}</div><h1>${noEmoji(s.name)}</h1>
+    <p>${tps.length} ${pl(tps.length,'materiał','materiały','materiałów')} · ${m.total} ${pl(m.total,'kluczowy punkt','kluczowe punkty','kluczowych punktów')} · ${s.levels.length} ${pl(s.levels.length,'lekcja','lekcje','lekcji')}</p>`));
+  sc.appendChild(masterySection(s,m));
+  if(t&&dayDiff(todayStr(),t.date)>=0)sc.appendChild(examCard(s,t));
+  const acts=naTeraz(s);sc.appendChild(nowCard(s,acts,isNew));
+  if(!isNew){const sz=szopStrip(s,m,acts);if(sz)sc.appendChild(sz);}
+  if(isNew&&!t)sc.appendChild(dateCard(s));
+  const mat=el('section','hsec');sc.appendChild(mat);
+  mat.appendChild(hlabel(tps.length>1||!isNew?'Materiały':'Materiał',isNew?null:hlink('+ Dodaj',()=>openQuickAdd())));
+  tps.forEach((tp,i)=>mat.appendChild(chapterCard(s,tp,i)));
+  if(isNew){const d=dodatkiCard(s,tps[0]);if(d)sc.appendChild(d);sc.appendChild(addRow(s,tps,isNew));}
+  else mat.appendChild(addRow(s,tps,isNew));
+  // CAŁY PRZEDMIOT
+  const tools=el('section','hsec');tools.appendChild(hlabel('Cały przedmiot'));sc.appendChild(tools);
+  const g=el('div','htools');
+  const mine=srsEntries().filter(x=>x.s.id===s.id),due=mine.filter(x=>x.e.due<=todayStr());
+  g.appendChild(toolTile({id:'ht-review',ic:'refresh',tone:mine.length?'cyan':'plain',dim:!mine.length,title:'Powtórka',sub:due.length?`${due.length} na dziś`:mine.length?'nic na dziś':'po pierwszej lekcji',
+    go:()=>{if(due.length)startReview(due);else if(mine.length)go('review');else toast('Powtórka ruszy po pierwszej lekcji','info');}}));
+  const nc=allCards(s).length,cardSeen=mine.some(x=>x.kind==='card');
+  g.appendChild(toolTile({id:'ht-cards',ic:'cards',tone:'gold',title:'Fiszki',sub:!cardSeen?`${nc} ${pl(nc,'nowa','nowe','nowych')}`:tps.length>1?`${nc} z ${tps.length} ${pl(tps.length,'materiału','materiałów','materiałów')}`:`${nc} ${pl(nc,'fiszka','fiszki','fiszek')}`,go:()=>openTool('fiszki')}));
+  const rec=(PROGRESS[s.id]||{}).exam||{};
+  g.appendChild(toolTile({id:'ht-exam',ic:'timer',tone:'pink',title:'Egzamin próbny',sub:rec.last?`ostatnio ${rec.last.pct}% (${gradeParts(rec.last.grade)[0]})`:isNew?'najlepiej po kilku lekcjach':'jeszcze nie było',go:()=>openTool('egzamin')}));
+  if(mediaOn('fox'))g.appendChild(toolTile({id:'ht-fox',ic:'chat',tone:'acid',title:'Rozmowa z lisem',sub:'3 tryby',go:()=>mediaCall('openFox',s.id,{})}));
+  const dn=lessonsDone(s,s.levels),all=dn===s.levels.length,brec=bossRec(s.id);
+  g.appendChild(toolTile({id:'ht-boss',rc:true,tone:'plain',title:'Pojedynek z Szopem',sub:brec.done?'Szop pokonany':`${dn} z ${s.levels.length} ${pl(s.levels.length,'lekcji','lekcji','lekcji')}`,
+    go:()=>{if(all)startBoss();else toast(`Pojedynek ruszy po wszystkich lekcjach (${dn} z ${s.levels.length})`,'lock');}}));
+  g.appendChild(toolTile({id:'ht-info',ic:'info',tone:'plain',title:'Zasady i oceny',sub:`zaliczenie od ${exPass(s)}%`,go:()=>openTool('info')}));
+  tools.appendChild(g);
+}
+/* mini kafelki 9:16 ze światem rolki (Centrum-Nowy, Dodatki) i miniatury rolek (Centrum-Material) — płaskie SVG, kolory stacji z manifestu */
+const STATION={'#2F6BFF':['#2F6BFF','#2456CC','#1B3F99'],'#1F8A5B':['#1F8A5B','#19704A','#12553A'],'#E9A23B':['#E9A23B','#C9852A','#A1681D'],'#E0483F':['#E0483F','#BD3B33','#952D27']};
+const ST_KEYS=Object.keys(STATION);
+function reelThumb(c,w,h){const f=STATION[String(c||'').toUpperCase()]||STATION['#2F6BFF'];
+  return `<svg width="${w}" height="${h}" viewBox="0 0 60 110" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><polygon points="0,96 60,66 60,77 0,107" fill="#DDD5C5"/><line x1="0" y1="101.5" x2="60" y2="71.5" stroke="#FFFFFF" stroke-width="1.5" stroke-dasharray="4 3"/><polygon points="8,62 30,51 52,62 30,73" fill="#E2DACB"/><polygon points="43,32 49,29 55,32 49,35" fill="#E4DCCD"/><polygon points="43,32 49,35 49,43 43,40" fill="#D6CDBB"/><polygon points="49,35 55,32 55,40 49,43" fill="#C9BFAB"/><polygon points="42,92 48,89 54,92 48,95" fill="#E4DCCD"/><polygon points="42,92 48,95 48,101 42,98" fill="#D6CDBB"/><polygon points="48,95 54,92 54,98 48,101" fill="#C9BFAB"/><polygon points="14,40 30,32 46,40 30,48" fill="${f[0]}"/><polygon points="14,40 30,48 30,70 14,62" fill="${f[1]}"/><polygon points="30,48 46,40 46,62 30,70" fill="${f[2]}"/></svg>`;}
+const TXT_REELS='3–6 rolek po minucie, każda o czymś innym. Na końcu każdej jedno pytanie.';
+const TXT_POD='20–30 minut rozmowy w 8 rozdziałach. Szop się myli, lis poprawia, a Ty odpowiadasz w pauzach.';
+const TXT_NOMEDIA='Rolek i podcastów na razie nie przygotujesz. Wszystko, co masz w tym przedmiocie, działa bez ograniczeń.';
+function inviteRow(kind,s,tp){
+  const reels=kind==='reels',row=el('div','hdrow');
+  const art=reels?`<span class="hdtiles">${['#2F6BFF','#1F8A5B','#E9A23B'].map(c=>`<span>${reelThumb(c,20,38)}</span>`).join('')}</span>`:`<span class="hdduo">${fox('idle',34)}${raccoon('idle',34)}</span>`;
+  row.innerHTML=`<div class="hdtop">${art}<h3>${reels?'Seria rolek':'Podcast z lisem i szopem'}</h3></div><p>${reels?TXT_REELS:TXT_POD}</p>`;
+  const b=el('button','hghost pink sm','PRZYGOTUJ');b.setAttribute('aria-label',reels?'Przygotuj serię rolek':'Przygotuj podcast z lisem i szopem');b.dataset.prep=kind;
+  b.onclick=()=>mediaCall('prepare',s.id,tp.id,kind);row.querySelector('.hdtop').appendChild(b);return row;
+}
+function soonRow(){const row=el('div','hdrow soon');row.innerHTML=`<div class="hdtop"><span class="hdduo">${fox('sleep',34)}${raccoon('idle',34)}</span><h3>Podcast z lisem i szopem</h3></div><p>Podcast będzie dostępny wkrótce</p>`;return row;}
+/* Centrum-Nowy: jedno zaproszenie na rolki i podcast dla materiału (bez licznika; licznik dopiero w arkuszu potwierdzenia — D4) */
+function dodatkiCard(s,tp){
+  if(!tp||!window.NaukaMedia||!canCreate()||mediaFor(s.id,tp.id).some(r=>r.status!=='failed'))return null;
+  const rOn=mediaOn('reels'),pOn=mediaOn('podcast');if(!rOn&&!pOn)return null;
+  const box=el('section','hdod a-up d4',`<div class="heb">Dodatki · ${topicShort(tp.name)}</div><h2>Rolki i podcast z tego materiału</h2><p>Przygotuję je, gdy zechcesz. Najlepiej po pierwszej lekcji — wtedy utrwalają to, co już znasz.</p><div class="hdrows"></div>`);
+  const rows=box.querySelector('.hdrows');if(rOn)rows.appendChild(inviteRow('reels',s,tp));rows.appendChild(pOn?inviteRow('podcast',s,tp):soonRow());
+  return box;
+}
+function renderMaterial(sc,s,tp){
+  const m=masteryOf(s,tp.id);
+  sc.appendChild(el('section','hhead mat a-up',`<div class="heb">${acroName(s)?'<span class="nocaps">'+acroName(s)+'</span>':sshort(s)} · Rozdział ${pad2(tp.n)}</div><h1>${noEmoji(tp.name)}</h1><p>${sourceMeta(tp)}</p>`));
+  sc.appendChild(masterySection(s,m));
+  sc.appendChild(pointsSection(s,tp,m));
+  sc.appendChild(lessonsSection(s,tp));
+  const ms=mediaSection(s,tp);if(ms)sc.appendChild(ms);
+  const chk=el('section','hsec');chk.appendChild(hlabel('Sprawdź się'));sc.appendChild(chk);
+  const g=el('div','htools');
+  if(mediaOn('fox')){const f=foxState(tp.id);
+    g.appendChild(toolTile({id:'mt-explain',ic:'lightbulb',tone:'acid',title:'Wytłumacz mi',sub:f.explain?(f.explain.gaps?`ostatnio ${f.explain.gaps} ${pl(f.explain.gaps,'luka','luki','luk')}`:'ostatnio bez luk'):'jeszcze nie było',go:()=>mediaCall('openFox',s.id,{topicId:tp.id,mode:'explain'})}));
+    g.appendChild(toolTile({id:'mt-quiz',ic:'help-bubble',tone:'cyan',title:'Przepytaj mnie',sub:f.quiz?`ostatnio ${f.quiz.ok} z ${f.quiz.n}`:'5 pytań otwartych',go:()=>mediaCall('openFox',s.id,{topicId:tp.id,mode:'quiz'})}));
+    const gr=f.exam?gradeFor(s.id,f.exam.pct):null;
+    g.appendChild(toolTile({id:'mt-oral',ic:'target',tone:'gold',title:'Egzamin ustny',sub:gr?`ostatnio ${gr.label}${gr.name?' ('+gr.name+')':''}`:'jeszcze nie było',go:()=>mediaCall('openFox',s.id,{topicId:tp.id,mode:'exam'})}));}
+  const S=scopedTo(s,tp.id),t=todayStr(),nc=allCards(S).length,dueC=srsEntries().filter(x=>x.s.id===s.id&&x.kind==='card'&&x.e.due<=t&&tp.levels.some(l=>l.id===x.lv.id)).length;
+  const anyC=srsEntries().some(x=>x.s.id===s.id&&x.kind==='card'&&tp.levels.some(l=>l.id===x.lv.id));
+  g.appendChild(toolTile({id:'mt-cards',ic:'cards',tone:'pink',title:'Fiszki',sub:anyC?`${nc} · ${dueC} na dziś`:`${nc} ${pl(nc,'nowa','nowe','nowych')}`,go:()=>openTool('fiszki',tp.id)}));
+  const nq=allQuiz(S).length;g.appendChild(toolTile({id:'mt-quizt',ic:'check',tone:'violet',title:'Quiz',sub:`${nq} ${pl(nq,'pytanie','pytania','pytań')}`,go:()=>openTool('quiz',tp.id)}));
+  const nt=allTasks(S).length;g.appendChild(toolTile({id:'mt-tasks',ic:'clipboard',tone:'amber',title:nt?'Zadania':'Ćwiczenia',sub:nt?`${nt} ${pl(nt,'zadanie','zadania','zadań')}`:'pary i wpisywanie',go:()=>openTool('cwicz',tp.id)}));
+  chk.appendChild(g);
+  const src=sourceRow(s,tp);if(src){const sec=el('section','hsec');sec.appendChild(hlabel('Źródło'));sec.appendChild(src);sc.appendChild(sec);}
+}
+function scopedTo(s,topicId){const lv=s.levels.filter(l=>(l.topicId||'_'+s.id)===topicId);return {...s,levels:lv};}
+const SRC_KIND={pdf:['PDF','PDF'],photos:['ZDJ','Zdjęcia'],pptx:['PPT','Prezentacja'],text:['TXT','Tekst'],mixed:['MIX','Pliki']};
+function isoDay(v){const d=v?new Date(v):null;return d&&!isNaN(d)?dstr(d):null;}
+function sourceMeta(tp){const src=tp.source,k=src&&SRC_KIND[src.kind],n=src&&Array.isArray(src.files)?src.files.length:0,d=isoDay(src&&src.addedAt||tp.createdAt);
+  return [k?k[1]:'',n>1?`${n} ${pl(n,'plik','pliki','plików')}`:'',d?'dodany '+fmtDate(d):''].filter(Boolean).join(' · ')||'materiał z Twojego konta';}
+function pointsSection(s,tp,m){
+  const box=el('section','hsec hpts a-up d2');const weak=m.list.filter(x=>x.r.st==='refresh').concat(m.list.filter(x=>x.r.st==='learning'));
+  const key='pf:'+tp.id;let only=!!PT_FILTER[key]&&weak.length>0;
+  const head=hlabel('Kluczowe punkty');
+  if(weak.length){const seg=el('div','hseg');seg.setAttribute('role','group');seg.setAttribute('aria-label','Pokaż punkty');
+    [['Wszystkie',false],[`Słabe · ${weak.length}`,true]].forEach(([l,v])=>{const b=el('button',v===only?'on':'',l);b.setAttribute('aria-pressed',String(v===only));b.onclick=()=>{PT_FILTER[key]=v;const nb=pointsSection(s,tp,m);box.replaceWith(nb);};seg.appendChild(b);});head.appendChild(seg);}
+  box.appendChild(head);
+  const ul=el('div','hpgrid');(only?weak:m.list).forEach(x=>{const b=el('button','hpchip',`${masteryMarker(x.r.st)}<span>${x.p.s}</span>`);b.setAttribute('aria-label',`${txt(x.p.s)}: ${ST_LABEL[x.r.st].toLowerCase()}`);b.onclick=()=>openPointSheet(s.id,x.p.id);ul.appendChild(b);});
+  if(!m.list.length)ul.appendChild(el('p','hmtxt','Punkty pojawią się po dodaniu materiału.'));
+  box.appendChild(ul);requestAnimationFrame(()=>fitChips(ul));return box;
+}
+/* nazwa punktu ze słowem szerszym niż kafelek (a przeglądarka nie umie go podzielić) → jedna kolumna zamiast łamania w środku słowa */
+function fitChips(ul){if(!ul||!ul.isConnected||ul.classList.contains('one'))return;ul.classList.add('measure');
+  const over=[...ul.querySelectorAll('.hpchip span:last-child')].some(sp=>sp.scrollWidth>sp.clientWidth+1);ul.classList.remove('measure');if(over)ul.classList.add('one');}
+const PT_FILTER={};
+function lessonsSection(s,tp){
+  const st=subjState(s.id),dn=lessonsDone(s,tp.levels),box=el('section','hsec hles a-up d3');
+  box.appendChild(hlabel('Lekcje z lisem',el('small','',`${dn} z ${tp.levels.length}`)));
+  const card=el('div','hlcard');
+  tp.levels.forEach((lv,i)=>{
+    const L=st.levels[lv.id]||{},done=!!L.done,sv=done?null:lessonLoad(s,lv),nf=(lv.feed||[]).length;
+    const row=el('div','hlrow'+(done?' done':sv?' cur':''));
+    const tile=done?`<span class="hln ok">${icon('check',{size:18,stroke:3.4})}</span>`:`<span class="hln${sv?' cur':''}">${i+1}</span>`;
+    const sub=done?`zrobiona · ${nf} ${pl(nf,'część','części','części')}`:sv?`${sv.phase==='feed'?`część ${sv.feedIdx+1} z ${nf}`:`pytanie ${Math.min(sv.qIdx+1,sv.items.length)} z ${sv.items.length}`} · ok. ${resumeMinutes(lv,sv)} min`:`${nf} ${pl(nf,'część','części','części')} · ok. ${lessonMinutes(lv)} min`;
+    const b=el('button','hlmain',`${tile}<span class="grow"><b>${noEmoji(lv.title)}</b><small>${sub}</small></span>`);
+    b.setAttribute('aria-label',`Lekcja ${i+1}: ${txt(noEmoji(lv.title))}. ${sub}`);b.onclick=()=>{if(!advOk())return;startLesson(lv);};row.appendChild(b);
+    if(done){const n=Math.max(0,Math.min(3,L.stars|0));row.appendChild(el('span','hstars',[0,1,2].map(k=>icon('star',{size:14,fill:true,cls:k<n?'ic-gold':'ic-off'})).join('')));row.lastChild.setAttribute('role','img');row.lastChild.setAttribute('aria-label',`${n} z 3 gwiazdek`);}
+    else if(sv){const d=el('button','hsbtn','DOKOŃCZ');d.onclick=()=>{if(!advOk())return;resumeLesson(lv,sv);};row.appendChild(d);}
+    else row.appendChild(el('span','hchev',icon('chevron-right',{size:18})));
+    card.appendChild(row);});
+  box.appendChild(card);return box;
+}
+/* rolki i podcast materiału z rejestru mediów (Centrum-Material): gotowe → pasek miniatur i karta podcastu, w toku → „przygotowuję”,
+   brak → zaproszenie (gdy funkcja włączona i zostało tworzenie), 0 tworzeń → neutralna linia; bez media.js — nic */
+function mediaSection(s,tp){
+  if(!window.NaukaMedia)return null;
+  const rows=mediaFor(s.id,tp.id),ri=reelsInfo(s,tp.id),pi=podcastInfo(s,tp.id);
+  const rRun=rows.find(r=>r.kind==='reels'&&r.status==='running'),pRun=rows.find(r=>r.kind==='podcast'&&r.status==='running');
+  const rOn=mediaOn('reels'),pOn=mediaOn('podcast'),can=canCreate();
+  const parts=[];
+  if(ri){const nx=nextReel(s,ri.m),box=el('div','hreels');
+    box.innerHTML=`<h3>${ri.man.title||'Seria rolek'}</h3><p>${ri.N} ${pl(ri.N,'rolka','rolki','rolek')} · ${fmtTime(ri.dur)} · obejrzane ${ri.watched} z ${ri.N}</p>`;
+    const strip=el('div','hrstrip');
+    ri.man.reels.forEach((r,i)=>{const w=ri.w.indexOf(r.n)>=0,next=nx&&nx.r===r;
+      const th=el('button','hthumb'+(w?' seen':'')+(next?' next':''),`${reelThumb(r.thumb||ST_KEYS[i%4],60,110)}<span class="hrn">${r.n}</span>${w?`<span class="hrok">${icon('check',{size:12,stroke:3.6})}</span><span class="hrbar"></span>`:''}`);
+      th.setAttribute('aria-label',`Rolka ${r.n} z ${ri.N}: ${txt(r.title||'')}.${w?' Obejrzana.':next?' Następna.':''}`);th.onclick=()=>mediaCall('openReels',s.id,tp.id,{mediaId:ri.m.id,reel:r.n});strip.appendChild(th);});
+    box.appendChild(strip);parts.push(['reels',box]);}
+  else if(rRun)parts.push(['reels',genCard('Rolki · przygotowuję','Dam znać, gdy seria będzie gotowa. W tym czasie ucz się dalej.')]);
+  else if(rOn&&can)parts.push(['reels',inviteRow('reels',s,tp)]);
+  if(pi){const card=el('div','hpod');
+    const pct=pi.total?Math.round(pi.heard/pi.total*100):0;
+    card.innerHTML=`<span class="hpodart">${fox('idle',40)}${raccoon('idle',40)}</span><button class="grow hpodtxt"><span class="heb cyan">Podcast</span><b>${pi.title}</b><small>${fmtTime(pi.total)} · ${pi.started?'zostało '+fmtTime(pi.left):pi.chapters+' '+pl(pi.chapters,'rozdział','rozdziały','rozdziałów')}</small><span class="hpbar" role="img" aria-label="Wysłuchane ${pct}%"><i style="width:${pct}%"></i></span></button>`;
+    card.querySelector('.hpodtxt').onclick=()=>mediaCall('openPodcast',s.id,tp.id,{mediaId:pi.m.id});
+    const pb=el('button','hplay',icon('play',{size:20}));pb.setAttribute('aria-label',pi.started?'Słuchaj dalej od '+fmtTime(pi.heard):'Słuchaj podcastu');pb.onclick=()=>mediaCall('openPodcast',s.id,tp.id,{mediaId:pi.m.id,play:true});card.appendChild(pb);
+    parts.push(['pod',card]);}
+  else if(pRun)parts.push(['pod',genCard('Podcast · przygotowuję','Dam znać, gdy będzie gotowy. W tym czasie ucz się dalej.')]);
+  else if(pOn&&can)parts.push(['pod',inviteRow('podcast',s,tp)]);
+  else if(rOn&&!pOn)parts.push(['pod',soonRow()]);
+  if(!parts.length&&(rOn||pOn)&&!can)parts.push(['none',el('p','hmtxt nomedia',TXT_NOMEDIA)]);
+  if(!parts.length)return null;
+  const box=el('section','hsec hmedia a-up d4');
+  box.appendChild(hlabel(ri?'Rolki':'Rolki i podcast',ri?hlink('Cała seria ›',()=>mediaCall('openReels',s.id,tp.id,{mediaId:ri.m.id})):null));
+  parts.forEach(p=>box.appendChild(p[1]));
+  if(!ri&&!rRun&&parts.some(p=>p[1].classList.contains('hdrow')))box.querySelectorAll('.hdrow').forEach(r=>r.classList.add('card'));
+  return box;
+}
+function genCard(t,s){return el('div','hgen',`<span class="hgdot a-blink"></span><div class="grow"><b>${t}</b><small>${s}</small></div>`);}
+function sourceRow(s,tp){
+  const src=tp.source;if(!src||!Array.isArray(src.files)||!src.files.length)return null;
+  const k=SRC_KIND[src.kind]||SRC_KIND.mixed,n=src.files.length,name=src.kind==='photos'&&n>1?`Zdjęcia · ${n}`:(src.files[0].name||'Materiał')+(n>1?` i ${n-1} ${pl(n-1,'inny','inne','innych')}`:'');
+  const b=el('button','hsrc',`<span class="hsft">${k[0]}</span><span class="grow"><b>${name}</b><small>${n>1?`${n} ${pl(n,'plik','pliki','plików')} · `:''}każde pytanie wskazuje swoją stronę</small></span>${icon('chevron-right',{size:20,cls:'chev'})}`);
+  b.onclick=()=>sourceSheet(s,tp);return b;
+}
+function sourceSheet(s,tp){
+  const src=tp.source||{files:[]},files=Array.isArray(src.files)?src.files:[];
+  const sh=openSheet('hsheet hsource',`<div class="shandle"></div><div class="heb">Źródło · ${topicShort(tp.name)}</div><h2 class="hsh">Plik źródłowy</h2>
+    <div class="hflist">${files.length?files.map(f=>`<div class="hfrow"><span class="hsft">${(SRC_KIND[/^image\//.test(f.mime||'')?'photos':/pdf/.test(f.mime||'')?'pdf':/presentation/.test(f.mime||'')?'pptx':/^text\//.test(f.mime||'')?'text':'mixed']||SRC_KIND.mixed)[0]}</span><b>${f.name||'Plik bez nazwy'}</b></div>`).join(''):'<p class="hmtxt">Brak informacji o plikach tego materiału.</p>'}</div>
+    <p class="hmtxt">Każde pytanie wskazuje swoją stronę — stuknij „Źródło” pod odpowiedzią.</p><button class="hbtn" id="hsrcok" data-primary>ROZUMIEM</button>`);
+  sheetBack();document.getElementById('sheetback').onclick=closeSheet;sh.querySelector('#hsrcok').onclick=closeSheet;return sh;
+}
+/* menu „…”: arkusz z wierszami */
+function menuSheet(title,rows){
+  const sh=openSheet('hsheet hmenu',`<div class="shandle"></div><div class="heb">${title}</div>`);
+  rows.forEach(([ic,lab,fn,danger])=>{const b=el('button','hmi'+(danger?' danger':''),icon(ic,{size:20,stroke:2.4})+`<span>${lab}</span>`);b.onclick=()=>{closeSheet();fn();};sh.appendChild(b);});
+  sheetBack();document.getElementById('sheetback').onclick=closeSheet;return sh;
+}
+function hubMenu(s){const t=testFor(s.id);
+  menuSheet(sshort(s),[['calendar','Plan do sprawdzianu',()=>{if(t)openTestPlan(t.id,'hub');else openTestSheet(s.id);}],['info','Zasady zaliczenia i skala ocen',()=>openTool('info')],
+    ['edit','Zmień nazwę i kolor',()=>{if(!hook('subjectEdit',s.id))toast('Zmiana nazwy działa po zalogowaniu','info');}],['trash','Usuń przedmiot',()=>hook('subjectDelete',s.id),true]]);}
+function materialMenu(s,tp){
+  const hid=tp.points.filter(p=>ptHidden(s,p));
+  menuSheet(topicShort(tp.name),[['edit','Zmień nazwę',()=>{if(!hook('topicRename',s.id,tp.id))toast('Zmiana nazwy działa po zalogowaniu','info');}],['file','Plik źródłowy',()=>sourceSheet(s,tp)]]
+    .concat(hid.length?[['refresh',`Przywróć ukryte punkty (${hid.length})`,()=>unhidePoints(s.id,hid.map(p=>p.id))]]:[])
+    .concat([['trash','Usuń materiał',()=>hook('topicDelete',s.id,tp.id),true]]));}
+/* „To nie jest punkt z mojego materiału” da się cofnąć: z komunikatu po ukryciu albo z menu materiału */
+function unhidePoints(sid,pids){const H=PROGRESS.ptHide;if(!H||typeof H!=='object')return;let n=0;
+  pids.forEach(id=>{if(own(H,sid+':'+id)){delete H[sid+':'+id];n++;}});if(!n)return;
+  if(!Object.keys(H).length)delete PROGRESS.ptHide;saveProgress();toast(n>1?'Punkty wróciły na listę':'Punkt wrócił na listę','check');if(current&&current.id===sid)renderSubject();}
+
+/* ---------- arkusze: „Jak to liczę?” i punkt ---------- */
+function openHowSheet(){
+  const row=(st,t)=>`<div class="hhrow">${masteryMarker(st)}<p>${t}</p></div>`;
+  const sh=openSheet('hsheet hhow',`<div class="shandle"></div><h2 class="hsh">Jak liczę, co umiesz</h2>
+    <p class="hmtxt">Każdy materiał dzielę na kluczowe punkty. Do każdego punktu należą fiszki i pytania z lekcji.</p>
+    ${row('known','<b>Umiem</b> — większość fiszek i pytań o tym punkcie masz dobrze w co najmniej dwa różne dni.')}
+    ${row('learning','<b>W trakcie</b> — punkt już ćwiczony, ale jeszcze nieutrwalony.')}
+    ${row('refresh','<b>Do odświeżenia</b> — minął termin powtórki. To robota Szopa Zapominalskiego: odzyskasz punkt jedną krótką powtórką.')}
+    ${row('new','<b>Nowe</b> — jeszcze nie ćwiczone.')}
+    <p class="hmtxt">Rolki i podcast pomagają, ale punkt rośnie dopiero po dobrej odpowiedzi — na końcu rolki, w pauzie podcastu, w lekcji, fiszkach albo rozmowie z lisem.</p>
+    <p class="hmtxt">Gotowość do sprawdzianu: 70% to punkty, które umiesz, 30% to najlepszy egzamin próbny.</p>
+    <p class="hmtxt">XP i seria nie zmieniają tych kwadratów.</p>
+    <button class="hbtn" id="hhowok" data-primary>ROZUMIEM</button>`);
+  sheetBack();document.getElementById('sheetback').onclick=closeSheet;sh.querySelector('#hhowok').onclick=closeSheet;return sh;
+}
+const ST_CHIP={known:['acc','UMIEM'],learning:['pink','W TRAKCIE'],refresh:['amber','DO ODŚWIEŻENIA'],new:['plain','NOWE']};
+function openPointSheet(sid,pid){
+  const s=SUBJECTS.find(x=>x.id===sid);const p=s&&pointById(s,pid);if(!p)return null;
+  const tp=topicList(s).find(t=>t.id===p.topicId),vis=visiblePoints(s,p.topicId),r=pointState(s,p),idx=vis.indexOf(p);
+  const S=srs(),fut=pointKeys(s,p).map(k=>S[k]&&S[k].due).filter(d=>d&&d>todayStr()).sort()[0];
+  const line=r.st==='refresh'?`Termin powtórki minął ${r.maxOverdue} ${pl(r.maxOverdue,'dzień','dni','dni')} temu.`:r.st==='learning'?(r.seen?`Ćwiczony, utrwalone ${r.firm} z ${r.n}.`:'Dobrze o nim mówisz — teraz czas na pytania i fiszki.'):r.st==='known'?'Utrwalony.'+(fut?' Następna powtórka '+dueText(fut)+'.':''):'Jeszcze nie ćwiczony.';
+  const mins=practiceMinutes(s,[p]),ch=pointChunk(s,p),lv0=s.levels.find(l=>l.id===p.lv[0]);
+  const sh=openSheet('hsheet hpoint',`<div class="shandle"></div><div class="heb">${tp?topicShort(tp.name):sshort(s)} · Punkt ${idx+1} z ${vis.length}</div><h2 class="hsh">${p.t}</h2>
+    <div class="hpst"><span class="hchip ${ST_CHIP[r.st][0]}">${ST_CHIP[r.st][1]}</span><span>${line}</span></div><div class="hprows"></div>`);
+  const rows=sh.querySelector('.hprows');
+  const go=(lab,fn,cls)=>{const b=el('button','hbtn'+(cls?' '+cls:''),lab);b.onclick=()=>{closeSheet();fn();};return b;};
+  if(r.st==='refresh'||r.st==='learning')sh.insertBefore(go(`${r.st==='refresh'?'ODŚWIEŻ':'PRZEĆWICZ'} TEN PUNKT · ${mins} MIN`,()=>{if(inSubj(sid))practice(s,[p.id]);}),rows);
+  else if(r.st==='new'&&lv0)sh.insertBefore(go(`ZACZNIJ OD LEKCJI ${lessonNo(s,lv0)}`,()=>openLessonAt(sid,lv0.id)),rows);
+  const rowB=(ic,lab,fn,tone)=>{const b=el('button','hprow',`${icon(ic,{size:18,stroke:2.6,cls:'ic-'+(tone||'pink')})}<span>${lab}</span>${icon('chevron-right',{size:16,cls:'chev'})}`);b.onclick=()=>{closeSheet();fn();};rows.appendChild(b);};
+  if(r.st==='known')rowB('refresh','Sprawdź się jeszcze raz',()=>{if(inSubj(sid))practice(s,[p.id]);},'cyan');
+  if(ch)rowB('book',`Przeczytaj w lekcji ${ch.n}, część ${ch.fi+1}`,()=>openLessonAt(sid,ch.lv.id,ch.fi));
+  const rr=mediaFor(sid,p.topicId).filter(x=>x.kind==='reels'&&x.status==='ready'&&x.manifest&&Array.isArray(x.manifest.reels));
+  for(const m of rr){const reel=m.manifest.reels.find(x=>Array.isArray(x.pointIds)&&x.pointIds.indexOf(p.raw)>=0);
+    if(reel&&window.NaukaMedia){rowB('reel',`Obejrzyj rolkę ${reel.n}/${m.manifest.reels.length}: ${reel.title||''}`,()=>mediaCall('openReels',sid,p.topicId,{mediaId:m.id,reel:reel.n}),'amber');break;}}
+  if(mediaOn('fox'))rowB('chat','Wytłumacz to lisowi',()=>mediaCall('openFox',sid,{topicId:p.topicId,mode:'explain',pointId:p.id}),'acid');
+  const sq=p.q.map(([l,i])=>{const lv=s.levels.find(x=>x.id===l);const q=lv&&(lv.quiz||[])[i];return q&&q.src&&(q.src.page||q.src.quote)?{lv,i,q}:null;}).find(Boolean);
+  if(sq)rowB('file',sq.q.src.page?`Źródło: strona ${sq.q.src.page}`:'Źródło w materiale',()=>openSourceView(qOf(s,sq.lv,sq.i),{s,lv:sq.lv,qi:sq.i}),'cyan');
+  const hide=el('button','hpfoot','To nie jest punkt z mojego materiału');
+  hide.onclick=async()=>{if(!await ask({title:'Ukryć ten punkt?',text:'Punkt zniknie z listy i nie będzie się liczył do tego, co umiesz. Fiszki i pytania zostają w lekcjach.',ok:'Ukryj'}))return;
+    if(!PROGRESS.ptHide||typeof PROGRESS.ptHide!=='object'||Array.isArray(PROGRESS.ptHide))PROGRESS.ptHide={};PROGRESS.ptHide[sid+':'+p.id]=todayStr();saveProgress();
+    toast('Punkt ukryty. Stuknij, żeby cofnąć','check',null,{go:()=>unhidePoints(sid,[p.id])});if(current&&current.id===sid)renderSubject();};
+  sh.appendChild(hide);
+  sheetBack();document.getElementById('sheetback').onclick=closeSheet;return sh;
+}
+
+/* ---------- ćwiczenie punktu (PointSheet, Szop, NA TERAZ; plan-media §1.6): bez AI i bez serc — przypomnienie z lekcji, do 4 pytań, 3 fiszki ---------- */
+function prioItems(s,refs,kind,max){const S=srs(),t=todayStr();
+  return refs.map(([l,i])=>{const k=s.id+':'+l+':'+(kind==='q'?'q'+i:i),e=S[k];return {k,e,o:e&&e.seen>0?Math.max(0,dayDiff(e.due,t)):-1};})
+    .sort((a,b)=>(b.o-a.o)||(((a.e||{}).box|0)-((b.e||{}).box|0))).slice(0,max).map(x=>srsResolve(x.k)).filter(Boolean);}
+function practice(s,pids,o){
+  o=o||{};const pts=pids.map(id=>pointById(s,id)).filter(Boolean);if(!pts.length)return;
+  const before={};pts.forEach(p=>{before[p.id]=pointState(s,p).st;});
   const items=[];
-  // krok 8: skrzynia po co trzecim poziomie (poza ostatnim), boss jako ostatni węzeł ścieżki
-  s.levels.forEach((lv,i)=>{items.push({lv,i});if((i+1)%3===0&&i+1<s.levels.length)items.push({chest:true,after:i});});
-  items.push({boss:true});
-  const xOf=k=>PATH_OFF[k%PATH_OFF.length];
-  const chests=st.chests||(st.chests={});
-  const saves=lsaves(); // P1-11: poziomy z przerwaną lekcją — dymek DOKOŃCZ
-  const chestOpen=it=>s.levels.slice(Math.max(0,it.after-2),it.after+1).every(isDone);
-  const doneOf=it=>it.chest?!!chests[String(it.after)]:it.boss?!!brec.done:isDone(it.lv);
-  items.forEach((it,k)=>{
-    const x=xOf(k);
-    const node=el('div','pathnode');node.style.setProperty('--x',x+'px');
-    if(it.chest){
-      const opened=!!chests[String(it.after)],open=chestOpen(it);
-      const btn=el('button','nodebtn node-chest'+(opened?' opened':open?' a-sway':''),icon('chest',{size:32,stroke:2.4}));
-      btn.setAttribute('aria-label','Skrzynia: '+(opened?'otwarta':open?'do otwarcia':'po zaliczeniu poziomu '+(it.after+1)));
-      btn.onclick=()=>{
-        if(chests[String(it.after)])return toast('Skrzynia już otwarta','chest'); // stan z chwili tapu (przerysowanie po 900 ms)
-        if(!open)return toast('Skrzynia otworzy się po zaliczeniu poziomu '+(it.after+1),'lock');
-        chests[String(it.after)]=true;saveProgress();btn.classList.remove('a-sway');btn.classList.add('a-pop');
-        addGems(GEM.chest);toast('Skrzynia: +'+GEM.chest+' gemów','gem','a-pop');setTimeout(()=>{if(current===s&&curTab==='path')renderPath(sc);},900);};
-      node.appendChild(btn);node.appendChild(el('div','nodelabel gold',opened?'Otwarta':'Skrzynia'));
-    }else if(it.boss){
-      const beaten=!!brec.done,open=all;
-      const btn=el('button','nodebtn node-boss'+(beaten?' beaten':open?' open a-pulse':' locked'),bossSvg(52)+(beaten?'<span class="won">'+icon('check',{size:14,stroke:4})+'</span>':''));
-      btn.setAttribute('aria-label','Boss rozdziału: '+(beaten?'pokonany, powtórz walkę':open?'zacznij walkę':'po zaliczeniu wszystkich poziomów'));
-      btn.onclick=()=>{if(open)startBoss();else toast('Boss czeka, aż zaliczysz wszystkie poziomy','lock');};
-      if(open&&!beaten)node.classList.add('cur'),node.appendChild(el('div','bubble a-bob','WALKA'));
-      node.appendChild(btn);node.appendChild(el('div','nodelabel'+(beaten?'':open?' cur':' lock'),beaten?'Boss pokonany':'Boss rozdziału'));
-    }else{
-      const lv=it.lv,i=it.i;const unlocked=levelUnlocked(s,i),done=isDone(lv),stars=(st.levels[lv.id]||{}).stars||0;
-      const cur=unlocked&&!done,saved=unlocked&&!!lessonLoad(s,lv,saves);
-      if(cur){node.classList.add('cur');node.appendChild(el('div','bubble a-bob'+(saved?' resume':''),saved?'DOKOŃCZ':'ZACZNIJ'));const pf=el('div','pathfox',fox('idle',86));pf.style.setProperty('--fx',(x<0?118:-118)+'px');node.appendChild(pf);}
-      else if(saved){node.classList.add('resume');node.appendChild(el('div','bubble resume a-bob','DOKOŃCZ'));}
-      const btn=el('button','nodebtn '+(done?'node-done':cur?'node-open a-pulse':'node-lock'),done?icon('check',{size:34,stroke:3.4}):cur?icon('bolt',{size:40}):icon('lock',{size:28}));
-      btn.setAttribute('aria-label',(saved?'Dokończ: ':done?'Powtórz: ':cur?'Zacznij: ':'Zablokowane: ')+txt(noEmoji(lv.title)));
-      if(done)btn.innerHTML+=`<span class="stars">${starRow(stars,12)}</span>`;
-      btn.onclick=unlocked?()=>startLesson(lv):()=>toast('Najpierw zalicz poprzedni poziom','lock');
-      node.appendChild(btn);
-      node.appendChild(el('div','nodelabel'+(cur?' cur':done?'':' lock'),noEmoji(lv.title)));
-    }
-    path.appendChild(node);
-  });
-  wrap.appendChild(path);sc.innerHTML='';sc.appendChild(wrap);liveFoxes(path);
-  requestAnimationFrame(()=>drawTrail(path));
-  // auto-scroll do bieżącego węzła (na środek ekranu)
-  requestAnimationFrame(()=>{const n=wrap.querySelector('.node-open,.node-boss.open');if(!n)return;const r=n.getBoundingClientRect(),w=wrap.getBoundingClientRect();wrap.scrollTop=Math.max(0,r.top-w.top+wrap.scrollTop-w.height/2+r.height/2);});
+  pts.forEach(p=>{const ch=pointChunk(s,p);if(ch&&ch.f&&txt(ch.f.body||'').trim())items.push({kind:'note',s,lv:ch.lv,title:noEmoji(ch.f.title||''),html:ch.f.body,n:ch.n,part:ch.fi+1,pt:p.s,key:'note:'+p.id});
+    prioItems(s,p.q,'q',4).forEach(x=>items.push(x));prioItems(s,p.fc,'c',3).forEach(x=>items.push(x));});
+  if(!items.some(x=>x.kind!=='note')){toast('Ten punkt nie ma jeszcze pytań ani fiszek','info');return;}
+  const L=items.slice(0,24);startReview(L);rvState.practice={sid:s.id,pids:pts.map(p=>p.id),before,onDone:typeof o.onDone==='function'?o.onDone:null};
+}
+/* rozgrzewka w dniu sprawdzianu: do 10 zaległych elementów przedmiotu, a bez nich 10 najsłabszych (pudełko, pomyłki) */
+function startWarmup(s){
+  if(!inSubj(s.id))return;
+  const mine=srsEntries().filter(x=>x.s.id===s.id),due=mine.filter(x=>x.e.due<=todayStr());
+  let items=due.slice(0,10);if(!items.length)items=mine.slice().sort((a,b)=>((a.e.box|0)-(b.e.box|0))||((b.e.lapses|0)-(a.e.lapses|0))).slice(0,10);
+  if(!items.length)items=shuffle(allCards(s)).slice(0,10).map(c=>srsResolve(s.id+':'+c.lid+':'+c.i)).filter(Boolean);
+  if(!items.length){toast('Brak fiszek i pytań w tym przedmiocie','info');return;}
+  startReview(items);rvState.warmup=s.id;rvState.back=()=>{if(current)renderSubject();else go('today');};
 }
 
 /* ---------- NAUKA W CZACIE (zamiast karty roladki z przesuwaniem): lis tłumaczy dawkę po kawałku ----------
@@ -2303,7 +3004,7 @@ async function chatNext(C){
   if(ls.feedIdx<ls.lv.feed.length){lessonSave(ls);return chatDose(C);} // P1-11: miejsce w czacie zapisane po każdej części
   ls.feedIdx=ls.lv.feed.length-1;chatHead(C);chatFoot(C,null);
   const has=ls.items.length;
-  if(!await chatSay(C,has?'To wszystko na start. Sprawdźmy, co zostało w głowie.':'To wszystko w tym poziomie. Dobra robota!'))return;
+  if(!await chatSay(C,has?'To wszystko na start. Sprawdźmy, co zostało w głowie.':'To wszystko w tej lekcji. Dobra robota!'))return;
   if(C.fox)foxAct(C.fox,'wave');
   chatFoot(C,[[has?'CZAS NA PYTANIA':'ZAKOŃCZ',()=>{chatStop(C);if(has){ls.phase='quiz';ls.replay=false;lessonSave(ls);renderLesson();}else finishLesson();},true]]);
 }
@@ -2335,7 +3036,7 @@ function lvSig(lv){return [(lv.feed||[]).length,(lv.quiz||[]).length,(lv.tasks||
 function lessonDrop(sid,lid){const all=lsaves(),k=sid+':'+lid;if(all[k]){delete all[k];lsavesPut(all);}}
 /* zapis bieżącej lekcji; q = indeks następnego pytania (po odpowiedzi: qIdx+1). Bez postępu (pierwsza część czatu, powtórka przed pierwszą odpowiedzią) — bez wpisu */
 function lessonSave(ls,q){
-  if(!current||!ls||ls.done)return false;
+  if(!current||!ls||ls.done||ls.peek)return false; // zajrzenie do części zrobionej lekcji (punkt, rolka, lis) niczego nie zapisuje
   q=q==null?(ls.phase==='quiz'&&ls.answered?ls.qIdx+1:ls.qIdx):q;const k=current.id+':'+ls.lv.id; // X przy otwartym „Dobrze!”/„Nie tym razem”: odpowiedź już policzona → następne pytanie
   const worth=ls.phase==='feed'?ls.feedIdx>0:(q>0||(!ls.replay&&(ls.lv.feed||[]).length>0)); // pytania po przeczytanym czacie też się liczą
   const all=lsaves();
@@ -2396,13 +3097,15 @@ function startLesson(lv,o){
   const items=levelSession(lv),nf=(lv.feed||[]).length;
   const replay=!!(subjState(current.id).levels[lv.id]||{}).done&&nf>0&&items.length>0; // powtórka zaliczonego poziomu: od pytań, czat pod „Przeczytaj jeszcze raz”
   lessonState={lv,phase:nf&&!replay?'feed':'quiz',feedIdx:0,items,qIdx:0,score:0,answered:false,combo:0,maxCombo:0,broken:false,xp:0,marks:[],run:[],t0:null,replay};
+  if(o.part!=null&&nf){lessonState.phase='feed';lessonState.feedIdx=Math.max(0,Math.min(nf-1,o.part|0));lessonState.replay=false;lessonState.peek=true;} // „Przeczytaj w lekcji N, część M” (punkt, rolka, rozmowa z lisem): bez zapisu miejsca
   lessonGhost(lessonState);
   const L=document.getElementById('lesson');L.classList.add('open');
   renderLesson();
 }
 function closeLesson(){closeSheet();keyFn=null;taskCleanup();if(lessonState)chatStop(lessonState.chat);clearInterval(bossInt);clearInterval(ghostInt);lessonState=null;bossState=null;const L=document.getElementById('lesson');if(L)L.classList.remove('open');renderSubject();}
 /* X w lekcji: miejsce jest zapisane na bieżąco, więc bez pytania — zamyka i mówi, że da się wrócić */
-function leaveLesson(){const ls=lessonState;const kept=!!ls&&!ls.done&&lessonSave(ls);closeLesson();if(kept)toast('Miejsce zapisane — dokończysz z węzła na ścieżce','bookmark');}
+function leaveLesson(){const ls=lessonState;const kept=!!ls&&!ls.done&&lessonSave(ls);const was=kept&&current&&!!(subjState(current.id).levels[ls.lv.id]||{}).done;closeLesson();
+  if(kept)toast(was?'Miejsce zapisane — dokończysz, gdy otworzysz tę lekcję':'Miejsce zapisane — dokończysz z karty „Na teraz” w przedmiocie','bookmark');}
 /* nagłówek lekcji: zamknij, pasek segmentowy (krok = dawka albo pytanie; zły = czerwony), serca */
 function lessonHead(ls){
   const totalFeed=(ls.lv.feed||[]).length,steps=totalFeed+ls.items.length;
@@ -2528,18 +3231,18 @@ function finishLesson(){
   const lc=el('div','lc');
   lc.innerHTML=`<div class="lcstars">${bigStar(stars>=1,0,.15)}${bigStar(stars>=2,1,.35)}${bigStar(stars>=3,2,.55)}</div>
     <div class="lcfox">${fox(passed?'happy':'oops',140)}</div>
-    <div class="lctxt"><div class="lct lcpop">${passed?'Poziom zaliczony!':'Poziom niezaliczony'}</div><div class="lcs">${noEmoji(s.name)} · ${noEmoji(lv.title)}</div></div>
+    <div class="lctxt"><div class="lct lcpop">${passed?'Lekcja zaliczona!':'Lekcja niezaliczona'}</div><div class="lcs">${noEmoji(s.name)} · ${noEmoji(lv.title)}</div></div>
     <div class="lcstats"><div class="lcstat a-pop" style="animation-delay:.85s"><div class="k">XP</div><div class="v gold" data-count="${ls.xp+bonus}" data-pre="+" data-delay="950">+${ls.xp+bonus}</div></div>
       <div class="lcstat a-pop" style="animation-delay:.95s"><div class="k">Celność</div><div class="v acid" data-count="${pct}" data-suf="%" data-delay="1050">${pct}%</div></div>
       <div class="lcstat a-pop" style="animation-delay:1.05s"><div class="k">Combo</div><div class="v pink" data-count="${ls.maxCombo}" data-pre="x" data-delay="1150" data-dur="500">x${ls.maxCombo}</div></div></div>
-    ${gem||(passed&&prev.done)?`<div class="lcrewards a-up d5">${gem?`<span class="lcreward cyan">${icon('gem',{size:15})}+${gem} ${pl(gem,'gem','gemy','gemów')}</span>`:'<span class="lcreward">powtórka poziomu · bez gemów</span>'}${boostActive()?'<span class="lcreward gold">'+icon('bolt',{size:15})+'podwójne XP</span>':''}</div>`:''}
+    ${gem||(passed&&prev.done)?`<div class="lcrewards a-up d5">${gem?`<span class="lcreward cyan">${icon('gem',{size:15})}+${gem} ${pl(gem,'gem','gemy','gemów')}</span>`:'<span class="lcreward">powtórka lekcji · bez gemów</span>'}${boostActive()?'<span class="lcreward gold">'+icon('bolt',{size:15})+'podwójne XP</span>':''}</div>`:''}
     ${gh?`<div class="lcghost ${gh.kind} a-up d5"><div class="ico">${icon(gh.kind==='win'?'bolt':'ghost',{size:24})}</div><div class="grow"><div class="t">${gh.t}</div><div class="s">${gh.s}</div></div></div>`:''}
-    ${passed?'':'<p class="lcp">Poniżej 50%. Przejdź naukę jeszcze raz i spróbuj ponownie.</p>'}`;
+    ${passed?'':'<p class="lcp">Poniżej 50%. Przejdź lekcję jeszcze raz i spróbuj ponownie.</p>'}`;
   body.appendChild(lc);L.appendChild(body);countUp(lc);liveFoxes(lc);
   const foot=el('div','lessonfoot col');
   const main=el('button','pill a-glow',passed?'DALEJ':'SPRÓBUJ JESZCZE RAZ');main.id=passed?'lcont':'lretry';
   main.onclick=passed?afterLevel:()=>startLesson(lv);
-  const alt=el('button','pill text',passed?'POWTÓRZ POZIOM':'WRÓĆ NA ŚCIEŻKĘ');alt.id=passed?'lretry':'lcont';
+  const alt=el('button','pill text',passed?'POWTÓRZ LEKCJĘ':'WRÓĆ DO PRZEDMIOTU');alt.id=passed?'lretry':'lcont';
   alt.onclick=passed?()=>startLesson(lv):closeLesson;
   foot.appendChild(main);foot.appendChild(alt);L.appendChild(foot);
   keyFn=e=>{if(e.key==='Enter')main.click();};
@@ -2566,7 +3269,7 @@ function cardGate(st,flip,btns,rate){
 }
 let fState=null;
 function renderFiszki(sc){
-  const s=current;
+  const s=scoped(current); // zakres: cały przedmiot albo jeden materiał (te same klucze SRS)
   if(!fState||fState.subj!==s.id)fState={subj:s.id,lvl:'all',idx:0,flipped:false};
   const wrap=el('div','scroll');
   const chips=el('div','chips');
@@ -2630,7 +3333,7 @@ function fiszkiDone(sc){
 /* ---------- QUIZ (cały przedmiot, filtr po poziomach): kafle 3D + panel dobrze/źle; bez serc i combo (to tylko w lekcji) ---------- */
 let qState=null;
 function renderQuiz(sc){
-  const s=current;closeSheet();
+  const s=scoped(current);closeSheet();
   if(!qState||qState.subj!==s.id)qState={subj:s.id,lvl:'all',list:null,idx:0,score:0,answered:false};
   if(!qState.list){
     qState.list = shuffle(qState.lvl==='all'?allQuiz(s):allQuiz(s).filter(q=>q.lid===qState.lvl)); // krok 9: także po filtrze poziomu elementy niosą lid/qi (klucz SRS, poprawki)
@@ -2649,7 +3352,7 @@ function renderQuiz(sc){
     const card=el('div','qcard');
     card.innerHTML=`<div class="result">${bigTile(pct>=70?'hot':pct>=50?'ok':'fail')}<h2>Wynik</h2>
       <div class="score">Trafione <b>${qState.score}/${qState.list.length}</b> (${pct}%)</div>
-      <p>${pct>=70?'Dobrze znasz ten materiał.':pct>=50?'Nieźle. Przejrzyj jeszcze fiszki.':'Wróć do fiszek i ścieżki, a potem spróbuj ponownie.'}</p>
+      <p>${pct>=70?'Dobrze znasz ten materiał.':pct>=50?'Nieźle. Przejrzyj jeszcze fiszki.':'Wróć do fiszek i lekcji, a potem spróbuj ponownie.'}</p>
       <button class="pill" id="qre">${LBL.again}</button></div>`;
     wrap.appendChild(card);sc.innerHTML='';sc.appendChild(wrap);
     document.getElementById('qre').onclick=()=>{qState.list=null;renderQuiz(sc);};
@@ -2976,11 +3679,13 @@ function testDone(sid,kind,lvId){
   const t=testFor(sid);if(!t)return false;const r=(t.plan||[]).find(x=>x.date===todayStr());
   if(!r||r.done||r.kind!==kind)return false;
   if(kind==='learn'&&r.lv){const st=subjState(sid);if(!r.lv.every(id=>(st.levels[id]||{}).done))return false;}
-  r.done=true;saveProgress();notify('Plan do sprawdzianu: dzień zaliczony','calendar');return true;
+  r.done=true;saveProgress();notify('Plan do sprawdzianu: dzień zaliczony','calendar');
+  completeDaily(sid,'plan'); // wiersz „Do sprawdzianu — …” w planie dnia (gdy jest)
+  return true;
 }
 function tpTitle(t,r){
   const s=testSubject(t);
-  if(r.kind==='learn'){const n=(r.lv||[]).length;if(n===1&&s){const lv=s.levels.find(l=>l.id===r.lv[0]);if(lv)return 'Nauka: '+noEmoji(lv.title);}return `Nauka: ${n} ${pl(n,'poziom','poziomy','poziomów')}`;}
+  if(r.kind==='learn'){const n=(r.lv||[]).length;if(n===1&&s){const lv=s.levels.find(l=>l.id===r.lv[0]);if(lv)return 'Nauka: '+noEmoji(lv.title);}return `Nauka: ${n} ${pl(n,'lekcja','lekcje','lekcji')}`;}
   if(r.kind==='review')return r.short?'Noc przed egzaminem':TP_LABEL.review;
   return own(TP_LABEL,r.kind)?TP_LABEL[r.kind]:''; // nigdy surowy r.kind z zapisu
 }
@@ -3010,14 +3715,7 @@ function testAction(t,r){
   if(r.kind==='weak'&&hasDeck(s.id)){startExamDeck(s.id);return;}
   openSubject(s.id,'egzamin',()=>examConfig(s,{levels:t.levels,n:r.n||20})); // mock (i weak bez talii = próbny)
 }
-/* wiersz planu na Dziś: „Do sprawdzianu: …” (dzień sprawdzianu = powodzenia) */
-function testTodayItem(t){
-  const s=testSubject(t);if(!s)return null;const today=todayStr();const N=dayDiff(today,t.date);if(N<0)return null;
-  const short=sshort(s);
-  if(N===0)return {t:{id:'test:'+t.id,done:false},s,kind:'test',info:true,reward:0,icon:'calendar',title:'Sprawdzian dziś — powodzenia',sub:short+' · plan zrobiony, teraz spokojnie',go:()=>openTestPlan(t.id)};
-  const r=(t.plan||[]).find(x=>x.date===today);if(!r)return null;
-  return {t:{id:'test:'+t.id,done:!!r.done},s,kind:'test',reward:0,icon:TP_ICON[r.kind],title:'Do sprawdzianu — '+tpTitle(t,r),sub:`${short} · ${inDays(N)} · ${tpSub(r,t)}`,go:()=>r.done?openTestPlan(t.id):testAction(t,r)};
-}
+/* wiersz planu na Dziś „Do sprawdzianu — …” to zadanie dnia `<sid>:plan` (buildDailyTasks → testStep, taskInfo kind 'plan') */
 /* arkusz „Mam sprawdzian” (z QuickAdd, zakładki Egzamin): przedmiot, data (natywne pole, min jutro), zakres poziomów → createTest → ekran planu */
 function openTestSheet(sid){
   if(!SUBJECTS.length)return;
@@ -3040,7 +3738,7 @@ function openTestSheet(sid){
       c.onclick=()=>{const next=on?lv.filter(x=>x!==l.id):all.filter(x=>x===l.id||lv.indexOf(x)>=0);levels=next.length?next:[l.id];if(levels.length===all.length)levels=null;draw();};lvBox.appendChild(c);});
     const N=dayDiff(todayStr(),date);const left=unfinishedLevels(subj,lv).length;const nq=exQuizFor(subj,lv).length;const ex=testFor(sel);
     inEl.textContent=inDays(N);
-    sum.innerHTML=icon('bulb',{size:16})+`<span>${N} ${pl(N,'dzień','dni','dni')} · ${N<2?'tylko krótka powtórka przed sprawdzianem':`${left?`${left} ${pl(left,'poziom','poziomy','poziomów')} do nauki`:'wszystko zaliczone, zostają powtórki'} · ${nq} ${pl(nq,'pytanie','pytania','pytań')} na próbny`}${ex?' · zastąpi obecny plan':''}</span>`;
+    sum.innerHTML=icon('bulb',{size:16})+`<span>${N} ${pl(N,'dzień','dni','dni')} · ${N<2?'tylko krótka powtórka przed sprawdzianem':`${left?`${left} ${pl(left,'lekcja','lekcje','lekcji')} do nauki`:'wszystko zaliczone, zostają powtórki'} · ${nq} ${pl(nq,'pytanie','pytania','pytań')} na próbny`}${ex?' · zastąpi obecny plan':''}</span>`;
   };
   inp.onchange=inp.oninput=()=>{const v=inp.value;if(v&&dayDiff(todayStr(),v)>=1)date=v;else{date=addDays(todayStr(),1);inp.value=date;}draw();};
   s.querySelector('#tpclose').onclick=closeSheet;
@@ -3053,13 +3751,13 @@ function renderTestPlan(){
   syncTests();const t=tests().find(x=>x.id===tpId)||tests()[0];const s=t&&testSubject(t);
   if(!t||!s)return go('today');
   applyTheme(s);
-  const back=()=>{if(tpFrom==='subject')openSubject(s.id,'egzamin');else go('today');};
+  const back=()=>{if(tpFrom==='subject')openSubject(s.id,'egzamin',null,{restore:true});else if(tpFrom==='hub')openSubject(s.id,'hub',null,{restore:true});else go('today');};
   const scroll=shell(null,{cls:'tplan',title:'Plan do sprawdzianu',pills:false,back});
   const today=todayStr(),N=dayDiff(today,t.date);const st=subjState(s.id);
-  const total=t.levels.length,done=t.levels.filter(id=>(st.levels[id]||{}).done).length;const rec=examRec(s.id);
-  const ready=Math.round(((total?done/total:0)*0.6+((rec.best?rec.best.pct:0)/100)*0.4)*100);
+  const total=t.levels.length;
+  const rd=readiness(s,t.levels),ready=rd.pct==null?0:rd.pct; // D3: ta sama gotowość co centrum przedmiotu i Dziś („?” poniżej 10 odpowiedzi)
   const d=dateOf(t.date);const scope=total===s.levels.length?'cały przedmiot':t.levels.map(id=>{const l=s.levels.find(x=>x.id===id);return l?noEmoji(l.title):'';}).filter(Boolean).join(', ');
-  scroll.appendChild(el('div','tphero a-up',`<div class="rvring a-pop">${ringSvg(ready,48)}<div class="rvpct"><b>${ready}%</b><span>gotowość</span></div></div>
+  scroll.appendChild(el('div','tphero a-up',`<div class="rvring a-pop">${ringSvg(ready,48)}<div class="rvpct"><b>${rd.pct==null?'?':ready+'%'}</b><span>gotowość</span></div></div>
     <div class="grow"><div class="s">${noEmoji(s.name)} · ${scope}</div><div class="d">${DAYS[d.getDay()].toLowerCase()}, ${d.getDate()} ${MONTHS_S[d.getMonth()]}</div><div class="in a-blink">${inDays(N)}</div></div>`));
   const rows=el('div','tprows');
   const todayRow=(t.plan||[]).find(r=>r.date===today);
@@ -3113,7 +3811,7 @@ function renderInfo(sc){
   ex.id='inf-exam';ex.onclick=()=>{curTab='egzamin';renderSubject();};wrap.appendChild(ex);
   const tb=el('button',`inflink a-up d${Math.min(6,d+2)}`,`<div class="ico red">${icon('calendar',{size:20,stroke:2.4})}</div><div class="grow"><div class="t">${t?'Sprawdzian '+inDays(dayDiff(todayStr(),t.date)):'Mam sprawdzian'}</div><div class="s">${t?'plan dzień po dniu jest gotowy':'ułożę plan dzień po dniu do daty'}</div></div>${icon('chevron-right',{size:18,cls:'chev'})}`);
   tb.id='inf-test';tb.onclick=()=>{if(t)openTestPlan(t.id,'subject');else openTestSheet(s.id);};wrap.appendChild(tb);
-  const foot=el('div','inffoot');const b=el('button','pill a-glow','WRÓĆ DO NAUKI');b.id='inf-back';b.onclick=()=>{curTab='path';renderSubject();};foot.appendChild(b);wrap.appendChild(foot);
+  const foot=el('div','inffoot');const b=el('button','pill a-glow','WRÓĆ DO NAUKI');b.id='inf-back';b.onclick=toolBack;foot.appendChild(b);wrap.appendChild(foot);
   sc.innerHTML='';sc.appendChild(wrap);
 }
 
@@ -3129,7 +3827,7 @@ function matchPool(s){return allCards(s).map(c=>{const t=txt(c.t);return {a:exCl
 
 function renderCwicz(sc){
   clearInterval(cwInt);cw=null;taskCleanup();closeSheet();
-  const s=current;const wrap=el('div','scroll');
+  const s=scoped(current);const wrap=el('div','scroll');
   const hub=el('div','exhub');
   const items = s.lang
    ? [['typing','edit','Wpisywanie','Po polsku → '+(s.short||'język')+'. Wpisz słowo z klawiatury.'],
@@ -3147,7 +3845,7 @@ function renderCwicz(sc){
   // krok 5: zadania z pola tasks całego przedmiotu, pogrupowane po typie (bez serc i combo, +4 XP)
   const tasks=allTasks(s);
   if(tasks.length){
-    hub.appendChild(el('div','exprompt','Zadania z poziomów'));
+    hub.appendChild(el('div','exprompt','Zadania z lekcji'));
     Object.keys(TASK_META).forEach(type=>{
       const list=tasks.filter(t=>t.type===type);if(!list.length)return;
       const meta=TASK_META[type];
@@ -3159,7 +3857,7 @@ function renderCwicz(sc){
 }
 /* --- ZADANIA Z POZIOMÓW (krok 5): ten sam taskBlock i panele co w lekcji --- */
 function cwStartTasks(sc,type){
-  const list=shuffle(allTasks(current).filter(t=>t.type===type));
+  const list=shuffle(allTasks(scoped(current)).filter(t=>t.type===type));
   if(!list.length){toast('Brak zadań tego typu');return renderCwicz(sc);}
   cw={type:'tasks',ttype:type,list,idx:0,score:0};cwRenderTasks(sc);
 }
@@ -3192,7 +3890,7 @@ function cwResult(sc,kind,score,total,retry){
 }
 /* --- TYPING --- */
 function exSubj(s){return {...s,levels:(s.levels||[]).map(l=>({...l,flashcards:(l.flashcards||[]).filter(c=>!c.noEx)}))};} // Wpisywanie/Klocki bez fiszek-notatek (noEx:true = reguła, nie słówko do wpisania)
-function cwStartTyping(sc){const pool=shuffle(typePool(exSubj(current))).slice(0,12);
+function cwStartTyping(sc){const pool=shuffle(typePool(exSubj(scoped(current)))).slice(0,12);
   if(!pool.length){toast('Brak danych do wpisywania');return renderCwicz(sc);}
   cw={type:'typing',list:pool,idx:0,score:0};cwRenderTyping(sc);}
 function cwRenderTyping(sc){
@@ -3222,7 +3920,7 @@ function cwRenderTyping(sc){
   inp.addEventListener('keydown',e=>{if(e.key==='Enter')check();});
 }
 /* --- TILES --- */
-function cwStartTiles(sc){const pool=shuffle(tilePool(exSubj(current))).slice(0,10);
+function cwStartTiles(sc){const pool=shuffle(tilePool(exSubj(scoped(current)))).slice(0,10);
   if(!pool.length){toast('Brak danych');return renderCwicz(sc);}
   cw={type:'tiles',list:pool,idx:0,score:0,_n:-1};cwRenderTiles(sc);}
 function cwRenderTiles(sc){
@@ -3252,7 +3950,7 @@ function cwRenderTiles(sc){
   };
 }
 /* --- MATCH --- */
-function cwStartMatch(sc){const pool=shuffle(matchPool(current)).slice(0,5);
+function cwStartMatch(sc){const pool=shuffle(matchPool(scoped(current))).slice(0,5);
   if(pool.length<2){toast('Za mało danych');return renderCwicz(sc);}
   cw={type:'match',pairs:pool,left:shuffle(pool.map((p,i)=>({i,t:p.a}))),right:shuffle(pool.map((p,i)=>({i,t:p.b}))),selL:null,selR:null,done:0,matched:new Set(),missed:new Set()};
   cwRenderMatch(sc);}
@@ -3274,7 +3972,7 @@ function tryMatch(sc){
   else{cw.missed.add(cw.selL);toast('To nie ta para','close');cw.selL=null;cw.selR=null;cwRenderMatch(sc);}
 }
 /* --- SPEED --- */
-function cwStartSpeed(sc){cw={type:'speed',list:shuffle(allQuiz(current)),idx:0,score:0,left:60};
+function cwStartSpeed(sc){cw={type:'speed',list:shuffle(allQuiz(scoped(current))),idx:0,score:0,left:60};
   clearInterval(cwInt);cwInt=setInterval(()=>{cw.left--;const t=document.getElementById('spdt');if(t){t.lastChild.textContent=cw.left+'s';t.classList.toggle('warn',cw.left<=10);}if(cw.left<=0){clearInterval(cwInt);cwResult(sc,(cw.score>=10)?'hot':'ok',cw.score,cw.idx,()=>cwStartSpeed(sc));}},1000);
   cwRenderSpeed(sc);}
 function cwRenderSpeed(sc){
@@ -3361,7 +4059,7 @@ function renderShop(){
   });
   scroll.appendChild(el('div','eyebrow sec','Skąd brać gemy'));
   const card=el('div','setcard a-up d5');
-  [['check','ic-acid','Zaliczony poziom','+'+GEM.level+' (+'+GEM.stars3+' za 3 gwiazdki)'],['chest','ic-gold','Skrzynia na ścieżce','+'+GEM.chest],['star','ic-gold','Misja dzienna / tygodniowa','+20–30 / +100'],['calendar','ic-cyan','Cały plan dnia','+'+GEM.plan],['boss','ic-violet','Boss rozdziału','+'+GEM.boss]].forEach(([ic,cls,lab,v],i)=>{
+  [['check','ic-acid','Zaliczona lekcja','+'+GEM.level+' (+'+GEM.stars3+' za 3 gwiazdki)'],['star','ic-gold','Misja dzienna / tygodniowa','+20–30 / +100'],['calendar','ic-cyan','Cały plan dnia','+'+GEM.plan],['boss','ic-violet','Pojedynek z Szopem','+'+GEM.boss]].forEach(([ic,cls,lab,v],i)=>{
     if(i)card.appendChild(el('div','setsep'));
     card.appendChild(el('div','setrow',icon(ic,{size:18,stroke:2.8,cls})+`<span class="t grow">${lab}</span><span class="v cyan">${v}</span>`));
   });
@@ -3373,12 +4071,12 @@ const MISSION_POOL={
   xp:{t:n=>`Zdobądź ${n} XP`,targets:[60,100,150],reward:20,icon:'bolt',tone:'acid'},
   streakok:{t:n=>`${n} poprawnych bez pomyłki`,targets:[8,10,15],reward:30,icon:'star',tone:'pink',max:true},
   review:{t:n=>`Powtórz ${n} ${pl(n,'pojęcie','pojęcia','pojęć')}`,targets:[10,15,20],reward:25,icon:'refresh',tone:'cyan'},
-  level:{t:()=>'Zalicz poziom',targets:[1],reward:25,icon:'check',tone:'acid'},
+  level:{t:()=>'Zalicz lekcję',targets:[1],reward:25,icon:'check',tone:'acid'},
   tftime:{t:()=>'Zadanie na czas bez błędu',targets:[1],reward:30,icon:'clock',tone:'gold'},
   plan:{t:()=>'Wykonaj cały plan dnia',targets:[1],reward:30,icon:'calendar',tone:'amber'}
 };
 const WEEKLY_POOL={
-  wlevels:{t:n=>`Zalicz ${n} ${pl(n,'poziom','poziomy','poziomów')} w tym tygodniu`,target:5,reward:100,icon:'chest',tone:'gold',ev:'level'},
+  wlevels:{t:n=>`Zalicz ${n} ${pl(n,'lekcję','lekcje','lekcji')} w tym tygodniu`,target:5,reward:100,icon:'chest',tone:'gold',ev:'level'},
   wxp:{t:n=>`Zdobądź ${n} XP w tym tygodniu`,target:300,reward:100,icon:'bolt',tone:'gold',ev:'xp'},
   wdays:{t:n=>`${n} dni nauki w tym tygodniu`,target:5,reward:100,icon:'flame',tone:'gold',ev:'day'}
 };
@@ -3548,7 +4246,7 @@ function renderBoss(){
   const it=bs.items[bs.idx];bs.n++;
   L.innerHTML='';
   const head=el('div','lessonhead bosshead');
-  const x=el('button','x',icon('close',{size:18,stroke:3}));x.setAttribute('aria-label','Uciekaj z walki');x.onclick=()=>{bossState=null;closeLesson();toast('Boss czeka na ścieżce','boss');};head.appendChild(x);
+  const x=el('button','x',icon('close',{size:18,stroke:3}));x.setAttribute('aria-label','Uciekaj z walki');x.onclick=()=>{bossState=null;closeLesson();toast('Szop czeka w przedmiocie','boss');};head.appendChild(x);
   head.appendChild(el('div','bosslbl','Boss rozdziału'));head.appendChild(heartsPill({iconBeat:true}));L.appendChild(head);
   const hero=el('div','bosshero');
   hero.innerHTML=`<div class="bossav" id="bossav">${raccoon(bs.hp<=Math.ceil(bs.max*.3)?'angry':'idle',124)}</div><div class="bossname">${bossName(s)}</div>
@@ -3592,9 +4290,9 @@ function finishBoss(win){
         :`<p class="lcp">${hearts().n<=0?'Skończyły się życia. Odzyskaj je (powtórka fiszek albo plecak) i spróbuj ponownie.':'Bossowi '+pl(bs.hp,'zostało','zostały','zostało')+' '+bs.hp+' '+pl(bs.hp,'życie','życia','żyć')+'. Przejrzyj fiszki z tego przedmiotu i wróć.'}</p>`}`;
   body.appendChild(lc);L.appendChild(body);
   const foot=el('div','lessonfoot col');
-  const main=el('button','pill a-glow',win?'WRACAM NA ŚCIEŻKĘ':'SPRÓBUJ PONOWNIE');main.id='bossmain';
+  const main=el('button','pill a-glow',win?'WRACAM DO PRZEDMIOTU':'SPRÓBUJ PONOWNIE');main.id='bossmain';
   main.onclick=win?closeLesson:()=>{if(hearts().n<=0)showNoHearts({inLesson:false});else startBoss();};
-  const alt=el('button','pill text',win?'JESZCZE RAZ':'WRÓĆ NA ŚCIEŻKĘ');alt.id='bossalt';alt.onclick=win?startBoss:closeLesson;
+  const alt=el('button','pill text',win?'JESZCZE RAZ':'WRÓĆ DO PRZEDMIOTU');alt.id='bossalt';alt.onclick=win?startBoss:closeLesson;
   foot.appendChild(main);foot.appendChild(alt);L.appendChild(foot);
   keyFn=e=>{if(e.key==='Enter')main.click();};
   if(win)notify(first?'Boss pokonany: +'+GEM.boss+' gemów':'Boss pokonany ponownie','boss','a-pop');
@@ -3642,7 +4340,7 @@ function ghostFinish(ls,passed){
 
 /* ---------- ODZNAKI (Profile.html): sprawdzane po każdym istotnym zdarzeniu, toast .a-pop przy odblokowaniu ---------- */
 const BADGES=[
-  {id:'first',name:'Pierwszy poziom',icon:'check',tone:'acid',test:()=>SUBJECTS.some(s=>Object.values((PROGRESS[s.id]||{}).levels||{}).some(l=>l&&l.done))},
+  {id:'first',name:'Pierwsza lekcja',icon:'check',tone:'acid',test:()=>SUBJECTS.some(s=>Object.values((PROGRESS[s.id]||{}).levels||{}).some(l=>l&&l.done))},
   {id:'streak7',name:'7 dni serii',icon:'flame',tone:'amber',test:()=>Math.max(META.best|0,streakDisplay())>=7},
   {id:'streak30',name:'30 dni serii',icon:'flame',tone:'amber',test:()=>Math.max(META.best|0,streakDisplay())>=30},
   {id:'streak50',name:'50 dni serii',icon:'flame',tone:'amber',test:()=>Math.max(META.best|0,streakDisplay())>=50},
@@ -3762,7 +4460,7 @@ function renderWeekly(){
     <div class="wkbars">${days.map((d,i)=>`<div class="wkcol${d===t?' today':''}${i===bi&&cur.perDay[i]>0?' best':''}${d>t?' future':''}"><div class="wkbar"><i class="a-up d${Math.min(6,i+1)}" style="height:${Math.max(6,Math.round(cur.perDay[i]/max*100))}%"></i></div><span>${DAYS_S[(i+1)%7]}</span></div>`).join('')}</div>
     <div class="wkbest a-up d6">${cur.xp?`Najmocniejszy dzień: ${DAYS[(bi+1)%7].toLowerCase()} — ${cur.perDay[bi]} XP.`:'Zacznij od jednego zadania z planu dnia.'}</div>`));
   const grid=el('div','wkgrid a-up d4');
-  [['flame',cur.days,pl(cur.days,'dzień nauki','dni nauki','dni nauki')],['check',cur.levels,pl(cur.levels,'poziom zaliczony','poziomy zaliczone','poziomów zaliczonych')],['refresh',cur.reviews,pl(cur.reviews,'pojęcie powtórzone','pojęcia powtórzone','pojęć powtórzonych')],['cards',cur.cards,pl(cur.cards,'karta w albumie','karty w albumie','kart w albumie')],['bolt','×'+cur.combo,'najlepsze combo'],['star',cur.missions,pl(cur.missions,'misja odebrana','misje odebrane','misji odebranych')]].forEach(([ic,v,lab])=>grid.appendChild(el('div','wkstat',`${icon(ic,{size:18,stroke:2.6})}<b>${v}</b><span>${lab}</span>`)));
+  [['flame',cur.days,pl(cur.days,'dzień nauki','dni nauki','dni nauki')],['check',cur.levels,pl(cur.levels,'lekcja zaliczona','lekcje zaliczone','lekcji zaliczonych')],['refresh',cur.reviews,pl(cur.reviews,'pojęcie powtórzone','pojęcia powtórzone','pojęć powtórzonych')],['cards',cur.cards,pl(cur.cards,'karta w albumie','karty w albumie','kart w albumie')],['bolt','×'+cur.combo,'najlepsze combo'],['star',cur.missions,pl(cur.missions,'misja odebrana','misje odebrane','misji odebranych')]].forEach(([ic,v,lab])=>grid.appendChild(el('div','wkstat',`${icon(ic,{size:18,stroke:2.6})}<b>${v}</b><span>${lab}</span>`)));
   scroll.appendChild(grid);
   const foot=el('div','wkfoot');
   const main=el('button','pill dark a-glow',last?'WRACAM DO NAUKI':'WRÓĆ DO PROFILU');main.id='wk-main';main.onclick=()=>go(last?'today':'profile');foot.appendChild(main);
@@ -3801,7 +4499,7 @@ function renderCram(){
   const s=SUBJECTS.find(x=>x.id===cramSid);if(!s)return go('today');
   applyTheme(s);
   const blocks=cramBlocks(s);const t=testFor(s.id);
-  const back=()=>openSubject(s.id,'egzamin');
+  const back=()=>{const p=navHist[navHist.length-1];if(p&&p.sid===s.id)goBack();else openSubject(s.id,'hub');}; // tam, skąd przyszła noc przed egzaminem (centrum, egzamin próbny)
   const scroll=shell(null,{cls:'cram',title:'Noc przed egzaminem',pills:false,back});
   for(let i=0;i<5;i++)scroll.appendChild(el('i','cramstar a-blink d'+(i%6+1)));
   const now=new Date();const toMid=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1)-now;
@@ -3868,7 +4566,7 @@ function cramRender(){
 function cramFinish(){
   const cs=cramState;if(!cs)return;cs.done=true;clearInterval(cramInt);closeSheet();keyFn=null;
   const s=cs.s;const total=cs.ok+cs.bad;const pct=total?Math.round(cs.ok/total*100):0;const t=testFor(s.id);
-  if(total){completeDaily(s.id,'review');testDone(s.id,'review');}
+  if(total){completeDaily(s.id,'review');completeDaily(s.id,'cram');testDone(s.id,'review');}
   app.innerHTML='';const L=el('div','lesson open rvrun cramdone');app.appendChild(L);app.appendChild(el('div','toast',''));app.lastChild.id='toast';
   const body=el('div','lessonbody done');if(pct>=50)body.appendChild(confetti(5));
   const lc=el('div','lc');
@@ -3971,7 +4669,6 @@ function netbar(){
 function barLayout(){
   let h=0;document.querySelectorAll('.netbar').forEach(x=>{if(getComputedStyle(x).display!=='none')h=Math.max(h,x.offsetHeight);});
   document.documentElement.style.setProperty('--barh',h+'px');document.body.classList.toggle('bar-on',h>0);
-  const p=document.querySelector('.path');if(p)requestAnimationFrame(()=>drawTrail(p));
 }
 /* storage niedostępny (STORE w pamięci: iOS file://, zablokowane dane witryn) → pasek ostrzeżenia; ===true, bo na prawdziwym localStorage .volatile to ewentualny wpis (tekst).
    P1-9: zwinięty do jednej linii; „Więcej” rozwija wyjaśnienie, krzyżyk zamyka. */
@@ -3998,7 +4695,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   window.addEventListener('offline',netbar);
   window.addEventListener('online',netbar);
   window.addEventListener('focus',netbar);window.addEventListener('pageshow',netbar);
-  window.addEventListener('resize',()=>{const p=document.querySelector('.path');if(p)drawTrail(p);barLayout();});
+  window.addEventListener('resize',()=>barLayout());
   // P1-8: powrót z tła (iOS trzyma WebView przez noc) i północ przy otwartej apce → nowy dzień: zamrożenia, plany, misje, ekran główny od nowa
   const back=()=>{netbar();dayCheckSynced();};
   document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')back();});
@@ -4060,9 +4757,36 @@ function start(){
 }
 /* API dla warstwy chmury (cloud-ui.js): widoki, arkusze i helpery silnika; przedmioty z konta wstawiane w miejscu (SUBJECTS to stała tablica) */
 // po starcie: nowy przedmiot z konta może mieć postępy z synchronizacji, których start() jeszcze nie sprawdził → fixProgress (idempotentne)
-function setSubjects(list){SUBJECTS.splice(0,SUBJECTS.length,...(list||[]).filter(s=>s&&s.id&&s.name&&Array.isArray(s.levels)&&s.levels.length));if(booted)try{fixProgress();}catch(e){}}
-function upsertSubject(s){if(!s||!s.id||!Array.isArray(s.levels)||!s.levels.length)return;const i=SUBJECTS.findIndex(x=>x.id===s.id);if(i>=0)SUBJECTS[i]=s;else SUBJECTS.push(s);if(booted)try{fixProgress();}catch(e){}}
-window.NaukaEngine={_explainFor:explainFor,_viz:{ok:vizOk,html:vizHtml,text:vizPlain,chunks:doseChunks},_notify:notify,_real:doseReal,subjShort:sshort,subjInitials:initials,barLayout,reload,el,icon,fox,liveFoxes,foxAct,toast,notify,openSheet,closeSheet,sheetBack,ask,shell,obShell,go,goBack,openSubject,openLevel,openTestSheet,openQuickAdd,renderError,pl,noEmoji,todayStr,esc,txt,native:NATIVE,
-  registerView:(k,fn)=>{VIEWS[k]=fn;},setSubjects,upsertSubject,subjects:()=>SUBJECTS,meta:()=>META,saveMeta,
-  get view(){return view;},get current(){return current;}};
+function setSubjects(list){SUBJECTS.splice(0,SUBJECTS.length,...(list||[]).filter(s=>s&&s.id&&s.name&&Array.isArray(s.levels)&&s.levels.length));relink();if(booted)try{fixProgress();}catch(e){}}
+function upsertSubject(s){if(!s||!s.id||!Array.isArray(s.levels)||!s.levels.length)return;const i=SUBJECTS.findIndex(x=>x.id===s.id);if(i>=0)SUBJECTS[i]=s;else SUBJECTS.push(s);relink();if(booted)try{fixProgress();}catch(e){}}
+function relink(){if(current){const c=SUBJECTS.find(x=>x.id===current.id);if(c)current=c;}} // otwarty przedmiot wskazuje nowy obiekt (zmiana nazwy, nowy materiał) — bez nieaktualnych danych w centrum
+function rerender(){if(lessonState||rvState||exState||bossState||cramState)return;if(current)renderSubject();else if(VIEWS[view])go(view,true);}
+/* plan-media §5: dane centrum przedmiotu, punkty, opanowanie, media — dla media.js (CLIENT-MEDIA) i cloud-ui.js; napisy już escapowane jak cała reszta danych silnika */
+const subjOf=sid=>SUBJECTS.find(x=>x.id===sid)||null;
+function levelIdOf(topicId,raw){raw=String(raw==null?'':raw);
+  for(const s of SUBJECTS)for(const l of s.levels){if((l.topicId||'_'+s.id)!==topicId)continue;if(l.raw===raw||l.id===raw)return l.id;}
+  const g='t'+tid8(topicId)+'_'+safeId(raw);for(const s of SUBJECTS){const l=s.levels.find(x=>x.id===g);if(l)return l.id;}return null;}
+function pointIdOf(topicId,raw){for(const s of SUBJECTS)for(const t of topicList(s)){if(t.id!==topicId)continue;const p=t.points.find(x=>x.raw===raw||x.id===raw);if(p)return p.id;}return null;}
+function pointRawOf(pid){for(const s of SUBJECTS){const p=pointById(s,pid);if(p)return {topicId:p.topicId,raw:p.raw};}return null;}
+function topicOfApi(sid,topicId){const s=subjOf(sid);const t=s&&topicList(s).find(x=>x.id===topicId);if(!t)return null;
+  return {topic:{id:t.id,name:t.name,createdAt:t.createdAt},n:t.n,levels:t.levels,points:t.points.filter(p=>!ptHidden(s,p)),source:t.source};}
+window.NaukaEngine={_explainFor:explainFor,_plan:rebuild=>{if(rebuild)PROGRESS.daily=null;return daily().tasks.map(x=>x.id);},_planAddMedia:()=>planAddMedia(), // kontrole (test/dev/checks/hub.mjs)
+  _viz:{ok:vizOk,html:vizHtml,text:vizPlain,chunks:doseChunks},_notify:notify,_real:doseReal,subjShort:sshort,subjInitials:initials,barLayout,reload,el,icon,fox,raccoon,liveFoxes,foxAct,toast,notify,openSheet,closeSheet,sheetBack,ask,shell,obShell,go,goBack,openLevel,openTestSheet,openQuickAdd,renderError,pl,noEmoji,todayStr,esc,txt,native:NATIVE,
+  registerView:(k,fn,o)=>{VIEWS[k]=fn;if(o&&typeof o.leave==='function')VIEW_LEAVE[k]=o.leave;else delete VIEW_LEAVE[k];},setSubjects,upsertSubject,subjects:()=>SUBJECTS,meta:()=>META,saveMeta,
+  // oceny i nawigacja centrum
+  gradeFor,gradeScale,openSubject:(sid,tab,setup)=>openSubject(sid,tab,setup),openMaterial,openLessonAt:(sid,lid,part)=>openLessonAt(sid,lid,part==null?null:part),openPointSheet,
+  practicePoints:(sid,pids,onDone)=>{const s=subjOf(sid);if(s&&inSubj(sid))practice(s,Array.isArray(pids)?pids:[],{onDone});},
+  // dane
+  subject:subjOf,topicOf:topicOfApi,levelId:levelIdOf,pointId:pointIdOf,pointRaw:pointRawOf,
+  pointsOf:(sid,topicId)=>{const s=subjOf(sid);return s?visiblePoints(s,topicId||null):[];},
+  pointState:(sid,pid)=>{const s=subjOf(sid);const p=s&&pointById(s,pid);return p?pointState(s,p):null;},
+  masteryOf:(sid,topicId)=>{const s=subjOf(sid);return s?masteryOf(s,topicId||null):null;},
+  readiness:(sid,levelIds)=>{const s=subjOf(sid);return s?readiness(s,Array.isArray(levelIds)?levelIds:null):null;},
+  naTeraz:sid=>{const s=subjOf(sid);return s?naTeraz(s):[];},
+  masteryMarker,masteryBar,lessonChunk,lessonMinutes,
+  // pytania do rolek, pauz podcastu i luk z rozmowy
+  quizItem,recordAnswer,makeDue,isDue,
+  // rejestr mediów i postępy
+  setMedia,mediaFor,mediaState,setMediaState,foxState,setFoxState,markOral,completeTask,fmtTime,dec,rerender,
+  get view(){return current?'subject':view;},get current(){return current;}}; // przedmiot otwarty = 'subject' (ekran rolki / podcastu pod spodem już nie jest widoczny)
 })();

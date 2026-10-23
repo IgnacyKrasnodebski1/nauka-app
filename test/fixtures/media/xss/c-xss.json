@@ -1,0 +1,59 @@
+{
+  "v": 1,
+  "duration": 11.16,
+  "lines": [
+    {
+      "i": 0,
+      "s": "lis",
+      "start": 0.2,
+      "end": 2.046,
+      "words": [
+        {"w":"Zwykła","start":0.2,"end":0.575},
+        {"w":"linijka","start":0.608,"end":1.032},
+        {"w":"z","start":1.069,"end":1.201},
+        {"w":"pojęciem.","start":1.212,"end":1.685}
+      ]
+    },
+    {
+      "i": 1,
+      "s": "szop",
+      "start": 2.496,
+      "end": 6.949,
+      "words": [
+        {"w":"Szop","start":2.496,"end":2.774},
+        {"w":"mówi","start":2.798,"end":3.076},
+        {"w":"<img","start":3.1,"end":3.329},
+        {"w":"src=x","start":3.349,"end":3.627},
+        {"w":"onerror=\"window.__pwned=1\">","start":3.651,"end":4.66},
+        {"w":"i","start":4.748,"end":4.88},
+        {"w":"<img","start":4.891,"end":5.12},
+        {"w":"src=x","start":5.14,"end":5.418},
+        {"w":"onerror=window.__pwned=1>","start":5.442,"end":6.451},
+        {"w":"🔥.","start":6.539,"end":6.622},
+        {"w":"<img src=x onerror=\"window.__pwned=1\">","start":6.949,"end":6.949}
+      ]
+    },
+    {
+      "i": 2,
+      "s": "<b>hacker</b>",
+      "start": 7.399,
+      "end": 8.588,
+      "words": [
+        {"w":"Nieznany","start":7.399,"end":7.872},
+        {"w":"mówca.","start":7.913,"end":8.24}
+      ]
+    },
+    {
+      "i": 3,
+      "s": "lis",
+      "start": 9.038,
+      "end": 10.4,
+      "words": [
+        {"w":"\"><script>window.__pwned=1</script>","start":9.038,"end":10.291}
+      ]
+    }
+  ],
+  "pauses": [
+    {"afterLine":1,"at":6.949}
+  ]
+}

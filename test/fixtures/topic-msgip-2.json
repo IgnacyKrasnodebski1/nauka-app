@@ -1,0 +1,1024 @@
+{
+  "name": "Wykład 3: teorie integracji",
+  "short": "Wykład 3",
+  "emoji": "📘",
+  "tagline": "",
+  "accent": "#FF2E93",
+  "accent2": "#FF2E93",
+  "grading": {
+    "pass": 50,
+    "examMin": 20,
+    "scale": [
+      [
+        90,
+        "5"
+      ],
+      [
+        80,
+        "4,5"
+      ],
+      [
+        70,
+        "4"
+      ],
+      [
+        60,
+        "3,5"
+      ],
+      [
+        50,
+        "3"
+      ]
+    ],
+    "failLabel": "2"
+  },
+  "info": "",
+  "levels": [
+    {
+      "id": "w1",
+      "title": "Funkcjonalizm i neofunkcjonalizm",
+      "emoji": "📘",
+      "feed": [
+        {
+          "title": "Funkcjonalizm: współpraca w konkretnych dziedzinach",
+          "body": "<b>Funkcjonalizm</b> — teoria integracji: współpraca w konkretnych dziedzinach technicznych zbliża państwa i buduje pokój.<br><br><b>David Mitrany</b> — twórca funkcjonalizmu, autor „A Working Peace System” z 1943 r.<br><br><b>Forma idzie za funkcją</b> — hasło funkcjonalizmu: instytucje powstają tam, gdzie jest konkretne zadanie.<br><br><b>Organizacja funkcjonalna</b> — instytucja do jednego zadania, np. poczty czy kolei, działająca ponad granicami.<br><br><b>Depolityzacja</b> — przeniesienie sporów z polityki do technicznej współpracy ekspertów."
+        },
+        {
+          "title": "Neofunkcjonalizm Ernsta Haasa",
+          "body": "<b>Neofunkcjonalizm</b> — teoria Ernsta Haasa: integracja w jednym sektorze pociąga kolejne i wzmacnia instytucje ponadnarodowe.<br><br><b>Ernst Haas</b> — twórca neofunkcjonalizmu, badał Europejską Wspólnotę Węgla i Stali.<br><br><b>EWWiS</b> — europejska Wspólnota Węgla i Stali z 1951 r., pierwszy krok integracji europejskiej.<br><br><b>Elity ponadnarodowe</b> — urzędnicy i grupy interesu, które według Haasa popychają integrację naprzód."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "Funkcjonalizm",
+          "d": "Teoria integracji: współpraca w konkretnych dziedzinach technicznych zbliża państwa i buduje pokój."
+        },
+        {
+          "t": "David Mitrany",
+          "d": "Twórca funkcjonalizmu, autor „A Working Peace System” z 1943 r."
+        },
+        {
+          "t": "Forma idzie za funkcją",
+          "d": "Hasło funkcjonalizmu: instytucje powstają tam, gdzie jest konkretne zadanie."
+        },
+        {
+          "t": "Organizacja funkcjonalna",
+          "d": "Instytucja do jednego zadania, np. poczty czy kolei, działająca ponad granicami."
+        },
+        {
+          "t": "Depolityzacja",
+          "d": "Przeniesienie sporów z polityki do technicznej współpracy ekspertów."
+        },
+        {
+          "t": "Neofunkcjonalizm",
+          "d": "Teoria Ernsta Haasa: integracja w jednym sektorze pociąga kolejne i wzmacnia instytucje ponadnarodowe."
+        },
+        {
+          "t": "Ernst Haas",
+          "d": "Twórca neofunkcjonalizmu, badał Europejską Wspólnotę Węgla i Stali."
+        },
+        {
+          "t": "EWWiS",
+          "d": "Europejska Wspólnota Węgla i Stali z 1951 r., pierwszy krok integracji europejskiej."
+        },
+        {
+          "t": "Elity ponadnarodowe",
+          "d": "Urzędnicy i grupy interesu, które według Haasa popychają integrację naprzód."
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Które pojęcie pasuje do opisu: „Teoria integracji: współpraca w konkretnych dziedzinach technicznych zbliża państwa i buduje pokój.”",
+          "a": [
+            "David Mitrany",
+            "Funkcjonalizm",
+            "Depolityzacja",
+            "EWWiS"
+          ],
+          "c": 1,
+          "e": "To Funkcjonalizm: teoria integracji: współpraca w konkretnych dziedzinach technicznych zbliża państwa i buduje pokój."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Twórca funkcjonalizmu, autor „A Working Peace System” z 1943 r.”",
+          "a": [
+            "Organizacja funkcjonalna",
+            "Ernst Haas",
+            "David Mitrany",
+            "Funkcjonalizm"
+          ],
+          "c": 2,
+          "e": "To David Mitrany: twórca funkcjonalizmu, autor „A Working Peace System” z 1943 r."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Hasło funkcjonalizmu: instytucje powstają tam, gdzie jest konkretne zadanie.”",
+          "a": [
+            "Neofunkcjonalizm",
+            "Elity ponadnarodowe",
+            "Organizacja funkcjonalna",
+            "Forma idzie za funkcją"
+          ],
+          "c": 3,
+          "e": "To Forma idzie za funkcją: hasło funkcjonalizmu: instytucje powstają tam, gdzie jest konkretne zadanie."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Teoria Ernsta Haasa: integracja w jednym sektorze pociąga kolejne i wzmacnia instytucje ponadnarodowe.”",
+          "a": [
+            "Funkcjonalizm",
+            "Organizacja funkcjonalna",
+            "Neofunkcjonalizm",
+            "EWWiS"
+          ],
+          "c": 2,
+          "e": "To Neofunkcjonalizm: teoria Ernsta Haasa: integracja w jednym sektorze pociąga kolejne i wzmacnia instytucje ponadnarodowe."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Twórca neofunkcjonalizmu, badał Europejską Wspólnotę Węgla i Stali.”",
+          "a": [
+            "Forma idzie za funkcją",
+            "Neofunkcjonalizm",
+            "Funkcjonalizm",
+            "Ernst Haas"
+          ],
+          "c": 3,
+          "e": "To Ernst Haas: twórca neofunkcjonalizmu, badał Europejską Wspólnotę Węgla i Stali."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Europejska Wspólnota Węgla i Stali z 1951 r., pierwszy krok integracji europejskiej.”",
+          "a": [
+            "EWWiS",
+            "Depolityzacja",
+            "Elity ponadnarodowe",
+            "Forma idzie za funkcją"
+          ],
+          "c": 0,
+          "e": "To EWWiS: europejska Wspólnota Węgla i Stali z 1951 r., pierwszy krok integracji europejskiej."
+        }
+      ],
+      "tasks": [
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "Funkcjonalizm: teoria integracji: współpraca w konkretnych dziedzinach technicznych zbliża państwa i buduje pokój.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            },
+            {
+              "s": "David Mitrany: urzędnicy i grupy interesu, które według Haasa popychają integrację naprzód.",
+              "v": false,
+              "e": "To opis pojęcia „Elity ponadnarodowe”."
+            },
+            {
+              "s": "Forma idzie za funkcją: hasło funkcjonalizmu: instytucje powstają tam, gdzie jest konkretne zadanie.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            }
+          ],
+          "e": "Pojęcia z tej lekcji w pigułce."
+        }
+      ]
+    },
+    {
+      "id": "w2",
+      "title": "Spillover i międzyrządowość",
+      "emoji": "📘",
+      "feed": [
+        {
+          "title": "Efekt spillover: integracja się rozlewa",
+          "body": "<b>Spillover</b> — efekt rozlania: integracja jednego sektora wymusza integrację sąsiednich.<br><br><b>Spillover funkcjonalny</b> — wspólny rynek wymaga wspólnych norm, więc integracja przechodzi na kolejne dziedziny.<br><br><b>Spillover polityczny</b> — elity przenoszą lojalność i oczekiwania na wspólne instytucje.<br><br><b>Spillback</b> — cofanie się integracji, gdy państwa odbierają kompetencje wspólnym instytucjom.<br><br><b>Kryzys pustego krzesła</b> — bojkot Francji w 1965 r., przykład zahamowania integracji."
+        },
+        {
+          "title": "Międzyrządowość: rządy trzymają ster",
+          "body": "<b>Międzyrządowość</b> — teoria: integracją sterują rządy państw, a wspólne instytucje są ich narzędziem.<br><br><b>Stanley Hoffmann</b> — krytyk neofunkcjonalizmu, jeden z twórców podejścia międzyrządowego.<br><br><b>Liberalna międzyrządowość</b> — teoria Andrew Moravcsika: preferencje krajowe plus negocjacje rządów.<br><br><b>Jednomyślność</b> — zasada głosowania, w której każde państwo może zablokować decyzję."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "Spillover",
+          "d": "Efekt rozlania: integracja jednego sektora wymusza integrację sąsiednich."
+        },
+        {
+          "t": "Spillover funkcjonalny",
+          "d": "Wspólny rynek wymaga wspólnych norm, więc integracja przechodzi na kolejne dziedziny."
+        },
+        {
+          "t": "Spillover polityczny",
+          "d": "Elity przenoszą lojalność i oczekiwania na wspólne instytucje."
+        },
+        {
+          "t": "Spillback",
+          "d": "Cofanie się integracji, gdy państwa odbierają kompetencje wspólnym instytucjom."
+        },
+        {
+          "t": "Kryzys pustego krzesła",
+          "d": "Bojkot Francji w 1965 r., przykład zahamowania integracji."
+        },
+        {
+          "t": "Międzyrządowość",
+          "d": "Teoria: integracją sterują rządy państw, a wspólne instytucje są ich narzędziem."
+        },
+        {
+          "t": "Stanley Hoffmann",
+          "d": "Krytyk neofunkcjonalizmu, jeden z twórców podejścia międzyrządowego."
+        },
+        {
+          "t": "Liberalna międzyrządowość",
+          "d": "Teoria Andrew Moravcsika: preferencje krajowe plus negocjacje rządów."
+        },
+        {
+          "t": "Jednomyślność",
+          "d": "Zasada głosowania, w której każde państwo może zablokować decyzję."
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Które pojęcie pasuje do opisu: „Efekt rozlania: integracja jednego sektora wymusza integrację sąsiednich.”",
+          "a": [
+            "Spillover funkcjonalny",
+            "Kryzys pustego krzesła",
+            "Liberalna międzyrządowość",
+            "Spillover"
+          ],
+          "c": 3,
+          "e": "To Spillover: efekt rozlania: integracja jednego sektora wymusza integrację sąsiednich."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Wspólny rynek wymaga wspólnych norm, więc integracja przechodzi na kolejne dziedziny.”",
+          "a": [
+            "Spillover funkcjonalny",
+            "Spillback",
+            "Stanley Hoffmann",
+            "Spillover"
+          ],
+          "c": 0,
+          "e": "To Spillover funkcjonalny: wspólny rynek wymaga wspólnych norm, więc integracja przechodzi na kolejne dziedziny."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Elity przenoszą lojalność i oczekiwania na wspólne instytucje.”",
+          "a": [
+            "Międzyrządowość",
+            "Spillover polityczny",
+            "Jednomyślność",
+            "Spillback"
+          ],
+          "c": 1,
+          "e": "To Spillover polityczny: elity przenoszą lojalność i oczekiwania na wspólne instytucje."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Teoria: integracją sterują rządy państw, a wspólne instytucje są ich narzędziem.”",
+          "a": [
+            "Międzyrządowość",
+            "Spillover",
+            "Spillback",
+            "Liberalna międzyrządowość"
+          ],
+          "c": 0,
+          "e": "To Międzyrządowość: teoria: integracją sterują rządy państw, a wspólne instytucje są ich narzędziem."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Krytyk neofunkcjonalizmu, jeden z twórców podejścia międzyrządowego.”",
+          "a": [
+            "Spillover polityczny",
+            "Stanley Hoffmann",
+            "Międzyrządowość",
+            "Spillover"
+          ],
+          "c": 1,
+          "e": "To Stanley Hoffmann: krytyk neofunkcjonalizmu, jeden z twórców podejścia międzyrządowego."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Teoria Andrew Moravcsika: preferencje krajowe plus negocjacje rządów.”",
+          "a": [
+            "Kryzys pustego krzesła",
+            "Jednomyślność",
+            "Liberalna międzyrządowość",
+            "Spillover polityczny"
+          ],
+          "c": 2,
+          "e": "To Liberalna międzyrządowość: teoria Andrew Moravcsika: preferencje krajowe plus negocjacje rządów."
+        }
+      ],
+      "tasks": [
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "Spillover: efekt rozlania: integracja jednego sektora wymusza integrację sąsiednich.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            },
+            {
+              "s": "Spillover funkcjonalny: zasada głosowania, w której każde państwo może zablokować decyzję.",
+              "v": false,
+              "e": "To opis pojęcia „Jednomyślność”."
+            },
+            {
+              "s": "Spillover polityczny: elity przenoszą lojalność i oczekiwania na wspólne instytucje.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            }
+          ],
+          "e": "Pojęcia z tej lekcji w pigułce."
+        }
+      ]
+    },
+    {
+      "id": "w3",
+      "title": "Etapy integracji i unia celna",
+      "emoji": "📘",
+      "feed": [
+        {
+          "title": "Etapy integracji gospodarczej",
+          "body": "<b>Strefa wolnego handlu</b> — brak ceł między członkami, ale każdy ma własne cła wobec reszty świata.<br><br><b>Etapy integracji Balassy</b> — strefa wolnego handlu, unia celna, wspólny rynek, unia gospodarcza, unia polityczna.<br><br><b>Bela Balassa</b> — ekonomista, który opisał kolejne etapy integracji gospodarczej.<br><br><b>Unia gospodarcza i walutowa</b> — etap ze wspólną walutą i koordynacją polityki gospodarczej.<br><br><b>Integracja negatywna</b> — usuwanie barier, np. ceł, bez tworzenia wspólnych polityk."
+        },
+        {
+          "title": "Unia celna i jej skutki",
+          "body": "<b>Unia celna</b> — brak ceł wewnątrz i wspólna taryfa celna wobec państw trzecich.<br><br><b>Wspólna taryfa celna</b> — jednakowe cła wszystkich członków unii celnej na towary spoza niej.<br><br><b>Efekt kreacji handlu</b> — unia celna zastępuje droższą produkcję krajową tańszym importem od partnerów.<br><br><b>Efekt przesunięcia handlu</b> — import przesuwa się od tańszych dostawców spoza unii do droższych partnerów."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "Strefa wolnego handlu",
+          "d": "Brak ceł między członkami, ale każdy ma własne cła wobec reszty świata."
+        },
+        {
+          "t": "Etapy integracji Balassy",
+          "d": "Strefa wolnego handlu, unia celna, wspólny rynek, unia gospodarcza, unia polityczna."
+        },
+        {
+          "t": "Bela Balassa",
+          "d": "Ekonomista, który opisał kolejne etapy integracji gospodarczej."
+        },
+        {
+          "t": "Unia gospodarcza i walutowa",
+          "d": "Etap ze wspólną walutą i koordynacją polityki gospodarczej."
+        },
+        {
+          "t": "Integracja negatywna",
+          "d": "Usuwanie barier, np. ceł, bez tworzenia wspólnych polityk."
+        },
+        {
+          "t": "Unia celna",
+          "d": "Brak ceł wewnątrz i wspólna taryfa celna wobec państw trzecich."
+        },
+        {
+          "t": "Wspólna taryfa celna",
+          "d": "Jednakowe cła wszystkich członków unii celnej na towary spoza niej."
+        },
+        {
+          "t": "Efekt kreacji handlu",
+          "d": "Unia celna zastępuje droższą produkcję krajową tańszym importem od partnerów."
+        },
+        {
+          "t": "Efekt przesunięcia handlu",
+          "d": "Import przesuwa się od tańszych dostawców spoza unii do droższych partnerów."
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Które pojęcie pasuje do opisu: „Brak ceł między członkami, ale każdy ma własne cła wobec reszty świata.”",
+          "a": [
+            "Etapy integracji Balassy",
+            "Strefa wolnego handlu",
+            "Integracja negatywna",
+            "Efekt kreacji handlu"
+          ],
+          "c": 1,
+          "e": "To Strefa wolnego handlu: brak ceł między członkami, ale każdy ma własne cła wobec reszty świata."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Strefa wolnego handlu, unia celna, wspólny rynek, unia gospodarcza, unia polityczna.”",
+          "a": [
+            "Unia gospodarcza i walutowa",
+            "Wspólna taryfa celna",
+            "Etapy integracji Balassy",
+            "Strefa wolnego handlu"
+          ],
+          "c": 2,
+          "e": "To Etapy integracji Balassy: strefa wolnego handlu, unia celna, wspólny rynek, unia gospodarcza, unia polityczna."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Ekonomista, który opisał kolejne etapy integracji gospodarczej.”",
+          "a": [
+            "Unia celna",
+            "Efekt przesunięcia handlu",
+            "Unia gospodarcza i walutowa",
+            "Bela Balassa"
+          ],
+          "c": 3,
+          "e": "To Bela Balassa: ekonomista, który opisał kolejne etapy integracji gospodarczej."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Brak ceł wewnątrz i wspólna taryfa celna wobec państw trzecich.”",
+          "a": [
+            "Strefa wolnego handlu",
+            "Unia gospodarcza i walutowa",
+            "Unia celna",
+            "Efekt kreacji handlu"
+          ],
+          "c": 2,
+          "e": "To Unia celna: brak ceł wewnątrz i wspólna taryfa celna wobec państw trzecich."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Jednakowe cła wszystkich członków unii celnej na towary spoza niej.”",
+          "a": [
+            "Bela Balassa",
+            "Unia celna",
+            "Strefa wolnego handlu",
+            "Wspólna taryfa celna"
+          ],
+          "c": 3,
+          "e": "To Wspólna taryfa celna: jednakowe cła wszystkich członków unii celnej na towary spoza niej."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Unia celna zastępuje droższą produkcję krajową tańszym importem od partnerów.”",
+          "a": [
+            "Efekt kreacji handlu",
+            "Integracja negatywna",
+            "Efekt przesunięcia handlu",
+            "Bela Balassa"
+          ],
+          "c": 0,
+          "e": "To Efekt kreacji handlu: unia celna zastępuje droższą produkcję krajową tańszym importem od partnerów."
+        }
+      ],
+      "tasks": [
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "Strefa wolnego handlu: brak ceł między członkami, ale każdy ma własne cła wobec reszty świata.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            },
+            {
+              "s": "Etapy integracji Balassy: import przesuwa się od tańszych dostawców spoza unii do droższych partnerów.",
+              "v": false,
+              "e": "To opis pojęcia „Efekt przesunięcia handlu”."
+            },
+            {
+              "s": "Bela Balassa: ekonomista, który opisał kolejne etapy integracji gospodarczej.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            }
+          ],
+          "e": "Pojęcia z tej lekcji w pigułce."
+        }
+      ]
+    },
+    {
+      "id": "w4",
+      "title": "Wspólny rynek i federalizm",
+      "emoji": "📘",
+      "feed": [
+        {
+          "title": "Wspólny rynek i cztery swobody",
+          "body": "<b>Wspólny rynek</b> — unia celna plus swobodny przepływ pracy i kapitału.<br><br><b>Cztery swobody</b> — swobodny przepływ towarów, usług, osób i kapitału.<br><br><b>Jednolity Akt Europejski</b> — traktat z 1986 r., który przyspieszył budowę rynku wewnętrznego.<br><br><b>Rynek wewnętrzny</b> — obszar bez granic wewnętrznych z czterema swobodami, w UE od 1993 r.<br><br><b>Zasada wzajemnego uznawania</b> — towar legalny w jednym państwie można sprzedawać w innych."
+        },
+        {
+          "title": "Federalizm: Europa jako państwo związkowe",
+          "body": "<b>Federalizm</b> — wizja integracji jako budowy państwa związkowego z rządem ponad państwami.<br><br><b>Altiero Spinelli</b> — autor Manifestu z Ventotene, zwolennik federacji europejskiej.<br><br><b>Manifest z Ventotene</b> — tekst z 1941 r. postulujący zjednoczoną, federalną Europę.<br><br><b>Subsydiarność</b> — decyzje zapadają na najniższym poziomie, który sobie z nimi radzi."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "Wspólny rynek",
+          "d": "Unia celna plus swobodny przepływ pracy i kapitału."
+        },
+        {
+          "t": "Cztery swobody",
+          "d": "Swobodny przepływ towarów, usług, osób i kapitału."
+        },
+        {
+          "t": "Jednolity Akt Europejski",
+          "d": "Traktat z 1986 r., który przyspieszył budowę rynku wewnętrznego."
+        },
+        {
+          "t": "Rynek wewnętrzny",
+          "d": "Obszar bez granic wewnętrznych z czterema swobodami, w UE od 1993 r."
+        },
+        {
+          "t": "Zasada wzajemnego uznawania",
+          "d": "Towar legalny w jednym państwie można sprzedawać w innych."
+        },
+        {
+          "t": "Federalizm",
+          "d": "Wizja integracji jako budowy państwa związkowego z rządem ponad państwami."
+        },
+        {
+          "t": "Altiero Spinelli",
+          "d": "Autor Manifestu z Ventotene, zwolennik federacji europejskiej."
+        },
+        {
+          "t": "Manifest z Ventotene",
+          "d": "Tekst z 1941 r. postulujący zjednoczoną, federalną Europę."
+        },
+        {
+          "t": "Subsydiarność",
+          "d": "Decyzje zapadają na najniższym poziomie, który sobie z nimi radzi."
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Które pojęcie pasuje do opisu: „Unia celna plus swobodny przepływ pracy i kapitału.”",
+          "a": [
+            "Cztery swobody",
+            "Zasada wzajemnego uznawania",
+            "Manifest z Ventotene",
+            "Wspólny rynek"
+          ],
+          "c": 3,
+          "e": "To Wspólny rynek: unia celna plus swobodny przepływ pracy i kapitału."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Swobodny przepływ towarów, usług, osób i kapitału.”",
+          "a": [
+            "Cztery swobody",
+            "Rynek wewnętrzny",
+            "Altiero Spinelli",
+            "Wspólny rynek"
+          ],
+          "c": 0,
+          "e": "To Cztery swobody: swobodny przepływ towarów, usług, osób i kapitału."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Traktat z 1986 r., który przyspieszył budowę rynku wewnętrznego.”",
+          "a": [
+            "Federalizm",
+            "Jednolity Akt Europejski",
+            "Subsydiarność",
+            "Rynek wewnętrzny"
+          ],
+          "c": 1,
+          "e": "To Jednolity Akt Europejski: traktat z 1986 r., który przyspieszył budowę rynku wewnętrznego."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Wizja integracji jako budowy państwa związkowego z rządem ponad państwami.”",
+          "a": [
+            "Federalizm",
+            "Wspólny rynek",
+            "Rynek wewnętrzny",
+            "Manifest z Ventotene"
+          ],
+          "c": 0,
+          "e": "To Federalizm: wizja integracji jako budowy państwa związkowego z rządem ponad państwami."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Autor Manifestu z Ventotene, zwolennik federacji europejskiej.”",
+          "a": [
+            "Jednolity Akt Europejski",
+            "Altiero Spinelli",
+            "Federalizm",
+            "Wspólny rynek"
+          ],
+          "c": 1,
+          "e": "To Altiero Spinelli: autor Manifestu z Ventotene, zwolennik federacji europejskiej."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Tekst z 1941 r. postulujący zjednoczoną, federalną Europę.”",
+          "a": [
+            "Zasada wzajemnego uznawania",
+            "Subsydiarność",
+            "Manifest z Ventotene",
+            "Jednolity Akt Europejski"
+          ],
+          "c": 2,
+          "e": "To Manifest z Ventotene: tekst z 1941 r. postulujący zjednoczoną, federalną Europę."
+        }
+      ],
+      "tasks": [
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "Wspólny rynek: unia celna plus swobodny przepływ pracy i kapitału.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            },
+            {
+              "s": "Cztery swobody: decyzje zapadają na najniższym poziomie, który sobie z nimi radzi.",
+              "v": false,
+              "e": "To opis pojęcia „Subsydiarność”."
+            },
+            {
+              "s": "Jednolity Akt Europejski: traktat z 1986 r., który przyspieszył budowę rynku wewnętrznego.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            }
+          ],
+          "e": "Pojęcia z tej lekcji w pigułce."
+        }
+      ]
+    }
+  ],
+  "keyPoints": [
+    {
+      "id": "p1",
+      "title": "Funkcjonalizm: współpraca w konkretnych dziedzinach",
+      "short": "Funkcjonalizm",
+      "summary": "Funkcjonalizm, David Mitrany, Forma idzie za funkcją",
+      "levels": [
+        "w1"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "w1",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "w1",
+          "index": 1
+        },
+        {
+          "kind": "flashcard",
+          "level": "w1",
+          "index": 2
+        },
+        {
+          "kind": "flashcard",
+          "level": "w1",
+          "index": 3
+        },
+        {
+          "kind": "flashcard",
+          "level": "w1",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "w1",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "w1",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "w1",
+          "index": 2
+        },
+        {
+          "kind": "task",
+          "level": "w1",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "title": "Neofunkcjonalizm Ernsta Haasa",
+      "short": "Neofunkcjonalizm",
+      "summary": "Neofunkcjonalizm, Ernst Haas, EWWiS",
+      "levels": [
+        "w1"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "w1",
+          "index": 5
+        },
+        {
+          "kind": "flashcard",
+          "level": "w1",
+          "index": 6
+        },
+        {
+          "kind": "flashcard",
+          "level": "w1",
+          "index": 7
+        },
+        {
+          "kind": "flashcard",
+          "level": "w1",
+          "index": 8
+        },
+        {
+          "kind": "quiz",
+          "level": "w1",
+          "index": 3
+        },
+        {
+          "kind": "quiz",
+          "level": "w1",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "w1",
+          "index": 5
+        }
+      ]
+    },
+    {
+      "id": "p3",
+      "title": "Efekt spillover: integracja się rozlewa",
+      "short": "Efekt spillover",
+      "summary": "Spillover, Spillover funkcjonalny, Spillover polityczny",
+      "levels": [
+        "w2"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "w2",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "w2",
+          "index": 1
+        },
+        {
+          "kind": "flashcard",
+          "level": "w2",
+          "index": 2
+        },
+        {
+          "kind": "flashcard",
+          "level": "w2",
+          "index": 3
+        },
+        {
+          "kind": "flashcard",
+          "level": "w2",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "w2",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "w2",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "w2",
+          "index": 2
+        },
+        {
+          "kind": "task",
+          "level": "w2",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p4",
+      "title": "Międzyrządowość: rządy trzymają ster",
+      "short": "Międzyrządowość",
+      "summary": "Międzyrządowość, Stanley Hoffmann, Liberalna międzyrządowość",
+      "levels": [
+        "w2"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "w2",
+          "index": 5
+        },
+        {
+          "kind": "flashcard",
+          "level": "w2",
+          "index": 6
+        },
+        {
+          "kind": "flashcard",
+          "level": "w2",
+          "index": 7
+        },
+        {
+          "kind": "flashcard",
+          "level": "w2",
+          "index": 8
+        },
+        {
+          "kind": "quiz",
+          "level": "w2",
+          "index": 3
+        },
+        {
+          "kind": "quiz",
+          "level": "w2",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "w2",
+          "index": 5
+        }
+      ]
+    },
+    {
+      "id": "p5",
+      "title": "Etapy integracji gospodarczej",
+      "short": "Etapy integracji",
+      "summary": "Strefa wolnego handlu, Etapy integracji Balassy, Bela Balassa",
+      "levels": [
+        "w3"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "w3",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "w3",
+          "index": 1
+        },
+        {
+          "kind": "flashcard",
+          "level": "w3",
+          "index": 2
+        },
+        {
+          "kind": "flashcard",
+          "level": "w3",
+          "index": 3
+        },
+        {
+          "kind": "flashcard",
+          "level": "w3",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "w3",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "w3",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "w3",
+          "index": 2
+        },
+        {
+          "kind": "task",
+          "level": "w3",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p6",
+      "title": "Unia celna i jej skutki",
+      "short": "Unia celna",
+      "summary": "Unia celna, Wspólna taryfa celna, Efekt kreacji handlu",
+      "levels": [
+        "w3"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "w3",
+          "index": 5
+        },
+        {
+          "kind": "flashcard",
+          "level": "w3",
+          "index": 6
+        },
+        {
+          "kind": "flashcard",
+          "level": "w3",
+          "index": 7
+        },
+        {
+          "kind": "flashcard",
+          "level": "w3",
+          "index": 8
+        },
+        {
+          "kind": "quiz",
+          "level": "w3",
+          "index": 3
+        },
+        {
+          "kind": "quiz",
+          "level": "w3",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "w3",
+          "index": 5
+        }
+      ]
+    },
+    {
+      "id": "p7",
+      "title": "Wspólny rynek i cztery swobody",
+      "short": "Wspólny rynek",
+      "summary": "Wspólny rynek, Cztery swobody, Jednolity Akt Europejski",
+      "levels": [
+        "w4"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "w4",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "w4",
+          "index": 1
+        },
+        {
+          "kind": "flashcard",
+          "level": "w4",
+          "index": 2
+        },
+        {
+          "kind": "flashcard",
+          "level": "w4",
+          "index": 3
+        },
+        {
+          "kind": "flashcard",
+          "level": "w4",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "w4",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "w4",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "w4",
+          "index": 2
+        },
+        {
+          "kind": "task",
+          "level": "w4",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p8",
+      "title": "Federalizm: Europa jako państwo związkowe",
+      "short": "Federalizm",
+      "summary": "Federalizm, Altiero Spinelli, Manifest z Ventotene",
+      "levels": [
+        "w4"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "w4",
+          "index": 5
+        },
+        {
+          "kind": "flashcard",
+          "level": "w4",
+          "index": 6
+        },
+        {
+          "kind": "flashcard",
+          "level": "w4",
+          "index": 7
+        },
+        {
+          "kind": "flashcard",
+          "level": "w4",
+          "index": 8
+        },
+        {
+          "kind": "quiz",
+          "level": "w4",
+          "index": 3
+        },
+        {
+          "kind": "quiz",
+          "level": "w4",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "w4",
+          "index": 5
+        }
+      ]
+    }
+  ]
+}

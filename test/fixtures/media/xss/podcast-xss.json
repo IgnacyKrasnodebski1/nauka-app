@@ -1,0 +1,154 @@
+{
+  "v": 1,
+  "kind": "podcast",
+  "title": "Podcast <img src=x onerror=\"window.__pwned=1\"> 🔥",
+  "topicId": "TOPIC",
+  "estSec": 1600,
+  "files": {"script":"script.json"},
+  "chapters": [
+    {
+      "n": 1,
+      "title": "Rozdział <svg onload=window.__pwned=1>",
+      "pointIds": ["p1","p2"],
+      "levelIds": ["l1"],
+      "estSec": 190,
+      "durSec": 11.16,
+      "status": "ready",
+      "pauses": [
+        {
+          "afterLine": 1,
+          "quizRef": {"level":"l1","index":1},
+          "pointId": "p1",
+          "lead": "Szop <img src=x onerror=\"window.__pwned=1\"> się myli 🔥"
+        }
+      ],
+      "files": {"audio":"c1.mp3","timing":"c1.json"}
+    },
+    {
+      "n": 2,
+      "title": "<svg onload=window.__pwned=1>",
+      "pointIds": ["p3","p5"],
+      "levelIds": ["l2"],
+      "estSec": 205,
+      "durSec": 32.376,
+      "status": "<b>ready</b>",
+      "pauses": [
+        {
+          "afterLine": 3,
+          "quizRef": {"level":"l2","index":6},
+          "pointId": "p5",
+          "lead": "Szop twierdzi, że w kryzysie płatniczym pomaga Bank Światowy. Kogo powinien był wymienić?"
+        }
+      ],
+      "files": {"audio":"c2.mp3","timing":"c2.json"}
+    },
+    {
+      "n": 3,
+      "title": "Handel i inwestycje",
+      "pointIds": ["p4"],
+      "levelIds": ["l2"],
+      "estSec": 200,
+      "durSec": null,
+      "status": "script",
+      "pauses": [
+        {
+          "afterLine": 1,
+          "quizRef": {"level":"l2","index":3},
+          "pointId": "p4",
+          "lead": "Szop myśli, że każdy kraj powinien robić wszystko sam. Co mówi przewaga komparatywna?"
+        }
+      ],
+      "files": {"audio":"../x.mp3","timing":"javascript:1"}
+    },
+    {
+      "n": 4,
+      "title": "Państwo i suwerenność",
+      "pointIds": ["p6"],
+      "levelIds": ["l3"],
+      "estSec": 210,
+      "durSec": null,
+      "status": "script",
+      "pauses": [
+        {
+          "afterLine": 1,
+          "quizRef": {"level":"l3","index":0},
+          "pointId": "p6",
+          "lead": "Szop dorzucił flagę do elementów państwa. Jakie są naprawdę?"
+        }
+      ],
+      "files": null
+    },
+    {
+      "n": 5,
+      "title": "ONZ i WTO",
+      "pointIds": ["p7","p8"],
+      "levelIds": ["l3"],
+      "estSec": 195,
+      "durSec": null,
+      "status": "script",
+      "pauses": [
+        {
+          "afterLine": 1,
+          "quizRef": {"level":"l3","index":3},
+          "pointId": "p7",
+          "lead": "Szop twierdzi, że sankcje nakłada Zgromadzenie Ogólne. Kto naprawdę?"
+        }
+      ],
+      "files": null
+    },
+    {
+      "n": 6,
+      "title": "MFW i Bank Światowy",
+      "pointIds": ["p9","p10"],
+      "levelIds": ["l3"],
+      "estSec": 200,
+      "durSec": null,
+      "status": "script",
+      "pauses": [
+        {
+          "afterLine": 1,
+          "quizRef": {"level":"l3","index":9},
+          "pointId": "p10",
+          "lead": "Szop pomieszał MFW z Bankiem Światowym. Kto finansuje drogi i szkoły?"
+        }
+      ],
+      "files": null
+    },
+    {
+      "n": 7,
+      "title": "Korporacje transnarodowe",
+      "pointIds": ["p11"],
+      "levelIds": ["l4"],
+      "estSec": 205,
+      "durSec": null,
+      "status": "script",
+      "pauses": [
+        {
+          "afterLine": 1,
+          "quizRef": {"level":"l4","index":1},
+          "pointId": "p11",
+          "lead": "Szop twierdzi, że polityka korporacji nie dotyczy. Jak jest naprawdę?"
+        }
+      ],
+      "files": null
+    },
+    {
+      "n": 8,
+      "title": "Unia Europejska i NGO",
+      "pointIds": ["p12","p13"],
+      "levelIds": ["l4"],
+      "estSec": 195,
+      "durSec": null,
+      "status": "script",
+      "pauses": [
+        {
+          "afterLine": 1,
+          "quizRef": {"level":"l4","index":7},
+          "pointId": "p13",
+          "lead": "Szop myśli, że NGO to agenda rządu. Czym różni się od organizacji międzyrządowej?"
+        }
+      ],
+      "files": null
+    }
+  ]
+}

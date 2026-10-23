@@ -1,0 +1,52 @@
+{
+  "title": "Kto jest kim: ONZ, WTO, MFW i Bank Światowy",
+  "cover": { "title": "Kto pożycza, a kto buduje drogi?", "sub": "Kto jest kim · pytanie na końcu" },
+  "maxLabels": 2,
+  "audio": { "src": "r2.mp3", "words": "r2.words.json", "rate": 1.15 },
+  "camDur": 0.95,
+  "world": {
+    "seed": 44,
+    "stations": [
+      { "id": "mfw", "kind": "vault", "label": "MFW", "x": -1.2, "y": -0.6, "color": "#2F6BFF" },
+      { "id": "bank", "kind": "school", "label": "Bank Światowy", "x": 2.6, "y": 2.4, "color": "#1F8A5B" },
+      { "id": "wto", "kind": "hall", "label": "WTO", "x": -0.6, "y": 5.0, "color": "#E9A23B" },
+      { "id": "kraj", "kind": "flag", "label": "Kraj w kryzysie", "x": -4.8, "y": -3.6 }
+    ],
+    "roads": [["kraj", "mfw"], ["mfw", "bank"], ["bank", "wto"], ["mfw", "wto"]]
+  },
+  "scenes": [
+    {
+      "say": "Kryzys? Kraj nie ma czym zapłacić za import. Do kogo dzwoni?",
+      "tts": "[excited] Kryzys? Kraj nie ma czym zapłacić za import. [short pause] Do kogo dzwoni?",
+      "cam": { "to": "kraj", "zoom": 2.0, "y": 0.56 },
+      "actions": [
+        { "type": "label", "at": "kraj", "text": "brak waluty", "on": "zapłacić" },
+        { "type": "fox", "pose": "think", "side": "left", "on": "Do", "dur": 1.4 }
+      ]
+    },
+    {
+      "say": "MFW pożycza państwom w kryzysie płatniczym. Bank Światowy? On buduje drogi i szkoły.",
+      "tts": "MFW POŻYCZA państwom w kryzysie płatniczym. [sarcastic] Bank Światowy? On buduje drogi i szkoły.",
+      "cam": { "to": "mfw", "zoom": 2.0, "y": 0.56 },
+      "actions": [
+        { "type": "chapter", "n": 2, "text": "Kto pożycza w kryzysie", "on": "MFW" },
+        { "type": "label", "at": "mfw", "text": "MFW", "on": "MFW", "style": "accent" },
+        { "type": "packet", "from": "mfw", "to": "kraj", "on": "pożycza", "n": 3, "style": "coin" },
+        { "type": "card", "at": "bank", "title": "Kto co robi", "lines": ["MFW: ratunek w kryzysie", { "t": "Bank Światowy: rozwój", "on": "Bank" }], "on": "Bank", "dx": 70, "dy": -110 },
+        { "type": "cam", "on": "Bank", "to": ["mfw", "bank"], "zoom": "fit", "y": 0.52, "dur": 0.55 }
+      ]
+    },
+    {
+      "say": "A WTO pilnuje zasad handlu. Trzy organizacje, trzy zadania. Zapamiętaj!",
+      "tts": "A WTO pilnuje zasad handlu. [excited] Trzy organizacje, TRZY zadania. Zapamiętaj!",
+      "cam": { "to": "wto", "zoom": 2.0, "y": 0.56 },
+      "hold": 0.4,
+      "actions": [
+        { "type": "label", "at": "wto", "text": "WTO: zasady handlu", "on": "WTO" },
+        { "type": "highlight", "at": "wto", "on": "zasad" },
+        { "type": "cam", "on": "Trzy", "to": ["mfw", "bank", "wto"], "zoom": "fit", "y": 0.5, "dur": 0.6 },
+        { "type": "fox", "pose": "celebrate", "side": "right", "on": "Zapamiętaj", "dur": 1.6 }
+      ]
+    }
+  ]
+}

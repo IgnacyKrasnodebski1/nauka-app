@@ -2,7 +2,7 @@
 /* ============================================================
    build.js — składa jednoplikową apkę (to ją pakuje Capacitor: native/www/index.html)
    Użycie:  node build.js
-   Wynik:   build/nauka-all.html  (konfiguracja chmury + chmura + silnik + UI chmury, style i fonty w środku)
+   Wynik:   build/nauka-all.html  (konfiguracja chmury + chmura + silnik + media + UI chmury, style i fonty w środku)
    Przedmioty nie są już wbudowane — przychodzą z konta (cloud.js). CSP: tylko nasze skrypty (hashe), połączenia tylko do Supabase i API,
    fonty tylko z data: (fonts/*.ttf → WOFF w base64; bez Google Fonts — działa offline i nie wysyła IP do Google).
    ============================================================ */
@@ -56,8 +56,12 @@ const fontsCss = (() => {
   return out;
 })();
 
-const css = read('styles.css');
-const scripts = ['cloud-config.js', 'cloud.js', 'engine.js', 'cloud-ui.js'].map(read);
+/* plan-media §4.2: media.js (rolki, podcast, rozmowa z lisem) między silnikiem a UI chmury; media.css doklejony do styles.css.
+   Brak pliku = ostrzeżenie (apka działa bez mediów: centrum chowa rolki, podcast i rozmowę, gdy nie ma window.NaukaMedia). */
+const optional = f => { if (fs.existsSync(path.join(ROOT, f))) return read(f); console.warn('UWAGA: brak ' + f + ' — build bez rolek, podcastu i rozmowy z lisem.'); return null; };
+const mediaCss = optional('media.css');
+const css = read('styles.css') + (mediaCss ? '\n' + mediaCss : '');
+const scripts = ['cloud-config.js', 'cloud.js', 'engine.js', 'media.js', 'cloud-ui.js'].map(f => f === 'media.js' ? optional(f) : read(f)).filter(s => s != null);
 const cfg = (() => { const w = {}; require('vm').runInNewContext(scripts[0], { window: w }); return w.CRAMFOX_CONFIG || {}; })();
 if (!cfg.anonKey || /__SUPABASE_ANON_KEY__/.test(cfg.anonKey)) console.warn('UWAGA: brak klucza anon w cloud-config.js — logowanie nie zadziała.');
 const missing = ['privacyUrl', 'termsUrl', 'supportEmail'].filter(k => !cfg[k]);
@@ -73,6 +77,7 @@ const csp = [
   "style-src 'unsafe-inline'",
   "font-src data:",
   "img-src 'self' data: blob:",
+  "media-src blob:", // audio rolek i podcastu: Blob z prywatnego bucketu (cloud.js mediaBlob) — nic z zewnątrz
   `connect-src 'self' ${origin(cfg.supabaseUrl)} ${origin(cfg.apiUrl)}`,
   "base-uri 'none'", "form-action 'none'", "object-src 'none'"
 ].join('; ');

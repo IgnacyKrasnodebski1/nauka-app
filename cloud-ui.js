@@ -37,14 +37,27 @@ window.NAUKA_BOOT=async function(start){
   boot();
   refreshInBackground();
 };
-function boot(){E().setSubjects(C.toEngine());started=true;startFn();if(C.storeFull())storeBar(true);}
+function boot(){E().setSubjects(C.toEngine());if(E().setMedia)E().setMedia(C.mediaCached());started=true;startFn();if(C.storeFull())storeBar(true);} // rejestr mediów z pamięci podręcznej przed planem dnia (wiersz „Rolki — …”)
 function withTimeout(p,ms){return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new C.CloudError(0,'timeout','timeout')),ms))]);}
 function safeToRerender(){const e=E();return !!e&&MAIN.has(e.view)&&!e.current&&!document.getElementById('sheet')&&!document.querySelector('.lesson.open');}
 async function refreshInBackground(){
   try{await C.fetchAll();E().setSubjects(C.toEngine());if(safeToRerender())E().go(E().view);}catch(e){}
   if(C.job()&&!genRun)recover(false);
   refreshQuota(); // limit znany, zanim ktoś stuknie „Zrób zdjęcie” (aparat musi się otworzyć w tym samym dotknięciu)
+  refreshMedia();
 }
+/* rolki i podcast (plan-media §4.6): lista wierszy media → rejestr silnika, odpytywanie wierszy w toku; bez 0010 lista jest pusta */
+async function refreshMedia(){try{await C.mediaList();}catch(e){}pushMedia();C.mediaWatch();}
+const pushMedia=()=>{try{if(started&&E().setMedia)E().setMedia(C.mediaCached());}catch(e){}};
+C.on('media',()=>pushMedia());
+C.on('mediaReady',row=>{pushMedia();if(!row)return;const nm=topicShortOf(row.topic_id);const reels=row.kind==='reels',M=()=>window.NaukaMedia;
+  actionToast(reels?`Rolki z „${nm}” są gotowe. Stuknij, żeby obejrzeć.`:`Podcast z „${nm}” jest gotowy. Stuknij, żeby posłuchać.`,reels?'star':'check',()=>{const m=M();if(!m)return;
+    if(reels&&typeof m.openReels==='function')m.openReels(row.subject_id,row.topic_id,{mediaId:row.id});else if(!reels&&typeof m.openPodcast==='function')m.openPodcast(row.subject_id,row.topic_id,{mediaId:row.id});});});
+C.on('mediaFailed',row=>{pushMedia();if(!row)return;const what=row.kind==='reels'?'rolek':'podcastu'; // design-centrum §6: bez zużycia przy błędzie po naszej stronie (charged:false)
+  try{E().notify(row.charged?`Nie udało się przygotować ${what}. Ta próba zużyła jedno tworzenie.`:`Nie udało się przygotować ${what}. To błąd po naszej stronie i nie zużył tworzenia.`,'alert');}catch(e){}});
+function topicShortOf(topicId){ // „Wykład 3” z „Wykład 3: teorie integracji” — jak nagłówek materiału w silniku (zwykły tekst, toast wstawia go przez textContent)
+  for(const s of E().subjects()){const t=(s.topics||[]).find(x=>x.id===topicId);if(t){const n=E().txt(t.name).replace(/\s+/g,' ').trim(),c=n.indexOf(':');const r=c>1&&c<=28?n.slice(0,c):n;return r.length>26?r.slice(0,25).trimEnd()+'…':r;}}
+  return 'materiału';}
 setInterval(()=>{if(started&&C.hasPending()&&safeToRerender())C.applyPending().catch(()=>{});},3000); // zmiany z innego urządzenia, które przyszły w trakcie lekcji
 C.on('signedout',()=>{note('Sesja wygasła — zaloguj się ponownie.');if(started)location.reload();}); // przed startem NAUKA_BOOT sam pokaże logowanie (zakładka „Zaloguj się”, dane lokalne zostają)
 C.on('store',x=>storeBar(!!(x&&x.full)));
@@ -58,7 +71,7 @@ function onResume(){ // powrót z tła: najpierw zmiany z chmury; silnik czeka n
   if(resumeP&&Date.now()-lastResume<5000)return resumeP;lastResume=Date.now();
   resumeP=(async()=>{
     try{await C.pull();}catch(e){}
-    refreshQuota();
+    refreshQuota();refreshMedia();
     if(C.job()&&(!genRun||genRun.phase==='offline'))recover(E().view==='cfgen');
   })();
   return resumeP;
@@ -230,7 +243,12 @@ window.NAUKA_HOOKS={
   addPhoto:into=>startAdd('photo',into),
   addFile:into=>startAdd('file',into),
   addText:into=>startAdd('text',into),
-  resume:()=>onResume()                    // zmiana dnia po powrocie z tła: silnik czeka na pull (maks. 5 s), zanim zużyje zamrożenie serii
+  resume:()=>onResume(),                   // zmiana dnia po powrocie z tła: silnik czeka na pull (maks. 5 s), zanim zużyje zamrożenie serii
+  quotaLine:()=>hubQuotaLine(),            // Centrum-Nowy: „Darmowe tworzenie lekcji: zostało 1 z 2” (tylko plan darmowy)
+  subjectEdit:sid=>{subjectEdit(sid);return true;},   // centrum „…”: zmień nazwę i kolor
+  subjectDelete:sid=>{subjectDelete(sid);return true;},
+  topicRename:(sid,tid)=>{topicRename(sid,tid);return true;},
+  topicDelete:(sid,tid)=>{topicDelete(sid,tid);return true;}
 };
 
 /* ---------- ustawienia: konto, zgoda na AI, pomoc ---------- */
@@ -330,7 +348,7 @@ function quotaOf(m){ // {scope, limit, used, left, files, maxMb, renew, trial, t
   return {scope:'month',limit,used:Math.min(used,limit),left:Math.max(0,limit-used),files,maxMb,renew:renewText(),trial:trialText(m.trialUntil),trialAt:trialAt(m.trialUntil),freeN:null,closed:false};
 }
 const quotaNow=()=>quotaOf(C.meCached(600000)); // do blokady przed aparatem tylko świeży odczyt (≤ 10 min); starszy = sprawdzi TWÓRZ i serwer
-const refreshQuota=()=>C.me({maxAge:60000}).then(quotaOf).catch(()=>null);
+const refreshQuota=()=>C.me({maxAge:60000}).then(v=>{pushMedia();return quotaOf(v);}).catch(()=>null); // po odpowiedzi /api/me centrum przerysowuje zaproszenia (features, media.remaining)
 const blocked=q=>!!q&&(q.left<=0||q.closed); // nowej lekcji nie da się teraz utworzyć
 function usedUp(n){ // darmowe lekcje wykorzystane — liczba z serwera (app_config), zwykle 2
   n=+n;if(!Number.isFinite(n))return 'Wykorzystano darmowe lekcje';if(n<=0)return 'Tworzenie nowych lekcji jest teraz niedostępne';
@@ -489,7 +507,7 @@ function renderAdd(){
     const ini=sub&&typeof E().subjInitials==='function'?E().subjInitials({name:esc(sub.name)}):''; // inicjały escapowane przez silnik
     b.innerHTML=(ini?'<div class="mono solid xs" aria-hidden="true">'+ini+'</div>':'')+'<div class="grow"><div class="t nm"></div><div class="s"></div></div><span class="ck">'+(draft.into===id?E().icon('check',{size:16,stroke:4}):'')+'</span>';$('.t',b).textContent=t;$('.s',b).textContent=s;
     b.onclick=()=>{draft.into=id;renderAdd();};return b;};
-  subs.forEach(s=>list.appendChild(opt(s.id,s.name,s.topics?'jako nowe poziomy na końcu ścieżki':'pusty przedmiot',s)));
+  subs.forEach(s=>list.appendChild(opt(s.id,s.name,s.topics?`jako nowy materiał — rozdział ${String(s.topics+1).padStart(2,'0')}`:'pusty przedmiot',s)));
   list.appendChild(opt(null,'Nowy przedmiot','nazwę podpowie AI, możesz ją zmienić'));
   if(draft.into===null){const nm=document.createElement('input');nm.className='cfin';nm.placeholder='Nazwa (opcjonalnie), np. Biologia';nm.maxLength=60;nm.value=draft.name||'';nm.oninput=()=>{draft.name=nm.value;};box.appendChild(nm);}
   box.appendChild(eb('Na czym się skupić? (opcjonalnie)'));
@@ -730,13 +748,7 @@ let readyState=null;
 function startFirstLevel(sid,lv){ // „ZACZNIJ NAUKĘ”: od razu pierwszy poziom nowego materiału
   const e=E();
   if(lv&&typeof e.openLevel==='function'){try{e.openLevel(sid,lv.id);return;}catch(x){}}
-  e.openSubject(sid,'path');if(!lv)return;
-  try{ // bez API silnika: przycisk węzła tego poziomu na ścieżce (etykieta „Zacznij: …”); przy kilku poziomach o tym samym tytule — ten na tej samej pozycji
-    const s=e.subjects().find(x=>x.id===sid);const name=l=>e.txt(e.noEmoji(l.title));const want=name(lv);
-    const k=s?s.levels.filter(l=>name(l)===want).indexOf(lv):0;
-    const btns=[...document.querySelectorAll('.nodebtn')].filter(b=>/: /.test(b.getAttribute('aria-label')||'')&&(b.getAttribute('aria-label')||'').split(': ').slice(1).join(': ')===want);
-    const b=btns[Math.max(0,k)];if(b&&!/node-lock/.test(b.className))b.click();
-  }catch(x){}
+  e.openSubject(sid,'hub'); // starszy silnik bez openLevel: samo centrum przedmiotu
 }
 function renderReady(){
   const rs=readyState;const s=rs&&E().subjects().find(x=>x.id===rs.sid);if(!s)return E().go('today');
@@ -759,8 +771,41 @@ function renderReady(){
   async function save(p){try{await C.updateSubject(s.id,p);E().setSubjects(C.toEngine());}catch(e){toastSafe('Nie udało się zapisać zmiany — sprawdź połączenie','wifi');}}
   const foot=footer(scroll,'col');
   const go=document.createElement('button');go.className='pill a-glow';go.textContent='ZACZNIJ NAUKĘ';go.onclick=()=>{const fresh=E().subjects().find(x=>x.id===s.id)||s;startFirstLevel(s.id,fresh.levels.find(l=>l.topicId===rs.topicId)||lv[0]);};
+  const see=document.createElement('button');see.className='pill text';see.id='cfr-see';see.textContent='Zobacz przedmiot';see.onclick=()=>E().openSubject(s.id,'hub'); // Centrum-Nowy
   const test=document.createElement('button');test.className='pill text';test.textContent='Mam z tego sprawdzian';test.onclick=()=>E().openTestSheet(s.id);
-  foot.appendChild(go);foot.appendChild(test);
+  foot.appendChild(go);foot.appendChild(see);foot.appendChild(test);
+}
+
+/* ---------- centrum przedmiotu: menu „…” (zmień nazwę i kolor, usuń przedmiot, zmień nazwę materiału, usuń materiał) ---------- */
+function hubQuotaLine(){const q=quotaNow()||quotaOf(C.meCached());if(!q||q.scope!=='lifetime')return '';
+  return q.left>0?`Darmowe tworzenie lekcji: zostało ${xOfY(q.left,q.limit)}`:`${usedUp(q.limit)}. ${keepLearning()}`;}
+function rerender(){try{E().setSubjects(C.toEngine());if(typeof E().rerender==='function')E().rerender();}catch(x){}}
+function editSheet(o){ // arkusz z polem nazwy (i kolorem): o={title, value, max, colors, color, save:async({name,color})}
+  const e=E();const sh=e.openSheet('cfedit',`<div class="shandle"></div><div class="shead"><div class="st2"></div><button class="backbtn sclose" id="cfe-x" aria-label="Zamknij">${e.icon('close',{size:18,stroke:3})}</button></div>
+    <input class="cfin" id="cfe-name"><div class="cfcolors" id="cfe-col"></div><button class="pill" id="cfe-ok" data-primary>ZAPISZ</button>`);
+  e.sheetBack();document.getElementById('sheetback').onclick=e.closeSheet;$('#cfe-x',sh).onclick=e.closeSheet;
+  $('.st2',sh).textContent=o.title;const nm=$('#cfe-name',sh);nm.maxLength=o.max||60;nm.value=o.value||'';let col=o.color;
+  const cs=$('#cfe-col',sh);if(o.colors){C.PALETTE.forEach((p,i)=>{const b=document.createElement('button');b.className='cfcolor'+(i===col?' on':'');b.style.background=p[0];b.setAttribute('aria-label','Kolor '+(i+1));
+    b.onclick=()=>{col=i;cs.querySelectorAll('.cfcolor').forEach(x=>x.classList.remove('on'));b.classList.add('on');};cs.appendChild(b);});}else cs.remove();
+  const ok=$('#cfe-ok',sh);ok.onclick=async()=>{const v=nm.value.replace(/\s+/g,' ').trim();if(!v){toastSafe('Wpisz nazwę','alert');return;}ok.disabled=true;
+    try{await o.save({name:v,color:col});e.closeSheet();toastSafe('Zapisane','check');rerender();}catch(x){ok.disabled=false;toastSafe(x&&x.code==='network'?'Brak połączenia — zmiana się nie zapisała':'Nie udało się zapisać zmiany','wifi');}};
+  setTimeout(()=>{try{nm.focus();}catch(x){}},80);
+}
+function subjectEdit(sid){const s=E().subjects().find(x=>x.id===sid);if(!s)return;
+  editSheet({title:'Nazwa i kolor przedmiotu',value:C.subjectName(sid),max:60,colors:true,color:Math.max(0,C.PALETTE.findIndex(p=>p[0]===s.accent)),save:o=>C.updateSubject(sid,{name:o.name,color:o.color})});}
+async function subjectDelete(sid){
+  const nm=C.subjectName(sid)||'ten przedmiot';
+  if(!await ask({title:'Usunąć przedmiot?',text:`„${nm}” zniknie razem z materiałami, lekcjami, rolkami i podcastem. Tego nie da się cofnąć.`,ok:'Usuń',danger:true}))return;
+  try{await C.deleteSubject(sid);E().setSubjects(C.toEngine());toastSafe('Przedmiot usunięty','check');E().go('subjects');}
+  catch(x){toastSafe(x&&x.code==='network'?'Brak połączenia — przedmiot nie został usunięty':'Nie udało się usunąć przedmiotu','alert');}
+}
+function topicRename(sid,tid){const s=E().subjects().find(x=>x.id===sid),t=s&&(s.topics||[]).find(x=>x.id===tid);if(!t)return;
+  editSheet({title:'Nazwa materiału',value:E().txt(t.name),max:120,save:o=>C.renameTopic(tid,o.name)});}
+async function topicDelete(sid,tid){
+  const s=E().subjects().find(x=>x.id===sid),t=s&&(s.topics||[]).find(x=>x.id===tid);if(!t)return;const last=(s.topics||[]).length<=1;
+  if(!await ask({title:'Usunąć materiał?',text:`„${E().txt(t.name)}” zniknie razem z lekcjami, rolkami i podcastem.${last?' To ostatni materiał — przedmiot też zniknie.':''} Tego nie da się cofnąć.`,ok:'Usuń',danger:true}))return;
+  try{await C.deleteTopic(tid);E().setSubjects(C.toEngine());toastSafe('Materiał usunięty','check');if(last)E().go('subjects');else E().openSubject(sid,'hub');}
+  catch(x){toastSafe(x&&x.code==='network'?'Brak połączenia — materiał nie został usunięty':'Nie udało się usunąć materiału','alert');}
 }
 
 function registerViews(){const R=E().registerView;R('cfadd',renderAdd);R('cfgen',renderGen);R('cfready',renderReady);}

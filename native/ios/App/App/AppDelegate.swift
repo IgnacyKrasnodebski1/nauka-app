@@ -1,4 +1,5 @@
 import UIKit
+import AVFoundation
 import Capacitor
 
 @UIApplicationMain
@@ -7,7 +8,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     var window: UIWindow?
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
-        // Override point for customization after application launch.
+        // Podcast z lisem i szopem (docs/plan-media.md §6.3): dźwięk z <audio> w WebView gra dalej przy zablokowanym ekranie
+        // i w tle (wymaga też UIBackgroundModes = audio w Info.plist). Tryb spokenAudio: system traktuje to jak mowę (podcast).
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio)
+        } catch {
+            NSLog("Cramfox: AVAudioSession setCategory failed: \(error.localizedDescription)")
+        }
         return true
     }
 

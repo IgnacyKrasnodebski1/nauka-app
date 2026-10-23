@@ -1,0 +1,131 @@
+{
+  "v": 1,
+  "duration": 36,
+  "lines": [
+    {
+      "i": 0,
+      "s": "lis",
+      "start": 0.2,
+      "end": 6.393,
+      "words": [
+        {"w":"Cześć!","start":0.2,"end":0.527},
+        {"w":"Dziś","start":0.875,"end":1.153},
+        {"w":"rozbieramy","start":1.177,"end":1.747},
+        {"w":"na","start":1.797,"end":1.977},
+        {"w":"części","start":1.993,"end":2.368},
+        {"w":"MSGiP,","start":2.401,"end":2.728},
+        {"w":"czyli","start":2.936,"end":3.263},
+        {"w":"międzynarodowe","start":3.291,"end":4.056},
+        {"w":"stosunki","start":4.123,"end":4.596},
+        {"w":"gospodarcze","start":4.637,"end":5.256},
+        {"w":"i","start":5.31,"end":5.442},
+        {"w":"polityczne.","start":5.453,"end":6.023}
+      ]
+    },
+    {
+      "i": 1,
+      "s": "szop",
+      "start": 6.843,
+      "end": 12.516,
+      "words": [
+        {"w":"Ja","start":6.843,"end":7.023},
+        {"w":"wiem,","start":7.039,"end":7.317},
+        {"w":"ja","start":7.521,"end":7.701},
+        {"w":"wiem!","start":7.717,"end":7.995},
+        {"w":"MSG","start":8.339,"end":8.568},
+        {"w":"i","start":8.588,"end":8.72},
+        {"w":"MSP","start":8.731,"end":8.96},
+        {"w":"to","start":8.98,"end":9.16},
+        {"w":"dokładnie","start":9.176,"end":9.698},
+        {"w":"to","start":9.743,"end":9.923},
+        {"w":"samo,","start":9.939,"end":10.217},
+        {"w":"tylko","start":10.421,"end":10.748},
+        {"w":"ktoś","start":10.776,"end":11.054},
+        {"w":"lubi","start":11.078,"end":11.356},
+        {"w":"długie","start":11.38,"end":11.755},
+        {"w":"skróty.","start":11.788,"end":12.163}
+      ]
+    },
+    {
+      "i": 2,
+      "s": "lis",
+      "start": 12.966,
+      "end": 19.54,
+      "words": [
+        {"w":"Nie","start":12.966,"end":13.195},
+        {"w":"do","start":13.215,"end":13.395},
+        {"w":"końca.","start":13.411,"end":13.738},
+        {"w":"MSG","start":14.086,"end":14.315},
+        {"w":"to","start":14.335,"end":14.515},
+        {"w":"wymiana","start":14.531,"end":14.955},
+        {"w":"gospodarcza","start":14.992,"end":15.611},
+        {"w":"ponad","start":15.665,"end":15.992},
+        {"w":"granicami:","start":16.02,"end":16.542},
+        {"w":"towary,","start":16.767,"end":17.142},
+        {"w":"usługi,","start":17.355,"end":17.73},
+        {"w":"kapitał","start":17.943,"end":18.367},
+        {"w":"i","start":18.404,"end":18.536},
+        {"w":"technologie.","start":18.547,"end":19.166}
+      ]
+    },
+    {
+      "i": 3,
+      "s": "lis",
+      "start": 19.99,
+      "end": 25.907,
+      "words": [
+        {"w":"A","start":19.99,"end":20.122},
+        {"w":"MSP","start":20.133,"end":20.362},
+        {"w":"to","start":20.382,"end":20.562},
+        {"w":"władza,","start":20.578,"end":20.953},
+        {"w":"bezpieczeństwo","start":21.166,"end":21.931},
+        {"w":"i","start":21.998,"end":22.13},
+        {"w":"dyplomacja.","start":22.141,"end":22.711},
+        {"w":"Przenikają","start":23.081,"end":23.651},
+        {"w":"się,","start":23.701,"end":23.93},
+        {"w":"ale","start":24.13,"end":24.359},
+        {"w":"patrzą","start":24.379,"end":24.754},
+        {"w":"na","start":24.787,"end":24.967},
+        {"w":"co","start":24.983,"end":25.163},
+        {"w":"innego.","start":25.179,"end":25.554}
+      ]
+    },
+    {
+      "i": 4,
+      "s": "szop",
+      "start": 26.357,
+      "end": 29.072,
+      "words": [
+        {"w":"Czyli","start":26.357,"end":26.684},
+        {"w":"sankcje","start":26.712,"end":27.136},
+        {"w":"to","start":27.173,"end":27.353},
+        {"w":"gospodarka","start":27.369,"end":27.939},
+        {"w":"czy","start":27.989,"end":28.218},
+        {"w":"polityka?","start":28.238,"end":28.711}
+      ]
+    },
+    {
+      "i": 5,
+      "s": "lis",
+      "start": 29.522,
+      "end": 35.259,
+      "words": [
+        {"w":"Jedno","start":29.522,"end":29.849},
+        {"w":"i","start":29.877,"end":30.009},
+        {"w":"drugie:","start":30.02,"end":30.395},
+        {"w":"cel","start":30.608,"end":30.837},
+        {"w":"polityczny,","start":30.857,"end":31.427},
+        {"w":"narzędzie","start":31.657,"end":32.179},
+        {"w":"gospodarcze.","start":32.224,"end":32.843},
+        {"w":"Dlatego","start":33.217,"end":33.641},
+        {"w":"uczymy","start":33.678,"end":34.053},
+        {"w":"się","start":34.086,"end":34.315},
+        {"w":"ich","start":34.335,"end":34.564},
+        {"w":"razem.","start":34.584,"end":34.911}
+      ]
+    }
+  ],
+  "pauses": [
+    {"afterLine":1,"at":12.516}
+  ]
+}

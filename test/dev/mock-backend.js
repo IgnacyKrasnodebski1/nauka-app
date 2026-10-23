@@ -55,8 +55,41 @@
                               nowe konta (rejestracja) są od razu free, bez okresu próbnego
      weekly=1                 seeded: podsumowanie tygodnia jeszcze niepokazane (w poniedziałek pojawi się na starcie)
      log=1                    każde żądanie w console.debug
+
+   Centrum przedmiotu, rolki, podcast, rozmowa z lisem (docs/plan-media.md §2, §6.5; spec docs/design-centrum.md §3):
+     mock=msgip               konto testowe z przedmiotem „Międzynarodowe stosunki gospodarcze i polityczne” (MSGiP), plan free,
+                              materiały 01–03 z test/fixtures/topic-msgip*.json (keyPoints), postępy jak w spec §3 (materiał 01: U 6 · W 2 · R 2 · N 3,
+                              przedmiot: 27 punktów U 8 · W 4 · R 2 · N 13, Powtórka 12 na dziś, próbny 64%, gotowość 40%, seria 5, 1 240 XP, 85 gemów)
+     msgip=mid|new|known      mid (domyślnie): Main — lekcja 4 przerwana (część 2 z 4), sprawdzian za 6 dni, rolki 01 gotowe (2/5 obejrzane),
+                              podcast 01 gotowy (rozdziały 1–2 nagrane), rolki 02 w przygotowaniu; new: Centrum-Nowy (tylko materiał 01, zero postępów,
+                              bez daty, bez mediów); known: wszystkie punkty „Umiem”, wszystkie lekcje zrobione (NA TERAZ = egzamin ustny)
+     exam=N|none              sprawdzian za N dni (0 = dziś → rozgrzewka, 1 = jutro → noc przed sprawdzianem); none = bez daty
+     lsave=0                  mid: bez przerwanej lekcji (NA TERAZ = „Odzyskaj 2 punkty od Szopa”)
+     media=none|ready|running|failed  wiersze tabeli media na starcie (msgip): ready = rolki + podcast materiału 01; running = ready + rolki 02
+                              w toku (krok „voice” 2/5; domyślnie dla mid); failed = ready + nieudane rolki 02 (zwrócone, charged:false)
+     mrun=N                   rolki 02 z media=running kończą się po ok. N s (domyślnie stoją w miejscu)
+     mediagen=fast|slow:N|fail:KOD[:N]  POST /api/media/reels|podcast: 202 od razu, potem wiersz idzie plan → script → voice → save → ready
+                              w ok. 4 s (fast) albo N s; fail:KOD = na końcu status failed z error „KOD:…” (zwrot tworzenia; refusal — bez zwrotu)
+     mediaerr=KOD[:x]         wymuszona odpowiedź POST mediów: busy · limit_reached:lifetime|month|daily|global · tts_unavailable ·
+                              voices_missing · ai_unavailable · media_unavailable · reserve_failed · no_quiz · bad_point ·
+                              unknown (wiersz powstaje, odpowiedź ginie — brak sieci) · unknown:html (504 bez JSON). Zawsze charged:false.
+     mediafx=xss              rolki i podcast z próbami XSS (test/fixtures/media/xss/*)
+     mq=N, mplan=free|pro     ile tworzeń rolek/podcastu zostało (free: 3 na zawsze, pro: 30 w miesiącu — app_config free_media_lifetime / pro_media_month)
+     reels=0                  backend bez ELEVENLABS_API_KEY: features.reels/podcast = false, POST mediów → 503 tts_unavailable
+     voices=0                 brak ELEVENLABS_VOICE_FOX/SZOP: features.podcast = false, podcast i rozdział → 503 voices_missing
+     fox=0                    rozmowa z lisem wyłączona: features.fox = false, /api/fox → 503 ai_unavailable
+     chat=N                   ile wiadomości do lisa zostało dziś (free 30, pro 200 — app_config free_chat_daily / pro_chat_daily)
+     foxerr=KOD               wymuszona odpowiedź /api/fox: ai_unavailable · fox_failed · limit_reached:chat_daily|chat_global · bad_request ·
+                              not_found · unknown (brak sieci po wysłaniu)
+     foxfx=xss                odpowiedzi lisa z próbami XSS i emoji (test/fixtures/media/xss/fox-xss.json)
+     chapter=busy|err:KOD|slow:N   POST /api/media/podcast/chapter: 409 chapter_busy (rozdział gotowy w wierszu po 5 s) | błąd
+                              (tts_unavailable, synth_failed, tts_budget, chapter_failing, voices_missing, not_ready, not_found) | synteza trwa N s (domyślnie 1,5 s)
+     nomedia=1                backend bez migracji 0010: /api/me media:null, chat:null, features wyłączone; tabela media nie istnieje;
+                              POST mediów i /api/fox → 503 media_unavailable
+     extra=kp                 (seeded, msgip) przedmiot „Punkty — test” z topic-kp-edge.json i topic-kp-few.json (przypadki brzegowe keyPoints)
    Konto testowe (tylko atrapa): test@cramfox.test / cramfox-test-1.
-   W konsoli: MOCK.cfg, MOCK.db(), MOCK.log (ostatnie żądania), MOCK.reset('seeded'), MOCK.set('gen','err:limit_reached'). */
+   W konsoli: MOCK.cfg, MOCK.db(), MOCK.log (ostatnie żądania), MOCK.reset('seeded'), MOCK.set('gen','err:limit_reached'),
+   MOCK.posts('reels'|'podcast'|'chapter'|'fox'|'generate') — liczba POST-ów, MOCK.media() — wiersze media, MOCK.mobjects() — pliki w buckecie media. */
 (function(){
 'use strict';
 const P=new URLSearchParams(location.search);
@@ -72,7 +105,7 @@ const realFetch=window.fetch.bind(window);
 const SCRIPT=document.currentScript&&document.currentScript.src||location.href;
 const FIXTURES=new URL('../fixtures/',SCRIPT).href;
 const cfg={
-  mock:/^(fresh|seeded)$/.test(P.get('mock')||'')?P.get('mock'):'fresh',
+  mock:/^(fresh|seeded|msgip)$/.test(P.get('mock')||'')?P.get('mock'):'fresh',
   reset:P.get('reset')==='1'||P.get('reset')==='true',
   login:P.get('login')!=='0',
   away:Math.max(0,+P.get('away')||0),
@@ -98,14 +131,46 @@ const cfg={
   weekly:P.get('weekly')==='1',
   cap:P.get('cap')||'',
   oldbe:P.get('oldbe')==='1',
-  log:P.get('log')==='1'
+  log:P.get('log')==='1',
+  // centrum przedmiotu i media (docs/plan-media.md)
+  msgip:/^(mid|new|known)$/.test(P.get('msgip')||'')?P.get('msgip'):'mid',
+  exam:P.has('exam')?P.get('exam'):null,
+  lsave:P.get('lsave')!=='0',
+  media:/^(none|ready|running|failed)$/.test(P.get('media')||'')?P.get('media'):null,
+  mrun:Math.max(0,+P.get('mrun')||0),
+  mediagen:P.get('mediagen')||'fast',
+  mediaerr:P.get('mediaerr')||'',
+  mediafx:P.get('mediafx')||'',
+  mq:P.has('mq')?Math.max(0,Math.floor(+P.get('mq')||0)):null,
+  mplan:P.get('mplan')||'',
+  reels:P.get('reels')!=='0',
+  voices:P.get('voices')!=='0',
+  fox:P.get('fox')!=='0',
+  chat:P.has('chat')?Math.max(0,Math.floor(+P.get('chat')||0)):null,
+  foxerr:P.get('foxerr')||'',
+  foxfx:P.get('foxfx')||'',
+  chapter:P.get('chapter')||'',
+  nomedia:P.get('nomedia')==='1'
 };
 const MB=1048576;
+/* app_config z backend/0010 (docs/plan-media.md §3.1) — liczby tworzeń mediów i wiadomości do lisa */
+const MEDIA_CFG={free_media_lifetime:3,pro_media_month:30,media_daily_per_user:5,free_chat_daily:30,pro_chat_daily:200};
+function mediaPlan(uid){if(cfg.mplan==='free'||cfg.mplan==='pro')return cfg.mplan;const p=DB&&DB.t.profiles.find(x=>x.id===uid);return p&&p.plan==='pro'&&(!p.trial_until||Date.parse(p.trial_until)>Date.now())?'pro':'free';}
+function mediaLimit(uid){return mediaPlan(uid)==='pro'?MEDIA_CFG.pro_media_month:MEDIA_CFG.free_media_lifetime;}
+function chatLimit(uid){return mediaPlan(uid)==='pro'?MEDIA_CFG.pro_chat_daily:MEDIA_CFG.free_chat_daily;}
+function applyQuotaParams(uid){ // mq=N / chat=N: „zostało N” — przeliczone na licznik serwera (dalsze tworzenia i wiadomości liczą się normalnie)
+  if(cfg.mq!=null)DB.mused[uid]=Math.max(0,mediaLimit(uid)-cfg.mq);
+  if(cfg.chat!=null){const d=new Date();DB.chat[uid]={day:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),used:Math.max(0,chatLimit(uid)-cfg.chat)};}
+}
 const TEST_USER={id:'0c0ffee0-0000-4000-8000-000000000001',email:'test@cramfox.test',password:'cramfox-test-1'};
 const IDS={sMakro:'5b000001-0000-4000-8000-000000000001',tMakro:'7c000001-0000-4000-8000-000000000001',
   sKrypto:'5b000002-0000-4000-8000-000000000002',tKrypto:'7c000002-0000-4000-8000-000000000002',
   sViz:'5b000003-0000-4000-8000-000000000003',tViz:'7c000003-0000-4000-8000-000000000003',
-  sXss:'5b000004-0000-4000-8000-000000000004',tXss:'7c000004-0000-4000-8000-000000000004'};
+  sXss:'5b000004-0000-4000-8000-000000000004',tXss:'7c000004-0000-4000-8000-000000000004',
+  sKp:'5b000005-0000-4000-8000-000000000005',tKpEdge:'7c000005-0000-4000-8000-000000000005',tKpFew:'7c000006-0000-4000-8000-000000000006',
+  // MSGiP (mock=msgip): pierwsze 8 znaków id tematów różne — od nich zależy id poziomu w silniku (t7c000011_l1 …)
+  sMsgip:'5b000011-0000-4000-8000-000000000011',tMsgip1:'7c000011-0000-4000-8000-000000000011',tMsgip2:'7c000012-0000-4000-8000-000000000012',tMsgip3:'7c000013-0000-4000-8000-000000000013',
+  mReels1:'ae000001-0000-4000-8000-000000000001',mPod1:'ae000002-0000-4000-8000-000000000002',mReels2:'ae000003-0000-4000-8000-000000000003'};
 const PLANS={free:{label:'Free',generationsPerMonth:2,generationsLifetime:2,filesPerGeneration:5,maxFileMb:50,maxSubjects:5,priceMonthlyPln:0,priceYearlyPln:0}, // jak packages/shared/src/plans.ts
   pro:{label:'Pro',generationsPerMonth:150,filesPerGeneration:20,maxFileMb:50,maxSubjects:1000,priceMonthlyPln:29,priceYearlyPln:199}};
 const BUCKET_MIME=/^(image\/(jpeg|png|webp|gif)|application\/pdf|text\/(plain|markdown)|application\/vnd\.openxmlformats-officedocument\.presentationml\.presentation)$/;
@@ -121,6 +186,7 @@ const monthKey=()=>{const d=new Date();return d.getUTCFullYear()+'-'+pad(d.getUT
 const uuid=()=>{const b=new Uint8Array(16);crypto.getRandomValues(b);b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);};
 const rnd=()=>Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2);
 const clone=v=>JSON.parse(JSON.stringify(v));
+const arr=v=>Array.isArray(v)?v:[];
 const sleep=(ms,signal)=>new Promise((res,rej)=>{if(signal&&signal.aborted)return rej(abortErr());const t=setTimeout(()=>{if(signal)signal.removeEventListener('abort',on);res();},ms);const on=()=>{clearTimeout(t);rej(abortErr());};if(signal)signal.addEventListener('abort',on,{once:true});});
 const abortErr=()=>new DOMException('The user aborted a request.','AbortError');
 const levelId=(topicId,l)=>'t'+String(topicId).replace(/-/g,'').slice(0,8)+'_'+String(l).replace(/[^A-Za-z0-9_-]/g,'_'); // jak mapLevel() w cloud.js
@@ -128,11 +194,14 @@ const levelId=(topicId,l)=>'t'+String(topicId).replace(/-/g,'').slice(0,8)+'_'+S
 /* ---------- stan „serwera” ---------- */
 const DBK='mockbe:db';
 let DB=null;
-function load(){try{const v=JSON.parse(localStorage.getItem(DBK)||'null');if(v&&v.v===1&&!v.free)v.free={};return v&&v.v===1?v:null;}catch(e){return null;}}
+function load(){try{const v=JSON.parse(localStorage.getItem(DBK)||'null');if(v&&v.v===1){if(!v.free)v.free={};if(!v.t.media)v.t.media=[];if(!v.mobjects)v.mobjects={};if(!v.mused)v.mused={};if(!v.chat)v.chat={};}return v&&v.v===1?v:null;}catch(e){return null;}}
 function save(){try{localStorage.setItem(DBK,JSON.stringify(DB));}catch(e){console.error('[mock] zapis stanu atrapy się nie udał',e);}}
 function emptyDb(scenario){return {v:1,scenario,createdAt:iso(),seeded:false,users:[],tokens:{access:{},refresh:{}},
-  t:{subjects:[],topics:[],materials:[],generations:[],app_state:[],profiles:[],usage:[],subscriptions:[]},objects:{},tus:{},
-  free:{}};} // free: znormalizowany adres e-mail → darmowe lekcje (jak free_generation_ledger w backend/0007 — przeżywa usunięcie konta)
+  t:{subjects:[],topics:[],materials:[],generations:[],app_state:[],profiles:[],usage:[],subscriptions:[],media:[]},objects:{},tus:{},
+  free:{}, // free: znormalizowany adres e-mail → darmowe lekcje (jak free_generation_ledger w backend/0007 — przeżywa usunięcie konta)
+  mobjects:{}, // bucket „media”: "uid/mediaId/plik" → {fx: plik z test/fixtures, reel?: n} albo {data: JSON}; mime z rozszerzenia
+  mused:{}, // uid → wykorzystane tworzenia rolek/podcastu (media_ledger z 0010: niezwrócone rezerwacje)
+  chat:{}};} // uid → {day, used} (fox_usage z 0010, doba Europe/Warsaw — w atrapie doba lokalna)
 function wipeApp(){ // dane apki na tym „urządzeniu”: postępy, sesja, cache — atrapa zostaje osobno (mockbe:*)
   const ks=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&!k.startsWith('mockbe:'))ks.push(k);}
   ks.forEach(k=>localStorage.removeItem(k));try{sessionStorage.clear();}catch(e){}
@@ -165,6 +234,15 @@ function init(){
       if(cfg.login){const s=newSession(TEST_USER.id);
         localStorage.setItem('cf_session',JSON.stringify({access_token:s.access_token,refresh_token:s.refresh_token,expires_at:s.expires_at,user:{id:s.user.id,email:s.user.email}}));}
     }
+    if(cfg.mock==='msgip'){ // konto po 0007: free, bez okresu próbnego; darmowe lekcje: new — 1 z 2 zużyta, reszta — obie
+      addUser(TEST_USER.id,TEST_USER.email,TEST_USER.password,{age16:true,client:'cramfox'});
+      const pr=DB.t.profiles.find(p=>p.id===TEST_USER.id);pr.created_at=iso(now()-30*86400000);
+      DB.free[TEST_USER.email]=cfg.msgip==='new'?1:2;
+      DB.mused[TEST_USER.id]=cfg.msgip==='new'?0:1; // spec §3: „Zostało: 2 z 3”
+      if(cfg.login){const s=newSession(TEST_USER.id);
+        localStorage.setItem('cf_session',JSON.stringify({access_token:s.access_token,refresh_token:s.refresh_token,expires_at:s.expires_at,user:{id:s.user.id,email:s.user.email}}));}
+    }
+    if(DB.users.length)applyQuotaParams(DB.users[0].id);
     save();
   }
   if(cfg.reset){P.delete('reset');try{history.replaceState(history.state,'',location.pathname+(P.toString()?'?'+P.toString():'')+location.hash);}catch(e){}} // location.reload() po logowaniu nie wyczyści stanu drugi raz
@@ -200,7 +278,8 @@ function insertTopic(subjectId,owner,content,id,genId,at){
 /* ---------- konto testowe: przedmioty i postępy (seeded) ---------- */
 let ready=Promise.resolve();
 async function seedContent(){
-  if(DB.scenario!=='seeded'||DB.seeded)return;
+  if(DB.seeded||(DB.scenario!=='seeded'&&DB.scenario!=='msgip'))return;
+  if(DB.scenario==='msgip')return seedMsgip();
   const uid=TEST_USER.id,t0=now()-6*86400000;
   const makro=await fixture('topic-makro'),krypto=await fixture('topic-krypto');
   const subj=(id,name,stage,accent,pos)=>DB.t.subjects.push({id,owner_id:uid,name,emoji:'📘',stage,accent,accent2:accent,exam_date:null,exam_label:null,position:pos,created_at:iso(t0+pos*1000)});
@@ -208,6 +287,7 @@ async function seedContent(){
   subj(IDS.sKrypto,'Krypto i NFT','studia','#22D3EE',1);insertTopic(IDS.sKrypto,uid,krypto,IDS.tKrypto,null,t0+1000);
   if(cfg.extra.includes('viz')){subj(IDS.sViz,'Wizualizacje — test','studia','#FFC043',2);const v=await fixture('topic-viz');if(cfg.lang)v.lang=true;insertTopic(IDS.sViz,uid,v,IDS.tViz,null,t0+2000);}
   if(cfg.extra.includes('xss')){subj(IDS.sXss,'Test<img src=x onerror="window.__pwned=1">','liceum','#FF2E93',3);insertTopic(IDS.sXss,uid,await fixture('topic-xss'),IDS.tXss,null,t0+3000);}
+  if(cfg.extra.includes('kp'))await seedKp(uid,t0,4);
   DB.t.app_state.push({user_id:uid,...seedState(makro,krypto),client_ts:null,rev:1,updated_at:iso(t0)});
   DB.seeded=true;save();
 }
@@ -236,6 +316,119 @@ function seedState(makro,krypto){
   };
   const meta={level:'studia',goal:'sesja',streak:6,best:12,bestWas:12,lastDay:last,freezes:1,frozenDays:[],ms:{'3':ymd(-4)},aiConsent:ymd(-7),streakCeleb:last,weeklyShown:cfg.weekly?ymd(-7):monday(),reduceMotion:false};
   return {progress,meta};
+}
+async function seedKp(uid,at,pos){ // extra=kp: przypadki brzegowe keyPoints (test/fixtures/make-msgip.mjs: kpEdge, kpFew)
+  DB.t.subjects.push({id:IDS.sKp,owner_id:uid,name:'Punkty — test',emoji:'📘',stage:'liceum',accent:'#A855F7',accent2:'#A855F7',exam_date:null,exam_label:null,position:pos,created_at:iso(at)});
+  insertTopic(IDS.sKp,uid,await fixture('topic-kp-edge'),IDS.tKpEdge,null,at);
+  insertTopic(IDS.sKp,uid,await fixture('topic-kp-few'),IDS.tKpFew,null,at+1000);
+}
+
+/* ---------- MSGiP (mock=msgip): przedmiot z 3 materiałami, postępy jak w spec §3 ---------- */
+const MSGIP_NAME='Międzynarodowe stosunki gospodarcze i polityczne';
+const MSGIP_MAT={ // pliki źródłowe (tabele materials + generations → topic.source w cloud.js, „ŹRÓDŁO” w materiale)
+  [IDS.tMsgip1]:[{name:'wyklad-1-2-msgip.pdf',mime:'application/pdf',size:2412000,ext:'pdf'}],
+  [IDS.tMsgip2]:Array.from({length:9},(_,i)=>({name:`wyklad-3-strona-${i+1}.jpg`,mime:'image/jpeg',size:640000+i*1000,ext:'jpg'})),
+  [IDS.tMsgip3]:[{name:'polityka-handlowa-ue.pptx',mime:'application/vnd.openxmlformats-officedocument.presentationml.presentation',size:5300000,ext:'pptx'}]};
+function seedSource(uid,subjectId,topic,at){
+  const ids=[];(MSGIP_MAT[topic.id]||[]).forEach((m,i)=>{const id=uuid(),p=uid+'/'+uuid()+'.'+m.ext;
+    DB.t.materials.push({id,owner_id:uid,storage_path:p,mime:m.mime,size_bytes:m.size,name:m.name,created_at:iso(at+i)});
+    DB.objects[p]={id:uuid(),size:m.size,mime:m.mime,at:iso(at+i)};ids.push(id);});
+  const g={id:uuid(),owner_id:uid,subject_id:subjectId,status:'done',error:null,topic_id:topic.id,material_ids:ids,stage:'studia',
+    options:{stage:'studia',mode:'materials',levels:4,viz:true,aiConsentV:1},model:'claude-opus-5',created_at:iso(at),finished_at:iso(at+90000)};
+  DB.t.generations.push(g);topic.generation_id=g.id;
+}
+const dayAt=(off,h,m)=>{const d=new Date();d.setDate(d.getDate()+off);d.setHours(h==null?18:h,m==null?20:m,0,0);return d.getTime();};
+async function seedMsgip(){
+  const uid=TEST_USER.id,v=cfg.msgip,S=IDS.sMsgip;
+  const examIn=cfg.exam==null?(v==='new'?null:6):cfg.exam==='none'?null:Math.max(0,Math.floor(+cfg.exam||0));
+  const tps=[[IDS.tMsgip1,'topic-msgip',-8],[IDS.tMsgip2,'topic-msgip-2',-5],[IDS.tMsgip3,'topic-msgip-3',-2]].slice(0,v==='new'?1:3);
+  const created=v==='new'?now()-120000:dayAt(-8);
+  DB.t.subjects.push({id:S,owner_id:uid,name:MSGIP_NAME,emoji:'📘',stage:'studia',accent:'#FF2E93',accent2:'#FF2E93',exam_date:examIn==null?null:ymd(examIn),exam_label:null,position:0,created_at:iso(created-60000)});
+  const contents={};
+  for(const [id,fx,off] of tps){const c=await fixture(fx);contents[id]=c;const at=v==='new'?created:dayAt(off);seedSource(uid,S,insertTopic(S,uid,c,id,null,at),at-120000);}
+  if(cfg.extra.includes('kp'))await seedKp(uid,dayAt(-9),1);
+  const md=cfg.media||(v==='mid'?'running':v==='known'?'ready':'none');
+  DB.t.app_state.push({user_id:uid,...msgipState(contents,examIn,md!=='none'),client_ts:null,rev:1,updated_at:iso(now()-3600000)});
+  if(md!=='none'){
+    await seedMedia(uid,S,IDS.tMsgip1,'reels',IDS.mReels1,dayAt(-3));
+    await seedMedia(uid,S,IDS.tMsgip1,'podcast',IDS.mPod1,dayAt(-2));
+    if(md==='running'&&tps.length>1)seedRunning(uid,S,IDS.tMsgip2,IDS.mReels2);
+    if(md==='failed'&&tps.length>1)DB.t.media.push(mediaRow({id:IDS.mReels2,owner_id:uid,subject_id:S,topic_id:IDS.tMsgip2,kind:'reels',status:'failed',phase:'voice',
+      progress:{step:'voice',done:1,total:5},spec:{types:['czym','kto','mit','porownanie','sprawdzian']},error:'released:tts_unavailable: 401 mock',charged:false,
+      refunded_at:iso(now()-600000),created_at:iso(now()-900000),finished_at:iso(now()-600000)}));
+  }
+  DB.seeded=true;save();
+}
+/* postępy MSGiP: stany punktów z kluczy SRS (D1). Wzorzec = znak na każdy element punktu z SRS (fiszki, potem pytania, w kolejności keyPoints):
+   k umiem (pudełko 3, termin za 3–8 dni) · f pudełko 2 za 2 dni · L pudełko 1 na dziś · l pudełko 1 na jutro · R pudełko 2, termin minął 4 dni temu ·
+   w zła odpowiedź dziś (pudełko 0) · - nie ćwiczone. Materiał 01: p1 W, p2–p4 U, p5 R, p6–p7 U, p8 W, p9 R, p10 U, p11–p13 N; materiał 02: U W N N U W N N. */
+function msgipState(C,examIn,withMedia){
+  const v=cfg.msgip,S=IDS.sMsgip,t1=IDS.tMsgip1,t2=IDS.tMsgip2,L=(t,l)=>levelId(t,l);
+  const srs={};
+  const E={k:i=>({box:3,due:ymd(3+i%6),seen:3,lapses:0}),f:()=>({box:2,due:ymd(2),seen:2,lapses:0}),L:()=>({box:1,due:ymd(0),seen:1,lapses:0}),
+    l:()=>({box:1,due:ymd(1),seen:1,lapses:0}),R:()=>({box:2,due:ymd(-4),seen:2,lapses:0}),w:()=>({box:0,due:ymd(0),seen:1,lapses:1})};
+  let k=0;const put=(t,pid,pat)=>{const c=C[t];if(!c)return;const p=(c.keyPoints||[]).find(x=>x.id===pid);if(!p)return;
+    p.items.filter(x=>x.kind!=='task').forEach((x,i)=>{const ch=pat==='k'?'k':pat[i]||'-';if(ch==='-')return;srs[S+':'+L(t,x.level)+':'+(x.kind==='quiz'?'q':'')+x.index]=E[ch](k++);});};
+  const levels={},allLv=[];
+  Object.keys(C).forEach(t=>C[t].levels.forEach(l=>allLv.push(L(t,l.id))));
+  if(v==='mid'){
+    [['p1','LLLff-w--'],['p2','k'],['p3','k'],['p4','k'],['p5','RRRRkkk'],['p6','k'],['p7','k'],['p8','Lff--'],['p9','RRRkkk'],['p10','k']].forEach(([p,x])=>put(t1,p,x));
+    [['p1','k'],['p2','llf'],['p5','k'],['p6','lf']].forEach(([p,x])=>put(t2,p,x));
+    levels[L(t1,'l1')]={done:true,stars:3,best:100};levels[L(t1,'l2')]={done:true,stars:2,best:83};levels[L(t1,'l3')]={done:true,stars:2,best:80};
+    if(C[t2])levels[L(t2,'w1')]={done:true,stars:2,best:75};
+  }
+  if(v==='known'){Object.keys(C).forEach(t=>(C[t].keyPoints||[]).forEach(p=>put(t,p.id,'k')));allLv.forEach(id=>{levels[id]={done:true,stars:3,best:100};});}
+  const ex=v==='new'?null:v==='known'?{pct:82,grade:'4,5',correct:20,total:25,date:ymd(-2)}:{pct:64,grade:'3,5',correct:16,total:25,date:ymd(-2)};
+  const history={};if(v!=='new')[60,45,80,30,55].forEach((x,i)=>{history[ymd(-1-i)]={xp:x,levels:i%2,cards:1,reviews:6,combo:4,missions:0};});
+  const progress={[S]:{xp:v==='new'?0:v==='known'?2100:1240,levels,...(ex?{exam:{n:1,passed:1,best:ex,last:ex}}:{})},
+    gems:v==='new'?0:v==='known'?140:85,goal:50,examsPassed:ex?1:0,hearts:{n:5,refillAt:null},srs,album:{},badges:v==='new'?{}:{first:ymd(-30),streak7:ymd(-20)}, // najlepsza seria 9 — odznaka 7 dni już zdobyta (bez toastu „Odznaka” na zrzutach)
+    stats:{missions:2,maxCombo:6,planDays:1,bosses:0},history};
+  if(examIn!=null)progress.tests=[{id:'tp-msgip',subjectId:S,levels:allLv,date:ymd(examIn),plan:[],built:null}];
+  if(v==='mid'&&cfg.lsave)progress.lessonSave=JSON.stringify({[S+':'+L(t1,'l4')]:{v:1,at:dayAt(-1,19,40),sig:'4.8.3',phase:'feed',feedIdx:1,
+    items:['q0','q1','q2','q3','q4','q5','t0','t1','t2'],qIdx:0,score:0,combo:0,maxCombo:0,broken:false,xp:4,bad:[],run:[],el:190000,terms:[],replay:false}});
+  if(withMedia&&v!=='new')progress.media={[IDS.mReels1]:{w:[1,2],q:{'1':0,'2':1},at:ymd(-1)},[IDS.mPod1]:{ch:2,pos:12,done:[1],at:ymd(-1)}};
+  if(v==='mid')progress.fox={[t1]:{explain:{at:ymd(-3),gaps:2},quiz:{at:ymd(-2),ok:4,n:6}}};
+  const meta={level:'studia',goal:'sesja',streak:v==='new'?0:5,best:v==='new'?0:9,bestWas:v==='new'?0:9,lastDay:v==='new'?null:ymd(-1),freezes:1,frozenDays:[],ms:{},aiConsent:ymd(-30),aiConsentV:1,
+    streakCeleb:v==='new'?null:ymd(-1),weeklyShown:monday(),reduceMotion:false};
+  if(!meta.lastDay){delete meta.lastDay;delete meta.streakCeleb;}
+  return {progress,meta};
+}
+
+/* ---------- media (backend/0010): wiersze, pliki w buckecie, manifesty ---------- */
+const MEDIA_COLS=['id','owner_id','subject_id','topic_id','kind','status','phase','progress','title','spec','manifest','error','charged','created_at','finished_at']; // GRANT SELECT (kolumny) dla authenticated
+const REEL_TYPES=['czym','kto','mit','porownanie','pulapki','sprawdzian'];
+const REEL_LABEL={czym:'Czym to jest',kto:'Kto jest kim',mit:'Mit czy fakt',porownanie:'Porównanie',pulapki:'Pułapki na egzaminie',sprawdzian:'Na sprawdzian'};
+const THUMBS=['#2F6BFF','#1F8A5B','#E9A23B','#E0483F'];
+const FILE_RE=/^[a-z0-9.]+$/;
+const xssFx=()=>cfg.mediafx==='xss';
+function mediaRow(o){return Object.assign({id:uuid(),owner_id:null,subject_id:null,topic_id:null,kind:'reels',status:'running',phase:'plan',progress:{step:'plan',done:0,total:1},title:null,
+  spec:{},manifest:null,error:null,charged:true,refunded_at:null,model:null,cost_usd:null,tts_chars:0,created_at:iso(),finished_at:null,updated_at:iso()},o);}
+const publicRow=r=>{const o={};MEDIA_COLS.forEach(c=>{o[c]=noInternal(clone(r[c]===undefined?null:r[c]));});return o;}; // pola _* to stan atrapy, nie kolumny
+function setMobj(uid,mid,file,v){if(FILE_RE.test(String(file)))DB.mobjects[uid+'/'+mid+'/'+file]=v;}
+function reelFiles(uid,mid,reels){ // rolki nieparzyste = sb-a, parzyste = sb-b (xss: sb-xss); atrapa podaje te same pliki pod rN.*
+  reels.forEach(r=>{const n=+r.n||1,f=r.files||{},base=xssFx()?'media/xss/sb-xss':(n%2?'media/sb-a':'media/sb-b');
+    setMobj(uid,mid,f.storyboard,{fx:base+'.json',reel:n});setMobj(uid,mid,f.audio,{fx:base+'.mp3'});setMobj(uid,mid,f.words,{fx:base+'.words.json'});});
+}
+async function seedMedia(uid,S,topicId,kind,id,at){ // gotowe rolki / podcast materiału 01 z fixture'ów (topicId podmieniony na prawdziwy)
+  const man=await fixture(xssFx()?(kind==='reels'?'media/xss/reels-xss':'media/xss/podcast-xss'):(kind==='reels'?'media/reels-msgip':'media/podcast-msgip'));
+  man.topicId=topicId;
+  const row=mediaRow({id,owner_id:uid,subject_id:S,topic_id:topicId,kind,status:'ready',phase:'save',progress:{step:'save',done:1,total:1},title:man.title,
+    spec:kind==='reels'?{types:(man.reels||[]).map(r=>r.type)}:{},manifest:man,model:'claude-sonnet-5',cost_usd:kind==='reels'?0.38:0.21,tts_chars:kind==='reels'?3900:5200,
+    created_at:iso(at),finished_at:iso(at+150000),updated_at:iso(at+150000)});
+  DB.t.media.push(row);
+  if(kind==='reels')reelFiles(uid,id,arr(man.reels));
+  else{setMobj(uid,id,'script.json',{fx:xssFx()?'media/xss/script-xss.json':'media/podcast-script.json'});
+    arr(man.chapters).forEach(c=>{if(c&&c.status==='ready'&&c.files)chapterFiles(uid,id,c.n);});}
+}
+function chapterFiles(uid,mid,n,data){ // nagrany rozdział: mp3 = c1/c2 z fixture'ów (na zmianę), czasy z fixture'u albo policzone (data)
+  const base=xssFx()?'media/xss/c-xss':'media/c'+(n%2?1:2);
+  setMobj(uid,mid,'c'+n+'.mp3',{fx:base+'.mp3'});setMobj(uid,mid,'c'+n+'.json',data?{data}:{fx:base+'.json'});
+}
+function seedRunning(uid,S,topicId,id){ // rolki 02 „przygotowuję”: krok voice 2/5, stoją (albo kończą się po mrun s)
+  const dur=cfg.mrun?cfg.mrun*1000/0.45:3600000; // start w 55% drogi (krok voice 2/5) — z mrun koniec po ok. mrun s
+  DB.t.media.push(mediaRow({id,owner_id:uid,subject_id:S,topic_id:topicId,kind:'reels',status:'running',phase:'voice',progress:{step:'voice',done:2,total:5},
+    spec:{types:['czym','kto','mit','porownanie','sprawdzian']},created_at:iso(now()-60000),
+    _walk:{t0:now()-0.55*dur,dur,n:5,outcome:'ok',types:['czym','kto','mit','porownanie','sprawdzian'],frozen:!cfg.mrun}}));
 }
 ready=seedContent().catch(e=>console.error('[mock] seed',e));
 
@@ -286,7 +479,7 @@ async function auth(u,m,h,b){
 }
 
 /* ---------- PostgREST ---------- */
-const OWNER={subjects:'owner_id',topics:'owner_id',materials:'owner_id',generations:'owner_id',app_state:'user_id',profiles:'id',usage:'user_id',subscriptions:'user_id'};
+const OWNER={subjects:'owner_id',topics:'owner_id',materials:'owner_id',generations:'owner_id',app_state:'user_id',profiles:'id',usage:'user_id',subscriptions:'user_id',media:'owner_id'};
 const CLIENT_WRITE={subjects:['POST','PATCH','DELETE'],materials:['POST','DELETE'],app_state:['POST','PATCH'],profiles:['PATCH'],topics:['PATCH','DELETE']}; // RLS: generations/usage tylko serwer
 const perr=(status,code,message,extra)=>res(status,Object.assign({code,details:null,hint:null,message},extra||{}));
 function parseVal(v){if(/^\{.*\}$/.test(v))return v.slice(1,-1).split(',').filter(Boolean);return v;}
@@ -330,8 +523,11 @@ async function rest(u,m,h,b){
   const table=path;
   if(table==='app_state'&&cfg.sync==='missing')return perr(404,'PGRST205',"Could not find the table 'public.app_state' in the schema cache");
   if((table==='app_state'&&cfg.sync==='fail')||cfg.fail.includes(table))return perr(500,'XX000','mock: wymuszony błąd tabeli '+table);
-  if(!DB.t[table])return perr(404,'PGRST205',"Could not find the table 'public."+table+"' in the schema cache");
+  if(!DB.t[table]||(table==='media'&&cfg.nomedia))return perr(404,'PGRST205',"Could not find the table 'public."+table+"' in the schema cache"); // nomedia: backend bez 0010
   if(table==='generations')lazyGenerations();
+  if(table==='media'){lazyMedia(); // 0010: GRANT SELECT tylko na kolumny z MEDIA_COLS — select=* albo inna kolumna = 42501
+    const sel=String(sp.get('select')||'*').split(',').map(x=>x.trim().split(':').pop());
+    if((m==='GET'||m==='HEAD')&&sel.some(c=>!MEDIA_COLS.includes(c)))return perr(403,'42501','permission denied for table media');}
   const own=OWNER[table],rep=/return=representation/.test(prefer);
   if(m==='GET'||m==='HEAD')return res(200,pick(query(table,uid,sp),sp.get('select')));
   if(!(CLIENT_WRITE[table]||[]).includes(m))return perr(403,'42501','permission denied for table '+table);
@@ -368,7 +564,8 @@ async function rest(u,m,h,b){
   if(m==='DELETE'){
     const rows=query(table,uid,sp);const ids=new Set(rows);
     DB.t[table]=DB.t[table].filter(r=>!ids.has(r));
-    if(table==='subjects'){const sids=new Set(rows.map(r=>r.id));DB.t.topics=DB.t.topics.filter(t=>!sids.has(t.subject_id));} // FK on delete cascade
+    if(table==='subjects'){const sids=new Set(rows.map(r=>r.id));DB.t.topics=DB.t.topics.filter(t=>!sids.has(t.subject_id));DB.t.media=DB.t.media.filter(r=>!sids.has(r.subject_id));} // FK on delete cascade (media: 0010)
+    if(table==='topics'){const tids=new Set(rows.map(r=>r.id));DB.t.media=DB.t.media.filter(r=>!tids.has(r.topic_id));} // pliki w buckecie media zostają (jak w Supabase) — sprząta klient
     save();return rep?res(200,clone(rows)):res(204);
   }
   return perr(405,'PGRST117','Unsupported HTTP method');
@@ -390,7 +587,7 @@ function rpc(fn,uid,args){
   if(fn!=='delete_my_account')return perr(404,'PGRST202','Could not find the function public.'+fn+' in the schema cache');
   if(cfg.del==='active_subscription')return perr(400,'P0001','active_subscription');
   if(args.p_dry_run)return res(204);
-  if(cfg.del==='files_remaining'||Object.keys(DB.objects).some(p=>p.startsWith(uid+'/')))return perr(400,'P0001','files_remaining');
+  if(cfg.del==='files_remaining'||Object.keys(DB.objects).some(p=>p.startsWith(uid+'/'))||Object.keys(DB.mobjects||{}).some(p=>p.startsWith(uid+'/')))return perr(400,'P0001','files_remaining'); // 0010: także bucket media
   DB.users=DB.users.filter(u=>u.id!==uid);
   Object.keys(DB.t).forEach(t=>{const own=OWNER[t];DB.t[t]=DB.t[t].filter(r=>r[own]!==uid);});
   Object.keys(DB.tokens.access).forEach(k=>{if(DB.tokens.access[k].uid===uid)delete DB.tokens.access[k];});
@@ -444,6 +641,16 @@ async function storage(u,m,h,b,signal){
       return res(204,undefined,{'Upload-Offset':String(up.off),'Tus-Resumable':'1.0.0'});
     }
   }
+  // bucket „media” (0010): odczyt i usuwanie tylko własnego folderu; zapis wyłącznie serwer (service role)
+  let mm=/^object\/(?:authenticated\/)?media\/(.+)$/.exec(p);
+  if(mm&&(m==='GET'||m==='HEAD')){const key=decodeURIComponent(mm[1]);const out=owns(key)?await mediaObject(key):null;
+    return out||serr(404,'not_found','Object not found');} // Supabase: 400 z statusCode 404 (też gdy RLS nie pozwala)
+  if(mm&&(m==='POST'||m==='PUT'))return serr(403,'Unauthorized','new row violates row-level security policy');
+  if(p==='object/media'&&m==='DELETE'){const d=bodyJson(b)||{};const out=[];
+    arr(d.prefixes).forEach(k=>{k=String(k);if(DB.mobjects[k]&&owns(k)){out.push({name:k,bucket_id:'media'});delete DB.mobjects[k];}});save();return res(200,out);}
+  if(p==='object/list/media'&&m==='POST'){const d=bodyJson(b)||{};const pre=String(d.prefix||'').replace(/\/$/,'')+'/';if(!owns(pre))return res(200,[]);
+    const names=[...new Set(Object.keys(DB.mobjects).filter(k=>k.startsWith(pre)).map(k=>k.slice(pre.length).split('/')[0]))].sort();
+    return res(200,names.slice(+d.offset||0,(+d.offset||0)+(+d.limit||100)).map(n=>DB.mobjects[pre+n]?{name:n,id:uuid(),metadata:{mimetype:MEDIA_MIME(n)}}:{name:n,id:null,metadata:null}));}
   return serr(404,'not_found','mock: brak trasy '+m+' '+p);
 }
 
@@ -475,9 +682,16 @@ async function api(u,m,h,b,signal){
     const plan=planOf(uid),us=usageRow(uid),prof=DB.t.profiles.find(x=>x.id===uid)||null,q=quotaOf(uid);
     const life=q.scope==='lifetime'; // pola dla starszych klientów: przy darmowych na zawsze niosą ten sam licznik („2 z 2”)
     return res(200,{profile:prof&&{...prof,plan},plan,usage:{month:us.month,generations:life?q.used:usedOf(uid),tutorMessages:us.tutor_messages},
-      limits:life?{...PLANS.free,generationsPerMonth:q.limit,generationsLifetime:q.limit}:PLANS[plan],quota:q,subscription:null});
+      limits:life?{...PLANS.free,generationsPerMonth:q.limit,generationsLifetime:q.limit}:PLANS[plan],quota:q,subscription:null,
+      // 0010 (docs/plan-media.md §2.7): bez migracji albo przy błędzie RPC — media:null, chat:null, wszystkie funkcje wyłączone
+      media:cfg.nomedia?null:mediaQuota(uid),chat:cfg.nomedia?null:chatQuota(uid),
+      features:cfg.nomedia?{reels:false,podcast:false,fox:false}:{reels:cfg.reels,podcast:cfg.reels&&cfg.voices,fox:cfg.fox}});
   }
   if(p==='/api/generate'&&m==='POST')return generate(uid,bodyJson(b),signal);
+  if(p==='/api/media/reels'&&m==='POST')return mediaPost('reels',uid,bodyJson(b),signal);
+  if(p==='/api/media/podcast'&&m==='POST')return mediaPost('podcast',uid,bodyJson(b),signal);
+  if(p==='/api/media/podcast/chapter'&&m==='POST')return chapterPost(uid,bodyJson(b),signal);
+  if(p==='/api/fox'&&m==='POST')return foxPost(uid,bodyJson(b),signal);
   return aerr(404,'not_found','mock: brak trasy '+m+' '+p);
 }
 const ERRS={ // kod → [status, czy liczy się do limitu (generationId), dodatkowe pola] — jak backend Build 7 (packages/ai/src/pipeline.ts)
@@ -549,6 +763,316 @@ async function generate(uid,d,signal){
   return res(200,{generationId:gid,topicId:t.id,topic:{id:t.id,subjectId:t.subject_id,name:t.name,content:t.content},demo:mode==='demo'});
 }
 
+/* ============================================================ MEDIA I ROZMOWA Z LISEM (docs/plan-media.md §2.2–2.7, backend/0010) */
+/* punkty tematu: kopia topicPoints() z nauka-backend packages/shared/src/media.ts (i mapPoints() w cloud.js), żeby surowe id punktów
+   (p3, Ll2) zgadzały się z klientem: złe odwołania i duplikaty odpadają; punkt bez tytułu odpada; pytania i fiszki bez punktu → punkt
+   zastępczy ich poziomu (doklejony na końcu); punkt z < 3 elementami albo < 2 z SRS łączy się z następnym (ostatni z poprzednim);
+   < 3 punkty (licząc zastępcze) → jeden punkt na poziom (id "L"+level.id). */
+function topicPoints(c){
+  c=c&&typeof c==='object'?c:{};const L=arr(c.levels).filter(l=>l&&typeof l.id==='string'&&l.id);
+  const byId=new Map(L.map(l=>[l.id,l])),order=new Map(L.map((l,i)=>[l.id,i]));
+  const txt=(v,n)=>{if(typeof v!=='string')return '';let t=v.replace(/[\p{Extended_Pictographic}️‍]/gu,'').replace(/[<>]/g,'').replace(/\s+/g,' ').trim();return t.length>n?t.slice(0,n-1).trimEnd()+'…':t;};
+  const listOf=(l,k)=>arr(k==='quiz'?l.quiz:k==='flashcard'?l.flashcards:l.tasks);
+  const fallback=()=>L.map(l=>{const id=l.id,t=txt(l.title,120)||id;return {id:'L'+id,title:t,short:t.length>24?t.slice(0,23).trimEnd()+'…':t,fb:true,levels:[id],
+    items:[...arr(l.flashcards).map((_,i)=>({kind:'flashcard',level:id,index:i})),...arr(l.quiz).map((_,i)=>({kind:'quiz',level:id,index:i})),...arr(l.tasks).map((_,i)=>({kind:'task',level:id,index:i}))]};});
+  const raw=arr(c.keyPoints);if(!raw.length)return fallback();
+  const seen=new Set(),ids=new Set();let pts=[];
+  for(const rp of raw){const p=rp&&typeof rp==='object'?rp:{},id=typeof p.id==='string'?p.id:'';if(!/^p\d{1,2}$/.test(id)||ids.has(id))continue;
+    const title=txt(p.title,120)||txt(p.short,120);if(!title)continue;const items=[];
+    for(const it of arr(p.items)){const x=it&&typeof it==='object'?it:{},kind=['quiz','flashcard','task'].includes(x.kind)?x.kind:null,lv=byId.get(x.level);
+      if(!kind||!lv||!Number.isInteger(x.index)||x.index<0||x.index>=listOf(lv,kind).length)continue;const k=kind+':'+x.level+':'+x.index;if(seen.has(k))continue;seen.add(k);items.push({kind,level:x.level,index:x.index});}
+    ids.add(id);const sh=txt(p.short,60)||title;pts.push({id,title,short:sh.length>24?sh.slice(0,23).trimEnd()+'…':sh,items,levels:[],fb:false});}
+  const extra=new Map();
+  for(const l of L)for(const kind of ['flashcard','quiz'])listOf(l,kind).forEach((_,index)=>{if(seen.has(kind+':'+l.id+':'+index))return;let p=extra.get(l.id);
+    if(!p){const t=txt(l.title,120)||l.id;p={id:'L'+l.id,title:t,short:t.length>24?t.slice(0,23).trimEnd()+'…':t,items:[],levels:[],fb:true};extra.set(l.id,p);}p.items.push({kind,level:l.id,index});});
+  pts=pts.concat([...extra.values()]);
+  const valid=p=>p.items.length>=3&&p.items.filter(x=>x.kind!=='task').length>=2;
+  for(let g=0;g<100;g++){const i=pts.findIndex(p=>!valid(p));if(i<0||pts.length<2)break;const tg=i+1<pts.length?pts[i+1]:pts[i-1];tg.items=tg.items.concat(pts[i].items);pts.splice(i,1);}
+  if(pts.length<3||pts.some(p=>!valid(p)))return fallback();
+  pts.forEach(p=>{p.items.sort((a,b)=>order.get(a.level)-order.get(b.level));p.levels=[...new Set(p.items.map(x=>x.level))].sort((a,b)=>order.get(a)-order.get(b));});
+  return pts;
+}
+/* manifest rolek dla dowolnego tematu (zamiast AI): punkty po kolei do rolek, pytanie końcowe = pierwsze nieużyte pytanie punktów rolki */
+function reelFileList(reels){const out=[];reels.forEach(r=>{const n=+r.n||1,f=r.files||{},base=xssFx()?'media/xss/sb-xss':(n%2?'media/sb-a':'media/sb-b');
+  out.push([f.storyboard,{fx:base+'.json',reel:n}],[f.audio,{fx:base+'.mp3'}],[f.words,{fx:base+'.words.json'}]);});return out;}
+function buildReels(row,content,types,focus){
+  const pts=topicPoints(content),used=new Set(),allQ=pts.flatMap(p=>p.items.filter(x=>x.kind==='quiz'));
+  const key=q=>q.level+'#'+q.index;
+  const pick=g=>{for(const p of g)for(const q of p.items)if(q.kind==='quiz'&&!used.has(key(q))){used.add(key(q));return q;}
+    const q=allQ.find(x=>!used.has(key(x)))||allQ[0];if(q)used.add(key(q));return q;};
+  const groups=focus?[[pts.find(p=>p.id===focus)].filter(Boolean)]:types.map(()=>[]);
+  if(!focus)pts.forEach((p,i)=>groups[i%groups.length].push(p));
+  const reels=groups.map((g,i)=>{const n=i+1,ty=types[i]||'czym',q=pick(g)||{level:'l1',index:0},first=g[0]||pts[0]||{short:'',id:'p1'};
+    const lv=arr(content.levels).find(l=>String(l.id)===q.level);
+    return {n,type:ty,title:REEL_LABEL[ty]+': '+first.short,durSec:45+((n*7)%15)+0.4,pointIds:g.map(p=>p.id),quizRef:{level:q.level,index:q.index},
+      feedRef:lv&&arr(lv.feed).length?{level:q.level,index:0}:null,files:{storyboard:`r${n}.json`,audio:`r${n}.mp3`,words:`r${n}.words.json`},rate:1.15,thumb:THUMBS[i%4]};});
+  const name=String(content.short||content.name||'materiał');
+  return {v:1,kind:'reels',title:focus&&reels[0]?reels[0].title:'Najważniejsze z „'+name+'”',topicId:row.topic_id,
+    coverage:{points:pts.length,covered:new Set(reels.flatMap(r=>r.pointIds)).size},reels};
+}
+const MSGIP1_NAME='Wykład 1–2: pojęcia i podmioty MSGiP';
+async function buildPodcast(row,content){
+  if(xssFx()||String(content.name)===MSGIP1_NAME){ // materiał 01 (albo XSS): skrypt i pauzy z fixture'ów, żaden rozdział jeszcze nienagrany
+    const man=await fixture(xssFx()?'media/xss/podcast-xss':'media/podcast-msgip');man.topicId=row.topic_id;
+    arr(man.chapters).forEach(c=>{c.status='script';c.durSec=null;c.files=null;});
+    return {man,script:null,scriptFx:xssFx()?'media/xss/script-xss.json':'media/podcast-script.json'};}
+  const pts=topicPoints(content),N=pts.length>=8?8:6,used=new Set(),allQ=pts.flatMap(p=>p.items.filter(x=>x.kind==='quiz'));
+  const groups=Array.from({length:N},()=>[]);pts.forEach((p,i)=>groups[i%N].push(p));groups.forEach((g,i)=>{if(!g.length&&pts.length)g.push(pts[i%pts.length]);});
+  const chapters=[],sc=[];
+  groups.forEach((g,i)=>{const n=i+1;let q=null,pp=g[0];
+    for(const p of g){q=p.items.find(x=>x.kind==='quiz'&&!used.has(x.level+'#'+x.index));if(q){pp=p;break;}}
+    if(!q)q=allQ.find(x=>!used.has(x.level+'#'+x.index))||null;if(q)used.add(q.level+'#'+q.index);
+    sc.push({n,title:pp?pp.short:'Rozdział '+n,lines:podLines(content,g)});
+    chapters.push({n,title:pp?pp.short:'Rozdział '+n,pointIds:g.map(p=>p.id),levelIds:[...new Set(g.flatMap(p=>p.levels))],estSec:180+((n*13)%40),durSec:null,status:'script',
+      pauses:q&&pp?[{afterLine:1,quizRef:{level:q.level,index:q.index},pointId:pp.id,lead:'Szop pomylił się przy „'+pp.short+'”. Jak jest naprawdę?'}]:[],files:null});});
+  const title='Lis i Szop: '+String(content.short||content.name||'materiał');
+  return {man:{v:1,kind:'podcast',title,topicId:row.topic_id,estSec:chapters.reduce((a,c)=>a+c.estSec,0),files:{script:'script.json'},chapters},script:{v:1,title,chapters:sc}};
+}
+function podLines(content,g){ // skrypt bez AI: lis tłumaczy pojęcia z fiszek punktu, szop się myli (linijka 1 = pomyłka przed pauzą)
+  const L=new Map(arr(content.levels).map(l=>[String(l.id),l])),strip=s=>String(s==null?'':s).replace(/<[^>]*>/g,'');
+  const cards=g.flatMap(p=>p.items.filter(x=>x.kind==='flashcard').map(x=>arr((L.get(x.level)||{}).flashcards)[x.index]).filter(Boolean)).slice(0,3);
+  const c0=cards[0]||{t:(g[0]||{}).short||'temat',d:(g[0]||{}).title||''};
+  const out=[{s:'lis',t:`Dziś: **${strip(c0.t)}**. ${strip(c0.d)}`},{s:'szop',t:`Czyli ${strip(c0.t)} to nic ważnego, można to pominąć!`},{s:'lis',t:`Nie można. ${strip(c0.d)}`}];
+  cards.slice(1).forEach(c=>{out.push({s:'szop',t:`A **${strip(c.t)}**?`},{s:'lis',t:strip(c.d)});});
+  return out;
+}
+/* czasy słów jak w test/fixtures/media/make-media.mjs (szacunek z prototypu), przeskalowane do długości nagrania */
+const r3=x=>Math.round(x*1000)/1000,letters=w=>(w.match(/[\p{L}\p{N}]/gu)||[]).length;
+function estTokens(text,t0){const out=[];let t=t0;
+  for(const m of String(text).matchAll(/\[[^\]]+\]|\S+/g)){const w=m[0];if(w[0]==='['){out.push({w,start:t,end:t+0.05,tag:true});t+=0.06;continue;}
+    const d=0.09+0.053*letters(w);out.push({w,start:t,end:t+d*0.92});t+=d;if(/[.?!…]["”]?$/.test(w))t+=0.32;else if(/[,;:—–]$/.test(w))t+=0.18;}
+  return {words:out,t};}
+function chapterTiming(lines,pauses,dur){
+  let t=0.2;const L=lines.map((x,i)=>{const {words,t:t1}=estTokens(String(x&&x.t||'').replace(/\*\*/g,''),t);const o={i,s:x&&x.s,start:t,end:t1,words};t=t1+0.45;return o;});
+  const f=dur/(t+0.3),sc=v=>r3(v*f);L.forEach(o=>{o.start=sc(o.start);o.end=sc(o.end);o.words.forEach(w=>{w.start=sc(w.start);w.end=sc(w.end);});});
+  return {v:1,duration:dur,lines:L,pauses:pauses.map(p=>({afterLine:p.afterLine,at:L[p.afterLine]?L[p.afterLine].end:dur}))};
+}
+async function chapterSynth(r,c){ // {data: czasy | null (gotowe czasy z fixture'u), dur}
+  const n=c.n,sk=DB.mobjects[r.owner_id+'/'+r.id+'/script.json'],base=xssFx()?'media/xss/c-xss':'media/c'+(n%2?1:2),dur=(await fixture(base)).duration;
+  if(sk&&((sk.fx==='media/podcast-script.json'&&n<=2)||(sk.fx==='media/xss/script-xss.json'&&n===1)))return {data:null,dur};
+  const script=sk?(sk.data||await fixture(String(sk.fx).replace(/\.json$/,''))):null;const ch=script&&arr(script.chapters).find(x=>x&&x.n===n);
+  return {data:chapterTiming(arr(ch&&ch.lines),arr(c.pauses),dur),dur};
+}
+function readyChapter(r,c){const s=c._synth||{data:null,dur:null};chapterFiles(r.owner_id,r.id,c.n,s.data);
+  c.status='ready';c.durSec=s.dur;c.files={audio:'c'+c.n+'.mp3',timing:'c'+c.n+'.json'};delete c.synthAt;delete c._readyAt;delete c._synth;r.updated_at=iso();}
+const noInternal=v=>{if(Array.isArray(v))return v.map(noInternal);if(v&&typeof v==='object'){const o={};Object.keys(v).forEach(k=>{if(k[0]!=='_')o[k]=noInternal(v[k]);});return o;}return v;};
+/* wiersz w toku: plan → script → voice → save (podcast bez voice) według czasu; frozen = stoi (seed media=running) */
+const STEPS={reels:[['plan',0.1],['script',0.35],['voice',0.85],['save',1]],podcast:[['plan',0.15],['script',0.85],['save',1]]};
+function finishMedia(r){const w=r._walk||{};
+  if(String(w.outcome||'ok').startsWith('fail:')){const code=w.outcome.slice(5);if(code==='refusal')failMedia(r,'refusal: mock');else releaseMedia(r,code+': mock');return;}
+  r.status='ready';r.phase='save';r.progress={step:'save',done:1,total:1};r.manifest=r._man||r.manifest;r.title=r.manifest&&r.manifest.title||null;r.finished_at=iso();r.updated_at=iso();
+  r.model='claude-sonnet-5';r.tts_chars=r.kind==='reels'?3800:0;arr(r._files).forEach(([f,v])=>setMobj(r.owner_id,r.id,f,v));delete r._walk;delete r._man;delete r._files;}
+function releaseMedia(r,reason){if(r.status==='ready'||r.refunded_at)return;r.status='failed';r.charged=false;r.refunded_at=iso();r.error='released:'+String(reason).slice(0,200);r.finished_at=iso();r.updated_at=iso();
+  if(r._counted&&DB.mused[r.owner_id]>0)DB.mused[r.owner_id]--;delete r._walk;delete r._man;delete r._files;}
+function failMedia(r,reason){r.status='failed';r.error=String(reason).slice(0,200);r.finished_at=iso();r.updated_at=iso();delete r._walk;delete r._man;delete r._files;}
+function lazyMedia(){
+  let ch=false;const t=now();
+  DB.t.media.forEach(r=>{
+    if(r.status==='running'&&r._walk){const w=r._walk,f=w.frozen?0.55:Math.min(1,(t-w.t0)/w.dur),st=STEPS[r.kind]||STEPS.reels;
+      if(f>=1&&!w.frozen){finishMedia(r);ch=true;}
+      else{let prev=0,step='save',done=0,total=1;for(const [name,end] of st){if(f<end){step=name;total=name==='plan'||name==='save'?1:w.n||5;done=Math.max(0,Math.min(total-1,Math.floor((f-prev)/(end-prev)*total)));break;}prev=end;}
+        if(r.phase!==step||!r.progress||r.progress.done!==done||r.progress.total!==total){r.phase=step;r.progress={step,done,total};r.updated_at=iso();ch=true;}}}
+    if(r.status==='running'&&!(r._walk&&r._walk.frozen)&&Date.parse(r.created_at)<t-8*60000){releaseMedia(r,'timeout:sweeper');ch=true;} // sweep_stale_media
+    if(r.kind==='podcast'&&r.manifest)arr(r.manifest.chapters).forEach(c=>{if(c&&c.status==='synth'&&c._readyAt&&c._readyAt<=t){readyChapter(r,c);ch=true;}});
+  });
+  if(ch)save();
+}
+function mediaQuota(uid){ // RPC media_quota
+  lazyMedia();const plan=mediaPlan(uid),limit=mediaLimit(uid),used=Math.min(DB.mused[uid]|0,limit+999),[fe,fa]=String(cfg.mediaerr||'').split(':');
+  const day=DB.t.media.filter(r=>r.owner_id===uid&&Date.parse(r.created_at)>now()-DAY_MS).length;
+  const b=DB.t.media.find(r=>r.owner_id===uid&&r.status==='running');
+  return {plan,scope:plan==='pro'?'month':'lifetime',used,limit,remaining:Math.max(0,limit-used),dailyLeft:Math.max(0,MEDIA_CFG.media_daily_per_user-day),
+    globalOpen:!(fe==='limit_reached'&&fa==='global'),busy:b?{id:b.id,kind:b.kind,topicId:b.topic_id}:null};
+}
+function chatRow(uid){const day=ymd(0);let c=DB.chat[uid];if(!c||c.day!==day)c=DB.chat[uid]={day,used:0};return c;}
+function chatQuota(uid){const c=chatRow(uid),limit=chatLimit(uid),[fe,fa]=String(cfg.foxerr||'').split(':');
+  return {day:c.day,used:c.used,limit,remaining:Math.max(0,limit-c.used),globalOpen:!(fe==='limit_reached'&&fa==='chat_global')};}
+
+const MEDIA_ERR={busy:409,conflict:409,limit_reached:402,tts_unavailable:503,voices_missing:503,ai_unavailable:503,no_config:503,media_unavailable:503,reserve_failed:500,
+  no_quiz:400,bad_point:400,bad_request:400,not_found:404,unauthorized:401,not_ready:409,chapter_busy:409,chapter_failing:429,tts_budget:429,synth_failed:500,fox_failed:500};
+const MEDIA_MSG={busy:'Przygotowuję już coś innego. Gdy skończę, możesz zlecić kolejne.',limit_reached:'Na razie nie przygotuję więcej rolek ani podcastów.',
+  tts_unavailable:'Lektor chwilowo nie działa. To problem po naszej stronie.',voices_missing:'Podcast będzie dostępny wkrótce.',ai_unavailable:'AI chwilowo nie działa. To problem po naszej stronie.',
+  media_unavailable:'Rolki i podcast nie są jeszcze dostępne.',reserve_failed:'Nie udało się zarezerwować tworzenia.',no_quiz:'Ten materiał nie ma pytań, a każda rolka kończy się pytaniem.',
+  bad_point:'Nie ma takiego punktu w tym materiale.',bad_request:'Nieprawidłowe body',not_found:'Nie znaleziono',unauthorized:'Wymagane logowanie',conflict:'To żądanie należy do innego konta.',
+  not_ready:'Podcast nie jest jeszcze gotowy.',chapter_busy:'Ten rozdział właśnie się nagrywa.',chapter_failing:'Tego rozdziału dziś nie nagram. Spróbuj jutro.',tts_budget:'Dziś nagrywam już bardzo dużo. Spróbuj jutro.',synth_failed:'Nie udało się nagrać rozdziału.',
+  fox_failed:'Lis nie odpowiedział. To błąd po naszej stronie.'};
+const merr=(code,extra)=>aerr(MEDIA_ERR[code]||500,code,MEDIA_MSG[code]||('mock: '+code),Object.assign({charged:false},extra||{}));
+const cerr=code=>aerr(MEDIA_ERR[code]||500,code,MEDIA_MSG[code]||('mock: '+code)); // błędy /api/media/podcast/chapter: jak na serwerze bez pola charged (rozdział nigdy nie jest naliczany)
+
+/* POST /api/media/reels | /api/media/podcast — kolejność jak w §2.2: przed kosztem ai → tts → (podcast) voices → auth → body → idempotencja (requestId) →
+   temat → pytania → punkt → rezerwacja (busy → dzienny → plan → globalny) → 202 i „praca w tle” (wiersz idzie według czasu, mediagen) */
+async function mediaPost(kind,uid,d,signal){
+  lazyMedia();
+  const [fe,fa]=String(cfg.mediaerr||'').split(':');
+  if(fe==='no_config')return merr('no_config');
+  if(fe==='ai_unavailable')return merr('ai_unavailable');
+  if(fe==='tts_unavailable'||!cfg.reels)return merr('tts_unavailable');
+  if(kind==='podcast'&&(fe==='voices_missing'||!cfg.voices))return merr('voices_missing');
+  if(!uid)return merr('unauthorized');
+  if(!d||typeof d!=='object'||!UUID.test(String(d.requestId||''))||!UUID.test(String(d.topicId||'')))return merr('bad_request');
+  if(kind==='reels'){const ty=d.types,fp=d.focusPointId;
+    if(!Array.isArray(ty)||!ty.length||ty.length>6||new Set(ty).size!==ty.length||!ty.every(x=>REEL_TYPES.includes(x)))return merr('bad_request');
+    if(fp!=null&&(typeof fp!=='string'||!/^(p\d{1,2}|L[A-Za-z0-9_-]{1,40})$/.test(fp)||ty.length!==1))return merr('bad_request');
+    if(fp==null&&ty.length<3)return merr('bad_request');}
+  const ex=DB.t.media.find(r=>r.id===d.requestId);
+  if(ex)return ex.owner_id!==uid||ex.kind!==kind?merr('conflict'):res(200,{media:publicRow(ex)}); // to samo requestId (i rodzaj): bez naliczenia; cudze albo inny rodzaj → 409 jak na serwerze
+  const tp=DB.t.topics.find(t=>t.id===d.topicId&&t.owner_id===uid);if(!tp)return merr('not_found');
+  if(fe==='no_quiz'||!arr(tp.content&&tp.content.levels).some(l=>arr(l.quiz).length))return merr('no_quiz');
+  if(kind==='reels'&&(fe==='bad_point'||(d.focusPointId!=null&&!topicPoints(tp.content).some(p=>p.id===d.focusPointId))))return merr('bad_point');
+  if(cfg.nomedia||fe==='media_unavailable')return merr('media_unavailable');
+  if(fe==='reserve_failed')return merr('reserve_failed');
+  const q=mediaQuota(uid),busyRow=DB.t.media.find(r=>r.owner_id===uid&&r.status==='running'&&((r._walk&&r._walk.frozen)||Date.parse(r.created_at)>now()-5.5*60000));
+  if(fe==='busy'||busyRow){const b=busyRow||{id:IDS.mReels2,kind:'reels',topic_id:d.topicId};return merr('busy',{busy:{id:b.id,kind:b.kind,topicId:b.topic_id}});}
+  if(fe==='limit_reached'){const reason=fa||q.scope;return merr('limit_reached',reason==='daily'||reason==='global'?{reason}:{reason,scope:reason,used:Math.max(q.used,q.limit),limit:q.limit});}
+  if(q.dailyLeft<=0)return merr('limit_reached',{reason:'daily'});
+  if(q.remaining<=0)return merr('limit_reached',{reason:q.scope,scope:q.scope,used:q.used,limit:q.limit});
+  const spec=kind==='reels'?{types:d.types.slice(),...(d.focusPointId?{focusPointId:d.focusPointId}:{})}:{};
+  const row=mediaRow({id:d.requestId,owner_id:uid,subject_id:tp.subject_id,topic_id:tp.id,kind,spec,_counted:true});
+  const [gm,ga,gb]=String(cfg.mediagen||'fast').split(':');
+  const secs=gm==='slow'?(+ga>0?+ga:60):gm==='fail'?(+gb>0?+gb:4):4;
+  let man,files;
+  if(kind==='reels'){man=buildReels(row,tp.content,d.types,d.focusPointId||null);files=reelFileList(man.reels);}
+  else{const b=await buildPodcast(row,tp.content);man=b.man;files=[['script.json',b.script?{data:b.script}:{fx:b.scriptFx}]];}
+  row._man=man;row._files=files;row._walk={t0:now(),dur:secs*1000,n:kind==='reels'?man.reels.length:man.chapters.length,outcome:gm==='fail'?'fail:'+(ga||'invalid_output'):'ok'};
+  DB.mused[uid]=(DB.mused[uid]|0)+1;DB.t.media.push(row);save();
+  if(fe==='unknown'){await sleep(800,signal);if(fa==='html')return res(504,'<!DOCTYPE html><html><body>FUNCTION_INVOCATION_TIMEOUT</body></html>',{'Content-Type':'text/html'});throw new TypeError('Failed to fetch');}
+  await sleep(250,signal);
+  return res(202,{media:publicRow(row)});
+}
+/* POST /api/media/podcast/chapter — synchronicznie; rozdział nagrany = mp3 c1/c2 z fixture'ów + czasy (fixture albo policzone ze skryptu) */
+async function chapterPost(uid,d,signal){
+  lazyMedia();
+  const [ce,ca]=String(cfg.chapter||'').split(':');
+  if(!cfg.reels)return cerr('tts_unavailable');
+  if(!cfg.voices||(ce==='err'&&ca==='voices_missing'))return cerr('voices_missing');
+  if(!uid)return cerr('unauthorized');
+  if(!d||typeof d!=='object'||!UUID.test(String(d.mediaId||''))||!Number.isInteger(d.chapter)||d.chapter<1||d.chapter>20)return cerr('bad_request');
+  const r=DB.t.media.find(x=>x.id===d.mediaId&&x.owner_id===uid);if(!r||r.kind!=='podcast')return cerr('not_found');
+  if(ce==='err'&&ca==='not_found')return cerr('not_found');
+  if(r.status!=='ready'||!r.manifest||(ce==='err'&&ca==='not_ready'))return cerr('not_ready');
+  const c=arr(r.manifest.chapters).find(x=>x&&x.n===d.chapter);if(!c)return cerr('not_found');
+  if(c.status==='ready')return res(200,{chapter:noInternal(c)}); // z pamięci podręcznej, bez syntezy
+  if(c.status==='synth'&&c.synthAt&&Date.parse(c.synthAt)>now()-180000)return cerr('chapter_busy');
+  if(ce==='busy'){c.status='synth';c.synthAt=iso();c._readyAt=now()+5000;c._synth=await chapterSynth(r,c);save();return cerr('chapter_busy');} // nagrywa inne urządzenie
+  if(ce==='err'&&ca==='tts_budget')return cerr('tts_budget');
+  if(ce==='err'&&ca==='chapter_failing')return cerr('chapter_failing'); // 3 nieudane nagrania tego rozdziału dziś (0010: claim → failing)
+  c.status='synth';c.synthAt=iso();save();
+  try{await sleep(ce==='slow'?(+ca>0?+ca:10)*1000:1500,signal);}catch(e){c.status='script';delete c.synthAt;save();throw e;}
+  if(ce==='err'){c.status='script';delete c.synthAt;save();return cerr(ca==='tts_unavailable'?'tts_unavailable':'synth_failed');}
+  c._synth=await chapterSynth(r,c);readyChapter(r,c);save();
+  return res(200,{chapter:noInternal(c)});
+}
+
+/* POST /api/fox — odpowiedzi z test/fixtures/media/fox-msgip.json (foxfx=xss: xss/fox-xss.json). Tura liczona przez serwer, nie przez model —
+   foxPlan() to kopia logiki z nauka-backend packages/ai/src/media/fox.ts: odpowiedź = każda wiadomość „user” poza chipem „Podpowiedz”; chip „Nie wiem”
+   jako wiadomość ucznia liczy się jako odpowiedź; step idk bez takiej wiadomości dolicza pominiętą odpowiedź tylko w tym żądaniu. Rozmowa po końcu →
+   400 too_many_turns, krok niepasujący do rozmowy → 400 bad_step (przed naliczeniem); finish bez odpowiedzi i finish w „Wytłumacz mi” → koniec bez AI.
+   Ocena w atrapie: „nie wiem” albo < 8 znaków = wrong, ≥ 30 znaków = ok, reszta = partial. Egzamin: ok 90, partial 55, wrong 15 na odpowiedź,
+   średnia na pytanie, pct = średnia pytań (ocenę liczy klient). */
+const FOX_MODES=['explain','quiz','exam'],FOX_STEPS=['start','answer','hint','idk','finish'];
+const FOX_MAX={explain:2,quiz:5,exam:6},HINT_CHIP=/^\s*podpowied[zź]\.?\s*$/i,IDK_CHIP=/^\s*nie wiem\.?\s*$/i;
+function foxValid(d){
+  if(!d||typeof d!=='object'||!UUID.test(String(d.subjectId||''))||!FOX_MODES.includes(d.mode)||!FOX_STEPS.includes(d.step))return false;
+  if(!Array.isArray(d.topicIds)||d.topicIds.length<1||d.topicIds.length>8||!d.topicIds.every(x=>UUID.test(String(x)))||new Set(d.topicIds).size!==d.topicIds.length)return false;
+  if(d.pointIds!=null&&(!Array.isArray(d.pointIds)||d.pointIds.length>20||!d.pointIds.every(x=>typeof x==='string'&&/^[0-9a-f-]{36}:(p\d{1,2}|L[A-Za-z0-9_-]{1,40})$/i.test(x))))return false;
+  if(d.pointIds!=null&&!d.pointIds.every(x=>d.topicIds.map(t=>t.toLowerCase()).includes(x.slice(0,36).toLowerCase())))return false; // punkt spoza wybranych materiałów (zod superRefine)
+  if(d.mode==='explain'&&arr(d.pointIds).length!==1)return false;
+  const ms=d.messages==null?[]:d.messages;if(!Array.isArray(ms)||ms.length>30||!ms.every(m=>m&&(m.role==='fox'||m.role==='user')&&typeof m.text==='string'&&m.text.length<=1500))return false;
+  return true;
+}
+function foxPlan(mode,step,ms){
+  const max=FOX_MAX[mode],answers=ms.filter(m=>m.role==='user'&&!HINT_CHIP.test(m.text)).length,last=ms[ms.length-1];
+  const P=(kind,next,o)=>Object.assign({kind,next},o||{});
+  if(step==='start')return answers>0?{err:'bad_step'}:P('ask','question',{n:1});
+  if(step==='finish'){if(!answers||mode==='explain')return P('local_end','end');return P('result','finish',{turn:answers,graded:false});}
+  if(step==='hint'){const p=answers+1;if(p>max)return {err:'too_many_turns'};
+    if(mode==='explain')return P('hint',p===2?'followup':'question',{n:1});if(mode==='quiz')return P('hint','question',{n:p});return P('hint',p%2===0?'followup':'question',{n:Math.ceil(p/2)});}
+  const idk=step==='idk';
+  if(!idk&&(!last||last.role!=='user'||!last.text.trim()||HINT_CHIP.test(last.text)))return {err:'bad_step'};
+  const extra=idk&&!(last&&last.role==='user'&&IDK_CHIP.test(last.text)),t=extra?answers+1:answers;
+  if(t>max)return {err:'too_many_turns'};
+  if(mode==='explain')return idk?P('explain_end','end',{turn:t,idk}):t===1?P('grade_followup','followup',{turn:t}):P('grade_end','end',{turn:t});
+  if(mode==='quiz')return t<5?P('grade_next','question',{turn:t,n:t+1,idk,extra}):P('result','finish',{turn:t,graded:true,idk,extra});
+  const k=Math.ceil(t/2);
+  if(t%2===1)return P('grade_followup','followup',{turn:t,n:k,idk,extra});
+  return k<3?P('grade_next','question',{turn:t,n:k+1,idk,extra}):P('result','finish',{turn:t,graded:true,idk,extra});
+}
+const foxGrade=t=>{t=String(t||'').trim();return /nie wiem/i.test(t)||t.length<8?'wrong':t.length>=30?'ok':'partial';};
+const FOX_SCORE={ok:90,partial:55,wrong:15};
+const FOX_MSG={too_many_turns:'Ta rozmowa już się skończyła.',bad_step:'Ten krok rozmowy nie pasuje do jej przebiegu.',bad_point:'Nie znaleziono tego punktu w materiale.'};
+async function foxPost(uid,d,signal){
+  const [fe,fa]=String(cfg.foxerr||'').split(':');
+  if(!cfg.fox)return merr('ai_unavailable');
+  if(!uid)return merr('unauthorized');
+  if(fe==='bad_request'||!foxValid(d))return merr('bad_request');
+  const plan=foxPlan(d.mode,d.step,arr(d.messages));
+  if(plan.err)return aerr(400,plan.err,FOX_MSG[plan.err],{charged:false});
+  const X0=await fixture(cfg.foxfx==='xss'?'media/xss/fox-xss':'media/fox-msgip');
+  if(plan.kind==='local_end'){const q=cfg.nomedia?null:(({day,used,limit,remaining})=>({day,used,limit,remaining}))(chatQuota(uid));
+    return res(200,{reply:d.mode==='explain'?'Dobrze, kończymy. Wróć do tego punktu, kiedy chcesz.':'Dobrze, kończymy. Możesz wrócić do rozmowy, kiedy chcesz.',next:'end',quota:q});}
+  const subj=DB.t.subjects.find(s=>s.id===d.subjectId&&s.owner_id===uid);
+  const tps=d.topicIds.map(id=>DB.t.topics.find(t=>t.id===id&&t.owner_id===uid&&t.subject_id===d.subjectId));
+  if(fe==='not_found'||!subj||tps.some(t=>!t))return merr('not_found');
+  const pts=[];for(const k of arr(d.pointIds)){const i=k.lastIndexOf(':'),tid=k.slice(0,i),raw=k.slice(i+1),t=tps.find(x=>x.id===tid);
+    const p=t&&topicPoints(t.content).find(x=>x.id===raw);if(!p)return aerr(400,'bad_point',FOX_MSG.bad_point,{charged:false});pts.push({...p,raw,topicId:tid,key:k});}
+  if(cfg.nomedia)return merr('media_unavailable');
+  const q=chatQuota(uid);
+  if(fe==='limit_reached'){const reason=fa||'chat_daily';return merr('limit_reached',{reason,used:q.used,limit:q.limit});}
+  if(q.used>=q.limit)return merr('limit_reached',{reason:'chat_daily',used:q.used,limit:q.limit});
+  chatRow(uid).used++;save(); // reserve_chat
+  await sleep(600,signal);
+  if(fe==='ai_unavailable'||fe==='fox_failed'){chatRow(uid).used=Math.max(0,chatRow(uid).used-1);save();return merr(fe);} // release_chat
+  if(fe==='unknown')throw new TypeError('Failed to fetch');
+  return res(200,Object.assign(foxReply(X0,d,pts,tps,plan),{quota:(({day,used,limit,remaining})=>({day,used,limit,remaining}))(chatQuota(uid))}));
+}
+function foxReply(fx,d,pts,tps,plan){
+  const P=pts[0]||(()=>{const t=tps[0],p=topicPoints(t.content)[0]||{id:'p1',title:'',short:''};return {...p,raw:p.id,topicId:t.id,key:t.id+':'+p.id};})();
+  const sub=s=>String(s==null?'':s).replace(/\{short\}/g,P.short).replace(/\{title\}/g,P.title);
+  const ms=arr(d.messages),users=ms.filter(m=>m.role==='user'&&!HINT_CHIP.test(m.text)).map(m=>m.text);
+  const last=users[users.length-1],isMsgip=tps.some(t=>String(t.content&&t.content.name)===MSGIP1_NAME),a=plan.kind;
+  const grades=users.map(foxGrade).concat(plan.extra?['wrong']:[]);
+  const g=plan.idk?'wrong':grades[grades.length-1]||'partial';
+  if(d.mode==='explain'){const X=fx.explain,pointId=P.key;
+    const fb=(X.feedback[isMsgip&&P.raw]||X.feedback['*']);const src=fb.source?{topicId:P.topicId,level:fb.source.level,feed:fb.source.feed}:null;
+    if(a==='ask')return {reply:'',next:'question',question:{n:1,text:sub(X.start)},pointId};
+    if(a==='hint')return {reply:sub(X.hint),next:plan.next,pointId};
+    if(a==='explain_end')return {reply:sub(X.idk),next:'end',verdict:'wrong',feedback:{good:[],gap:[],wrong:[],...(src?{source:src}:{})},pointId};
+    if(a==='grade_end')return {reply:sub(X.end[g]),next:'end',verdict:g,feedback:{good:[],gap:[],wrong:[]},pointId};
+    const fl=X.followup[isMsgip&&P.raw]||X.followup['*'];
+    const feedback={good:arr(fb.good).map(sub),gap:arr(fb.gap).map(sub),wrong:arr(fb.wrong).map(sub),...(src?{source:src}:{})};
+    return {reply:sub(X.react[g]),next:'followup',question:{n:1,text:sub(fl)},verdict:g,feedback,pointId};}
+  const t0=tps[0],tp0=topicPoints(t0.content);
+  const gapsOf=pct=>pct>=90?[]:isMsgip?arr(fx.exam.gaps).map(x=>{const t=tps.find(y=>String(y.content&&y.content.name)===MSGIP1_NAME)||t0;return {title:x.title,topicId:t.id,level:x.level,feed:x.feed,pointId:t.id+':'+x.point};})
+    :tp0.slice(0,2).map(p=>({title:p.title,topicId:t0.id,level:p.levels[0],feed:0,pointId:t0.id+':'+p.id}));
+  if(d.mode==='quiz'){const X=fx.quiz,Q=arr(X.questions);
+    if(a==='ask')return {reply:X.intro,next:'question',question:{n:1,text:Q[0]}};
+    if(a==='hint')return {reply:'Podpowiem: wróć myślami do lekcji o tym punkcie.',next:'question'};
+    if(a==='grade_next')return {reply:(plan.idk?'Nic straconego. ':'')+X.comment[g],next:'question',verdict:g,question:{n:plan.n,text:Q[plan.n-1]}};
+    const all=grades.slice(0,5),per=all.map((x,i)=>({q:Q[i]||'Pytanie',verdict:{ok:'DOBRZE',partial:'PRAWIE',wrong:'ŹLE'}[x],note:X.comment[x]}));
+    const pct=all.length?Math.round(all.reduce((s,x)=>s+FOX_SCORE[x],0)/all.length):0;
+    return {reply:sub(X.end),next:'finish',...(plan.graded?{verdict:g}:{}),result:{pct,score:{ok:all.filter(x=>x==='ok').length,total:all.length},perQuestion:per,gaps:gapsOf(pct)}};}
+  const X=fx.exam,Q=arr(X.questions);
+  if(a==='ask')return {reply:X.intro,next:'question',question:{n:1,text:Q[0].q}};
+  if(a==='hint')return {reply:'Podpowiem: zacznij od definicji, potem przykład.',next:plan.next};
+  if(a==='grade_followup')return {reply:plan.idk?'Nic straconego.':'Rozumiem.',next:'followup',question:{n:plan.n,text:Q[plan.n-1].follow}};
+  if(a==='grade_next')return {reply:plan.idk?'Nic straconego. Dalej.':'Dziękuję. Dalej.',next:'question',question:{n:plan.n,text:Q[plan.n-1].q}};
+  const asked=Math.min(3,Math.ceil(grades.length/2)),per=Q.slice(0,asked).map((x,i)=>{const gs=grades.slice(i*2,i*2+2);const sc=gs.length?gs.reduce((s,y)=>s+FOX_SCORE[y],0)/gs.length:0;const key=sc>=80?'ok':sc>=50?'partial':'wrong';
+    return {sc,row:{q:x.q,verdict:{ok:'DOBRZE',partial:'PRAWIE',wrong:'ŹLE'}[key],note:x.notes[key]}};});
+  const pct=per.length?Math.round(per.reduce((s,x)=>s+x.sc,0)/per.length):0;
+  return {reply:X.end,next:'finish',result:{pct,score:{ok:per.filter(x=>x.row.verdict==='DOBRZE').length,total:per.length},perQuestion:per.map(x=>x.row),gaps:gapsOf(pct)}};
+}
+
+/* Storage: bucket „media” (prywatny; 0010: SELECT i DELETE własnego folderu, bez INSERT/UPDATE dla użytkownika) */
+const MEDIA_MIME=f=>/\.mp3$/.test(f)?'audio/mpeg':'application/json';
+async function mediaObject(key){
+  const o=DB.mobjects[key];if(!o)return null;const file=key.split('/').pop();
+  if(o.data)return new Response(JSON.stringify(o.data),{status:200,headers:{'Content-Type':'application/json'}});
+  const r=await realFetch(FIXTURES+o.fx);if(!r.ok)return null;
+  if(o.reel){const sb=await r.json();const n=o.reel;if(sb&&typeof sb==='object'&&!xssFx())sb.audio=Object.assign({},sb.audio,{src:`r${n}.mp3`,words:`r${n}.words.json`});
+    return new Response(JSON.stringify(sb),{status:200,headers:{'Content-Type':'application/json'}});}
+  return new Response(await r.blob(),{status:200,headers:{'Content-Type':MEDIA_MIME(file)}});
+}
+
 /* ---------- routing i podmiana fetch ---------- */
 function route(url){
   let u;try{u=new URL(url,location.href);}catch(e){return null;}
@@ -572,6 +1096,8 @@ window.fetch=async function(input,init){
   const headers=new Headers(init.headers||(isReq?input.headers:undefined)||{});
   const body=init.body!==undefined?init.body:undefined;const signal=init.signal||(isReq?input.signal:undefined);
   const entry={t:iso(),method,path:r.u.pathname+r.u.search,status:0};LOG.push(entry);if(LOG.length>500)LOG.shift();
+  if(method==='POST'&&/^\/api\/media\/(reels|podcast)$/.test(r.u.pathname)){ // plan-media §4.6: dziennik cf_media_job:<uid> zapisany PRZED wysłaniem POST
+    try{entry.journal=Object.keys(localStorage).some(k=>k.startsWith('cf_media_job:')&&localStorage.getItem(k));}catch(e){entry.journal=false;}}
   await ready;
   await sleep(cfg.lat,signal);
   if(cfg.net==='off'||navigator.onLine===false){entry.status='network';if(cfg.log)console.debug('[mock]',method,entry.path,'→ brak sieci');throw new TypeError('Failed to fetch');}
@@ -590,8 +1116,16 @@ if(cfg.native&&!window.Capacitor){
     const hs={};r.headers.forEach((v,k)=>{hs[k]=v;});return {status:r.status,data,headers:hs,url:o.url};}}}};
 }
 
-window.MOCK={cfg,log:LOG,db:()=>DB,ready:()=>ready,save,TEST_USER:{email:TEST_USER.email},IDS,
+const POST_PATH={reels:'/api/media/reels',podcast:'/api/media/podcast',chapter:'/api/media/podcast/chapter',fox:'/api/fox',generate:'/api/generate',me:'/api/me'};
+const CFG_PARSE={reels:v=>v!=='0',voices:v=>v!=='0',fox:v=>v!=='0',nomedia:v=>v==='1',lsave:v=>v!=='0',mrun:v=>Math.max(0,+v||0),
+  mq:v=>v==null||v===''?null:Math.max(0,Math.floor(+v||0)),chat:v=>v==null||v===''?null:Math.max(0,Math.floor(+v||0))};
+window.MOCK={cfg,log:LOG,db:()=>DB,ready:()=>ready,save,TEST_USER:{email:TEST_USER.email,id:TEST_USER.id},IDS,
   reset(scenario){const q=new URLSearchParams(location.search);q.set('mock',scenario||cfg.mock);q.set('reset','1');location.search=q.toString();},
-  set(k,v){const q=new URLSearchParams(location.search);if(v==null||v==='')q.delete(k);else q.set(k,v);cfg[k]=v;history.replaceState(history.state,'',location.pathname+'?'+q.toString());}};
+  set(k,v){const q=new URLSearchParams(location.search);if(v==null||v==='')q.delete(k);else q.set(k,v);cfg[k]=CFG_PARSE[k]?CFG_PARSE[k](v==null?v:String(v)):v;
+    if((k==='mq'||k==='chat'||k==='mplan')&&DB.users.length){applyQuotaParams(DB.users[0].id);save();}
+    history.replaceState(history.state,'',location.pathname+'?'+q.toString());},
+  posts:kind=>LOG.filter(e=>e.method==='POST'&&e.path.split('?')[0]===(POST_PATH[kind]||kind)).length, // ile POST-ów (także odrzuconych i zerwanych)
+  media:()=>clone(DB.t.media),mobjects:()=>Object.keys(DB.mobjects),
+  topicPoints:c=>topicPoints(c)};
 console.info('[mock] atrapa backendu: scenariusz '+cfg.mock+(cfg.gen!=='ok'?', gen='+cfg.gen:'')+' — żadne żądanie do Supabase/API nie wychodzi z przeglądarki');
 })();

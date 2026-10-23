@@ -1,0 +1,52 @@
+{
+  "title": "MSG i MSP w minutę",
+  "cover": { "title": "MSG i MSP to NIE szyfr", "sub": "Czym to jest · pytanie na końcu" },
+  "maxLabels": 2,
+  "audio": { "src": "r1.mp3", "words": "r1.words.json", "rate": 1.15 },
+  "camDur": 0.95,
+  "world": {
+    "seed": 31,
+    "stations": [
+      { "id": "msg", "kind": "factory", "label": "MSG: gospodarka", "x": -1, "y": -1, "color": "#1F8A5B" },
+      { "id": "msp", "kind": "hall", "label": "MSP: polityka", "x": 3.2, "y": 1.2, "color": "#2F6BFF" },
+      { "id": "sankcje", "kind": "document", "label": "Sankcje", "x": 1.4, "y": 5.2, "color": "#E9A23B" },
+      { "id": "port", "kind": "crate", "label": "Towary i kapitał", "x": -4.6, "y": -3.4 }
+    ],
+    "roads": [["port", "msg"], ["msg", "msp"], ["msp", "sankcje"], ["msg", "sankcje"]]
+  },
+  "scenes": [
+    {
+      "say": "MSG i MSP brzmią jak szyfr? Spokojnie, to dwie strony jednej monety.",
+      "tts": "[excited] MSG i MSP brzmią jak szyfr? Spokojnie, to DWIE strony jednej monety.",
+      "cam": { "to": "all", "y": 0.46 },
+      "actions": [
+        { "type": "card", "id": "mit", "title": "Popularny mit", "lines": ["To dwa osobne światy"], "t": -0.6, "y": 0.15, "sfx": "none" },
+        { "type": "fox", "pose": "shrug", "side": "left", "on": "Spokojnie", "dur": 1.6 },
+        { "type": "strike", "card": "mit", "line": 0, "text": "Dwie strony jednej monety", "on": "dwie" }
+      ]
+    },
+    {
+      "say": "MSG to gospodarka: towary, usługi i kapitał płyną przez granice.",
+      "tts": "MSG to gospodarka: towary, usługi i kapitał PŁYNĄ przez granice.",
+      "cam": { "to": "msg", "zoom": 2.0, "y": 0.56 },
+      "actions": [
+        { "type": "chapter", "n": 1, "text": "Gospodarka", "on": "MSG" },
+        { "type": "label", "at": "msg", "text": "MSG", "on": "gospodarka", "style": "accent" },
+        { "type": "packet", "from": "port", "to": "msg", "on": "towary", "n": 3, "style": "coin" },
+        { "type": "cam", "on": "kapitał", "to": ["port", "msg"], "zoom": "fit", "y": 0.55, "dur": 0.55 }
+      ]
+    },
+    {
+      "say": "MSP to polityka: władza, bezpieczeństwo, dyplomacja. Sankcje łączą jedno z drugim!",
+      "tts": "[dramatically] MSP to polityka: władza, bezpieczeństwo, dyplomacja. [excited] Sankcje łączą jedno z drugim!",
+      "cam": { "to": "msp", "zoom": 2.0, "y": 0.56 },
+      "hold": 0.4,
+      "actions": [
+        { "type": "chapter", "n": 2, "text": "Polityka", "on": "MSP" },
+        { "type": "card", "at": "msp", "title": "MSP", "lines": ["władza", { "t": "bezpieczeństwo", "on": "bezpieczeństwo" }, { "t": "dyplomacja", "on": "dyplomacja" }], "on": "polityka", "dx": 60, "dy": -90 },
+        { "type": "cam", "on": "Sankcje", "to": "sankcje", "zoom": 2.2, "y": 0.56, "dur": 0.5, "punch": true },
+        { "type": "fox", "pose": "thumbs", "side": "right", "on": "łączą", "dur": 1.6 }
+      ]
+    }
+  ]
+}

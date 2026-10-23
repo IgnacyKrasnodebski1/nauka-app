@@ -1,0 +1,805 @@
+{
+  "name": "Prezentacja: polityka handlowa UE",
+  "short": "Prezentacja",
+  "emoji": "📘",
+  "tagline": "",
+  "accent": "#FF2E93",
+  "accent2": "#FF2E93",
+  "grading": {
+    "pass": 50,
+    "examMin": 20,
+    "scale": [
+      [
+        90,
+        "5"
+      ],
+      [
+        80,
+        "4,5"
+      ],
+      [
+        70,
+        "4"
+      ],
+      [
+        60,
+        "3,5"
+      ],
+      [
+        50,
+        "3"
+      ]
+    ],
+    "failLabel": "2"
+  },
+  "info": "",
+  "levels": [
+    {
+      "id": "p1",
+      "title": "Wspólna polityka handlowa",
+      "emoji": "📘",
+      "feed": [
+        {
+          "title": "Wspólna polityka handlowa UE",
+          "body": "<b>Wspólna polityka handlowa</b> — polityka UE wobec handlu z państwami trzecimi; wyłączna kompetencja Unii.<br><br><b>Kompetencja wyłączna</b> — dziedzina, w której tylko UE może stanowić prawo.<br><br><b>Art. 207 TFUE</b> — przepis traktatu, który określa zasady wspólnej polityki handlowej.<br><br><b>Komisarz ds. handlu</b> — członek Komisji, który negocjuje umowy handlowe w imieniu UE.<br><br><b>Państwo trzecie</b> — państwo spoza Unii Europejskiej."
+        },
+        {
+          "title": "Instrumenty ochrony handlu",
+          "body": "<b>Cło antydumpingowe</b> — dodatkowe cło na towar sprzedawany poniżej normalnej wartości.<br><br><b>Dumping</b> — sprzedaż za granicą po cenie niższej niż na rynku krajowym lub poniżej kosztów.<br><br><b>Cło wyrównawcze</b> — cło nakładane, gdy eksport z innego kraju jest subsydiowany.<br><br><b>Środki ochronne</b> — czasowe ograniczenia importu przy jego nagłym wzroście.<br><br><b>Subsydium</b> — dopłata państwa do produkcji lub eksportu."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "Wspólna polityka handlowa",
+          "d": "Polityka UE wobec handlu z państwami trzecimi; wyłączna kompetencja Unii."
+        },
+        {
+          "t": "Kompetencja wyłączna",
+          "d": "Dziedzina, w której tylko UE może stanowić prawo."
+        },
+        {
+          "t": "Art. 207 TFUE",
+          "d": "Przepis traktatu, który określa zasady wspólnej polityki handlowej."
+        },
+        {
+          "t": "Komisarz ds. handlu",
+          "d": "Członek Komisji, który negocjuje umowy handlowe w imieniu UE."
+        },
+        {
+          "t": "Państwo trzecie",
+          "d": "Państwo spoza Unii Europejskiej."
+        },
+        {
+          "t": "Cło antydumpingowe",
+          "d": "Dodatkowe cło na towar sprzedawany poniżej normalnej wartości."
+        },
+        {
+          "t": "Dumping",
+          "d": "Sprzedaż za granicą po cenie niższej niż na rynku krajowym lub poniżej kosztów."
+        },
+        {
+          "t": "Cło wyrównawcze",
+          "d": "Cło nakładane, gdy eksport z innego kraju jest subsydiowany."
+        },
+        {
+          "t": "Środki ochronne",
+          "d": "Czasowe ograniczenia importu przy jego nagłym wzroście."
+        },
+        {
+          "t": "Subsydium",
+          "d": "Dopłata państwa do produkcji lub eksportu."
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Które pojęcie pasuje do opisu: „Polityka UE wobec handlu z państwami trzecimi; wyłączna kompetencja Unii.”",
+          "a": [
+            "Kompetencja wyłączna",
+            "Wspólna polityka handlowa",
+            "Państwo trzecie",
+            "Cło wyrównawcze"
+          ],
+          "c": 1,
+          "e": "To Wspólna polityka handlowa: polityka UE wobec handlu z państwami trzecimi; wyłączna kompetencja Unii."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Dziedzina, w której tylko UE może stanowić prawo.”",
+          "a": [
+            "Komisarz ds. handlu",
+            "Dumping",
+            "Kompetencja wyłączna",
+            "Subsydium"
+          ],
+          "c": 2,
+          "e": "To Kompetencja wyłączna: dziedzina, w której tylko UE może stanowić prawo."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Przepis traktatu, który określa zasady wspólnej polityki handlowej.”",
+          "a": [
+            "Cło antydumpingowe",
+            "Środki ochronne",
+            "Kompetencja wyłączna",
+            "Art. 207 TFUE"
+          ],
+          "c": 3,
+          "e": "To Art. 207 TFUE: przepis traktatu, który określa zasady wspólnej polityki handlowej."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Dodatkowe cło na towar sprzedawany poniżej normalnej wartości.”",
+          "a": [
+            "Wspólna polityka handlowa",
+            "Komisarz ds. handlu",
+            "Cło antydumpingowe",
+            "Cło wyrównawcze"
+          ],
+          "c": 2,
+          "e": "To Cło antydumpingowe: dodatkowe cło na towar sprzedawany poniżej normalnej wartości."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Sprzedaż za granicą po cenie niższej niż na rynku krajowym lub poniżej kosztów.”",
+          "a": [
+            "Art. 207 TFUE",
+            "Cło antydumpingowe",
+            "Subsydium",
+            "Dumping"
+          ],
+          "c": 3,
+          "e": "To Dumping: sprzedaż za granicą po cenie niższej niż na rynku krajowym lub poniżej kosztów."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Cło nakładane, gdy eksport z innego kraju jest subsydiowany.”",
+          "a": [
+            "Cło wyrównawcze",
+            "Państwo trzecie",
+            "Środki ochronne",
+            "Kompetencja wyłączna"
+          ],
+          "c": 0,
+          "e": "To Cło wyrównawcze: cło nakładane, gdy eksport z innego kraju jest subsydiowany."
+        }
+      ],
+      "tasks": [
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "Wspólna polityka handlowa: polityka UE wobec handlu z państwami trzecimi; wyłączna kompetencja Unii.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            },
+            {
+              "s": "Kompetencja wyłączna: dopłata państwa do produkcji lub eksportu.",
+              "v": false,
+              "e": "To opis pojęcia „Subsydium”."
+            },
+            {
+              "s": "Art. 207 TFUE: przepis traktatu, który określa zasady wspólnej polityki handlowej.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            }
+          ],
+          "e": "Pojęcia z tej lekcji w pigułce."
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "title": "Umowy handlowe UE",
+      "emoji": "📘",
+      "feed": [
+        {
+          "title": "Umowy o wolnym handlu",
+          "body": "<b>CETA</b> — umowa handlowa UE z Kanadą.<br><br><b>Umowa o wolnym handlu</b> — umowa znosząca większość ceł między stronami.<br><br><b>Mercosur</b> — wspólny rynek Ameryki Południowej, z którym UE negocjuje umowę.<br><br><b>Reguły pochodzenia</b> — zasady, które ustalają, z jakiego kraju pochodzi towar.<br><br><b>Umowa o partnerstwie gospodarczym</b> — umowa UE z krajami Afryki, Karaibów i Pacyfiku."
+        },
+        {
+          "title": "Jak UE zawiera umowy",
+          "body": "<b>Mandat negocjacyjny</b> — upoważnienie Rady UE dla Komisji do negocjacji umowy.<br><br><b>Rada UE</b> — instytucja rządów państw członkowskich, która zatwierdza umowy.<br><br><b>Zgoda Parlamentu Europejskiego</b> — warunek zawarcia umowy handlowej przez UE.<br><br><b>Umowa mieszana</b> — umowa obejmująca też kompetencje państw, więc ratyfikują ją także parlamenty krajowe.<br><br><b>Ratyfikacja</b> — ostateczne zatwierdzenie umowy międzynarodowej."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "CETA",
+          "d": "Umowa handlowa UE z Kanadą."
+        },
+        {
+          "t": "Umowa o wolnym handlu",
+          "d": "Umowa znosząca większość ceł między stronami."
+        },
+        {
+          "t": "Mercosur",
+          "d": "Wspólny rynek Ameryki Południowej, z którym UE negocjuje umowę."
+        },
+        {
+          "t": "Reguły pochodzenia",
+          "d": "Zasady, które ustalają, z jakiego kraju pochodzi towar."
+        },
+        {
+          "t": "Umowa o partnerstwie gospodarczym",
+          "d": "Umowa UE z krajami Afryki, Karaibów i Pacyfiku."
+        },
+        {
+          "t": "Mandat negocjacyjny",
+          "d": "Upoważnienie Rady UE dla Komisji do negocjacji umowy."
+        },
+        {
+          "t": "Rada UE",
+          "d": "Instytucja rządów państw członkowskich, która zatwierdza umowy."
+        },
+        {
+          "t": "Zgoda Parlamentu Europejskiego",
+          "d": "Warunek zawarcia umowy handlowej przez UE."
+        },
+        {
+          "t": "Umowa mieszana",
+          "d": "Umowa obejmująca też kompetencje państw, więc ratyfikują ją także parlamenty krajowe."
+        },
+        {
+          "t": "Ratyfikacja",
+          "d": "Ostateczne zatwierdzenie umowy międzynarodowej."
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Które pojęcie pasuje do opisu: „Umowa handlowa UE z Kanadą.”",
+          "a": [
+            "Umowa o wolnym handlu",
+            "Umowa o partnerstwie gospodarczym",
+            "Zgoda Parlamentu Europejskiego",
+            "CETA"
+          ],
+          "c": 3,
+          "e": "To CETA: umowa handlowa UE z Kanadą."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Umowa znosząca większość ceł między stronami.”",
+          "a": [
+            "Umowa o wolnym handlu",
+            "Reguły pochodzenia",
+            "Rada UE",
+            "Ratyfikacja"
+          ],
+          "c": 0,
+          "e": "To Umowa o wolnym handlu: umowa znosząca większość ceł między stronami."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Wspólny rynek Ameryki Południowej, z którym UE negocjuje umowę.”",
+          "a": [
+            "Mandat negocjacyjny",
+            "Mercosur",
+            "Umowa mieszana",
+            "Umowa o wolnym handlu"
+          ],
+          "c": 1,
+          "e": "To Mercosur: wspólny rynek Ameryki Południowej, z którym UE negocjuje umowę."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Upoważnienie Rady UE dla Komisji do negocjacji umowy.”",
+          "a": [
+            "Mandat negocjacyjny",
+            "CETA",
+            "Reguły pochodzenia",
+            "Zgoda Parlamentu Europejskiego"
+          ],
+          "c": 0,
+          "e": "To Mandat negocjacyjny: upoważnienie Rady UE dla Komisji do negocjacji umowy."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Instytucja rządów państw członkowskich, która zatwierdza umowy.”",
+          "a": [
+            "Mercosur",
+            "Rada UE",
+            "Mandat negocjacyjny",
+            "Ratyfikacja"
+          ],
+          "c": 1,
+          "e": "To Rada UE: instytucja rządów państw członkowskich, która zatwierdza umowy."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Warunek zawarcia umowy handlowej przez UE.”",
+          "a": [
+            "Umowa o partnerstwie gospodarczym",
+            "Umowa mieszana",
+            "Zgoda Parlamentu Europejskiego",
+            "Umowa o wolnym handlu"
+          ],
+          "c": 2,
+          "e": "To Zgoda Parlamentu Europejskiego: warunek zawarcia umowy handlowej przez UE."
+        }
+      ],
+      "tasks": [
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "CETA: umowa handlowa UE z Kanadą.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            },
+            {
+              "s": "Umowa o wolnym handlu: ostateczne zatwierdzenie umowy międzynarodowej.",
+              "v": false,
+              "e": "To opis pojęcia „Ratyfikacja”."
+            },
+            {
+              "s": "Mercosur: wspólny rynek Ameryki Południowej, z którym UE negocjuje umowę.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            }
+          ],
+          "e": "Pojęcia z tej lekcji w pigułce."
+        }
+      ]
+    },
+    {
+      "id": "p3",
+      "title": "UE w handlu światowym",
+      "emoji": "📘",
+      "feed": [
+        {
+          "title": "UE w WTO",
+          "body": "<b>UE w WTO</b> — unia występuje w WTO jako jeden członek obok państw członkowskich.<br><br><b>Spór handlowy</b> — konflikt o zasady handlu rozstrzygany w WTO.<br><br><b>Organ Rozstrzygania Sporów</b> — organ WTO, który rozstrzyga spory między członkami.<br><br><b>Organ Apelacyjny</b> — druga instancja sporów WTO; od 2019 r. nie działa.<br><br><b>Odwet handlowy</b> — cła nałożone za zgodą WTO po wygranym sporze."
+        },
+        {
+          "title": "Handel a wartości",
+          "body": "<b>Rozdział o zrównoważonym rozwoju</b> — część umowy handlowej o prawach pracowniczych i środowisku.<br><br><b>GSP</b> — system preferencji: niższe cła dla krajów rozwijających się.<br><br><b>Everything but Arms</b> — bezcłowy dostęp do rynku UE dla krajów najsłabiej rozwiniętych, oprócz broni.<br><br><b>CBAM</b> — graniczny podatek węglowy: opłata za emisje CO₂ zawarte w imporcie niektórych towarów.<br><br><b>Kontrola eksportu</b> — ograniczenia eksportu towarów podwójnego zastosowania."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "UE w WTO",
+          "d": "Unia występuje w WTO jako jeden członek obok państw członkowskich."
+        },
+        {
+          "t": "Spór handlowy",
+          "d": "Konflikt o zasady handlu rozstrzygany w WTO."
+        },
+        {
+          "t": "Organ Rozstrzygania Sporów",
+          "d": "Organ WTO, który rozstrzyga spory między członkami."
+        },
+        {
+          "t": "Organ Apelacyjny",
+          "d": "Druga instancja sporów WTO; od 2019 r. nie działa."
+        },
+        {
+          "t": "Odwet handlowy",
+          "d": "Cła nałożone za zgodą WTO po wygranym sporze."
+        },
+        {
+          "t": "Rozdział o zrównoważonym rozwoju",
+          "d": "Część umowy handlowej o prawach pracowniczych i środowisku."
+        },
+        {
+          "t": "GSP",
+          "d": "System preferencji: niższe cła dla krajów rozwijających się."
+        },
+        {
+          "t": "Everything but Arms",
+          "d": "Bezcłowy dostęp do rynku UE dla krajów najsłabiej rozwiniętych, oprócz broni."
+        },
+        {
+          "t": "CBAM",
+          "d": "Graniczny podatek węglowy: opłata za emisje CO₂ zawarte w imporcie niektórych towarów."
+        },
+        {
+          "t": "Kontrola eksportu",
+          "d": "Ograniczenia eksportu towarów podwójnego zastosowania."
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Które pojęcie pasuje do opisu: „Unia występuje w WTO jako jeden członek obok państw członkowskich.”",
+          "a": [
+            "Spór handlowy",
+            "UE w WTO",
+            "Odwet handlowy",
+            "Everything but Arms"
+          ],
+          "c": 1,
+          "e": "To UE w WTO: unia występuje w WTO jako jeden członek obok państw członkowskich."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Konflikt o zasady handlu rozstrzygany w WTO.”",
+          "a": [
+            "Organ Apelacyjny",
+            "GSP",
+            "Spór handlowy",
+            "Kontrola eksportu"
+          ],
+          "c": 2,
+          "e": "To Spór handlowy: konflikt o zasady handlu rozstrzygany w WTO."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Organ WTO, który rozstrzyga spory między członkami.”",
+          "a": [
+            "Rozdział o zrównoważonym rozwoju",
+            "CBAM",
+            "Spór handlowy",
+            "Organ Rozstrzygania Sporów"
+          ],
+          "c": 3,
+          "e": "To Organ Rozstrzygania Sporów: organ WTO, który rozstrzyga spory między członkami."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Część umowy handlowej o prawach pracowniczych i środowisku.”",
+          "a": [
+            "UE w WTO",
+            "Organ Apelacyjny",
+            "Rozdział o zrównoważonym rozwoju",
+            "Everything but Arms"
+          ],
+          "c": 2,
+          "e": "To Rozdział o zrównoważonym rozwoju: część umowy handlowej o prawach pracowniczych i środowisku."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „System preferencji: niższe cła dla krajów rozwijających się.”",
+          "a": [
+            "Organ Rozstrzygania Sporów",
+            "Rozdział o zrównoważonym rozwoju",
+            "Kontrola eksportu",
+            "GSP"
+          ],
+          "c": 3,
+          "e": "To GSP: system preferencji: niższe cła dla krajów rozwijających się."
+        },
+        {
+          "q": "Które pojęcie pasuje do opisu: „Bezcłowy dostęp do rynku UE dla krajów najsłabiej rozwiniętych, oprócz broni.”",
+          "a": [
+            "Everything but Arms",
+            "Odwet handlowy",
+            "CBAM",
+            "Spór handlowy"
+          ],
+          "c": 0,
+          "e": "To Everything but Arms: bezcłowy dostęp do rynku UE dla krajów najsłabiej rozwiniętych, oprócz broni."
+        }
+      ],
+      "tasks": [
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "UE w WTO: unia występuje w WTO jako jeden członek obok państw członkowskich.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            },
+            {
+              "s": "Spór handlowy: ograniczenia eksportu towarów podwójnego zastosowania.",
+              "v": false,
+              "e": "To opis pojęcia „Kontrola eksportu”."
+            },
+            {
+              "s": "Organ Rozstrzygania Sporów: organ WTO, który rozstrzyga spory między członkami.",
+              "v": true,
+              "e": "Zgadza się z wykładem."
+            }
+          ],
+          "e": "Pojęcia z tej lekcji w pigułce."
+        }
+      ]
+    }
+  ],
+  "keyPoints": [
+    {
+      "id": "p1",
+      "title": "Wspólna polityka handlowa UE",
+      "short": "Polityka handlowa",
+      "summary": "Wspólna polityka handlowa, Kompetencja wyłączna, Art. 207 TFUE",
+      "levels": [
+        "p1"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "p1",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "p1",
+          "index": 1
+        },
+        {
+          "kind": "flashcard",
+          "level": "p1",
+          "index": 2
+        },
+        {
+          "kind": "flashcard",
+          "level": "p1",
+          "index": 3
+        },
+        {
+          "kind": "flashcard",
+          "level": "p1",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "p1",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "p1",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "p1",
+          "index": 2
+        },
+        {
+          "kind": "task",
+          "level": "p1",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "title": "Instrumenty ochrony handlu",
+      "short": "Ochrona handlu",
+      "summary": "Cło antydumpingowe, Dumping, Cło wyrównawcze",
+      "levels": [
+        "p1"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "p1",
+          "index": 5
+        },
+        {
+          "kind": "flashcard",
+          "level": "p1",
+          "index": 6
+        },
+        {
+          "kind": "flashcard",
+          "level": "p1",
+          "index": 7
+        },
+        {
+          "kind": "flashcard",
+          "level": "p1",
+          "index": 8
+        },
+        {
+          "kind": "flashcard",
+          "level": "p1",
+          "index": 9
+        },
+        {
+          "kind": "quiz",
+          "level": "p1",
+          "index": 3
+        },
+        {
+          "kind": "quiz",
+          "level": "p1",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "p1",
+          "index": 5
+        }
+      ]
+    },
+    {
+      "id": "p3",
+      "title": "Umowy o wolnym handlu",
+      "short": "Umowy o wolnym handlu",
+      "summary": "CETA, Umowa o wolnym handlu, Mercosur",
+      "levels": [
+        "p2"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "p2",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "p2",
+          "index": 1
+        },
+        {
+          "kind": "flashcard",
+          "level": "p2",
+          "index": 2
+        },
+        {
+          "kind": "flashcard",
+          "level": "p2",
+          "index": 3
+        },
+        {
+          "kind": "flashcard",
+          "level": "p2",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "p2",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "p2",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "p2",
+          "index": 2
+        },
+        {
+          "kind": "task",
+          "level": "p2",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p4",
+      "title": "Jak UE zawiera umowy",
+      "short": "Procedura umów",
+      "summary": "Mandat negocjacyjny, Rada UE, Zgoda Parlamentu Europejskiego",
+      "levels": [
+        "p2"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "p2",
+          "index": 5
+        },
+        {
+          "kind": "flashcard",
+          "level": "p2",
+          "index": 6
+        },
+        {
+          "kind": "flashcard",
+          "level": "p2",
+          "index": 7
+        },
+        {
+          "kind": "flashcard",
+          "level": "p2",
+          "index": 8
+        },
+        {
+          "kind": "flashcard",
+          "level": "p2",
+          "index": 9
+        },
+        {
+          "kind": "quiz",
+          "level": "p2",
+          "index": 3
+        },
+        {
+          "kind": "quiz",
+          "level": "p2",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "p2",
+          "index": 5
+        }
+      ]
+    },
+    {
+      "id": "p5",
+      "title": "UE w WTO",
+      "short": "UE w WTO",
+      "summary": "UE w WTO, Spór handlowy, Organ Rozstrzygania Sporów",
+      "levels": [
+        "p3"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "p3",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "p3",
+          "index": 1
+        },
+        {
+          "kind": "flashcard",
+          "level": "p3",
+          "index": 2
+        },
+        {
+          "kind": "flashcard",
+          "level": "p3",
+          "index": 3
+        },
+        {
+          "kind": "flashcard",
+          "level": "p3",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "p3",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "p3",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "p3",
+          "index": 2
+        },
+        {
+          "kind": "task",
+          "level": "p3",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p6",
+      "title": "Handel a wartości",
+      "short": "Handel a wartości",
+      "summary": "Rozdział o zrównoważonym rozwoju, GSP, Everything but Arms",
+      "levels": [
+        "p3"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "p3",
+          "index": 5
+        },
+        {
+          "kind": "flashcard",
+          "level": "p3",
+          "index": 6
+        },
+        {
+          "kind": "flashcard",
+          "level": "p3",
+          "index": 7
+        },
+        {
+          "kind": "flashcard",
+          "level": "p3",
+          "index": 8
+        },
+        {
+          "kind": "flashcard",
+          "level": "p3",
+          "index": 9
+        },
+        {
+          "kind": "quiz",
+          "level": "p3",
+          "index": 3
+        },
+        {
+          "kind": "quiz",
+          "level": "p3",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "p3",
+          "index": 5
+        }
+      ]
+    }
+  ]
+}

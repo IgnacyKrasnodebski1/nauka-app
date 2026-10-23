@@ -1,0 +1,69 @@
+{
+  "v": 1,
+  "kind": "reels",
+  "title": "Kto rządzi światową gospodarką?",
+  "topicId": "TOPIC",
+  "coverage": {"points":13,"covered":13},
+  "reels": [
+    {
+      "n": 1,
+      "type": "czym",
+      "title": "MSG i MSP w minutę",
+      "durSec": 52.1,
+      "pointIds": ["p1","p2"],
+      "quizRef": {"level":"l1","index":1},
+      "feedRef": {"level":"l1","index":0},
+      "thumb": "#2F6BFF",
+      "files": {"storyboard":"r1.json","audio":"r1.mp3","words":"r1.words.json"},
+      "rate": 1.15
+    },
+    {
+      "n": 2,
+      "type": "kto",
+      "title": "ONZ, WTO, MFW i Bank Światowy",
+      "durSec": 58.1,
+      "pointIds": ["p7","p8","p9","p10"],
+      "quizRef": {"level":"l3","index":6},
+      "feedRef": {"level":"l3","index":1},
+      "thumb": "#1F8A5B",
+      "files": {"storyboard":"r2.json","audio":"r2.mp3","words":"r2.words.json"},
+      "rate": 1.15
+    },
+    {
+      "n": 3,
+      "type": "mit",
+      "title": "Globalizacja to tylko handel?",
+      "durSec": 47.1,
+      "pointIds": ["p3","p4","p5"],
+      "quizRef": {"level":"l2","index":2},
+      "feedRef": {"level":"l2","index":0},
+      "thumb": "#E9A23B",
+      "files": {"storyboard":"r3.json","audio":"r3.mp3","words":"r3.words.json"},
+      "rate": 1.15
+    },
+    {
+      "n": 4,
+      "type": "porownanie",
+      "title": "Korporacja kontra państwo",
+      "durSec": 55.1,
+      "pointIds": ["p6","p11"],
+      "quizRef": {"level":"l4","index":1},
+      "feedRef": {"level":"l4","index":1},
+      "thumb": "#E0483F",
+      "files": {"storyboard":"r4.json","audio":"r4.mp3","words":"r4.words.json"},
+      "rate": 1.15
+    },
+    {
+      "n": 5,
+      "type": "sprawdzian",
+      "title": "5 rzeczy na sprawdzian",
+      "durSec": 59,
+      "pointIds": ["p12","p13"],
+      "quizRef": {"level":"l4","index":6},
+      "feedRef": {"level":"l4","index":2},
+      "thumb": "#2F6BFF",
+      "files": {"storyboard":"r5.json","audio":"r5.mp3","words":"r5.words.json"},
+      "rate": 1.15
+    }
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "_": "Odpowiedzi atrapy z próbami XSS i emoji (foxfx=xss). Żadna nie może się wykonać ani pokazać emoji.",
+  "explain": {
+    "start": "Wytłumacz <img src=x onerror=\"window.__pwned=1\"> punkt {short} 🔥",
+    "react": { "ok": "<b>Dobrze</b>", "partial": "<svg onload=window.__pwned=1>", "wrong": "\"><img src=x onerror=window.__pwned=1>" },
+    "feedback": { "*": {
+      "good": ["<img src=x onerror=\"window.__pwned=1\">dobrze 🔥"],
+      "gap": ["<script>window.__pwned=1</script>luka"],
+      "wrong": ["javascript:window.__pwned=1"],
+      "source": { "level": "l3\"><img src=x onerror=window.__pwned=1>", "feed": 1 } } },
+    "followup": { "*": "Dopytam <img src=x onerror=\"window.__pwned=1\">?" },
+    "end": { "ok": "<img src=x onerror=window.__pwned=1>", "partial": "<img src=x onerror=window.__pwned=1>", "wrong": "<img src=x onerror=window.__pwned=1>" },
+    "hint": "<img src=x onerror=\"window.__pwned=1\"> 🔥",
+    "idk": "Nic straconego. <img src=x onerror=\"window.__pwned=1\">",
+    "finish": "<svg onload=window.__pwned=1>"
+  },
+  "quiz": {
+    "intro": "<img src=x onerror=\"window.__pwned=1\">",
+    "questions": ["<img src=x onerror=window.__pwned=1> 1?", "2 🔥?", "<b>3</b>?", "4?", "5?"],
+    "comment": { "ok": "<img src=x onerror=window.__pwned=1>", "partial": "x", "wrong": "y" },
+    "end": "<svg onload=window.__pwned=1>"
+  },
+  "exam": {
+    "intro": "<img src=x onerror=window.__pwned=1>",
+    "questions": [
+      { "q": "<img src=x onerror=\"window.__pwned=1\">?", "follow": "<svg onload=window.__pwned=1>", "notes": { "ok": "<img src=x onerror=window.__pwned=1>", "partial": "🔥", "wrong": "x" } },
+      { "q": "Drugie?", "follow": "Dopytanie?", "notes": { "ok": "a", "partial": "b", "wrong": "c" } },
+      { "q": "Trzecie?", "follow": "Dopytanie?", "notes": { "ok": "a", "partial": "b", "wrong": "c" } }
+    ],
+    "gaps": [ { "title": "<img src=x onerror=\"window.__pwned=1\"> luka 🔥", "level": "l3", "feed": 1, "point": "p9" } ],
+    "end": "<img src=x onerror=window.__pwned=1>"
+  }
+}

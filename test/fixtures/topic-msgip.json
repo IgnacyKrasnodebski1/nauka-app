@@ -1,0 +1,1807 @@
+{
+  "name": "Wykład 1–2: pojęcia i podmioty MSGiP",
+  "short": "Wykład 1–2",
+  "emoji": "🌍",
+  "tagline": "Pojęcia i podmioty: MSG a MSP, globalizacja, państwa, organizacje, korporacje, UE i NGO.",
+  "accent": "#FF2E93",
+  "accent2": "#FF2E93",
+  "grading": {
+    "pass": 50,
+    "examMin": 20,
+    "scale": [
+      [
+        90,
+        "5"
+      ],
+      [
+        80,
+        "4,5"
+      ],
+      [
+        70,
+        "4"
+      ],
+      [
+        60,
+        "3,5"
+      ],
+      [
+        50,
+        "3"
+      ]
+    ],
+    "failLabel": "2"
+  },
+  "info": "<div class=\"zbox\"><h3>Zasady zaliczenia</h3><p>Egzamin pisemny, zaliczenie od <b>50%</b>. Skala ocen: 2, 3, 3,5, 4, 4,5, 5.</p></div>",
+  "levels": [
+    {
+      "id": "l1",
+      "title": "Czym są MSGiP: MSG a MSP",
+      "emoji": "📘",
+      "feed": [
+        {
+          "title": "Dwa skróty, jeden przedmiot",
+          "body": "<b>MSG</b> to międzynarodowe stosunki gospodarcze: wymiana towarów, usług, kapitału, technologii i pracy ponad granicami. <b>MSP</b> to międzynarodowe stosunki polityczne: władza, bezpieczeństwo i dyplomacja."
+        },
+        {
+          "title": "MSG a MSP: gdzie granica",
+          "body": "Gospodarka i polityka się przenikają. <b>Sankcje</b> to polityka, która działa przez gospodarkę, a umowa handlowa bywa decyzją polityczną."
+        },
+        {
+          "title": "Kto gra na scenie międzynarodowej",
+          "body": "Uczestnicy to <b>państwa</b>, <b>organizacje międzyrządowe</b>, <b>korporacje transnarodowe</b>, <b>organizacje pozarządowe</b>, a czasem pojedyncze osoby."
+        },
+        {
+          "title": "MSGiP wśród nauk społecznych",
+          "body": "MSGiP łączą <b>ekonomię</b>, <b>nauki o polityce</b>, <b>prawo międzynarodowe</b>, historię i socjologię. Jedno zjawisko oglądamy z kilku stron."
+        },
+        {
+          "title": "Trzy poziomy analizy",
+          "body": "Na stosunki międzynarodowe patrzymy z poziomu <b>jednostki</b>, <b>państwa</b> albo całego <b>systemu międzynarodowego</b>."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "MSG",
+          "d": "Międzynarodowe stosunki gospodarcze: wymiana towarów, usług, kapitału, technologii i pracy ponad granicami państw."
+        },
+        {
+          "t": "MSP",
+          "d": "Międzynarodowe stosunki polityczne: relacje władzy, bezpieczeństwa i dyplomacji między uczestnikami życia międzynarodowego."
+        },
+        {
+          "t": "Sankcje gospodarcze",
+          "d": "Narzędzie polityki zagranicznej działające przez gospodarkę: ograniczenie handlu lub finansów, żeby wymusić zmianę polityki."
+        },
+        {
+          "t": "Geoekonomia",
+          "d": "Używanie narzędzi gospodarczych do osiągania celów politycznych państwa."
+        },
+        {
+          "t": "Współzależność",
+          "d": "Stan, w którym decyzja jednego państwa odbija się na gospodarkach i polityce innych."
+        },
+        {
+          "t": "Interdyscyplinarność MSGiP",
+          "d": "MSGiP łączą ekonomię, nauki o polityce, prawo międzynarodowe, historię i socjologię."
+        },
+        {
+          "t": "Ekonomia polityczna międzynarodowa",
+          "d": "Nurt badający, jak polityka wpływa na gospodarkę światową i odwrotnie."
+        },
+        {
+          "t": "Poziomy analizy",
+          "d": "Jednostka, państwo i system międzynarodowy: trzy perspektywy patrzenia na stosunki międzynarodowe."
+        },
+        {
+          "t": "System międzynarodowy",
+          "d": "Całość uczestników stosunków międzynarodowych i powiązań między nimi."
+        },
+        {
+          "t": "Prawo międzynarodowe publiczne",
+          "d": "Normy regulujące stosunki między państwami i organizacjami międzynarodowymi."
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Czym zajmują się międzynarodowe stosunki gospodarcze (MSG)?",
+          "a": [
+            "Wymianą towarów, usług, kapitału i technologii między państwami",
+            "Wyłącznie wojną i pokojem",
+            "Tylko polityką pieniężną jednego państwa",
+            "Organizacją wyborów w państwach"
+          ],
+          "c": 0,
+          "e": "MSG to wymiana gospodarcza ponad granicami: towary, usługi, kapitał, technologie i praca.",
+          "src": {
+            "page": 2,
+            "quote": "MSG to wymiana gospodarcza ponad granicami: towary, usługi, kapitał, technologie i praca."
+          }
+        },
+        {
+          "q": "Czym różnią się MSG od MSP?",
+          "a": [
+            "MSG dotyczą wymiany gospodarczej, MSP relacji władzy i bezpieczeństwa",
+            "To dwie nazwy tego samego",
+            "MSG dotyczą tylko Europy, MSP reszty świata",
+            "MSP badają wyłącznie handel"
+          ],
+          "c": 0,
+          "e": "MSG to gospodarka ponad granicami, MSP to władza, bezpieczeństwo i dyplomacja. Przenikają się, ale patrzą na co innego.",
+          "src": {
+            "page": 2,
+            "quote": "MSG to gospodarka ponad granicami, MSP to władza, bezpieczeństwo i dyplomacja. Przenikają się, ale patrzą na co innego."
+          }
+        },
+        {
+          "q": "Sankcje gospodarcze to przykład…",
+          "a": [
+            "użycia gospodarki jako narzędzia polityki",
+            "pomocy rozwojowej",
+            "wolnego handlu",
+            "integracji regionalnej"
+          ],
+          "c": 0,
+          "e": "Sankcje to cel polityczny osiągany środkami gospodarczymi.",
+          "src": {
+            "page": 3,
+            "quote": "Sankcje to cel polityczny osiągany środkami gospodarczymi."
+          }
+        },
+        {
+          "q": "Co oznacza współzależność w stosunkach międzynarodowych?",
+          "a": [
+            "Decyzje jednego państwa odbijają się na innych",
+            "Każde państwo jest samowystarczalne",
+            "Państwa nie handlują ze sobą",
+            "Tylko mocarstwa wpływają na gospodarkę"
+          ],
+          "c": 0,
+          "e": "Współzależność: gospodarki i polityki państw są tak splecione, że decyzja jednego kraju dotyka innych.",
+          "src": {
+            "page": 4,
+            "quote": "Współzależność: gospodarki i polityki państw są tak splecione, że decyzja jednego kraju dotyka innych."
+          }
+        },
+        {
+          "q": "Które dziedziny łączą MSGiP?",
+          "a": [
+            "Ekonomię, nauki o polityce, prawo i historię",
+            "Tylko matematykę",
+            "Wyłącznie geografię fizyczną",
+            "Tylko ekonomię"
+          ],
+          "c": 0,
+          "e": "MSGiP są interdyscyplinarne: ekonomia, nauki o polityce, prawo międzynarodowe, historia i socjologia.",
+          "src": {
+            "page": 5,
+            "quote": "MSGiP są interdyscyplinarne: ekonomia, nauki o polityce, prawo międzynarodowe, historia i socjologia."
+          }
+        },
+        {
+          "q": "Ekonomia polityczna międzynarodowa bada…",
+          "a": [
+            "wzajemny wpływ polityki i gospodarki światowej",
+            "wyłącznie kursy walut",
+            "historię starożytną",
+            "prawo cywilne"
+          ],
+          "c": 0,
+          "e": "To nurt na styku ekonomii i polityki: jak władza kształtuje gospodarkę świata i odwrotnie.",
+          "src": {
+            "page": 5,
+            "quote": "To nurt na styku ekonomii i polityki: jak władza kształtuje gospodarkę świata i odwrotnie."
+          }
+        },
+        {
+          "q": "Ile poziomów analizy wyróżnia się w stosunkach międzynarodowych?",
+          "a": [
+            "Trzy: jednostka, państwo, system",
+            "Dwa: rząd i opozycja",
+            "Pięć, po jednym na kontynent",
+            "Jeden: państwo"
+          ],
+          "c": 0,
+          "e": "Jednostka, państwo i system międzynarodowy.",
+          "src": {
+            "page": 6,
+            "quote": "Jednostka, państwo i system międzynarodowy."
+          }
+        },
+        {
+          "q": "System międzynarodowy to…",
+          "a": [
+            "całość uczestników i powiązań między nimi",
+            "rząd światowy",
+            "to samo co ONZ",
+            "suma budżetów państw"
+          ],
+          "c": 0,
+          "e": "System międzynarodowy to wszyscy uczestnicy i relacje między nimi, nie żadna jedna instytucja.",
+          "src": {
+            "page": 6,
+            "quote": "System międzynarodowy to wszyscy uczestnicy i relacje między nimi, nie żadna jedna instytucja."
+          }
+        }
+      ],
+      "tasks": [
+        {
+          "type": "sort",
+          "title": "MSG czy MSP?",
+          "buckets": [
+            {
+              "name": "MSG",
+              "items": [
+                "umowa handlowa",
+                "inwestycja zagraniczna"
+              ]
+            },
+            {
+              "name": "MSP",
+              "items": [
+                "sojusz wojskowy",
+                "wizyta dyplomatyczna"
+              ]
+            }
+          ],
+          "e": "Handel i inwestycje to gospodarka (MSG), sojusze i dyplomacja to polityka (MSP)."
+        },
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "MSGiP korzystają z ekonomii, nauk o polityce i prawa międzynarodowego.",
+              "v": true,
+              "e": "To nauka interdyscyplinarna."
+            },
+            {
+              "s": "Poziomy analizy to jednostka, państwo i system międzynarodowy.",
+              "v": true,
+              "e": "Trzy perspektywy."
+            },
+            {
+              "s": "System międzynarodowy to inna nazwa ONZ.",
+              "v": false,
+              "e": "System to wszyscy uczestnicy i powiązania, nie jedna organizacja."
+            }
+          ],
+          "e": "MSGiP łączą kilka nauk i trzy poziomy patrzenia."
+        },
+        {
+          "type": "match",
+          "title": "Nauka i to, co wnosi do MSGiP",
+          "pairs": [
+            [
+              "Ekonomia",
+              "handel, kapitał, waluty"
+            ],
+            [
+              "Nauki o polityce",
+              "władza i bezpieczeństwo"
+            ],
+            [
+              "Prawo międzynarodowe",
+              "normy między państwami"
+            ],
+            [
+              "Historia",
+              "skąd wziął się dzisiejszy porządek"
+            ]
+          ],
+          "e": "Każda nauka oświetla inną stronę tego samego zjawiska."
+        }
+      ]
+    },
+    {
+      "id": "l2",
+      "title": "Globalizacja, handel i kryzysy",
+      "emoji": "📘",
+      "feed": [
+        {
+          "title": "Globalizacja: więcej niż handel",
+          "body": "<b>Globalizacja</b> to narastanie powiązań gospodarczych, politycznych i kulturowych między państwami i społeczeństwami. Handel to tylko jedna z jej warstw."
+        },
+        {
+          "title": "Co napędza globalizację",
+          "body": "Tańszy transport, <b>rewolucja informacyjna</b> i <b>liberalizacja handlu</b> obniżyły koszty kontaktu i wymiany."
+        },
+        {
+          "title": "Handel międzynarodowy",
+          "body": "Kraje specjalizują się według <b>przewagi komparatywnej</b> (Ricardo). <b>Bilans handlowy</b> to eksport minus import towarów."
+        },
+        {
+          "title": "Inwestycje zagraniczne",
+          "body": "<b>BIZ</b> daje trwałą kontrolę nad firmą za granicą. <b>Inwestycje portfelowe</b> to zakup akcji i obligacji bez kontroli."
+        },
+        {
+          "title": "Kryzysy w gospodarce światowej",
+          "body": "<b>Kryzys bilansu płatniczego</b>: kraj nie ma czym zapłacić za import ani za długi. Kryzys potrafi się rozlać na inne kraje (<b>efekt zarażania</b>)."
+        },
+        {
+          "title": "Kto gasi pożar",
+          "body": "W kryzysie płatniczym państwo idzie po pożyczkę do <b>MFW</b>. W zamian MFW oczekuje reform (<b>warunkowość</b>)."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "Globalizacja",
+          "d": "Narastanie powiązań gospodarczych, politycznych i kulturowych między państwami i społeczeństwami."
+        },
+        {
+          "t": "Liberalizacja handlu",
+          "d": "Znoszenie ceł i barier, które utrudniają wymianę między państwami."
+        },
+        {
+          "t": "Rewolucja informacyjna",
+          "d": "Rozwój technologii komunikacyjnych, który obniżył koszty kontaktu i przyspieszył globalizację."
+        },
+        {
+          "t": "Antyglobalizm",
+          "d": "Ruch krytykujący skutki globalizacji: nierówności, utratę miejsc pracy, wpływ korporacji."
+        },
+        {
+          "t": "Przewaga komparatywna",
+          "d": "Kraj opłaca się specjalizować w tym, co wytwarza relatywnie taniej niż inni (Ricardo)."
+        },
+        {
+          "t": "Bilans handlowy",
+          "d": "Różnica między wartością eksportu a importu towarów."
+        },
+        {
+          "t": "BIZ",
+          "d": "Bezpośrednie inwestycje zagraniczne: zakup lub budowa firmy za granicą z trwałą kontrolą nad nią."
+        },
+        {
+          "t": "Inwestycje portfelowe",
+          "d": "Zakup zagranicznych akcji lub obligacji bez przejmowania kontroli nad firmą."
+        },
+        {
+          "t": "Kryzys bilansu płatniczego",
+          "d": "Sytuacja, gdy kraj nie ma czym zapłacić za import ani obsłużyć długów zagranicznych."
+        },
+        {
+          "t": "Efekt zarażania",
+          "d": "Rozlewanie się kryzysu z jednego kraju na inne przez handel i rynki finansowe."
+        },
+        {
+          "t": "Pożyczkodawca ostatniej instancji",
+          "d": "Instytucja, która pożycza, gdy nikt inny nie chce; na poziomie świata tę rolę pełni MFW."
+        },
+        {
+          "t": "Warunkowość",
+          "d": "Pożyczka w zamian za reformy, np. cięcie deficytu; typowa dla programów MFW."
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Globalizacja to przede wszystkim…",
+          "a": [
+            "narastanie powiązań między państwami w wielu dziedzinach",
+            "tylko handel towarami",
+            "zamykanie granic",
+            "likwidacja państw"
+          ],
+          "c": 0,
+          "e": "Globalizacja obejmuje gospodarkę, politykę i kulturę.",
+          "src": {
+            "page": 7,
+            "quote": "Globalizacja obejmuje gospodarkę, politykę i kulturę."
+          }
+        },
+        {
+          "q": "Co przyspieszyło globalizację pod koniec XX wieku?",
+          "a": [
+            "Technologie komunikacyjne i liberalizacja handlu",
+            "Wzrost ceł",
+            "Zakaz inwestycji zagranicznych",
+            "Powrót do handlu wymiennego"
+          ],
+          "c": 0,
+          "e": "Tańszy kontakt i niższe bariery handlowe.",
+          "src": {
+            "page": 7,
+            "quote": "Tańszy kontakt i niższe bariery handlowe."
+          }
+        },
+        {
+          "q": "Globalizacja to tylko handel — prawda?",
+          "a": [
+            "Nie, obejmuje też politykę, kulturę i finanse",
+            "Tak, wyłącznie handel",
+            "Tak, tylko handel ropą",
+            "Nie, dotyczy tylko kultury"
+          ],
+          "c": 0,
+          "e": "Handel to jedna warstwa; są też przepływy kapitału, idei i decyzje polityczne.",
+          "src": {
+            "page": 8,
+            "quote": "Handel to jedna warstwa; są też przepływy kapitału, idei i decyzje polityczne."
+          }
+        },
+        {
+          "q": "Przewaga komparatywna oznacza, że kraj…",
+          "a": [
+            "specjalizuje się w tym, co wytwarza relatywnie taniej",
+            "produkuje wszystko sam",
+            "nie eksportuje",
+            "ma najwięcej surowców"
+          ],
+          "c": 0,
+          "e": "Ricardo: liczy się koszt względny, nie bezwzględny.",
+          "src": {
+            "page": 8,
+            "quote": "Ricardo: liczy się koszt względny, nie bezwzględny."
+          }
+        },
+        {
+          "q": "Firma z Niemiec buduje fabrykę w Polsce i nią zarządza. To…",
+          "a": [
+            "bezpośrednia inwestycja zagraniczna",
+            "inwestycja portfelowa",
+            "pomoc rozwojowa",
+            "cło"
+          ],
+          "c": 0,
+          "e": "Trwała kontrola nad firmą za granicą to BIZ.",
+          "src": {
+            "page": 9,
+            "quote": "Trwała kontrola nad firmą za granicą to BIZ."
+          }
+        },
+        {
+          "q": "Bilans handlowy to różnica między…",
+          "a": [
+            "eksportem a importem towarów",
+            "długiem a PKB",
+            "podatkami a wydatkami",
+            "inflacją a bezrobociem"
+          ],
+          "c": 0,
+          "e": "Eksport minus import towarów.",
+          "src": {
+            "page": 9,
+            "quote": "Eksport minus import towarów."
+          }
+        },
+        {
+          "q": "Kraj ma kryzys bilansu płatniczego. Do kogo zwraca się po pożyczkę ratunkową?",
+          "a": [
+            "WTO",
+            "MFW",
+            "ONZ"
+          ],
+          "c": 1,
+          "e": "Pożyczki w kryzysie płatniczym to rola MFW. WTO pilnuje zasad handlu, ONZ — pokoju.",
+          "src": {
+            "page": 10,
+            "quote": "Pożyczki w kryzysie płatniczym to rola MFW. WTO pilnuje zasad handlu, ONZ — pokoju."
+          }
+        },
+        {
+          "q": "Efekt zarażania w kryzysie to…",
+          "a": [
+            "rozlewanie się kryzysu na inne kraje",
+            "szczepienia w czasie kryzysu",
+            "wzrost eksportu",
+            "spadek inflacji"
+          ],
+          "c": 0,
+          "e": "Kryzys przechodzi przez handel i rynki finansowe na kolejne kraje.",
+          "src": {
+            "page": 10,
+            "quote": "Kryzys przechodzi przez handel i rynki finansowe na kolejne kraje."
+          }
+        },
+        {
+          "q": "Czego MFW zwykle oczekuje w zamian za pożyczkę?",
+          "a": [
+            "Reform, np. ograniczenia deficytu",
+            "Oddania terytorium",
+            "Niczego",
+            "Wystąpienia z ONZ"
+          ],
+          "c": 0,
+          "e": "To warunkowość: pieniądze w zamian za program reform.",
+          "src": {
+            "page": 10,
+            "quote": "To warunkowość: pieniądze w zamian za program reform."
+          }
+        }
+      ],
+      "tasks": [
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "Globalizacja obejmuje też kulturę i politykę.",
+              "v": true,
+              "e": "Nie tylko handel."
+            },
+            {
+              "s": "Liberalizacja handlu to podnoszenie ceł.",
+              "v": false,
+              "e": "To znoszenie ceł i barier."
+            },
+            {
+              "s": "Rewolucja informacyjna przyspieszyła globalizację.",
+              "v": true,
+              "e": "Kontakt stał się tani i szybki."
+            }
+          ],
+          "e": "Globalizacja ma wiele warstw i kilka sił napędowych."
+        },
+        {
+          "type": "match",
+          "title": "Pojęcie i jego sens",
+          "pairs": [
+            [
+              "Przewaga komparatywna",
+              "specjalizacja w tym, co relatywnie tańsze"
+            ],
+            [
+              "Bilans handlowy",
+              "eksport minus import"
+            ],
+            [
+              "BIZ",
+              "trwała kontrola nad firmą za granicą"
+            ],
+            [
+              "Inwestycja portfelowa",
+              "akcje i obligacje bez kontroli"
+            ]
+          ],
+          "e": "Handel i kapitał to dwie drogi powiązań między gospodarkami."
+        },
+        {
+          "type": "chain",
+          "title": "Jak przebiega kryzys płatniczy?",
+          "steps": [
+            "Kraj traci dopływ waluty z eksportu",
+            "Brakuje pieniędzy na import i spłatę długów",
+            "Rynki odmawiają nowych pożyczek",
+            "Państwo prosi MFW o pożyczkę",
+            "MFW pożycza w zamian za reformy"
+          ],
+          "given": [
+            0,
+            4
+          ],
+          "bank": [
+            "WTO nakłada sankcje",
+            "Bank Światowy buduje drogi"
+          ],
+          "e": "MFW wchodzi, gdy rynki już nie pożyczają, i stawia warunki."
+        },
+        {
+          "type": "fill",
+          "text": "Kraj specjalizuje się według przewagi {0}, a różnica eksportu i importu to bilans {1}.",
+          "blanks": [
+            "komparatywnej",
+            "handlowy"
+          ],
+          "bank": [
+            "absolutnej",
+            "płatniczy",
+            "fiskalnej",
+            "budżetowy"
+          ],
+          "e": "Przewaga komparatywna (Ricardo) i bilans handlowy."
+        }
+      ]
+    },
+    {
+      "id": "l3",
+      "title": "Państwa i organizacje międzynarodowe",
+      "emoji": "📘",
+      "feed": [
+        {
+          "title": "Państwo: nadal główny gracz",
+          "body": "Państwo to <b>terytorium</b>, <b>ludność</b> i <b>suwerenna władza</b>. Mimo globalizacji to państwa zawierają umowy i tworzą organizacje."
+        },
+        {
+          "title": "MFW i Bank Światowy: kto co robi",
+          "body": "Oba powstały w <b>Bretton Woods</b> w 1944 r. <b>MFW</b> pilnuje stabilności finansowej i pożycza w kryzysie płatniczym. <b>Bank Światowy</b> finansuje rozwój: drogi, szkoły, szpitale."
+        },
+        {
+          "title": "ONZ",
+          "body": "<b>ONZ</b> powstała w 1945 r., żeby utrzymać pokój. <b>Rada Bezpieczeństwa</b> (5 stałych członków z wetem) może nakładać sankcje. W <b>Zgromadzeniu Ogólnym</b> każde państwo ma jeden głos."
+        },
+        {
+          "title": "WTO",
+          "body": "<b>WTO</b> działa od 1995 r. (wcześniej <b>GATT</b>). Ustala zasady handlu i rozstrzyga spory. Ważna zasada: <b>klauzula największego uprzywilejowania</b>."
+        },
+        {
+          "title": "Organizacje międzyrządowe",
+          "body": "Członkami organizacji międzyrządowych są państwa. To one przekazują organizacji zadania i pieniądze."
+        },
+        {
+          "title": "Jak organizacje zmieniają państwa",
+          "body": "Organizacje ustalają reguły, które państwa przyjmują: zasady handlu WTO, warunki pożyczek MFW, rezolucje ONZ."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "Państwo",
+          "d": "Terytorium, ludność i suwerenna władza: trzy elementy państwa w prawie międzynarodowym."
+        },
+        {
+          "t": "Suwerenność",
+          "d": "Niezależność władzy państwa od innych państw i najwyższa władza na jego terytorium."
+        },
+        {
+          "t": "Państwo narodowe",
+          "d": "Państwo, którego granice pokrywają się mniej więcej z zasięgiem jednego narodu."
+        },
+        {
+          "t": "ONZ",
+          "d": "Organizacja Narodów Zjednoczonych, założona w 1945 r.; jej głównym celem jest utrzymanie pokoju i bezpieczeństwa."
+        },
+        {
+          "t": "Rada Bezpieczeństwa ONZ",
+          "d": "Organ ONZ z 5 stałymi członkami z prawem weta; decyduje o sankcjach i misjach pokojowych."
+        },
+        {
+          "t": "Zgromadzenie Ogólne ONZ",
+          "d": "Organ, w którym każde państwo członkowskie ma jeden głos."
+        },
+        {
+          "t": "WTO",
+          "d": "Światowa Organizacja Handlu (od 1995 r.): ustala zasady handlu i rozstrzyga spory handlowe."
+        },
+        {
+          "t": "Klauzula największego uprzywilejowania",
+          "d": "Zasada WTO: korzyść handlową daną jednemu członkowi trzeba dać wszystkim."
+        },
+        {
+          "t": "GATT",
+          "d": "Układ ogólny w sprawie taryf celnych i handlu z 1947 r., poprzednik WTO."
+        },
+        {
+          "t": "MFW",
+          "d": "Międzynarodowy Fundusz Walutowy: pilnuje stabilności finansowej i pożycza państwom w kryzysie płatniczym."
+        },
+        {
+          "t": "Bretton Woods",
+          "d": "Konferencja z 1944 r., na której powstały MFW i Bank Światowy."
+        },
+        {
+          "t": "Kwota w MFW",
+          "d": "Wpłata państwa członkowskiego; od niej zależą głosy i dostęp do pożyczek. Z kwot MFW ma pieniądze."
+        },
+        {
+          "t": "Bank Światowy",
+          "d": "Finansuje rozwój: drogi, szkoły i szpitale w krajach rozwijających się."
+        },
+        {
+          "t": "Pomoc rozwojowa",
+          "d": "Długoterminowe wsparcie krajów biedniejszych, np. pożyczki Banku Światowego na infrastrukturę."
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Jakie trzy elementy tworzą państwo w prawie międzynarodowym?",
+          "a": [
+            "Terytorium, ludność, suwerenna władza",
+            "Armia, flaga, hymn",
+            "Waluta, bank, giełda",
+            "Konstytucja, sąd, parlament"
+          ],
+          "c": 0,
+          "e": "Klasyczna definicja: terytorium, ludność i suwerenna władza.",
+          "src": {
+            "page": 11,
+            "quote": "Klasyczna definicja: terytorium, ludność i suwerenna władza."
+          }
+        },
+        {
+          "q": "Suwerenność oznacza, że…",
+          "a": [
+            "władza państwa nie podlega innym państwom",
+            "państwo nie ma granic",
+            "państwo należy do ONZ",
+            "państwo nie ma długów"
+          ],
+          "c": 0,
+          "e": "Suwerenność: niezależność na zewnątrz i najwyższa władza wewnątrz.",
+          "src": {
+            "page": 11,
+            "quote": "Suwerenność: niezależność na zewnątrz i najwyższa władza wewnątrz."
+          }
+        },
+        {
+          "q": "Kiedy powstała ONZ?",
+          "a": [
+            "W 1945 r.",
+            "W 1919 r.",
+            "W 1989 r.",
+            "W 1995 r."
+          ],
+          "c": 0,
+          "e": "ONZ powstała po II wojnie światowej, w 1945 r.",
+          "src": {
+            "page": 12,
+            "quote": "ONZ powstała po II wojnie światowej, w 1945 r."
+          }
+        },
+        {
+          "q": "Który organ ONZ może nałożyć wiążące sankcje?",
+          "a": [
+            "Rada Bezpieczeństwa",
+            "Zgromadzenie Ogólne",
+            "Sekretariat",
+            "UNESCO"
+          ],
+          "c": 0,
+          "e": "Wiążące decyzje o sankcjach podejmuje Rada Bezpieczeństwa.",
+          "src": {
+            "page": 12,
+            "quote": "Wiążące decyzje o sankcjach podejmuje Rada Bezpieczeństwa."
+          }
+        },
+        {
+          "q": "Czym zajmuje się WTO?",
+          "a": [
+            "Zasadami handlu i sporami handlowymi",
+            "Pożyczkami w kryzysie",
+            "Misjami pokojowymi",
+            "Ochroną zabytków"
+          ],
+          "c": 0,
+          "e": "WTO to reguły handlu i rozstrzyganie sporów.",
+          "src": {
+            "page": 13,
+            "quote": "WTO to reguły handlu i rozstrzyganie sporów."
+          }
+        },
+        {
+          "q": "Klauzula największego uprzywilejowania mówi, że…",
+          "a": [
+            "korzyść dla jednego członka trzeba dać wszystkim",
+            "najbogatszy kraj ma pierwszeństwo",
+            "cła są zakazane",
+            "można dyskryminować partnerów"
+          ],
+          "c": 0,
+          "e": "To zasada niedyskryminacji w WTO.",
+          "src": {
+            "page": 13,
+            "quote": "To zasada niedyskryminacji w WTO."
+          }
+        },
+        {
+          "q": "Kraj ma kryzys płatniczy. Do kogo idzie po pożyczkę?",
+          "a": [
+            "Do Banku Światowego",
+            "Do MFW",
+            "Do WTO",
+            "Do ONZ"
+          ],
+          "c": 1,
+          "e": "MFW ratuje w kryzysie płatniczym. Bank Światowy finansuje rozwój: drogi, szkoły.",
+          "src": {
+            "page": 11,
+            "quote": "MFW ratuje w kryzysie płatniczym. Bank Światowy finansuje rozwój: drogi, szkoły."
+          }
+        },
+        {
+          "q": "Skąd MFW ma pieniądze na pożyczki?",
+          "a": [
+            "Z kwot wpłacanych przez państwa członkowskie",
+            "Z podatku od korporacji",
+            "Z zysków WTO",
+            "Z ceł"
+          ],
+          "c": 0,
+          "e": "Państwa wpłacają kwoty; od nich zależą też głosy.",
+          "src": {
+            "page": 11,
+            "quote": "Państwa wpłacają kwoty; od nich zależą też głosy."
+          }
+        },
+        {
+          "q": "Na jakiej konferencji powstały MFW i Bank Światowy?",
+          "a": [
+            "Bretton Woods, 1944",
+            "Jałta, 1945",
+            "Maastricht, 1992",
+            "Wersal, 1919"
+          ],
+          "c": 0,
+          "e": "Bretton Woods, lipiec 1944 r.",
+          "src": {
+            "page": 11,
+            "quote": "Bretton Woods, lipiec 1944 r."
+          }
+        },
+        {
+          "q": "Kto finansuje budowę dróg i szkół w krajach rozwijających się?",
+          "a": [
+            "Bank Światowy",
+            "MFW",
+            "WTO",
+            "Rada Bezpieczeństwa"
+          ],
+          "c": 0,
+          "e": "Rozwój i infrastruktura to rola Banku Światowego.",
+          "src": {
+            "page": 14,
+            "quote": "Rozwój i infrastruktura to rola Banku Światowego."
+          }
+        },
+        {
+          "q": "Pomoc rozwojowa Banku Światowego to…",
+          "a": [
+            "długoterminowe wsparcie infrastruktury i usług",
+            "krótkie pożyczki w kryzysie walutowym",
+            "sankcje handlowe",
+            "misje pokojowe"
+          ],
+          "c": 0,
+          "e": "Bank Światowy działa długoterminowo, MFW — w kryzysie.",
+          "src": {
+            "page": 14,
+            "quote": "Bank Światowy działa długoterminowo, MFW — w kryzysie."
+          }
+        }
+      ],
+      "tasks": [
+        {
+          "type": "match",
+          "title": "Organizacja i jej rola",
+          "pairs": [
+            [
+              "ONZ",
+              "pokój i bezpieczeństwo"
+            ],
+            [
+              "WTO",
+              "zasady handlu"
+            ],
+            [
+              "MFW",
+              "pożyczki w kryzysie płatniczym"
+            ],
+            [
+              "Bank Światowy",
+              "finansowanie rozwoju"
+            ]
+          ],
+          "e": "Każda organizacja ma swoje zadanie — to częsta pułapka na sprawdzianie."
+        },
+        {
+          "type": "sort",
+          "title": "MFW czy Bank Światowy?",
+          "buckets": [
+            {
+              "name": "MFW",
+              "items": [
+                "pożyczka w kryzysie płatniczym",
+                "kwoty członkowskie"
+              ]
+            },
+            {
+              "name": "Bank Światowy",
+              "items": [
+                "budowa dróg",
+                "szkoły i szpitale"
+              ]
+            }
+          ],
+          "e": "MFW gasi kryzysy, Bank Światowy finansuje rozwój."
+        },
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "Rada Bezpieczeństwa ma 5 stałych członków z prawem weta.",
+              "v": true,
+              "e": "USA, Chiny, Rosja, Wielka Brytania, Francja."
+            },
+            {
+              "s": "W Zgromadzeniu Ogólnym głos zależy od liczby ludności.",
+              "v": false,
+              "e": "Każde państwo ma jeden głos."
+            },
+            {
+              "s": "ONZ powstała w 1945 r.",
+              "v": true,
+              "e": "Po II wojnie światowej."
+            }
+          ],
+          "e": "ONZ: Rada Bezpieczeństwa decyduje, Zgromadzenie Ogólne debatuje."
+        },
+        {
+          "type": "fill",
+          "text": "Państwo to terytorium, {0} i suwerenna {1}.",
+          "blanks": [
+            "ludność",
+            "władza"
+          ],
+          "bank": [
+            "armia",
+            "waluta",
+            "flaga",
+            "gospodarka"
+          ],
+          "e": "Trzy elementy państwa."
+        }
+      ]
+    },
+    {
+      "id": "l4",
+      "title": "Korporacje, UE i NGO",
+      "emoji": "📘",
+      "feed": [
+        {
+          "title": "Korporacje transnarodowe",
+          "body": "<b>Korporacja transnarodowa</b> ma siedzibę w jednym kraju, a oddziały i produkcję w wielu innych. Największe mają przychody wyższe niż PKB wielu państw."
+        },
+        {
+          "title": "Korporacja kontra państwo",
+          "body": "Korporacje wpływają na politykę przez inwestycje, miejsca pracy i <b>lobbing</b>. Dlatego są podmiotem MSGiP, choć nie mają suwerenności."
+        },
+        {
+          "title": "Unia Europejska jako podmiot",
+          "body": "<b>UE</b> to 27 państw, wspólny rynek i instytucje ponad państwami. To przykład <b>integracji ponadnarodowej</b>."
+        },
+        {
+          "title": "NGO",
+          "body": "<b>Organizacje pozarządowe</b> działają niezależnie od państw i nie dla zysku. Wpływają na politykę przez <b>rzecznictwo</b>."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "Korporacja transnarodowa",
+          "d": "Firma z siedzibą w jednym kraju, a oddziałami i produkcją w wielu innych."
+        },
+        {
+          "t": "Przychody korporacji a PKB",
+          "d": "Największe korporacje mają przychody większe niż PKB wielu państw."
+        },
+        {
+          "t": "Łańcuch dostaw",
+          "d": "Sieć firm i krajów, przez które przechodzi produkt od surowca do klienta."
+        },
+        {
+          "t": "Lobbing",
+          "d": "Wpływanie na decyzje polityczne w interesie firmy lub grupy."
+        },
+        {
+          "t": "Unia Europejska",
+          "d": "Związek 27 państw ze wspólnym rynkiem i instytucjami ponad państwami."
+        },
+        {
+          "t": "Integracja ponadnarodowa",
+          "d": "Przekazanie części kompetencji państw wspólnym instytucjom, jak w UE."
+        },
+        {
+          "t": "Komisja Europejska",
+          "d": "Organ wykonawczy UE: proponuje prawo i pilnuje traktatów."
+        },
+        {
+          "t": "NGO",
+          "d": "Organizacja pozarządowa: działa niezależnie od państw i nie dla zysku, np. Amnesty International."
+        },
+        {
+          "t": "Rzecznictwo",
+          "d": "Działania NGO, które mają zmienić prawo lub politykę."
+        },
+        {
+          "t": "Organizacja międzyrządowa",
+          "d": "Organizacja, której członkami są państwa, np. ONZ czy WTO; przeciwieństwo NGO."
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Korporacja transnarodowa to firma, która…",
+          "a": [
+            "działa i produkuje w wielu krajach",
+            "należy do ONZ",
+            "działa tylko w jednym mieście",
+            "jest organizacją pozarządową"
+          ],
+          "c": 0,
+          "e": "Siedziba w jednym kraju, działalność w wielu.",
+          "src": {
+            "page": 18,
+            "quote": "Siedziba w jednym kraju, działalność w wielu."
+          }
+        },
+        {
+          "q": "Czy korporacja jest podmiotem MSGiP?",
+          "a": [
+            "Tak, wpływa na gospodarkę i politykę wielu państw",
+            "Nie, tylko państwa są podmiotami",
+            "Tylko w Europie",
+            "Tylko gdy jest państwowa"
+          ],
+          "c": 0,
+          "e": "Korporacje nie mają suwerenności, ale realnie kształtują stosunki międzynarodowe.",
+          "src": {
+            "page": 18,
+            "quote": "Korporacje nie mają suwerenności, ale realnie kształtują stosunki międzynarodowe."
+          }
+        },
+        {
+          "q": "Lobbing to…",
+          "a": [
+            "wpływanie na decyzje polityczne w czyimś interesie",
+            "rodzaj podatku",
+            "pożyczka MFW",
+            "głosowanie w ONZ"
+          ],
+          "c": 0,
+          "e": "Lobbing to jeden ze sposobów wpływu korporacji na państwa.",
+          "src": {
+            "page": 19,
+            "quote": "Lobbing to jeden ze sposobów wpływu korporacji na państwa."
+          }
+        },
+        {
+          "q": "Ile państw liczy Unia Europejska?",
+          "a": [
+            "27",
+            "12",
+            "15",
+            "30"
+          ],
+          "c": 0,
+          "e": "Od wyjścia Wielkiej Brytanii w 2020 r. — 27.",
+          "src": {
+            "page": 20,
+            "quote": "Od wyjścia Wielkiej Brytanii w 2020 r. — 27."
+          }
+        },
+        {
+          "q": "Integracja ponadnarodowa polega na…",
+          "a": [
+            "przekazaniu części kompetencji wspólnym instytucjom",
+            "likwidacji państw",
+            "zamknięciu granic",
+            "zakazie handlu"
+          ],
+          "c": 0,
+          "e": "Państwa dzielą się częścią władzy ze wspólnymi instytucjami.",
+          "src": {
+            "page": 20,
+            "quote": "Państwa dzielą się częścią władzy ze wspólnymi instytucjami."
+          }
+        },
+        {
+          "q": "Który organ UE proponuje nowe prawo?",
+          "a": [
+            "Komisja Europejska",
+            "Rada Bezpieczeństwa",
+            "MFW",
+            "WTO"
+          ],
+          "c": 0,
+          "e": "Inicjatywa ustawodawcza należy do Komisji Europejskiej.",
+          "src": {
+            "page": 21,
+            "quote": "Inicjatywa ustawodawcza należy do Komisji Europejskiej."
+          }
+        },
+        {
+          "q": "Organizacja pozarządowa (NGO) to…",
+          "a": [
+            "organizacja niezależna od państw, działająca nie dla zysku",
+            "agenda rządowa",
+            "korporacja",
+            "organizacja międzyrządowa"
+          ],
+          "c": 0,
+          "e": "NGO: niezależna, non-profit.",
+          "src": {
+            "page": 22,
+            "quote": "NGO: niezależna, non-profit."
+          }
+        },
+        {
+          "q": "Czym NGO różni się od organizacji międzyrządowej?",
+          "a": [
+            "Członkami NGO nie są państwa",
+            "NGO zawsze jest firmą",
+            "NGO ma armię",
+            "Nie ma różnicy"
+          ],
+          "c": 0,
+          "e": "Organizacje międzyrządowe zrzeszają państwa, NGO — ludzi i stowarzyszenia.",
+          "src": {
+            "page": 22,
+            "quote": "Organizacje międzyrządowe zrzeszają państwa, NGO — ludzi i stowarzyszenia."
+          }
+        }
+      ],
+      "tasks": [
+        {
+          "type": "sort",
+          "title": "Kto jest członkiem?",
+          "buckets": [
+            {
+              "name": "Państwa",
+              "items": [
+                "ONZ",
+                "WTO"
+              ]
+            },
+            {
+              "name": "Nie państwa",
+              "items": [
+                "Amnesty International",
+                "Lekarze bez Granic"
+              ]
+            }
+          ],
+          "e": "Organizacje międzyrządowe zrzeszają państwa, NGO — nie."
+        },
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "Korporacja transnarodowa ma produkcję w wielu krajach.",
+              "v": true,
+              "e": "Na tym polega jej transnarodowość."
+            },
+            {
+              "s": "Korporacje nie mają żadnego wpływu na politykę.",
+              "v": false,
+              "e": "Wpływają przez inwestycje i lobbing."
+            },
+            {
+              "s": "Przychody dużej korporacji mogą przewyższać PKB państwa.",
+              "v": true,
+              "e": "To częsty argument w MSGiP."
+            }
+          ],
+          "e": "Korporacje to podmioty niepaństwowe o realnej sile."
+        },
+        {
+          "type": "match",
+          "title": "Instytucje UE",
+          "pairs": [
+            [
+              "Komisja Europejska",
+              "proponuje prawo"
+            ],
+            [
+              "Parlament Europejski",
+              "wybierany przez obywateli"
+            ],
+            [
+              "Rada UE",
+              "rządy państw członkowskich"
+            ]
+          ],
+          "e": "Trzy główne instytucje stanowienia prawa w UE."
+        }
+      ]
+    }
+  ],
+  "keyPoints": [
+    {
+      "id": "p1",
+      "title": "MSG a MSP: czym się różnią",
+      "short": "MSG a MSP",
+      "summary": "Gospodarka i polityka ponad granicami: dwa spojrzenia na te same relacje.",
+      "levels": [
+        "l1"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l1",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "l1",
+          "index": 1
+        },
+        {
+          "kind": "flashcard",
+          "level": "l1",
+          "index": 2
+        },
+        {
+          "kind": "flashcard",
+          "level": "l1",
+          "index": 3
+        },
+        {
+          "kind": "flashcard",
+          "level": "l1",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "l1",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "l1",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "l1",
+          "index": 2
+        },
+        {
+          "kind": "quiz",
+          "level": "l1",
+          "index": 3
+        },
+        {
+          "kind": "task",
+          "level": "l1",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "title": "MSGiP na tle nauk społecznych",
+      "short": "MSGiP a nauki społeczne",
+      "summary": "Interdyscyplinarność i poziomy analizy.",
+      "levels": [
+        "l1"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l1",
+          "index": 5
+        },
+        {
+          "kind": "flashcard",
+          "level": "l1",
+          "index": 6
+        },
+        {
+          "kind": "flashcard",
+          "level": "l1",
+          "index": 7
+        },
+        {
+          "kind": "flashcard",
+          "level": "l1",
+          "index": 8
+        },
+        {
+          "kind": "flashcard",
+          "level": "l1",
+          "index": 9
+        },
+        {
+          "kind": "quiz",
+          "level": "l1",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "l1",
+          "index": 5
+        },
+        {
+          "kind": "quiz",
+          "level": "l1",
+          "index": 6
+        },
+        {
+          "kind": "quiz",
+          "level": "l1",
+          "index": 7
+        },
+        {
+          "kind": "task",
+          "level": "l1",
+          "index": 1
+        },
+        {
+          "kind": "task",
+          "level": "l1",
+          "index": 2
+        }
+      ]
+    },
+    {
+      "id": "p3",
+      "title": "Globalizacja: więcej niż handel",
+      "short": "Globalizacja",
+      "summary": "Czym jest globalizacja i co ją napędza.",
+      "levels": [
+        "l2"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l2",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "l2",
+          "index": 1
+        },
+        {
+          "kind": "flashcard",
+          "level": "l2",
+          "index": 2
+        },
+        {
+          "kind": "flashcard",
+          "level": "l2",
+          "index": 3
+        },
+        {
+          "kind": "quiz",
+          "level": "l2",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "l2",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "l2",
+          "index": 2
+        },
+        {
+          "kind": "task",
+          "level": "l2",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p4",
+      "title": "Handel i inwestycje zagraniczne",
+      "short": "Handel i inwestycje",
+      "summary": "Przewaga komparatywna, bilans handlowy, BIZ.",
+      "levels": [
+        "l2"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l2",
+          "index": 4
+        },
+        {
+          "kind": "flashcard",
+          "level": "l2",
+          "index": 5
+        },
+        {
+          "kind": "flashcard",
+          "level": "l2",
+          "index": 6
+        },
+        {
+          "kind": "flashcard",
+          "level": "l2",
+          "index": 7
+        },
+        {
+          "kind": "quiz",
+          "level": "l2",
+          "index": 3
+        },
+        {
+          "kind": "quiz",
+          "level": "l2",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "l2",
+          "index": 5
+        },
+        {
+          "kind": "task",
+          "level": "l2",
+          "index": 1
+        },
+        {
+          "kind": "task",
+          "level": "l2",
+          "index": 3
+        }
+      ]
+    },
+    {
+      "id": "p5",
+      "title": "Zarządzanie kryzysami w gospodarce światowej",
+      "short": "Zarządzanie kryzysami",
+      "summary": "Kryzys płatniczy, efekt zarażania i pożyczki ratunkowe.",
+      "levels": [
+        "l2"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l2",
+          "index": 8
+        },
+        {
+          "kind": "flashcard",
+          "level": "l2",
+          "index": 9
+        },
+        {
+          "kind": "flashcard",
+          "level": "l2",
+          "index": 10
+        },
+        {
+          "kind": "flashcard",
+          "level": "l2",
+          "index": 11
+        },
+        {
+          "kind": "quiz",
+          "level": "l2",
+          "index": 6
+        },
+        {
+          "kind": "quiz",
+          "level": "l2",
+          "index": 7
+        },
+        {
+          "kind": "quiz",
+          "level": "l2",
+          "index": 8
+        },
+        {
+          "kind": "task",
+          "level": "l2",
+          "index": 2
+        }
+      ]
+    },
+    {
+      "id": "p6",
+      "title": "Państwo narodowe i suwerenność",
+      "short": "Państwo narodowe",
+      "summary": "Elementy państwa i suwerenność.",
+      "levels": [
+        "l3"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 1
+        },
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 2
+        },
+        {
+          "kind": "quiz",
+          "level": "l3",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "l3",
+          "index": 1
+        },
+        {
+          "kind": "task",
+          "level": "l3",
+          "index": 3
+        }
+      ]
+    },
+    {
+      "id": "p7",
+      "title": "ONZ: pokój i bezpieczeństwo",
+      "short": "ONZ",
+      "summary": "Rada Bezpieczeństwa i Zgromadzenie Ogólne.",
+      "levels": [
+        "l3"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 3
+        },
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 4
+        },
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 5
+        },
+        {
+          "kind": "quiz",
+          "level": "l3",
+          "index": 2
+        },
+        {
+          "kind": "quiz",
+          "level": "l3",
+          "index": 3
+        },
+        {
+          "kind": "task",
+          "level": "l3",
+          "index": 2
+        }
+      ]
+    },
+    {
+      "id": "p8",
+      "title": "WTO: zasady handlu światowego",
+      "short": "WTO",
+      "summary": "Reguły handlu, spory i klauzula największego uprzywilejowania.",
+      "levels": [
+        "l3"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 6
+        },
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 7
+        },
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 8
+        },
+        {
+          "kind": "quiz",
+          "level": "l3",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "l3",
+          "index": 5
+        }
+      ]
+    },
+    {
+      "id": "p9",
+      "title": "MFW: rola Międzynarodowego Funduszu Walutowego",
+      "short": "MFW",
+      "summary": "Pożyczki w kryzysie płatniczym, kwoty i warunkowość.",
+      "levels": [
+        "l3"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 9
+        },
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 10
+        },
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 11
+        },
+        {
+          "kind": "quiz",
+          "level": "l3",
+          "index": 6
+        },
+        {
+          "kind": "quiz",
+          "level": "l3",
+          "index": 7
+        },
+        {
+          "kind": "quiz",
+          "level": "l3",
+          "index": 8
+        },
+        {
+          "kind": "task",
+          "level": "l3",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "id": "p10",
+      "title": "Bank Światowy: finansowanie rozwoju",
+      "short": "Bank Światowy",
+      "summary": "Drogi, szkoły i szpitale w krajach rozwijających się.",
+      "levels": [
+        "l3"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 12
+        },
+        {
+          "kind": "flashcard",
+          "level": "l3",
+          "index": 13
+        },
+        {
+          "kind": "quiz",
+          "level": "l3",
+          "index": 9
+        },
+        {
+          "kind": "quiz",
+          "level": "l3",
+          "index": 10
+        },
+        {
+          "kind": "task",
+          "level": "l3",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p11",
+      "title": "Korporacje transnarodowe jako podmioty",
+      "short": "Korporacje transnarodowe",
+      "summary": "Siła ekonomiczna i wpływ na politykę.",
+      "levels": [
+        "l4"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l4",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "l4",
+          "index": 1
+        },
+        {
+          "kind": "flashcard",
+          "level": "l4",
+          "index": 2
+        },
+        {
+          "kind": "flashcard",
+          "level": "l4",
+          "index": 3
+        },
+        {
+          "kind": "quiz",
+          "level": "l4",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "l4",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "l4",
+          "index": 2
+        },
+        {
+          "kind": "task",
+          "level": "l4",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "id": "p12",
+      "title": "Unia Europejska jako podmiot",
+      "short": "Unia Europejska",
+      "summary": "Integracja ponadnarodowa i instytucje UE.",
+      "levels": [
+        "l4"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l4",
+          "index": 4
+        },
+        {
+          "kind": "flashcard",
+          "level": "l4",
+          "index": 5
+        },
+        {
+          "kind": "flashcard",
+          "level": "l4",
+          "index": 6
+        },
+        {
+          "kind": "quiz",
+          "level": "l4",
+          "index": 3
+        },
+        {
+          "kind": "quiz",
+          "level": "l4",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "l4",
+          "index": 5
+        },
+        {
+          "kind": "task",
+          "level": "l4",
+          "index": 2
+        }
+      ]
+    },
+    {
+      "id": "p13",
+      "title": "NGO: organizacje pozarządowe",
+      "short": "NGO",
+      "summary": "Organizacje niezależne od państw i rzecznictwo.",
+      "levels": [
+        "l4"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "l4",
+          "index": 7
+        },
+        {
+          "kind": "flashcard",
+          "level": "l4",
+          "index": 8
+        },
+        {
+          "kind": "flashcard",
+          "level": "l4",
+          "index": 9
+        },
+        {
+          "kind": "quiz",
+          "level": "l4",
+          "index": 6
+        },
+        {
+          "kind": "quiz",
+          "level": "l4",
+          "index": 7
+        },
+        {
+          "kind": "task",
+          "level": "l4",
+          "index": 0
+        }
+      ]
+    }
+  ]
+}

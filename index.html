@@ -8,13 +8,15 @@
 <title>Cramfox — nauka z Twoich materiałów</title>
 <link rel="stylesheet" href="fonts/fonts.css">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="media.css">
 </head>
 <body>
 <div id="app"></div>
-<!-- kolejność ma znaczenie: chmura ustawia konto (NAUKA_UID) przed silnikiem; UI chmury startuje silnik po wczytaniu przedmiotów -->
+<!-- kolejność ma znaczenie: chmura ustawia konto (NAUKA_UID) przed silnikiem; media.js (rolki, podcast, lis) po silniku; UI chmury startuje silnik po wczytaniu przedmiotów -->
 <script src="cloud-config.js"></script>
 <script src="cloud.js"></script>
 <script src="engine.js"></script>
+<script src="media.js"></script>
 <script src="cloud-ui.js"></script>
 </body>
 </html>

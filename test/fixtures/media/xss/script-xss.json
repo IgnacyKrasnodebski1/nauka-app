@@ -1,0 +1,16 @@
+{
+  "v": 1,
+  "title": "Podcast <img src=x onerror=\"window.__pwned=1\"> 🔥",
+  "chapters": [
+    { "n": 1, "title": "Rozdział <svg onload=window.__pwned=1>", "lines": [
+      { "s": "lis", "t": "Zwykła linijka z **pojęciem**." },
+      { "s": "szop", "t": "Szop mówi <img src=x onerror=\"window.__pwned=1\"> i **<img src=x onerror=window.__pwned=1>** 🔥." },
+      { "s": "<b>hacker</b>", "t": "Nieznany mówca." },
+      { "s": "lis", "t": "**\"><script>window.__pwned=1</script>**" }
+    ] },
+    { "n": 2, "title": "Drugi", "lines": [
+      { "s": "lis", "t": "Druga część." },
+      { "s": "szop", "t": "javascript:window.__pwned=1" }
+    ] }
+  ]
+}

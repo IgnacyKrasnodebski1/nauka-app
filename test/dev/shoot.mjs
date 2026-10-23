@@ -7,7 +7,11 @@
 
    Użycie (z katalogu test/):  npm install  →  node dev/shoot.mjs [--out KATALOG] [--only fresh,seeded,...] [--port 8790] [--headful]
    Chrome: /Applications/Google Chrome.app (albo --chrome ŚCIEŻKA / CHROME=…). Atrapa: test/dev/mock-backend.js — nic nie idzie do Supabase ani do API.
-   Scenariusze: fresh, seeded, comeback, monday, errors, boot, nostore, xss, narrow, native (+ lesson4 do debugowania). SHOOT_DEBUG=1 = więcej logów. */
+   Scenariusze: fresh, seeded, comeback, monday, errors, boot, nostore, xss, narrow, native (+ lesson4 do debugowania). SHOOT_DEBUG=1 = więcej logów.
+   Centrum przedmiotu i media (390×844 jak makiety design/centrum/*.dc.html, mock=msgip, dzień makiet 22.10.2026): hub (Main, Material, Nowy, HowSheet,
+   PointSheet, menu, Szop), today, reels (Seria, Odtwarzacz, Pytanie, Przygotuj A/B), podcast (Odtwarzacz, nagrywanie, Pauza, mini), fox (Tryby, Wytłumacz,
+   Przepytaj, Egzamin), limits (0 tworzeń, bez głosów, busy, limity, porażka, nieznany wynik, czat 0, bez 0010, XSS).
+   Szybko: node dev/shoot.mjs --only hub,today,reels,podcast,fox,limits,narrowhub */
 import puppeteer from 'puppeteer-core';
 import http from 'node:http';
 import fs from 'node:fs';
@@ -37,7 +41,7 @@ const TASK_LABEL=Object.fromEntries(Object.entries(KB.labels).map(([k,v])=>[v,k.
 const TASK_ORDER=['tf','fill','typeterm','swipe','thesis','scenario','finderror','match','order','sort','timeline','chain','chart','mathsteps'];
 
 /* ---------- serwer plików (repo) ---------- */
-const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png','.svg':'image/svg+xml','.md':'text/markdown; charset=utf-8'};
+const MIME={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png','.svg':'image/svg+xml','.md':'text/markdown; charset=utf-8','.mp3':'audio/mpeg'};
 const serverHits=[];
 const server=http.createServer((req,res)=>{
   const u=new URL(req.url,'http://localhost');
@@ -133,7 +137,18 @@ async function shot(run,name,state,how){
     document.querySelectorAll('#app *').forEach(e=>{if(out.wide.length>=4)return;const r=e.getBoundingClientRect();if(!r.width||!r.height||r.right<=W+2)return;const cs=getComputedStyle(e);
       if(cs.visibility==='hidden'||cs.display==='none'||+cs.opacity===0||cs.position==='fixed')return;if(scrollX(e))return;if(!e.childNodes.length||![...e.childNodes].some(n=>n.nodeType===3&&n.nodeValue.trim()))return;
       out.wide.push((e.className&&e.className.baseVal==null?String(e.className):e.tagName.toLowerCase()).slice(0,40)+' → '+Math.round(r.right)+'px');});
-    out.pwned=!!window.__pwned;return out;});
+    out.pwned=!!window.__pwned;
+    // centrum i media (plan-media §6.5): ani słowa o płatnościach / planie Pro w tekstach apki, bez UI mikrofonu. Treść materiału użytkownika
+    // (lekcja w #lesson, zadania .task, quiz/ćwiczenia .quizview, panele „Dobrze!/Źle” z wyjaśnieniem — np. ekonomia: „ceny”, „kupuje”, „zł”) nie jest tekstem apki.
+    const box=document.createElement('div');box.style.cssText='position:fixed;left:-99999px;top:0;width:'+innerWidth+'px';
+    [...document.body.children].forEach(e=>{if(!/^(SCRIPT|STYLE|AUDIO|VIDEO)$/.test(e.tagName))box.appendChild(e.cloneNode(true));});
+    box.querySelectorAll('#lesson, .quizview, .task, #sheet.ok, #sheet.bad').forEach(x=>x.remove());
+    document.body.appendChild(box);const all=box.innerText||'';box.remove();
+    out.money=[...new Set(all.match(/(?<![\p{L}\p{N}])(pro|premium|płatn(?:oś\p{L}*|y|a|e|ie|ych|ym|ymi|ego|ej)|cen[aeyą]|kup(?:i\p{L}*|uj\p{L}*|ow\p{L}*|no)?|subskrypc\p{L}*|zł|pln)(?![\p{L}\p{N}])/giu)||[])];
+    out.mic=[...document.querySelectorAll('button,[role=button]')].filter(b=>b.getBoundingClientRect().width>0&&/mikrofon|powiedz odpowied|nagraj głos/i.test((b.innerText||'')+' '+(b.getAttribute('aria-label')||''))).length;
+    return out;});
+  if(chk.money.length)issue(run,'payment-words',`${file}: ${chk.money.join(', ')} (App Store 3.1.1)`);
+  if(chk.mic)issue(run,'mic-ui',`${file}: przycisk mikrofonu (tryb głosowy jest na później)`);
   if(chk.emoji.length)issue(run,'emoji-in-ui',`${file}: ${chk.emoji.join(' ')}`);
   if(chk.docWide)issue(run,'horizontal-scroll',`${file}: dokument szerszy niż ekran ${run.w}px`);
   if(chk.wide.length)issue(run,'text-overflow',`${file}: ${chk.wide.join('; ')}`);
@@ -346,6 +361,20 @@ async function addTextMaterial(run,o={}){ // + → Wklej tekst → (zgoda) → t
 }
 
 /* ============================================================ SCENARIUSZE */
+/* od planu-media (D6): przedmiot otwiera centrum (hub) zamiast ścieżki z zakładkami; narzędzia (Fiszki, Quiz, Ćwiczenia, Egzamin, Info) przez
+   NaukaEngine.openSubject(sid, tab) — jak kafle „CAŁY PRZEDMIOT”; lekcję poziomu — openLevel(sid, lid) (pierwszy niezaliczony = dawny węzeł „ZACZNIJ”) */
+const TAB_OF={'Ścieżka':'hub','Fiszki':'fiszki','Quiz':'quiz','Ćwiczenia':'cwicz','Egzamin':'egzamin','Info':'info'};
+async function subTab(run,label){run.last='zakładka '+label;await run.page.evaluate(t=>{const c=NaukaEngine.current;if(c)NaukaEngine.openSubject(c.id,t);},TAB_OF[label]||label);await settle(run,450);}
+async function openNode(run,o={}){run.last='lekcja '+(o.title||(o.done?'(zaliczona)':'(pierwsza niezaliczona)'));
+  await run.page.evaluate(o=>{const s=NaukaEngine.current;if(!s)return;let P={};try{P=JSON.parse(localStorage.getItem('nauka_progress_v1:'+window.NAUKA_UID)||'{}');}catch(e){}
+    const done=((P[s.id]||{}).levels)||{};const lv=o.title?s.levels.find(l=>String(l.title).includes(o.title)):o.done?s.levels.find(l=>(done[l.id]||{}).done):(s.levels.find(l=>!(done[l.id]||{}).done)||s.levels[0]);
+    if(lv)NaukaEngine.openLevel(s.id,lv.id);},o);await settle(run,500);}
+/* przedmiot po nazwie: na Dziś karta .dsubj (krótka nazwa, D6), w siatce „Przedmioty” kafel .subjtile (pełna nazwa); bez karty — wprost przez silnik */
+async function openSubj(run,name){run.last='przedmiot '+name;const el=await find(run,'.dsubj, .subjtile',name);
+  if(el){await el.evaluate(e=>{e.scrollIntoView({block:'center'});e.click();});}
+  else{const ok=await run.page.evaluate(n=>{const s=(NaukaEngine.subjects()||[]).find(x=>NaukaEngine.txt(x.name).includes(n));if(s)NaukaEngine.openSubject(s.id);return !!s;},name);if(!ok)throw new Error('nie pojawiło się: przedmiot „'+name+'”');}
+  await settle(run,450);}
+async function toToday(run){run.last='Dziś';await run.page.evaluate(()=>NaukaEngine.go('today'));await waitFor(run,'.plan',null,15000);}
 const SCEN={};
 
 /* 1) Nowe konto od zera: rejestracja → etap → cel → pusty Dziś → tekst → generowanie → przedmiot → lekcja → Ćwiczenia → wylogowanie */
@@ -378,7 +407,7 @@ SCEN.fresh=async()=>{
   await tap(r,'#cfadd-go',null,{settle:1500});
   await shot(r,'generating-start','Tworzenie lekcji: faza AI (pasek, kroki, „Możesz zamknąć ten ekran…”, WRÓĆ DO DZIŚ)','TWÓRZ LEKCJĘ (atrapa: gen=slow:30)');
   await sleep(26000);await shot(r,'generating-progress','Tworzenie lekcji po ~27 s: kolejny krok zaznaczony, pasek ~55%','Czekanie na AI');
-  await waitFor(r,'#cfr-name',null,20000);
+  await waitFor(r,'#cfr-name',null,60000); // gen=slow:30 + zapas na obciążoną maszynę
   await shot(r,'subject-ready','„Lekcja gotowa”: nazwa od AI, kolor, nowe poziomy, ZACZNIJ NAUKĘ / „Mam z tego sprawdzian”','Koniec generowania');
   const log=await mockLog(r);const posts=log.filter(x=>x.startsWith('POST /api/generate')).length;
   if(posts!==1)issue(r,'generate-retry',`POST /api/generate wywołany ${posts} razy przy jednym „TWÓRZ LEKCJĘ”`);
@@ -391,14 +420,14 @@ SCEN.fresh=async()=>{
     if(await has(r,'.scel'))await shot(r,'streak-celebration','Świętowanie serii po pierwszym poziomie dnia (dzień 1)','Wynik poziomu → DALEJ');
     else UNREACHED.push('fresh: świętowanie serii nie pojawiło się po pierwszym poziomie');
     if(await has(r,'.lessonfoot .pill.amber'))await tap(r,'.lessonfoot .pill.amber');
-    await waitFor(r,'.pathview');await shot(r,'subject-path-after','Ścieżka po zaliczeniu poziomu 1 (poziom 2 odblokowany)','Świętowanie → DALEJ');
+    await waitFor(r,'.hhead');await shot(r,'subject-hub-after','Centrum przedmiotu po zaliczeniu lekcji 1 (bez kłódek, NA TERAZ: następna lekcja)','Świętowanie → DALEJ');
   }
   // Ćwiczenia: wszystkie typy zadań z poziomów
-  await tap(r,'.subtab','Ćwiczenia');await waitFor(r,'.exhub');await shot(r,'cwicz-hub','Zakładka „Ćwiczenia”: gry z fiszek + „Zadania z poziomów” po typach','Przedmiot → Ćwiczenia');
+  await subTab(r,'Ćwiczenia');await waitFor(r,'.exhub');await shot(r,'cwicz-hub','Zakładka „Ćwiczenia”: gry z fiszek + „Zadania z poziomów” po typach','Przedmiot → Ćwiczenia');
   await scrollBy(r,'#subjscreen .scroll','end');await shot(r,'cwicz-hub-tasks','Ćwiczenia: lista typów zadań (dół)','Przewinięcie');
   for(const type of TASK_ORDER){
     try{
-      await tap(r,'.subtab','Ćwiczenia');
+      await subTab(r,'Ćwiczenia');
       const label=TASK_LABEL[type];if(!(await find(r,'.excard h3',label,{exact:true}))){UNREACHED.push(`zadanie „${type}”: brak w przedmiocie z generowania (fixtures)`);continue;}
       await tap(r,'.excard h3',label,{exact:true});await waitFor(r,'.task');
       await shot(r,'task-'+type,`Zadanie „${label}” (stan początkowy)`,'Ćwiczenia → '+label);
@@ -412,10 +441,10 @@ SCEN.fresh=async()=>{
   }
   // gry z fiszek w Ćwiczeniach
   for(const [label,name,state] of [['Pary z fiszek','cwicz-pairs','Ćwiczenie „Pary z fiszek”'],['Szybki quiz na czas','cwicz-speed','Ćwiczenie „Szybki quiz na czas” (60 s)'],['Pojęcie z fiszek','cwicz-typing','Ćwiczenie „Pojęcie z fiszek” (wpisz termin)']]){
-    try{await tap(r,'.subtab','Ćwiczenia');await tap(r,'.excard h3',label,{exact:true});await shot(r,name,state,'Ćwiczenia → '+label);}catch(e){FAILS.push(`fresh/${name}: ${e.message}`);}}
-  await tap(r,'.subtab','Ścieżka');
+    try{await subTab(r,'Ćwiczenia');await tap(r,'.excard h3',label,{exact:true});await shot(r,name,state,'Ćwiczenia → '+label);}catch(e){FAILS.push(`fresh/${name}: ${e.message}`);}}
+  await subTab(r,'Ścieżka');
   // ustawienia → wylogowanie
-  await tap(r,'.brow .backbtn');await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await waitFor(r,'#set-plan');await settle(r,500);
+  await toToday(r);await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await waitFor(r,'#set-plan');await settle(r,500);
   await shot(r,'settings-new-account','Ustawienia nowego konta (bez okresu startowego): „Nowe lekcje — Darmowe tworzenie lekcji: zostało 1 z 2”','Profil → Ustawienia');
   {const s=await r.page.evaluate(()=>(document.querySelector('#set-plan .s')?.textContent||'').replace(/\u00a0/g,' '));if(s!=='Darmowe tworzenie lekcji: zostało 1 z 2')issue(r,'quota-new-account','Nowe konto po pierwszej lekcji: oczekiwane „Darmowe tworzenie lekcji: zostało 1 z 2”, jest „'+s+'”');}
   await tap(r,'.topbar .backbtn');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await waitFor(r,'#set-logout');
@@ -465,19 +494,19 @@ SCEN.seeded=async()=>{
     await sleep(300);}
   await waitFor(r,'#rvmain');await shot(r,'review-done','Koniec powtórki: % umiem, wracają dziś, seria','Ostatni element powtórki');await tap(r,'#rvdone');
   // fiszki
-  await nav(r,'Fiszki');await waitFor(r,'.cards');await shot(r,'cards-hub','Fiszki (hub): powtórka na dziś + przedmioty','Dolna nawigacja → Fiszki');
+  await r.page.evaluate(()=>NaukaEngine.go('cards'));await waitFor(r,'.cards');await shot(r,'cards-hub','Fiszki (widok dla starych odnośników — zakładki w nawigacji już nie ma, D6)','NaukaEngine.go("cards")');
   await tap(r,'.setrow','Polityka');await waitFor(r,'#subjscreen .flip');await shot(r,'flashcards','Fiszki przedmiotu: filtr poziomów, licznik, karta','Fiszki → przedmiot');
   await tap(r,'#subjscreen .flip');await shot(r,'flashcards-back','Fiszka odwrócona','Stuknięcie karty');
   await tap(r,'.chips .chip','Podstawy');
   for(let k=0;k<12&&!(await has(r,'.fdone'));k++){if(!(await has(r,'#subjscreen .flip.flipped')))await tap(r,'#subjscreen .flip',null,{settle:950});await tap(r,k%3===2?'.fbtn.no':'.fbtn.yes',null,{settle:420});}
   await waitFor(r,'.fdone');await shot(r,'flashcards-done','Koniec talii: % umiem, „Wracają dziś”, POWTÓRZ TE N','Przejście talii „Podstawy”');
   // ścieżka, skrzynia, info
-  await tap(r,'.subtab','Ścieżka');await waitFor(r,'.pathview');await shot(r,'path-progress','Ścieżka w trakcie: 3 zaliczone (gwiazdki), bieżący poziom 4, skrzynia do otwarcia','Przedmiot → Ścieżka');
-  if(await has(r,'.node-chest.a-sway')){await tap(r,'.node-chest.a-sway',null,{settle:120});await shot(r,'path-chest-opened','Skrzynia otwarta: +10 gemów (toast)','Stuknięcie skrzyni');}else UNREACHED.push('seeded: skrzynia do otwarcia nie była widoczna');
-  await tap(r,'.infobtn');await waitFor(r,'.info');await shot(r,'subject-info','Info przedmiotu: kafle z info (emoji z danych!), siatka ocen','Przedmiot → (i)');
+  await subTab(r,'Ścieżka');await waitFor(r,'.hhead');await shot(r,'hub-progress','Centrum przedmiotu (konto z postępami, punkty zastępcze — jeden na lekcję)','Przedmiot');
+  NOTES.push('seeded: skrzynie na ścieżce zniknęły razem ze ścieżką (spec §2 „Dropped”) — zrzutu skrzyni nie ma.');
+  await subTab(r,'Info');await waitFor(r,'.info');await shot(r,'subject-info','Info przedmiotu: kafle z info (emoji z danych!), siatka ocen','Przedmiot → (i)');
   await scrollBy(r,'#subjscreen .scroll','end');await shot(r,'subject-info-scale','Info: siatka ocen z „tu jesteś”, egzamin, sprawdzian','Przewinięcie');
   // quiz w zakładce
-  await tap(r,'.subtab','Quiz');await waitFor(r,'.quizview .quiz');await shot(r,'quiz-tab','Zakładka Quiz: pytanie (filtr poziomów, licznik)','Przedmiot → Quiz');
+  await subTab(r,'Quiz');await waitFor(r,'.quizview .quiz');await shot(r,'quiz-tab','Zakładka Quiz: pytanie (filtr poziomów, licznik)','Przedmiot → Quiz');
   await solve(r,{wrong:true});await sheetAfter(r);await shot(r,'quiz-wrong-sheet','Quiz: panel „Nie tym razem”','Zła odpowiedź w zakładce Quiz');
   if(await has(r,'#sexpl')){await tap(r,'#sexpl');await shot(r,'quiz-explain-sheet','Quiz: „Wyjaśnijmy inaczej”','WYJAŚNIJ INACZEJ');await tap(r,'#sok');}
   await tap(r,'#snext');
@@ -487,7 +516,7 @@ SCEN.seeded=async()=>{
     await solve(r);const s=await sheetAfter(r);if(k===0&&s==='ok')await shot(r,'quiz-ok-sheet','Quiz: panel „Dobrze!” (+3 XP)','Dobra odpowiedź');await tap(r,'#snext');}
   if(!tfSeen)UNREACHED.push('seeded: pytanie w trybie prawda/fałsz nie wypadło w 30 pytaniach zakładki Quiz');
   // egzamin
-  await tap(r,'.subtab','Egzamin');await waitFor(r,'#exstart');await shot(r,'exam-setup','Egzamin: ustawienia (pytania, czas, próg), zakres, siatka ocen','Przedmiot → Egzamin');
+  await subTab(r,'Egzamin');await waitFor(r,'#exstart');await shot(r,'exam-setup','Egzamin: ustawienia (pytania, czas, próg), zakres, siatka ocen','Przedmiot → Egzamin');
   await scrollBy(r,'#subjscreen .scroll','end');await shot(r,'exam-setup-bottom','Egzamin: warunki, ostatnie podejście, „Mam sprawdzian”, „Egzamin jutro?”','Przewinięcie');
   await tap(r,'#egn .egchip[data-n="10"]');await tap(r,'#exstart');await waitFor(r,'.egrun');
   await shot(r,'exam-run','Egzamin w trakcie: pytanie, czas, siatka, flaga','ZACZYNAM · 10 PYTAŃ');
@@ -503,9 +532,9 @@ SCEN.seeded=async()=>{
   await tap(r,'#egfin');await waitFor(r,'.egres');await shot(r,'exam-result','Wynik egzaminu: % i ocena, statystyki, „Gdzie tracisz punkty”','ZAKOŃCZ I SPRAWDŹ');
   await scrollMain(r,760);await shot(r,'exam-result-review','Wynik egzaminu: siatka ocen, talia błędów, przegląd pytań','Przewinięcie');
   if(await has(r,'#egmain','TALIA')){await tap(r,'#egmain');await waitFor(r,'.rvrun');await shot(r,'exam-error-deck','Talia błędów z egzaminu (sesja powtórki)','Wynik → TALIA BŁĘDÓW');await tap(r,'.rvrun .lessonhead .x');await nav(r,'Dziś');}
-  else{await tap(r,'#egalt');await tap(r,'.brow .backbtn');}
+  else{await tap(r,'#egalt');await toToday(r);}
   // noc przed egzaminem + plan do sprawdzianu
-  await waitFor(r,'.plan');await tap(r,'.subjtile','Polityka');await tap(r,'.subtab','Egzamin');await waitFor(r,'#excram');
+  await waitFor(r,'.plan');await openSubj(r,'Polityka');await subTab(r,'Egzamin');await waitFor(r,'#excram');
   await tap(r,'#excram');await waitFor(r,'#cram-start');await shot(r,'cram','Noc przed egzaminem: 4 bloki po 5 minut','Egzamin → „Egzamin jutro?”');
   await tap(r,'#cram-start');await waitFor(r,'.cramrun');await shot(r,'cram-run','Noc przed egzaminem: blok 1 (fiszka, czas bloku)','ZACZYNAM');
   for(let k=0;k<6&&!(await has(r,'#cram-done'));k++)await tap(r,'#cram-skip',null,{settle:300,timeout:3000}).catch(()=>{});
@@ -515,7 +544,7 @@ SCEN.seeded=async()=>{
   await scrollBy(r,'.screen.active .scroll','end');await shot(r,'testplan-bottom','Plan do sprawdzianu: dół (sprawdzian, Usuń plan)','Przewinięcie');
   await tap(r,'.topbar .backbtn');await waitFor(r,'.plan');await shot(r,'today-with-test','Dziś z wierszem „Do sprawdzianu — …” na górze planu','Plan → Dziś');
   // lekcja z konta z postępami → wynik → kamień milowy serii (7 dni)
-  await tap(r,'.subjtile','Polityka');await waitFor(r,'.node-open');await tap(r,'.node-open');await waitFor(r,'#lesson.open .chat');
+  await openSubj(r,'Polityka');await openNode(r);await waitFor(r,'#lesson.open .chat');
   await chatThrough(r,{shots:false,endShot:false,vizShots:false});
   if(await lessonQuiz(r,{wrong:0,shots:false,noBadShots:true,noOkShots:true})==='done'){
     await shot(r,'level-complete-seeded','Wynik poziomu (konto z postępami)','Lekcja poziomu 4');
@@ -523,9 +552,9 @@ SCEN.seeded=async()=>{
     else if(await has(r,'.scel'))await shot(r,'streak-celebration-seeded','Świętowanie serii','Pierwszy poziom dnia');
     if(await has(r,'.lessonfoot .pill.amber'))await tap(r,'.lessonfoot .pill.amber');}
   // boss (Krypto: wszystkie poziomy zaliczone)
-  await tap(r,'.brow .backbtn');await waitFor(r,'.plan');await tap(r,'.subjtile','Krypto');await waitFor(r,'.node-boss');
-  await r.page.evaluate(()=>{const n=document.querySelector('.node-boss');if(n)n.scrollIntoView({block:'center'});});await shot(r,'path-boss','Ścieżka: wszystkie poziomy zaliczone, boss „WALKA”','Krypto → Ścieżka');
-  await tap(r,'.node-boss');await waitFor(r,'.bossrun');await shot(r,'boss-run','Boss Szop Zapominalski: pasek życia, cios, czas 20 s','Węzeł bossa');
+  await toToday(r);await openSubj(r,'Krypto');await waitFor(r,'.hhead');
+  await scrollMain(r,'end');await shot(r,'hub-boss-tile','Centrum: wszystkie lekcje zrobione — kafel „Pojedynek z Szopem”','Krypto → CAŁY PRZEDMIOT');
+  await tapT(r,'Pojedynek z Szopem');await waitFor(r,'.bossrun');await shot(r,'boss-run','Boss Szop Zapominalski: pasek życia, cios, czas 20 s','Kafel „Pojedynek z Szopem”');
   let hitShot=false;
   const turn=()=>r.page.evaluate(()=>{const e=document.querySelector('.bossq .eyebrow');return e?e.textContent:'';}).catch(()=>'');
   for(let k=0;k<30;k++){if(await has(r,'.bossres'))break;if(!(await has(r,'.bossrun .quiz, .bossrun .task'))){await sleep(250);continue;}
@@ -537,23 +566,25 @@ SCEN.seeded=async()=>{
   if(await has(r,'.bossres')){await shot(r,'boss-result','Wynik walki z bossem','Koniec walki');await tap(r,'#bossmain');}else FAILS.push('seeded: walka z bossem nie skończyła się w 30 ruchach');
   // brak żyć
   await r.page.evaluate(()=>{const k=Object.keys(localStorage).find(k=>k.startsWith('nauka_progress_v1:'));const p=JSON.parse(localStorage.getItem(k));p.hearts={n:0,refillAt:Date.now()+25*60000};localStorage.setItem(k,JSON.stringify(p));NaukaEngine.reload();});
-  await waitFor(r,'.plan');await tap(r,'.subjtile','Polityka');await waitFor(r,'.node-open');await tap(r,'.node-open');await waitFor(r,'#sheet.nohearts');
+  await waitFor(r,'.plan');await openSubj(r,'Polityka');await openNode(r);await waitFor(r,'#sheet.nohearts');
   await shot(r,'no-hearts','Koniec żyć: licznik, „Powtórz 10 fiszek”, „Uzupełnij wszystkie” za gemy','Węzeł poziomu przy 0 sercach (stan ustawiony w localStorage)');
   await tap(r,'#nhgems',null,{settle:100});await shot(r,'no-hearts-refilled','Życia uzupełnione za 50 gemów (toast)','Koniec żyć → Uzupełnij wszystkie');
   // duch: powtórka zaliczonego dziś poziomu
-  try{await tap(r,'.nodebtn.node-done[aria-label*="Polska: demografia"]');await waitFor(r,'#lesson.open .quiz, #lesson.open .task'); // P1-11: powtórka zaliczonego poziomu od pytań
+  try{await openNode(r,{title:'Polska: demografia'});await waitFor(r,'#lesson.open .quiz, #lesson.open .task'); // P1-11: powtórka zaliczonego poziomu od pytań
     await waitFor(r,'.ghostcard',null,8000);await sleep(1200);await shot(r,'lesson-ghost','Powtórka poziomu: wyścig z duchem (własny najlepszy przebieg)','Ścieżka → zaliczony dziś poziom → czat → pytania');
     if(await has(r,'#lreread'))await shot(r,'lesson-replay-reread','Powtórka zaliczonego poziomu: od pytań, „Przeczytaj jeszcze raz” nad pierwszym pytaniem','Ścieżka → zaliczony poziom');
     await solve(r);await sheetAfter(r);await tap(r,'#snext');
     await tap(r,'#lesson .lessonhead .x');
-    if(await has(r,'#toast.show','Miejsce zapisane'))await shot(r,'lesson-left-saved','Wyjście z lekcji (X): „Miejsce zapisane — dokończysz z węzła na ścieżce”','X w trakcie pytań');
-    if(await has(r,'.bubble.resume')){await r.page.evaluate(()=>{const b=document.querySelector('.bubble.resume');if(b)b.scrollIntoView({block:'center'});});await shot(r,'path-resume-bubble','Ścieżka: węzeł z dymkiem „DOKOŃCZ” (zapisana przerwana lekcja)','Po wyjściu z lekcji');
-      await tap(r,'.nodebtn[aria-label^="Dokończ"]');if(await has(r,'#sheet')){await shot(r,'lesson-resume-sheet','Arkusz „Dokończyć lekcję?” (Od nowa / DOKOŃCZ)','Węzeł „DOKOŃCZ”');await tap(r,'#sheet .pill','DOKOŃCZ');await waitFor(r,'#lesson.open .quiz, #lesson.open .task');await tap(r,'#lesson .lessonhead .x');}}
-    else UNREACHED.push('seeded: po wyjściu z lekcji nie pojawił się dymek „DOKOŃCZ” na ścieżce');
+    if(await has(r,'#toast.show','Miejsce zapisane'))await shot(r,'lesson-left-saved','Wyjście z powtórki zrobionej lekcji (X): „Miejsce zapisane — dokończysz, gdy otworzysz tę lekcję”','X w trakcie pytań');
+    // D5 pkt 2: „Dokończ lekcję” tylko dla niezrobionych lekcji (przegląd 2026-10-23) — powtórka zrobionej wznawia się po jej otwarciu (karta „Dokończ lekcję 4”: scenariusz hub)
+    if(await has(r,'#subjscreen button','DOKOŃCZ LEKCJĘ'))issue(r,'resume-done-lesson','NA TERAZ pokazało „DOKOŃCZ LEKCJĘ” dla zrobionej lekcji (powtórka)');
+    await openNode(r,{title:'Polska: demografia'});
+    if(await has(r,'#sheet')){await shot(r,'lesson-resume-sheet','Arkusz „Dokończyć lekcję?” (Od nowa / DOKOŃCZ) po ponownym otwarciu lekcji','Lekcja z zapisanym miejscem');await tap(r,'#sheet .pill','DOKOŃCZ');await waitFor(r,'#lesson.open .quiz, #lesson.open .task');await tap(r,'#lesson .lessonhead .x');}
+    else UNREACHED.push('seeded: po ponownym otwarciu lekcji z zapisanym miejscem nie było arkusza „Dokończyć lekcję?”');
   }catch(e){FAILS.push('seeded/duch: '+e.message);}
   // plecak: zakup
-  await tap(r,'.brow .streak.gems');await waitFor(r,'#shop-freeze');await tap(r,'#shop-freeze .buy',null,{settle:150});await shot(r,'shop-bought','Plecak: kupione zamrożenie (toast, gemy w górę)','Plecak → Zamrożenie serii');
-  await tap(r,'.topbar .backbtn');await tap(r,'.brow .backbtn');
+  await r.page.evaluate(()=>NaukaEngine.go('shop'));await waitFor(r,'#shop-freeze'); // w centrum nie ma pigułek gemów (spec §2) — plecak z Dziś / Profiluawait tap(r,'#shop-freeze .buy',null,{settle:150});await shot(r,'shop-bought','Plecak: kupione zamrożenie (toast, gemy w górę)','Plecak → Zamrożenie serii');
+  await toToday(r);
   // zdjęcie strony → istniejący przedmiot → generowanie w tle
   await mockSet(r,'upload','slow');await mockSet(r,'gen','slow:18'); // czas na Dziś z wierszem „Tworzę lekcję…” i [+] → ekran postępu
   await waitFor(r,'.plan');await tap(r,'.navplus');await waitFor(r,'#cf-qa-quota');await shot(r,'quickadd-sheet-seeded','Arkusz „Dodaj materiał” konta z okresem startowym: „Do <data>: zostało 148 z 150 w tym miesiącu, potem 2 darmowe lekcje · do 20 plików naraz”','[+]');
@@ -569,9 +600,9 @@ SCEN.seeded=async()=>{
   const tl=await mockLog(r);if(!tl.some(x=>x.startsWith('PATCH /storage/v1/upload/resumable')))issue(r,'tus','Plik 7 MB nie poszedł przez TUS (brak PATCH /upload/resumable)');
   await waitFor(r,'#toast.show','Lekcja gotowa',30000);await shot(r,'generation-done-toast','Klikalny toast „Lekcja gotowa — dotknij, żeby zobaczyć” po generowaniu w tle','Czekanie na koniec generowania');
   await tap(r,'#toast.show');await waitFor(r,'#cfr-name');await shot(r,'generation-done-from-toast','Toast → ekran „Lekcja gotowa”','Stuknięcie toastu');await tap(r,'.topbar .backbtn');await waitFor(r,'.plan');
-  await tap(r,'.subjtile','Polityka');await waitFor(r,'.pathview');await scrollBy(r,'.pathview','end');await shot(r,'path-new-chapter','Ścieżka po dodaniu materiału: nowy rozdział na końcu (pierwszy poziom od razu odblokowany)','Dziś → Polityka');
+  await openSubj(r,'Polityka');await waitFor(r,'.hhead');await scrollMain(r,650);await shot(r,'hub-new-chapter','Centrum po dodaniu materiału: nowy rozdział na liście MATERIAŁY','Dziś → Polityka');
   // usunięcie konta (atrapa)
-  await tap(r,'.brow .backbtn');await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await tap(r,'#set-delete');
+  await toToday(r);await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await tap(r,'#set-delete');
   await mockSet(r,'lat','900');await tap(r,'#cfdel-go',null,{settle:300});await shot(r,'delete-account-busy','Usuwanie konta w toku („USUWAM…”)','Usuń konto → USUŃ KONTO NA ZAWSZE');
   await waitFor(r,'#cf-notice',null,15000);await shot(r,'account-deleted','Po usunięciu konta: logowanie z podziękowaniem','Koniec usuwania');
   const st=await r.page.evaluate(()=>{const d=MOCK.db();return {users:d.users.length,objects:Object.keys(d.objects).length,rows:Object.fromEntries(Object.entries(d.t).map(([k,v])=>[k,v.length]))};});
@@ -748,18 +779,18 @@ SCEN.xss=async()=>{
   const r=await newRun('xss','mock=seeded&reset=1&extra=viz,xss&lang=1');
   await waitFor(r,'.plan');await tap(r,'.link','Wszystkie');await waitFor(r,'.subjects');
   await shot(r,'subjects-xss','Przedmioty: nazwa z „<img onerror>” wyświetlona jako tekst','Konto z extra=viz,xss → Wszystkie');
-  await tap(r,'.subjtile','Test');await waitFor(r,'.pathview');await shot(r,'path-xss','Przedmiot z danymi XSS: ścieżka','Przedmiot „Test<img…>”');
-  await tap(r,'.infobtn');await shot(r,'info-xss','Info przedmiotu z danymi XSS (sanitizer)','(i)');
-  await tap(r,'.subtab','Ćwiczenia');await shot(r,'cwicz-xss','Ćwiczenia przedmiotu XSS (zadanie hotspot pominięte)','Ćwiczenia');
-  await tap(r,'.brow .backbtn');await tap(r,'.link','Wszystkie');await tap(r,'.subjtile','Wizualizacje');await waitFor(r,'.node-open');
-  await tap(r,'.node-open');await waitFor(r,'#lesson.open .chat');
+  await openSubj(r,'Test');await waitFor(r,'.hhead');await shot(r,'hub-xss','Przedmiot z danymi XSS: centrum','Przedmiot „Test<img…>”');
+  await subTab(r,'Info');await shot(r,'info-xss','Info przedmiotu z danymi XSS (sanitizer)','(i)');
+  await subTab(r,'Ćwiczenia');await shot(r,'cwicz-xss','Ćwiczenia przedmiotu XSS (zadanie hotspot pominięte)','Ćwiczenia');
+  await toToday(r);await tap(r,'.link','Wszystkie');await openSubj(r,'Wizualizacje');
+  await openNode(r);await waitFor(r,'#lesson.open .chat');
   const c=await chatThrough(r,{shots:false,endShot:false,vizShots:true});
   NOTES.push('xss: schematy pokazane w czacie topic-viz: '+c.viz.join(', '));
   const pw=await r.page.evaluate(()=>!!window.__pwned);if(pw)issue(r,'XSS','window.__pwned ustawione po czacie z topic-viz.json');
-  await tap(r,'#lesson .lessonhead .x');await tap(r,'.subtab','Ćwiczenia');await waitFor(r,'.exhub');
+  await tap(r,'#lesson .lessonhead .x');await subTab(r,'Ćwiczenia');await waitFor(r,'.exhub');
   await shot(r,'cwicz-lang','Ćwiczenia przedmiotu z lang:true (Wpisywanie, Klocki, Pary słówek) — w produkcji nieosiągalne (serwer nie zapisuje lang)','Przedmiot „Wizualizacje” z lang=1 (atrapa)');
   await tap(r,'.excard h3','Klocki');await shot(r,'cwicz-tiles','Ćwiczenie „Klocki — ułóż słowo”','Ćwiczenia → Klocki');
-  await tap(r,'.subtab','Ćwiczenia');await tap(r,'.excard h3','Wpisywanie');await shot(r,'cwicz-typing','Ćwiczenie „Wpisywanie”','Ćwiczenia → Wpisywanie');
+  await subTab(r,'Ćwiczenia');await tap(r,'.excard h3','Wpisywanie');await shot(r,'cwicz-typing','Ćwiczenie „Wpisywanie”','Ćwiczenia → Wpisywanie');
   await closeRun(r);
 };
 
@@ -769,12 +800,12 @@ SCEN.narrow=async()=>{
   await waitFor(r,'#cf-go');await shot(r,'auth-signup','360×780: logowanie / rejestracja','Pierwsze uruchomienie');await closeRun(r);
   r=await newRun('narrow','mock=seeded&reset=1&extra=viz',{w:360,h:780,prefix:'360-'});
   await waitFor(r,'.plan');await shot(r,'today','360×780: Dziś','Konto z postępami');
-  await tap(r,'.subjtile','Polityka');await waitFor(r,'.pathview');await shot(r,'subject-path','360×780: ścieżka przedmiotu','Dziś → Polityka');
-  await tap(r,'.subtab','Quiz');await waitFor(r,'.quizview .quiz');await shot(r,'quiz','360×780: pytanie quizu','Przedmiot → Quiz');
-  await tap(r,'.subtab','Egzamin');await waitFor(r,'#exstart');await shot(r,'exam-setup','360×780: ustawienia egzaminu','Przedmiot → Egzamin');
-  await tap(r,'.brow .backbtn');await tap(r,'.link','Wszystkie');await tap(r,'.subjtile','Wizualizacje');await tap(r,'.node-open');await waitFor(r,'#lesson.open .chat');
+  await openSubj(r,'Polityka');await waitFor(r,'.hhead');await shot(r,'subject-hub','360×780: centrum przedmiotu','Dziś → Polityka');
+  await subTab(r,'Quiz');await waitFor(r,'.quizview .quiz');await shot(r,'quiz','360×780: pytanie quizu','Przedmiot → Quiz');
+  await subTab(r,'Egzamin');await waitFor(r,'#exstart');await shot(r,'exam-setup','360×780: ustawienia egzaminu','Przedmiot → Egzamin');
+  await toToday(r);await tap(r,'.link','Wszystkie');await openSubj(r,'Wizualizacje');await openNode(r);await waitFor(r,'#lesson.open .chat');
   await waitFor(r,'.chatfoot .creply',null,10000);await scrollBy(r,'.lessonbody.chatbody','end');await shot(r,'lesson-chat-viz','360×780: czat lekcji ze schematem','Wizualizacje → poziom 1');
-  await tap(r,'#lesson .lessonhead .x');await tap(r,'.brow .backbtn');
+  await tap(r,'#lesson .lessonhead .x');await toToday(r);
   await nav(r,'Profil');await tap(r,'.topbar .backbtn[aria-label="Ustawienia"]');await waitFor(r,'#set-logout');await shot(r,'settings','360×780: ustawienia (karta Konto)','Profil → Ustawienia');
   await addTextMaterial(r);await shot(r,'add-material','360×780: „Dodaj materiał”','[+] → Wklej tekst');
   await closeRun(r);
@@ -807,10 +838,176 @@ SCEN.nostore=async()=>{
   await closeRun(r);
 };
 
+/* ============================================================ CENTRUM PRZEDMIOTU, ROLKI, PODCAST, ROZMOWA Z LISEM (docs/plan-media.md §6.5)
+   390×844 jak makiety design/centrum/*.dc.html; dane jak w spec §3 (mock=msgip, dzień makiet: czwartek 22 października 2026). Ekrany otwierane przez
+   NaukaEngine / NaukaMedia (stabilne API z planu §4.5 i §5), przyciski — po tekście z makiet. */
+const MS={S:'5b000011-0000-4000-8000-000000000011',T1:'7c000011-0000-4000-8000-000000000011',T2:'7c000012-0000-4000-8000-000000000012',T3:'7c000013-0000-4000-8000-000000000013'};
+const MSQ='mock=msgip&reset=1&clock=2026-10-22';
+const PHONE={w:390,h:844};
+const pidOf=(t,raw)=>'t'+t.replace(/-/g,'').slice(0,8)+'_'+raw;
+async function call(run,fn,...args){ // NaukaEngine.x / NaukaMedia.x — brak funkcji = błąd kroku
+  run.last=fn;const v=await run.page.evaluate((fn,args)=>{const [o,k]=fn.includes('.')?fn.split('.'):['NaukaEngine',fn];const obj=window[o];if(!obj||typeof obj[k]!=='function')return {__missing:o+'.'+k};
+    try{const x=obj[k](...args);return x&&typeof x.then==='function'?'promise':(x===undefined?null:(typeof x==='object'&&x&&x.nodeType?'node':JSON.parse(JSON.stringify(x))));}catch(e){return {__error:String(e&&e.message||e)};}},fn,args);
+  if(v&&v.__missing)throw new Error('brak '+v.__missing);if(v&&v.__error)throw new Error(fn+': '+v.__error);await settle(run,600);return v;}
+async function tapT(run,text,o={}){ // najmniejszy widoczny element (przycisk, chip, wiersz) z tym tekstem albo aria-label
+  run.last='tapT „'+text+'”';const want=String(text).replace(/\s+/g,' ').trim().toLowerCase();const t0=Date.now();let h=null;
+  while(Date.now()-t0<(o.timeout||8000)){h=await run.page.evaluateHandle((w,sel)=>{const N=s=>String(s||'').replace(/[  ]/g,' ').replace(/\s+/g,' ').trim().toLowerCase();
+      const vis=e=>{const r=e.getBoundingClientRect();const cs=getComputedStyle(e);return r.width>0&&r.height>0&&cs.visibility!=='hidden'&&cs.display!=='none';};
+      const all=[...document.querySelectorAll(sel||'button,[role=button],a,[tabindex],.chip,label,li')].filter(e=>vis(e)&&(N(e.innerText).includes(w)||N(e.getAttribute('aria-label')).includes(w)));
+      const inner=all.filter(e=>!all.some(x=>x!==e&&e.contains(x)));inner.sort((a,b)=>N(a.innerText).length-N(b.innerText).length);return inner[0]||null;},want,o.sel||null).then(x=>x.asElement());if(h)break;await sleep(150);}
+  if(!h)throw new Error('nie ma „'+text+'” ('+run.name+')');
+  await h.evaluate(e=>e.scrollIntoView({block:'center'}));if(o.real)await h.click();else await h.evaluate(e=>e.click());await settle(run,o.settle??400);return h;}
+async function seeT(run,text,timeout=8000){const want=String(text).replace(/\s+/g,' ').trim().toLowerCase();const t0=Date.now();
+  while(Date.now()-t0<timeout){const ok=await run.page.evaluate(w=>(document.body.innerText||'').replace(/[  ]/g,' ').replace(/\s+/g,' ').toLowerCase().includes(w),want).catch(()=>false);if(ok)return true;await sleep(200);}
+  throw new Error('nie pojawiło się „'+text+'” ('+run.name+')');}
+async function ready(run){await waitFor(run,'.nav, #app > *',null,15000);await run.page.waitForFunction(()=>window.NaukaEngine&&NaukaEngine.subjects().length>0,{timeout:15000});await settle(run,500);}
+async function step(run,label,fn){try{await fn();}catch(e){FAILS.push(`${run.name}/${label}: ${e.message}`);console.log('  ✗',label,e.message);}}
+async function typeAnswer(run,text){const inp=await run.page.$('textarea, input[type="text"], input:not([type])');if(!inp)throw new Error('brak pola odpowiedzi');
+  await inp.click({clickCount:3});await run.page.keyboard.type(text,{delay:2});const send=await run.page.$('button[aria-label*="Wyślij"], button[aria-label*="wyślij"]');
+  if(send)await send.evaluate(b=>b.click());else await run.page.keyboard.press('Enter');await settle(run,1400);}
+
+/* Main, Material, Nowy, HowSheet, PointSheet, menu „…”, Inna propozycja, praktyka punktu (Szop) */
+SCEN.hub=async()=>{
+  const r=await newRun('hub',MSQ,PHONE);await ready(r);
+  await step(r,'Main',async()=>{await call(r,'openSubject',MS.S);await seeT(r,'NA TERAZ');
+    await shot(r,'hub-main','Main: centrum przedmiotu w połowie nauki (Umiesz 8 z 27, sprawdzian za 6 dni, NA TERAZ: przerwana lekcja, Szop)','Dziś → MSGiP (mock=msgip)');
+    await scrollMain(r,700);await shot(r,'hub-main-materials','Main: MATERIAŁY 01–03 (kwadraty opanowania, pigułki, „Rolki · przygotowuję”)','Przewinięcie');
+    await scrollMain(r,'end');await shot(r,'hub-main-tools','Main: „Dodaj materiał do …” i CAŁY PRZEDMIOT (6 kafli)','Przewinięcie do końca');await scrollMain(r,0);});
+  await step(r,'HowSheet',async()=>{await tapT(r,'Jak to liczę?');await shot(r,'hub-howsheet','HowSheet „Jak liczę, co umiesz” (4 stany, gotowość, XP nie zmienia kwadratów)','„Jak to liczę?”');await tapT(r,'ROZUMIEM');});
+  await step(r,'Inna propozycja',async()=>{await tapT(r,'Inna propozycja');await shot(r,'hub-other-proposal','NA TERAZ po „Inna propozycja” (następna akcja z listy D5)','„Inna propozycja”');await call(r,'openSubject',MS.S);});
+  await step(r,'menu',async()=>{await tapT(r,'Więcej',{sel:'button[aria-label]'});await shot(r,'hub-menu','Menu „…” przedmiotu: plan do sprawdzianu, zasady, zmień nazwę i kolor, usuń','TopBar → „…”');await r.page.keyboard.press('Escape');await call(r,'closeSheet');});
+  await step(r,'PointSheet',async()=>{await call(r,'openPointSheet',MS.S,pidOf(MS.T1,'p9'));await seeT(r,'PUNKT 9 Z 13');
+    await shot(r,'hub-pointsheet-refresh','PointSheet MFW: „DO ODŚWIEŻENIA”, „ODŚWIEŻ TEN PUNKT”, lekcja 3 część 2, rolka 2/5, lis, źródło','Stuknięcie chipa „MFW”');
+    await call(r,'openPointSheet',MS.S,pidOf(MS.T1,'p2'));await shot(r,'hub-pointsheet-known','PointSheet punktu „Umiem”: bez głównego przycisku, „Sprawdź się jeszcze raz”','Chip punktu „Umiem”');
+    await call(r,'openPointSheet',MS.S,pidOf(MS.T1,'p11'));await shot(r,'hub-pointsheet-new','PointSheet punktu „Nowe”: „ZACZNIJ OD LEKCJI 4”','Chip punktu „Nowe”');await call(r,'closeSheet');});
+  await step(r,'Szop',async()=>{await call(r,'openSubject',MS.S);await tapT(r,'ODZYSKAJ');await shot(r,'hub-szop-practice','Praktyka punktów od Szopa: przypomnienie z lekcji, pytania i fiszki punktu (bez AI, bez serc)','Pasek Szopa → ODZYSKAJ');
+    await call(r,'goBack');});
+  await step(r,'Material',async()=>{await call(r,'openMaterial',MS.S,MS.T1);await seeT(r,'KLUCZOWE PUNKTY');
+    await shot(r,'hub-material','Centrum-Material 01: nagłówek, „Umiesz 6 z 13”, KLUCZOWE PUNKTY (13 chipów)','Main → karta 01');
+    await scrollMain(r,650);await shot(r,'hub-material-lessons','Material 01: LEKCJE Z LISEM (3 z 4, lekcja 4 „DOKOŃCZ”), ROLKI (miniatury), PODCAST','Przewinięcie');
+    await scrollMain(r,'end');await shot(r,'hub-material-tools','Material 01: SPRAWDŹ SIĘ (6 kafli), ŹRÓDŁO (wyklad-1-2-msgip.pdf)','Przewinięcie do końca');
+    await tapT(r,'Słabe');await scrollMain(r,0);await shot(r,'hub-material-weak','Material 01: przełącznik „Słabe · 4” (tylko W trakcie i Do odświeżenia)','„Słabe · 4”');
+    await tapT(r,'wyklad-1-2-msgip.pdf');await shot(r,'hub-source-sheet','Arkusz „Źródło”: pliki materiału i „Każde pytanie wskazuje swoją stronę…”','ŹRÓDŁO');await call(r,'closeSheet');});
+  await step(r,'Material 02',async()=>{await call(r,'openMaterial',MS.S,MS.T2);await shot(r,'hub-material-02','Centrum-Material 02: rolki w przygotowaniu (busy), podcast do przygotowania','Main → karta 02');});
+  await closeRun(r);
+  const n=await newRun('hub-new',MSQ+'&msgip=new',PHONE);await ready(n);
+  await step(n,'Nowy',async()=>{await call(n,'openSubject',MS.S);await seeT(n,'NA START');
+    await shot(n,'hub-nowy','Centrum-Nowy: „13 punktów przed Tobą”, NA START „Zacznij od lekcji 1”, karta daty','Przedmiot gotowy → „Zobacz przedmiot” (msgip=new)');
+    await scrollMain(n,700);await shot(n,'hub-nowy-dodatki','Centrum-Nowy: Dodatki (seria rolek, podcast z lisem i szopem, PRZYGOTUJ — bez licznika)','Przewinięcie');
+    await scrollMain(n,'end');await shot(n,'hub-nowy-tools','Centrum-Nowy: „Dodaj następny materiał”, „Darmowe tworzenie lekcji: zostało 1 z 2”, CAŁY PRZEDMIOT','Przewinięcie do końca');});
+  await step(n,'data',async()=>{await call(n,'openSubject',MS.S);await tapT(n,'Za tydzień');await shot(n,'hub-nowy-date','Po „Za tydzień”: karta sprawdzianu (gotowość „?”, 7 dni)','Karta daty → „Za tydzień”');});
+  await closeRun(n);
+};
+/* Dziś z nowymi formatami */
+SCEN.today=async()=>{
+  const r=await newRun('today',MSQ,PHONE);await ready(r);
+  await step(r,'Dziś',async()=>{await call(r,'go','today');await shot(r,'today','Dziś: plan dnia z przedmiotu (lekcja, rolki, Szop), karta sprawdzianu, pigułki','Start (mock=msgip)');
+    await scrollMain(r,650);await shot(r,'today-extras','Dziś: POZA PLANEM (podcast, „Przepytaj się”), TWOJE PRZEDMIOTY','Przewinięcie');
+    await scrollMain(r,'end');await shot(r,'today-subjects','Dziś: karta przedmiotu „Umiesz 8 z 27 · sprawdzian za 6 dni”, „Dodaj materiał”','Przewinięcie do końca');});
+  await step(r,'Przedmioty',async()=>{await nav(r,'Przedmioty');await shot(r,'subjects-grid','Zakładka „Przedmioty” (D6)','Dolna nawigacja → Przedmioty');});
+  await closeRun(r);
+  for(const [q,name,state] of [['exam=0','today-exam-today','Dziś w dniu sprawdzianu: „Rozgrzewka · 5 min”'],['exam=1','today-exam-tomorrow','Dzień przed sprawdzianem: „Noc przed sprawdzianem · 20 min”'],['msgip=known','today-all-known','Wszystko „Umiem”: „Egzamin ustny z lisem”']]){
+    const x=await newRun('today-'+q,MSQ+'&'+q,PHONE);await ready(x);
+    await step(x,q,async()=>{await call(x,'openSubject',MS.S);await shot(x,name.replace('today','hub'),state+' (NA TERAZ w hubie)',q);await call(x,'go','today');await shot(x,name,state+' (Dziś)',q);});await closeRun(x);}
+};
+/* Rolki-Seria, Rolki-Odtwarzacz (rolka 2 przy „pożycza”), Rolki-Pytanie, Rolki-Przygotuj A i B, gotowe */
+SCEN.reels=async()=>{
+  const r=await newRun('reels',MSQ,PHONE);await ready(r);
+  await step(r,'Seria',async()=>{await call(r,'NaukaMedia.openReels',MS.S,MS.T1);await seeT(r,'Kto rządzi światową gospodarką?');
+    await shot(r,'reels-series','Rolki-Seria: 5 rolek, 2 obejrzane, 3 następna, „OGLĄDAJ DALEJ · ROLKA 3”','Material 01 → „Cała seria ›”');});
+  await step(r,'Odtwarzacz',async()=>{await call(r,'NaukaMedia.openReels',MS.S,MS.T1,{reel:2});await sleep(Math.round(5.05/1.15*1000));
+    await r.page.mouse.click(195,420);await settle(r,300); // stuknięcie = pauza
+    await shot(r,'reels-player','Rolki-Odtwarzacz: rolka 2/5 „KTO JEST KIM” w okolicy słowa „pożycza” (stuknięcie = pauza)','Seria → rolka 2, ok. 4,4 s');
+    await r.page.mouse.click(195,420);});
+  await step(r,'Wyjaśnij',async()=>{await tapT(r,'Wyjaśnij');await shot(r,'reels-explain','Rolka: „Wyjaśnij” — część lekcji i „Przeczytaj w lekcji 3, część 2”','Akcja boczna „Wyjaśnij”');await call(r,'closeSheet');});
+  await step(r,'Pytanie',async()=>{await call(r,'go','today');await call(r,'NaukaMedia.openReels',MS.S,MS.T1);await tapT(r,'ONZ, WTO, MFW i Bank Światowy',{settle:800});await seeT(r,'PYTANIE',90000);
+    await shot(r,'reels-question','Rolki-Pytanie przed odpowiedzią (istniejące pytanie quizu l3#6)','Koniec narracji rolki 2');
+    await tapT(r,'Do MFW');await shot(r,'reels-question-ok','Rolki-Pytanie: „Dobrze!”, wyjaśnienie, „Zapisane do punktu „MFW” · wróci … w powtórce”, NASTĘPNA ROLKA · 3/5','Odpowiedź „Do MFW”');});
+  await closeRun(r);
+  const p=await newRun('reels-prepare',MSQ+'&media=ready&mediagen=slow:40',PHONE);await ready(p);
+  await step(p,'Przygotuj',async()=>{await call(p,'openSubject',MS.S);await call(p,'openMaterial',MS.S,MS.T2);await tapT(p,'PRZYGOTUJ',{sel:'button'});await seeT(p,'Przygotuj serię rolek');
+    await shot(p,'reels-prepare-a','Rolki-Przygotuj A: 5 rodzajów, podsumowanie, „To jedno tworzenie rolek lub podcastu. Zostało: 2 z 3.”','Material 02 → PRZYGOTUJ (rolki)');
+    await tapT(p,'PRZYGOTUJ ROLKI',{settle:2500});await sleep(9000);
+    await shot(p,'reels-prepare-b','Rolki-Przygotuj B: „Przygotowuję rolki”, kroki, szkielety miniatur, UCZ SIĘ DALEJ','PRZYGOTUJ ROLKI (mediagen=slow:40)');
+    const n=(await mockLog(p)).filter(x=>x.startsWith('POST /api/media/reels')).length;if(n!==1)issue(p,'media-retry',`POST /api/media/reels wywołany ${n} razy przy jednym „PRZYGOTUJ ROLKI”`);
+    await tapT(p,'UCZ SIĘ DALEJ');await seeT(p,'są gotowe',80000);await shot(p,'reels-ready-toast','Toast „Rolki z „Wykład 3” są gotowe. Stuknij, żeby obejrzeć.”','Koniec przygotowania');});
+  await step(p,'pojedyncza',async()=>{await call(p,'NaukaMedia.prepare',MS.S,MS.T3,'reels',{focusPointId:pidOf(MS.T3,'p2')});await shot(p,'reels-prepare-single','Przygotuj rolkę o punkcie „<punkt>” (tryb pojedynczej rolki)','„ZRÓB ROLKĘ Z TEGO”');});
+  await closeRun(p);
+};
+/* Podcast-Odtwarzacz, nagrywanie rozdziału, Podcast-Pauza, mini-odtwarzacz */
+SCEN.podcast=async()=>{
+  const r=await newRun('podcast',MSQ,PHONE);await ready(r);
+  await step(r,'Odtwarzacz',async()=>{await call(r,'NaukaMedia.openPodcast',MS.S,MS.T1);await seeT(r,'PODCAST Z LISEM');await sleep(800);
+    await shot(r,'podcast-player','Podcast-Odtwarzacz: scena lis/szop, „<długość> · 8 rozdziałów · 8 pauz” (fixture: 21:13 zamiast 26:40), transkrypcja, tempo, rozdziały','Material 01 → karta podcastu');
+    await scrollMain(r,'end');await shot(r,'podcast-chapters','Podcast: lista 8 rozdziałów (rozdział 1 wysłuchany)','Przewinięcie');});
+  await step(r,'Nagrywanie',async()=>{await tapT(r,'Handel i inwestycje',{settle:300});await shot(r,'podcast-recording','Podcast: „Nagrywam rozdział 3… zwykle ok. 30 s” (jeden POST na rozdział)','Rozdział 3 (nienagrany)');await sleep(2500);});
+  await step(r,'Pauza',async()=>{await call(r,'NaukaMedia.openPodcast',MS.S,MS.T1,{chapter:2,play:true});await sleep(1200);
+    await r.page.evaluate(()=>{const a=document.querySelector('audio');if(a){a.currentTime=19.8;a.play&&a.play().catch(()=>{});}});
+    await seeT(r,'PAUZA NA PYTANIE',15000);await shot(r,'podcast-pause','Podcast-Pauza: Szop pomylił MFW z Bankiem Światowym — pytanie l2#6, „SŁUCHAJ DALEJ” wyłączone','Rozdział 2, pauza po linijce Szopa');
+    await tapT(r,'MFW');await shot(r,'podcast-pause-answered','Podcast-Pauza po odpowiedzi: zaznaczona odpowiedź, linijka lisa, „SŁUCHAJ DALEJ” aktywne','Odpowiedź „MFW”');await tapT(r,'SŁUCHAJ DALEJ');});
+  await step(r,'Mini',async()=>{await tapT(r,'Zwiń');await call(r,'go','today');await shot(r,'podcast-mini','Mini-odtwarzacz nad paskiem na Dziś: „Lis i Szop · Rozdział 2 z 8”','Odtwarzacz → Zwiń → Dziś');});
+  await closeRun(r);
+};
+/* Lis-Tryby, Wytłumacz mi, Przepytaj mnie, Egzamin ustny (wynik) */
+SCEN.fox=async()=>{
+  const r=await newRun('fox',MSQ,PHONE);await ready(r);
+  await step(r,'Tryby',async()=>{await call(r,'NaukaMedia.openFox',MS.S,{topicId:MS.T1,mode:'explain',pointId:pidOf(MS.T1,'p9')});await seeT(r,'Rozmowa z lisem');
+    await shot(r,'fox-modes','Lis-Tryby: zakres „Wykład 1–2”, „Wytłumacz mi” wybrane, „KTÓRY PUNKT?” (MFW), „Odpowiadasz, pisząc.”','Material 01 → „Wytłumacz mi”');});
+  await step(r,'Wytłumacz',async()=>{await tapT(r,'ZACZNIJ ROZMOWĘ',{settle:1500});await shot(r,'fox-explain-start','Lis-Wytłumacz: pierwsza wiadomość lisa','ZACZNIJ ROZMOWĘ');
+    await typeAnswer(r,'MFW to organizacja, która pożycza pieniądze krajom w kryzysie i pilnuje kursów walut. Finansuje też drogi i szkoły w biednych krajach.');await seeT(r,'POMYŁKA');
+    await shot(r,'fox-explain','Lis-Wytłumacz: DOBRZE / LUKA / POMYŁKA, „Przeczytaj w lekcji 3, część 2”, dopytanie, chipy „Podpowiedz” / „Nie wiem”','Odpowiedź o MFW');});
+  await closeRun(r);
+  const q=await newRun('fox-quiz',MSQ,PHONE);await ready(q);
+  await step(q,'Przepytaj',async()=>{await call(q,'NaukaMedia.openFox',MS.S,{topicId:MS.T1,mode:'quiz'});await shot(q,'fox-modes-quiz','Lis-Tryby: „Przepytaj mnie” (bez wyboru punktu)','„Przepytaj mnie”');
+    await tapT(q,'ZACZNIJ ROZMOWĘ',{settle:1500});await typeAnswer(q,'MSG to gospodarka ponad granicami, a MSP to polityka i bezpieczeństwo.');
+    await shot(q,'fox-quiz','Przepytaj mnie: werdykt i pytanie 2 z 5','Odpowiedź na pytanie 1');});
+  await closeRun(q);
+  const e=await newRun('fox-exam',MSQ,PHONE);await ready(e);
+  await step(e,'Egzamin',async()=>{await call(e,'NaukaMedia.openFox',MS.S,{topicId:MS.T1,mode:'exam'});await tapT(e,'ZACZNIJ ROZMOWĘ',{settle:1500});
+    for(const a of ['MSG to gospodarka ponad granicami, a MSP to polityka, władza i bezpieczeństwo.','Na przykład sankcje gospodarcze łączą jedno i drugie wyraźnie.','Pożycza.','Buduje drogi.','Tak, korporacja wpływa na politykę państw przez inwestycje i lobbing.','Np. Apple.'])await typeAnswer(e,a);
+    await seeT(e,'DO POPRAWY',10000);await shot(e,'fox-exam-result','Lis-Egzamin: „4 dobry”, skala 2–5, PYTANIA, DO POPRAWY (OBEJRZYJ ROLKĘ / DODAJ DO POWTÓRKI)','6 odpowiedzi (3 pytania × dopytanie)');
+    await scrollMain(e,'end');await shot(e,'fox-exam-gaps','Lis-Egzamin: karty DO POPRAWY i GOTOWE','Przewinięcie');});
+  await closeRun(e);
+};
+/* limity i stany bez tworzeń (spec §6, D4) */
+SCEN.limits=async()=>{
+  const one=async(q,label,fn)=>{const r=await newRun('limits-'+label,MSQ+'&'+q,PHONE);await ready(r);await step(r,label,()=>fn(r));await closeRun(r);};
+  await one('msgip=new&mq=0','nowy-mq0',async r=>{await call(r,'openSubject',MS.S);await scrollMain(r,650);await shot(r,'limits-nowy-mq0','Centrum-Nowy przy 0 tworzeń: bez karty Dodatków i „PRZYGOTUJ”','mq=0');
+    await call(r,'openMaterial',MS.S,MS.T1);await scrollMain(r,650);await shot(r,'limits-material-mq0','Material przy 0 tworzeń: „Rolek i podcastów na razie nie przygotujesz. …”','mq=0');});
+  await one('msgip=new&voices=0','voices0',async r=>{await call(r,'openSubject',MS.S);await scrollMain(r,650);await shot(r,'limits-voices0','Dodatki bez głosów podcastu: „Podcast będzie dostępny wkrótce”','voices=0');});
+  await one('media=running','busy',async r=>{await call(r,'openSubject',MS.S);await call(r,'openMaterial',MS.S,MS.T3);await tapT(r,'PRZYGOTUJ',{sel:'button'}).catch(()=>{});await shot(r,'limits-busy','„Przygotowuję już coś innego (Wykład 3). …”','Material 03 → PRZYGOTUJ (rolki 02 w toku)');});
+  for(const [q,label,txt] of [['mediaerr=limit_reached:daily','daily','Na dziś to wszystko'],['mediaerr=limit_reached:global','global','Dziś przygotowuję bardzo dużo'],['mediaerr=ai_unavailable','failed','To błąd po naszej stronie'],['mediaerr=unknown','unknown','Nie wiem jeszcze']])
+    await one('media=ready&'+q,label,async r=>{await call(r,'openSubject',MS.S);await call(r,'openMaterial',MS.S,MS.T2);await tapT(r,'PRZYGOTUJ',{sel:'button'});if(!(await seeT(r,txt,1200).catch(()=>false)))await tapT(r,'PRZYGOTUJ ROLKI',{settle:1500});await seeT(r,txt,12000);
+      await shot(r,'limits-'+label,`Przygotowanie: ${label} — „${txt}…”`,q);});
+  await one('chat=0','chat0',async r=>{await call(r,'NaukaMedia.openFox',MS.S,{topicId:MS.T1});await shot(r,'limits-chat0','Lis-Tryby przy 0 wiadomości: „Na dziś to wszystkie rozmowy. Jutro możesz znowu.”, przycisk wyłączony','chat=0');});
+  await one('chat=4','chat4',async r=>{await call(r,'NaukaMedia.openFox',MS.S,{topicId:MS.T1});await shot(r,'limits-chat4','Lis-Tryby: „Dziś możesz wysłać lisowi jeszcze 4 wiadomości.”','chat=4');});
+  await one('nomedia=1','nomedia',async r=>{await call(r,'openSubject',MS.S);await shot(r,'limits-nomedia','Backend bez 0010: hub bez rolek, podcastu i rozmowy z lisem','nomedia=1');});
+  await one('mediafx=xss&media=ready&foxfx=xss','xss',async r=>{await call(r,'NaukaMedia.openReels',MS.S,MS.T1);await shot(r,'limits-xss-series','Seria z próbami XSS w manifeście (tylko tekst)','mediafx=xss');
+    await call(r,'NaukaMedia.openReels',MS.S,MS.T1,{reel:1});await sleep(2500);await shot(r,'limits-xss-reel','Rolka z próbami XSS w scenariuszu','mediafx=xss');});
+};
+
+/* centrum i media na najwęższym ekranie (360×780; reszta media/hub idzie w 390×844) — przegląd UX 2026-10-23: łamanie nazw punktów, przewijanie, pauza podcastu */
+SCEN.narrowhub=async()=>{
+  const W={w:360,h:780,prefix:'360-'};
+  const r=await newRun('narrowhub',MSQ,W);await ready(r);
+  await step(r,'Main',async()=>{await call(r,'openSubject',MS.S);await seeT(r,'NA TERAZ');await shot(r,'hub-main','360×780: Main (NA TERAZ, Szop, materiały)','Dziś → MSGiP');});
+  await step(r,'Material 02',async()=>{await call(r,'openMaterial',MS.S,MS.T2);await seeT(r,'KLUCZOWE PUNKTY');await shot(r,'hub-material-02','360×780: Material 02 — długie nazwy punktów (dzielenie albo jedna kolumna)','Main → 02');});
+  await step(r,'Dziś',async()=>{await call(r,'go','today');await shot(r,'today','360×780: Dziś (plan dnia = NA TERAZ)','Dolna nawigacja → Dziś');});
+  await step(r,'Lis',async()=>{await call(r,'NaukaMedia.openFox',MS.S,{topicId:MS.T1,mode:'explain',pointId:pidOf(MS.T1,'p9')});await seeT(r,'Rozmowa z lisem');await shot(r,'fox-modes','360×780: Lis-Tryby otwiera się od góry (wybrany punkt przewinięty tylko w bok)','Material 01 → „Wytłumacz mi”');});
+  await step(r,'Pauza',async()=>{await call(r,'NaukaMedia.openPodcast',MS.S,MS.T1,{chapter:2,play:true});await sleep(1200);
+    await r.page.evaluate(()=>{const a=document.querySelector('audio');if(a){a.currentTime=19.8;a.play&&a.play().catch(()=>{});}});
+    await seeT(r,'PAUZA NA PYTANIE',15000);await shot(r,'podcast-pause','360×780: Podcast-Pauza sięga dołu ekranu','Rozdział 2, pauza');});
+  await closeRun(r);
+  const x=await newRun('narrowhub-exam',MSQ+'&exam=0',W);await ready(x);
+  await step(x,'exam=0',async()=>{await call(x,'openSubject',MS.S);await seeT(x,'SPRAWDZIAN');await shot(x,'hub-exam-today','360×780: dzień sprawdzianu — pasek dni z jedną wąską komórką, Rozgrzewka','exam=0');
+    await call(x,'go','today');await shot(x,'today-exam-today','360×780: Dziś w dniu sprawdzianu — bez nowej lekcji i rolek','exam=0');});
+  await closeRun(x);
+};
+
 /* pomocniczy (tylko --only lesson4): lekcja poziomu 4 na koncie z postępami — do debugowania pętli pytań */
 SCEN.lesson4=async()=>{
   const r=await newRun('lesson4','mock=seeded&reset=1');await waitFor(r,'.plan');
-  await tap(r,'.subjtile','Polityka');await waitFor(r,'.node-open');await tap(r,'.node-open');await waitFor(r,'#lesson.open .chat');
+  await openSubj(r,'Polityka');await openNode(r);await waitFor(r,'#lesson.open .chat');
   await chatThrough(r,{shots:false,endShot:false,vizShots:false});
   console.log('  wynik:',await lessonQuiz(r,{wrong:0,shots:false,noBadShots:true,noOkShots:true}));await shot(r,'lesson4-end','koniec','');await closeRun(r);
 };
@@ -849,10 +1046,10 @@ function writeIndex(t0){
   fs.mkdirSync(OUT,{recursive:true});
   fs.readdirSync(OUT).filter(f=>/\.png$/.test(f)||f==='INDEX.md').forEach(f=>fs.unlinkSync(path.join(OUT,f)));
   await new Promise((res,rej)=>{server.once('error',rej);server.listen(PORT,'127.0.0.1',res);});
-  browser=await puppeteer.launch({executablePath:CHROME,headless:arg('headful',false)?false:true,args:['--no-first-run','--no-default-browser-check','--lang=pl-PL','--disable-features=Translate'],defaultViewport:null});
+  browser=await puppeteer.launch({executablePath:CHROME,headless:arg('headful',false)?false:true,args:['--no-first-run','--no-default-browser-check','--lang=pl-PL','--disable-features=Translate','--autoplay-policy=no-user-gesture-required','--disable-audio-output'],defaultViewport:null,protocolTimeout:90000}); // audio: rolki i podcast grają bez głośników
   try{
     await makeAssets();
-    const order=ONLY?ONLY.filter(n=>SCEN[n]):['fresh','seeded','comeback','monday','errors','boot','nostore','xss','narrow','native'];
+    const order=ONLY?ONLY.filter(n=>SCEN[n]):['fresh','seeded','comeback','monday','errors','boot','nostore','xss','narrow','native','hub','today','reels','podcast','fox','limits','narrowhub'];
     for(const n of order){
       console.log('▶',n);const s0=Date.now();
       try{await SCEN[n]();}catch(e){FAILS.push(`${n}: ${e.message}`);console.log('  ✗',n,e.message);

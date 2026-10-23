@@ -12,7 +12,7 @@ Jak czytać:
 - **„do sprawdzenia”** oznacza, że tego nie dało się potwierdzić bez sieci albo bez dostępu do produkcji;
 - w dokumencie nie ma żadnych sekretów (kluczy, haseł, tokenów). Są tylko nazwy zmiennych.
 
-Plan nagrywania wykładów (Etap 2) jest osobno: [`docs/plan-wyklady.md`](plan-wyklady.md).
+Plan nagrywania wykładów (Etap 2) jest osobno: [`docs/plan-wyklady.md`](plan-wyklady.md). Centrum przedmiotu, kluczowe punkty, rolki, podcast i rozmowa z lisem (2026-10-22/23): [rozdział 14](#14-centrum-przedmiotu-kluczowe-punkty-rolki-podcast-rozmowa-z-lisem), spec [`docs/design-centrum.md`](design-centrum.md), kontrakty [`docs/plan-media.md`](plan-media.md).
 
 ---
 
@@ -25,6 +25,7 @@ Plan nagrywania wykładów (Etap 2) jest osobno: [`docs/plan-wyklady.md`](plan-w
 5. **Nieudana generacja nadal zjada limit.** Nie ponawiaj `POST /api/generate` automatycznie.
 5a. **Decyzja z 2026-10-15 (AUDYT D3 / P0-2), w kodzie Build 7, niewdrożona:** plan free = **2 generacje na zawsze** (bez odnawiania; liczone po skrócie adresu e-mail, więc usunięcie konta i ponowna rejestracja tym samym adresem nic nie daje), **nowe konta bez triala**, konta z trialem w toku zostają na pro do jego końca (generacje z triala nie liczą się do darmowych 2), limit globalny i limit darmowych generacji w tabeli `app_config` (domyślnie 30/dobę i 2; zmiana bez migracji). Wszystko w `backend/0007_generation_guards.sql`; kolejność wdrożenia bez zmian (0007 → backend → 0008 → apka). Pakiety z wyższymi limitami (IAP) mają się mapować na plan `pro` — jeszcze ich nie ma.
 6. **Build 7 (AUDYT §6.1, sekcje A–C, plus poprawki z przeglądu) jest w drzewach roboczych, niewdrożony.** Kolejność: `backend/0007_generation_guards.sql` → wdrożenie backendu → sprawdzenie, że build 6 dalej tworzy lekcje → `backend/0008_account_limits.sql` (cały plik; potem sprawdzenie wszystkich 4 sekcji) → build 7 apki. Nowy backend bez 0007 odpowiada na każdą generację 500 `reserve_failed` (bez naliczenia). Szczegóły i wycofanie: `nauka-backend/docs/DEPLOY.md` („Build 7”). Opisy oznaczone niżej „Build 7” dotyczą kodu, nie produkcji, dopóki to nie zostanie wdrożone.
+7. **Centrum przedmiotu i media (2026-10-23) są w drzewach roboczych, niewdrożone, 0010 niewgrana.** Ścieżka poziomów zniknęła (centrum z kluczowymi punktami), dolna nawigacja to „Dziś · Przedmioty · [+] · Powtórka · Profil”, doszły rolki, podcast „Lis i Szop” i rozmowa z lisem. Kolejność: `backend/0010_media.sql` → backend z kluczami ElevenLabs i głosami → apka. Szczegóły: [14](#14-centrum-przedmiotu-kluczowe-punkty-rolki-podcast-rozmowa-z-lisem) i `nauka-backend/docs/DEPLOY.md`.
 
 ---
 
@@ -43,6 +44,7 @@ Plan nagrywania wykładów (Etap 2) jest osobno: [`docs/plan-wyklady.md`](plan-w
 11. [Plan i znane ograniczenia](#11-plan-i-znane-ograniczenia)
 12. [Zasady i konwencje](#12-zasady-i-konwencje)
 13. [Słowniczek](#13-słowniczek)
+14. [Centrum przedmiotu, kluczowe punkty, rolki, podcast, rozmowa z lisem](#14-centrum-przedmiotu-kluczowe-punkty-rolki-podcast-rozmowa-z-lisem)
 
 ---
 
@@ -176,6 +178,7 @@ Ważne:
 | `cloud-config.js` | 7 linii | `window.CRAMFOX_CONFIG = {supabaseUrl, anonKey, apiUrl}`. Wartości publiczne. Opcjonalna flaga `apiDirect` jest czytana w `cloud.js:45`, ale nieustawiona. |
 | `cloud.js` | 513 linii | Jedno IIFE bez UI: sesja, REST, Storage, TUS, API, cache, mapowanie, sanitizer, synchronizacja, generowanie. Wystawia `window.NAUKA_CLOUD` (`:508–512`) i ustawia `window.NAUKA_UID` (`:24`). |
 | `engine.js` | 3790 linii, 367 KB | Jedno IIFE, `"use strict"`: router, wszystkie ekrany nauki, zadania, grywalizacja, lis, szop. Wystawia `window.NaukaEngine`. |
+| `media.js` | 2004 linie (2026-10-23) | Jedno IIFE: odtwarzacz rolek (port `test/proto/rolka/engine.js` jako `Reel.mount`), seria rolek, arkusz „Przygotuj”, podcast „Lis i Szop” z mini-odtwarzaczem, rozmowa z lisem. Wystawia `window.NaukaMedia`; rejestruje widoki `reelseries`, `reelplay`, `podcast`, `foxmodes`, `foxchat`, `foxresult`. Bez własnego `fetch` (wszystko przez `NAUKA_CLOUD`). Style w `media.css` (`.mx-*`, `.reel`). Patrz [14](#14-centrum-przedmiotu-kluczowe-punkty-rolki-podcast-rozmowa-z-lisem). |
 | `cloud-ui.js` | 424 linie | Ustawia `window.NAUKA_BOOT` (`:20`) i `window.NAUKA_HOOKS` (`:135`), rejestruje widoki `cfadd`, `cfgen`, `cfready` (`:423`). Logowanie, karta „Konto”, dodawanie materiału, ekran generowania, „przedmiot gotowy”. |
 | `styles.css` | 2795 linii | Style. Kopia tokenów z `design/tokens.css` w `:12–137` (nie całkiem 1:1, patrz [3.14](#314-pasek-offline-ekran-błędu-design)). |
 | `index.html` | 17 linii | Wersja deweloperska: `<link>` do `styles.css` i 4 skrypty w kolejności (`:12–15`). **Bez CSP.** |
@@ -198,7 +201,7 @@ Ważne:
 | Xcode | bundle `com.ignacykrasnodebski.nauka`, `IPHONEOS_DEPLOYMENT_TARGET 16.4`, tylko iPhone (`TARGETED_DEVICE_FAMILY 1`), `MARKETING_VERSION 1.0`, `CURRENT_PROJECT_VERSION 1` (numer builda podaje się przy archiwizacji), Swift 5.0, `CODE_SIGN_STYLE Automatic` |
 | Zespół podpisujący | **brak `DEVELOPMENT_TEAM` w projekcie**; archiwa są podpisane zespołem `H9QDV2Z2G3` |
 | Schematy | `App` (aplikacja) i `CapApp-SPM` |
-| `Info.plist` | region `pl`, nazwa `Cramfox`, `ITSAppUsesNonExemptEncryption=false`, opisy dostępu do aparatu i zdjęć (po polsku), tylko pion, `UIUserInterfaceStyle Dark`, `UIStatusBarStyle LightContent`, `UIMainStoryboardFile=Main` (poziom główny) i `UISceneStoryboardFile=Main` (w konfiguracji sceny). **Brak** `NSMicrophoneUsageDescription` i `UIBackgroundModes`. |
+| `Info.plist` | region `pl`, nazwa `Cramfox`, `ITSAppUsesNonExemptEncryption=false`, opisy dostępu do aparatu i zdjęć (po polsku), tylko pion, `UIUserInterfaceStyle Dark`, `UIStatusBarStyle LightContent`, `UIMainStoryboardFile=Main` (poziom główny) i `UISceneStoryboardFile=Main` (w konfiguracji sceny). **Brak** `NSMicrophoneUsageDescription`. Od 2026-10-23 `UIBackgroundModes = audio` (podcast gra przy zablokowanym ekranie), a `AppDelegate.swift` ustawia `AVAudioSession` na `.playback` / `.spokenAudio`. |
 | Ikona | `native/resources/icon.svg` i `make-icon.js` |
 
 Skrypty w `native/package.json`:
@@ -213,7 +216,7 @@ Skrypty w `native/package.json`:
 
 ### 3.3 Kolejność skryptów i start
 
-Kolejność jest ważna: `cloud-config.js` → `cloud.js` → `engine.js` → `cloud-ui.js` (`index.html:12–15`, `build.js:16`).
+Kolejność jest ważna: `cloud-config.js` → `cloud.js` → `engine.js` → `media.js` → `cloud-ui.js` (`index.html`, tablica `scripts` w `build.js`, `test/dev/index.html`; `media.js` od 2026-10-23). Style: `styles.css` + `media.css` (w buildzie sklejone). CSP ma `media-src blob:` (audio rolek i podcastu z Storage jako Blob).
 
 1. `cloud.js` przy wczytaniu czyta sesję z `cf_session` i ustawia `window.NAUKA_UID` (stały na czas życia strony). Raz kasuje stare klucze bez uid (`:26`, flaga `cf_legacy_cleared`).
 2. `engine.js` dokłada w tle fonty Google (`<link media=print>`, potem `all`, `:22`), ustawia `NATIVE` (`:24`) i przygotowuje `STORE` (`:36`, localStorage z testem zapisu; przy błędzie pamięć i pasek ostrzeżenia).
@@ -960,6 +963,7 @@ Przedmiot (tabela subjects)          np. „Biologia”
 | `grading` | `pass` 0–100, `examMin` 1–240, `scale` [[próg, etykieta]…] ≥1, `failLabel` |
 | `info` | HTML ≤20 000 |
 | `levels` | 1–30 |
+| `keyPoints?` | 3–15 kluczowych punktów (od 2026-10-23, [14.2](#142-kluczowe-punkty-i-opanowanie)); stare tematy bez pola |
 
 Skala zapisywana według etapu (`GRADING_BY_STAGE`, `finalize.ts:30–35`; AI jej nie wybiera):
 
@@ -1132,6 +1136,10 @@ Projekt Supabase `zhgxhdsnizujzygpcyfl` („nauka”), eu-central-1. Typy: `stag
 | `free_generation_ledger` (0007, D3) | id, email_hash (sha256 hex z `lower(trim(email))` z `auth.users`), user_id (→ auth.users, `on delete set null`), generation_id (unikalne), created_at — jeden wiersz na naliczenie na planie free | RLS bez polityk, rolom API odebrane; przeżywa usunięcie konta; zużycie konta = wiersze z jego skrótem adresu **albo** jego user_id (zmiana adresu nie zeruje); nigdy nie kasowane |
 | `app_config` (0007, D3) | key, value jsonb, note, updated_at | RLS bez polityk, rolom API odebrane (service role tylko SELECT); `generation_global_daily_cap` (30), `free_lifetime_generations` (2); czyta `app_config_int()` — zła wartość albo brak wiersza = wartość domyślna |
 | `usage` | (user_id, month `RRRR-MM`) PK, generations, tutor_messages | tylko SELECT; pisze tylko RPC `increment_usage` |
+| `media` (0010, niewgrana) | id (= `requestId` klienta), owner_id, subject_id i topic_id (kaskada z przedmiotu / tematu), kind (`reels`/`podcast`), status (`running`/`ready`/`failed`), phase, progress, title, spec, manifest (pliki w bucket `media`), error (`<kod>:<szczegół>`, zwrot = `released:…`), charged, refunded_at, model, cost_usd, tts_chars | SELECT swoich, **tylko kolumny klienta** (`MEDIA_SEL` w `cloud.js`; bez kosztu, modelu, znaków; `select=*` odrzucone); pisze tylko serwer |
+| `media_ledger` (0010) | user_id (`on delete set null`), media_id (unikalne, **bez** klucza obcego), kind, scope (`lifetime`/`month`), month, email_hash, created_at, finished_at, voided_at, refunded_at — jeden wiersz na rezerwację | RLS bez polityk, rolom API odebrane. Przeżywa usunięcie materiału, przedmiotu i konta; z niego liczone są busy, dobowy bezpiecznik konta, pule planu (free po skrócie adresu e-mail) i limity globalne |
+| `fox_usage` (0010) | (user_id, day) PK — wiadomości do lisa w dniu Europe/Warsaw | tylko serwer |
+| `tts_ledger` (0010) | chars (ujemne = zwrot `tts_refund`), media_id, kind (`reel`/`chapter`), created_at — budżet znaków lektora na kroczącą dobę | tylko serwer; bez klucza obcego |
 | `app_state` (0004) | user_id PK, progress jsonb, meta jsonb, client_ts, rev, updated_at; CHECK rozmiar progress+meta < 2 000 000 B | wszystko na swoim (także DELETE) |
 | `subscriptions` | user_id PK, stripe_subscription_id, status, price_id, interval, current_period_end, cancel_at_period_end | SELECT swoje; pisze webhook |
 | `progress`, `srs_cards`, `activity`, `user_meta`, `quests_daily`, `achievements` | postępy starej apki Recall | wszystko na swoich |
@@ -1157,13 +1165,17 @@ Projekt Supabase `zhgxhdsnizujzygpcyfl` („nauka”), eu-central-1. Typy: `stag
 | `materials_bucket_stats()` (Build 7) | rozmiar i liczba plików bucketu (alert) | tylko service role |
 | `materials_upload_allowed()` (Build 7, `0008`) | dla polityki RESTRICTIVE: <100 plików i <500 MB konta w 24 h | wołana przez politykę |
 | `increment_usage(p_user, p_month, p_field)` | (do Build 7 dla generacji; tutor nadal) `generations`: najpierw limity dobowe (≥20 wierszy `generations` konta w 24 h → zwraca **1000000**; globalnie ≥ limit z `app_config` — od 0007, wcześniej 300 — → **2000000**; licznik bez zmian), potem +1 i zwraca sumę miesięczną. Inne pole (tutor): na trialu bez subskrypcji przy ≥30 × dzień miesiąca → wyjątek `tutor_cap` | tylko service role |
-| `delete_my_account(p_dry_run)` | `not_authenticated`; `active_subscription` (active / trialing / past_due, także na próbę); `files_remaining` (pliki w `materials/<uid>/`, tylko na serio); potem `delete from auth.users` z kaskadą | tylko zalogowani |
+| `delete_my_account(p_dry_run)` | `not_authenticated`; `active_subscription` (active / trialing / past_due, także na próbę); `files_remaining` (pliki w `materials/<uid>/`, od 0010 także w `media/<uid>/`, tylko na serio); potem `delete from auth.users` z kaskadą | tylko zalogowani |
+| `reserve_media`, `finish_media`, `release_media`, `fail_media`, `media_quota` (0010) | pula rolek i podcastu, jak `reserve_generation` / `finish_generation` / `release_generation`; szczegóły w [14.8](#148-migracja-0010-i-kolejność-wdrożenia) | tylko service role |
+| `claim_podcast_chapter`, `set_podcast_chapter`, `release_podcast_chapter(…, p_failed)`, `tts_budget`, `tts_refund` (0010) | nagrywanie rozdziału na żądanie i globalny budżet znaków lektora | tylko service role |
+| `reserve_chat`, `release_chat`, `chat_quota` (0010) | wiadomości do lisa na dzień (Europe/Warsaw) | tylko service role |
+| `sweep_stale_media()` (0010) | tworzenie bez końca starsze niż 8 min → zwrot (także gdy wiersz `media` zniknął); rozdział „nagrywany” > 5 min → wraca | cron |
 | `end_trials()` | pro → free po końcu `trial_until`, jeśli brak subskrypcji | nikt (tylko cron) |
 | `my_total_xp()`, `log_activity(...)`, `weekly_leaderboard(...)`, `my_weekly_rank()` | stara apka Recall | |
 
 **Wartości „sentinel”:** API zwraca 402 `limit_reached` z `used = wynik − 1`, czyli **999999** (limit konta) albo **1999999** (limit serwera). Apka rozpoznaje je po tych liczbach.
 
-**pg_cron:** `cramfox-end-trials`, `15 * * * *` (co godzinę o :15), `select public.end_trials()` — trial może więc trwać do ok. godziny dłużej. Build 7: drugie zadanie `cramfox-sweep-generations` co 5 min (`sweep_stale_generations()`).
+**pg_cron:** `cramfox-end-trials`, `15 * * * *` (co godzinę o :15), `select public.end_trials()` — trial może więc trwać do ok. godziny dłużej. Build 7: drugie zadanie `cramfox-sweep-generations` co 5 min (`sweep_stale_generations()`). 0010: `cramfox-sweep-media` co 5 min (`sweep_stale_media()`).
 
 **Triggery Build 7 (`0008`):** `cap_owner_rows` (BEFORE INSERT) na `subjects`, `materials`, `topics` → `enforce_owner_caps()`: 200 przedmiotów na konto, 100 wierszy `materials` i 50 tematów na dobę; błąd 23514 z nazwą limitu (`subject_limit`, `materials_daily_limit`, `topics_daily_limit`). CHECK `topics_content_size` (`pg_column_size(content) < 1000000`, NOT VALID). Polityka RESTRICTIVE `materials upload daily cap` na `storage.objects`. **Widok** `generation_cost_daily` (koszt dzienny, service role).
 
@@ -1190,6 +1202,7 @@ Projekt Supabase `zhgxhdsnizujzygpcyfl` („nauka”), eu-central-1. Typy: `stag
 - **Limit miesięczny sprawdzany po podbiciu licznika:** `increment_usage` najpierw dodaje 1 (`0004_cramfox.sql:109–111`), a dopiero potem `reserveGeneration` porównuje `used > limit` (`lib/plan.ts:48`). Odrzucone żądanie i tak zostawia licznik ponad limitem (np. 4/3). Wstępne sprawdzenie tylko do odczytu działa tylko w trybie materiałów **z plikami** (`intake.ts:71–75`), więc żądania z samym tekstem i tryb `prompt` zawsze idą tą drogą. UI ukrywa to przez `min(used, lim)` (`cloud-ui.js:156`).
 - **Okna limitów:** dobowe to kroczące 24 h (nie doba kalendarzowa, choć UI mówi „Spróbuj jutro”); miesięczne to miesiąc UTC; koniec triala przez cron o :15 co godzinę (do ok. 1 h spóźnienia).
 - CLAUDE.md i oba README opisują plany od 0007 (free 2 na zawsze, bez triala, 30/dobę z pulą free 20, 20/dobę na konto).
+- **Rolki, podcast i rozmowa z lisem (0010, niewgrana):** osobna pula, nigdy nie zużywa darmowych lekcji. Wartości w `app_config` (zmiana bez migracji): `free_media_lifetime` 3 (na zawsze, po skrócie adresu e-mail jak lekcje), `pro_media_month` 30, `media_daily_per_user` 5 (krocząca doba, także nieudane i zwrócone), `media_global_daily_cap` 60 (bez zwróconych; 0 = wstrzymane), `media_global_daily_attempts` 150 (próby, także zwrócone), `free_chat_daily` 30, `pro_chat_daily` 200, `chat_global_daily_cap` 5000, `tts_global_daily_chars` 600 000. Pełny opis: [14.6](#146-tworzenie-limity-kody) i [14.8](#148-migracja-0010-i-kolejność-wdrożenia).
 
 ### 7.6 Bucket `materials`
 
@@ -1211,6 +1224,8 @@ Projekt Supabase `zhgxhdsnizujzygpcyfl` („nauka”), eu-central-1. Typy: `stag
 | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` | web | Stripe w trybie testowym (wg DEPLOY.md) |
 | `NEXT_PUBLIC_APP_URL` | web | domyślnie `http://localhost:3000` |
 | `EXPO_PUBLIC_*` | stara apka Expo | nie dotyczy Cramfoxa |
+
+Media i rozmowa z lisem (2026-10-23, niewdrożone): `ELEVENLABS_API_KEY`, `ELEVENLABS_VOICE_REEL` (domyślnie głos „Dawid”), `ELEVENLABS_VOICE_FOX`, `ELEVENLABS_VOICE_SZOP` (bez domyślnych — bez nich podcast „wkrótce”), `ELEVENLABS_REEL_MODEL` (`eleven_v4`), `ELEVENLABS_PODCAST_MODEL` (`eleven_flash_v2_5`), `ELEVENLABS_REEL_TAGS` (`1`), `CRAMFOX_MEDIA_MODEL`, `CRAMFOX_FOX_MODEL` (oba `claude-sonnet-5`). Tylko nazwy; wartości w panelu Vercela.
 
 Po stronie apki: `cloud-config.js` (URL Supabase, klucz anon, URL API; wszystko publiczne).
 
@@ -1426,7 +1441,7 @@ Potem: Xcode → Window → Organizer → archiwum → Distribute App. Zapisz, k
   ```
 
 - Pułapki:
-  - migracje są w dwóch worktree (dwóch gałęziach) jednego repo: 0001–0003 w `nauka-backend/supabase/migrations/`, 0004–0008 w `nauka-app/backend/`. Build 7: **0007 (addytywna) przed backendem, 0008 (zaostrzająca) po sprawdzeniu buildu 6 na nowym backendzie** — kolejność i sprawdzenia w `nauka-backend/docs/DEPLOY.md`; lokalny test obu (`cd nauka-backend && npm run test:db`, tymczasowy Postgres); `supabase db push` z backendu **nie** da schematu Cramfoxa;
+  - migracje są w dwóch worktree (dwóch gałęziach) jednego repo: 0001–0003 w `nauka-backend/supabase/migrations/`, 0004–0010 w `nauka-app/backend/` (0010 = media i rozmowa z lisem, [14.8](#148-migracja-0010-i-kolejność-wdrożenia)). Build 7: **0007 (addytywna) przed backendem, 0008 (zaostrzająca) po sprawdzeniu buildu 6 na nowym backendzie** — kolejność i sprawdzenia w `nauka-backend/docs/DEPLOY.md`; lokalny test obu (`cd nauka-backend && npm run test:db`, tymczasowy Postgres); `supabase db push` z backendu **nie** da schematu Cramfoxa;
   - **nigdy nie uruchamiaj 0001–0003 ani `supabase db push` z `nauka-backend` na produkcji.** 0001 i 0002 odtwarzają politykę `"profiles self update"` bez sprawdzenia `trial_until` (`0001_init.sql:193–195`, `0002_gamification.sql:36–38`), więc użytkownik mógłby sam ustawić sobie trial do 2099 i zostać na pro. 0001 przywraca też `increment_usage` bez limitów 20/300 i bez `tutor_cap` (`0001_init.sql:233–249`) oraz `handle_new_user` bez triala. Po takim błędzie trzeba od razu wgrać ponownie 0004, **a po nim 0007** (0004 przywraca trial dla nowych kont i globalne 300 w `increment_usage`; 0007 jest idempotentna i nie nadpisuje wartości w `app_config`);
   - `0001_init.sql` został zmieniony na miejscu (limit 50 MB, PPTX). Baza, która już go wykonała, tego nie widzi; właściwą drogą są 0005 i 0006;
   - `reset_dev.sql` kasuje wszystko. **Nigdy na produkcji.**
@@ -1685,7 +1700,13 @@ Kolejność: 1a schematy → 1b PPTX → 2a spike → 2b backend → 2c nagrywar
 | **Duch** | Zapis najlepszego przejścia poziomu, z którym się ścigasz. |
 | **Boss / Szop Zapominalski** | Ostatni węzeł ścieżki: pytania na czas, HP szopa. |
 | **Cram** | Tryb „noc przed egzaminem”, 4 bloki po 5 minut. |
-| **Gotowość** | 60% poziomów zaliczonych + 40% najlepszego egzaminu, w planie do sprawdzianu. |
+| **Gotowość** | Od 2026-10-23 (D3): 70% × udział punktów „Umiem” + 30% × najlepszy egzamin próbny (bez egzaminu = udział punktów); poniżej 10 odpowiedzi „?”. Wcześniej 60% poziomów + 40% egzaminu. |
+| **Kluczowy punkt** | Jedna rzecz do opanowania z materiału (6–15 na temat, `content.keyPoints`); grupuje fiszki, pytania i zadania. Stare tematy: punkt na poziom (`L<levelId>`). |
+| **Opanowanie (Umiem / W trakcie / Do odświeżenia / Nowe)** | Stan punktu liczony z kluczy SRS (D1), bez nowych danych. XP i seria go nie zmieniają. |
+| **NA TERAZ** | Jedna karta akcji w centrum przedmiotu (priorytet D5); ta sama akcja zasila plan na Dziś. |
+| **Rolka** | Krótki pionowy film (45–60 s) z lektorem z jednego materiału, kończący się istniejącym pytaniem quizu. Seria = 3–6 rolek. |
+| **Podcast „Lis i Szop”** | 20–30 min dialogu w 8 rozdziałach; szop się myli, lis poprawia; pauza z pytaniem w każdym rozdziale. |
+| **Tworzenie (mediów)** | Jedno zlecenie rolek albo podcastu z puli `free_media_lifetime` / `pro_media_month` (osobnej od lekcji). |
 | **`_skip`** | Zadanie, którego apka nie obsługuje; zostaje w tablicy, żeby nie przesunąć indeksów. |
 | **`epoch`** | Znacznik resetu postępów; przy scalaniu wyższy wygrywa cały `progress`. |
 | **Outline (plan)** | Pierwsza faza generowania: podział materiału na poziomy. |
@@ -1722,3 +1743,95 @@ Kolejność: 1a schematy → 1b PPTX → 2a spike → 2b backend → 2c nagrywar
 | **Spike** | Krótki, tani eksperyment przed decyzją (tu: test ElevenLabs przed Etapem 2). |
 | **Zgoda v1 / v2** | Zgoda na przetwarzanie przez AI: v1 dla materiałów (Claude), v2 dla nagrań (ElevenLabs, USA). |
 | **Recall**, **NAUKA** | Starsze nazwy: backend i apka webowa (Recall), pierwsza wersja apki (NAUKA). |
+
+---
+
+## 14. Centrum przedmiotu, kluczowe punkty, rolki, podcast, rozmowa z lisem
+
+**W skrócie (stan 2026-10-23, kod w drzewach roboczych, niewdrożony, 0010 niewgrana):** ścieżka poziomów zniknęła. Przedmiot otwiera się jako **centrum** („zeszyt z jedną kartą na teraz”): opanowanie kluczowych punktów, karta sprawdzianu, jedna akcja „NA TERAZ”, pasek Szopa (zapominanie), materiały jako rozdziały 01/02/03 i siatka narzędzi. Każdy materiał ma swój ekran z punktami, lekcjami, rolkami, podcastem i rozmową z lisem. Rolki i podcast to osobne „tworzenia” z osobnej puli (nigdy nie zużywają 2 darmowych lekcji). Źródło prawdy dla wyglądu i tekstów: [`docs/design-centrum.md`](design-centrum.md) (decyzje D1–D8) i makiety `design/centrum/*.dc.html`; kontrakty danych, API i bazy: [`docs/plan-media.md`](plan-media.md).
+
+### 14.1 Nawigacja i ekrany
+
+- Dolna nawigacja (D6): „Dziś” · „Przedmioty” · [+] („Dodaj materiał”) · „Powtórka” · „Profil”. Zakładka Fiszki zniknęła (fiszki są w centrum i w materiale; widok `cards` zostaje dla starych linków).
+- `openSubject(sid, tab='hub')`: zakładki `hub` (dawna `path` to alias), `material` (z `curTopic`), `fiszki`, `quiz`, `cwicz`, `egzamin`, `info`. Narzędzia mają przycisk powrotu do miejsca otwarcia; `navHist` pamięta otwarty materiał.
+- Lekcje nie mają blokad (`levelUnlocked()` zawsze `true`); boss nadal wymaga zrobienia wszystkich lekcji. Skrzynie zniknęły razem ze ścieżką.
+- Pełnoekranowe (bez nawigacji): lekcja, odtwarzacze, rozmowa z lisem, egzamin, seria rolek, wybór trybu lisa. Mini-odtwarzacz podcastu (`NaukaMedia.miniPlayer()`) siedzi nad nawigacją na każdej zakładce.
+- „Przedmiot gotowy” (cloud-ui): „ZACZNIJ NAUKĘ” otwiera lekcję 1, link „Zobacz przedmiot” — centrum (stan „Nowy”: start od lekcji 1, karta daty sprawdzianu, karta „Dodatki”).
+- Dziś: plan z kart „NA TERAZ” przedmiotów (wiersze z „ZROBIONE” / „+XP”), karta sprawdzianu, sekcja „POZA PLANEM” (podcast, propozycja lisa), karty przedmiotów z mini paskiem opanowania. Pasek celu XP zniknął z Dziś (cel nadal w Ustawieniach).
+- Plan dnia (`buildDailyTasks`, `planSubs` = 2 przedmioty o największym XP) liczy te same warunki co „NA TERAZ”, żeby Dziś i centrum się nie różniły: powtórka; lekcja (przerwana albo następna — z kroku „nauka” planu do sprawdzianu, gdy jest); wiersz „Do sprawdzianu — …” (`<sid>:plan`, krok planu powtórka / próbny / słabe punkty od D−2; zaliczenie kroku zalicza wiersz, +20 XP); rolki (tylko pierwszy przedmiot); Szop przy **≥ 2** punktach do odświeżenia; egzamin ustny, gdy wszystko „Umiem”. W dniu sprawdzianu i dzień przed: rozgrzewka / noc przed + powtórka i Szop, **bez nowej lekcji i rolek**. Rejestr mediów i `features` z `/api/me` przychodzą po ułożeniu planu, więc `planAddMedia()` (po każdej zmianie `setMedia`) dopisuje wiersz rolek i egzaminu ustnego.
+- Komunikaty (toast) w odtwarzaczach bez dolnego paska (`reelplay`, `podcast`, `fox*`, `reelseries`) pokazują się u góry (`TOAST_TOP`), żeby nie zasłaniać głównego przycisku ani wyjaśnienia odpowiedzi.
+
+### 14.2 Kluczowe punkty i opanowanie
+
+- Backend: `content.keyPoints` (6–15 punktów, każdy ≥ 3 elementy, w tym ≥ 2 pytania lub fiszki; każde pytanie i fiszka w dokładnie jednym punkcie) powstaje w tej samej generacji lekcji, walidowane w `finalize.ts → buildKeyPoints()`; bez spełnionych reguł temat zapisuje się bez punktów. Opis pól: `nauka-backend/docs/API.md` („Kluczowe punkty”).
+- Odczyt **identyczny po obu stronach**: `cloud.js → mapPoints()` i `@nauka/shared media.ts → topicPoints()` (atrapa `test/dev/mock-backend.js` ma kopię): złe odwołania i duplikaty odpadają; punkt bez tytułu odpada; pytania i fiszki bez punktu → punkt zastępczy ich poziomu (`L<levelId>`); punkt z < 3 elementami albo < 2 pytaniami/fiszkami łączy się z następnym (ostatni z poprzednim); < 3 punkty (licząc zastępcze) → cały temat punkt na poziom. Zadania nieobsługiwane w apce (`_skip`) liczą się do wielkości punktu jak na serwerze. Dzięki temu surowe id (`p3`, `Ll2`) są te same w apce, w manifestach mediów i w `/api/fox`.
+- Id punktu w silniku: `t<8 znaków topicId>_<raw>` (bez `:`). Stare tematy (bez `keyPoints`) działają: punkt na lekcję.
+- Opanowanie (D1) to czysta funkcja kluczy SRS (`pointState`): Umiem (≥ 70% elementów w pudełku ≥ 2 i nic > 2 dni po terminie), Do odświeżenia (≥ ⅓ elementów > 2 dni po terminie), W trakcie, Nowe. Dobra odpowiedź w rozmowie z lisem zapisuje `PROGRESS.oral` i może podnieść tylko „Nowe” → „W trakcie”. XP, seria, oglądanie i słuchanie nie zmieniają stanu.
+- Gotowość (D3): `70% × udział „Umiem” + 30% × najlepszy egzamin próbny`; poniżej 10 odpowiedzi „?”. Ten sam wynik w centrum, na Dziś i w planie do sprawdzianu.
+- „NA TERAZ” (D5): sprawdzian dziś/jutro → przerwana lekcja → ≥ 2 punkty do odświeżenia (Szop) → plan dnia → następna lekcja → egzamin próbny od D−3 → egzamin ustny, gdy wszystko „Umiem”. Rolki i podcast tylko jako „Inna propozycja”.
+- „Dokończ lekcję” (`lastResume`) bierze tylko przerwane **niezrobione** lekcje bez `replay`; zajrzenie do części zrobionej lekcji („Przeczytaj w lekcji N, część M” z punktu, rolki, lisa) ma `ls.peek` i niczego nie zapisuje. Zapis powtórki zrobionej lekcji (też z Build 7) wznawia się dopiero po otwarciu tej lekcji.
+- Punkt zastępczy powstaje tylko dla lekcji z fiszkami albo pytaniami (`cloud.js mapPoints → fallback`, `engine.js fbPoints`) — inaczej punkt byłby na zawsze „Nowe” i „Umiem X z Y” nie doszłoby do Y.
+- „To nie jest punkt z mojego materiału” (`PROGRESS.ptHide`) da się cofnąć: komunikat „Punkt ukryty. Stuknij, żeby cofnąć” i w menu „…” materiału „Przywróć ukryte punkty (N)”.
+- Egzamin ustny „dziś” liczy się z całego przedmiotu (`PROGRESS.fox['s:<sid>']`) i z każdego materiału (`PROGRESS.fox[<topicId>]`) — wtedy NA TERAZ = „Na dziś wystarczy”.
+- Nazwy punktów w kafelkach dzielą się ze słownika (`hyphens:auto`, `lang="pl"`); gdy przeglądarka nie umie podzielić słowa szerszego niż kafelek, siatka przechodzi na jedną kolumnę (`fitChips`).
+- Nowe pola postępów (opcjonalne, walidowane w `fixProgress`): `PROGRESS.media`, `PROGRESS.oral`, `PROGRESS.fox`, `PROGRESS.ptHide`, `META.mediaPrefs`. Nowe zadania dnia: `szop`, `reels:<mediaId>`, `cram`, `oral`, `warmup` (stare `quiz`/`exam` nadal się wyświetlają). Nowy klucz localStorage: `cf_media_job:<uid>` (dziennik tworzenia mediów). Żaden stary klucz nie zmienił nazwy.
+
+### 14.3 Rolki
+
+- Seria na materiał: 3–6 rolek (domyślnie 5 rodzajów bez „Pułapki na egzaminie”), każda 45–60 s, lektor „Dawid” (ElevenLabs `eleven_v4`, tempo 1,15). Pojedyncza rolka o jednym punkcie („ZRÓB ROLKĘ Z TEGO”). Serwer: plan serii → scenariusze (Claude) → TTS z czasami znaków → pliki w bucket `media`.
+- Odtwarzacz: port prototypu `test/proto/rolka/` (izometryczny świat, napisy karaoke, rozdziały), bez gradientów i winiety; scenariusz i czasy słów są sanitizowane w apce przed użyciem. Przewijanie w górę/dół, stuknięcie = pauza, „Do powtórki” (punkt na dziś), „Wyjaśnij” (fragment lekcji), „Następna”.
+- Pytanie końcowe = istniejące pytanie quizu (`quizRef`), odpowiedź zapisuje SRS (+3 XP za dobrą) — samo oglądanie nic nie zmienia. Nazwy plików zawsze z `reel.files` (numer rolki może mieć luki).
+
+### 14.4 Podcast „Lis i Szop”
+
+- Scenariusz raz na materiał (jedno tworzenie): 8 rozdziałów (6–8 przy małym temacie), 20–30 min, dialog lisa i szopa, w każdym rozdziale pauza z istniejącym pytaniem quizu.
+- Audio rozdziału jest nagrywane **dopiero, gdy użytkownik go włączy** (`POST /api/media/podcast/chapter`, ElevenLabs `eleven_flash_v2_5`, bez naliczenia, pamięć na zawsze); następny rozdział rusza sam po końcu bieżącego (jedno żądanie, bez ponawiania). Bez głosów `ELEVENLABS_VOICE_FOX`/`SZOP` podcast pokazuje „Podcast będzie dostępny wkrótce”.
+- Jeden `<audio>` poza `#app`, tempo 1,0×/1,25×/1,5×, pytania w trakcie albo na końcu rozdziału, transkrypcja na żywo, mini-odtwarzacz, Media Session. Pozycja zapisywana przy pauzie, zmianie rozdziału, zamknięciu, ukryciu apki i najwyżej raz na minutę — jako **jedna wartość** `PROGRESS.media[id].cp = "<rozdział>:<sekunda>"` (scalanie dwóch urządzeń bierze napis w całości; osobne `ch` / `pos` pomieszałyby rozdział jednego urządzenia z pozycją drugiego). `mediaState()` czyta `cp`, a starsze `ch` / `pos` tylko, gdy `cp` brak.
+- Rozdział, którego nagranie nie udało się 3 razy w dobie (UTC), odpowiada 429 `chapter_failing` („Tego rozdziału dziś nie nagram. Spróbuj jutro.”) — każda próba kosztuje znaki lektora. Kwestia bez litery i cyfry (np. `** **`) odpada już przy pisaniu scenariusza, a w starym scenariuszu kończy nagrywanie przed jakimkolwiek wywołaniem ElevenLabs.
+
+### 14.5 Rozmowa z lisem
+
+- Trzy tryby tekstowe: „Wytłumacz mi” (jeden punkt, ocena DOBRZE / LUKA / POMYŁKA, źródło w lekcji, jedno dopytanie), „Przepytaj mnie” (5 pytań otwartych), „Egzamin ustny” (3 pytania z dopytaniem, ocena w skali przedmiotu liczona w apce z `pct` serwera). Tryb głosowy później: **żadnego UI mikrofonu**.
+- Serwer jest bezstanowy i sam liczy tury z transkrypcji (`foxPlan` w `packages/ai/src/media/fox.ts`): odpowiedź = każda wiadomość ucznia poza chipem „Podpowiedz”; „Nie wiem” jest odpowiedzią. Apka dopisuje chipy do transkrypcji po udanej odpowiedzi serwera. Rozmowa po końcu → 400 `too_many_turns`, zły krok → 400 `bad_step` (przed naliczeniem).
+- Limit: 30 wiadomości dziennie (free), 200 (pro), doba Europe/Warsaw; linia limitu tylko przy ≤ 10. Błąd AI zwraca wiadomość (`release_chat`).
+
+### 14.6 Tworzenie, limity, kody
+
+- Jedno stuknięcie + arkusz potwierdzenia = jedno `POST` (dziennik `cf_media_job:<uid>` przed wysłaniem, `requestId` = `media.id` = klucz idempotencji). Nigdy automatycznego ponowienia; „SPRÓBUJ PONOWNIE” wysyła nowy `requestId`. Licznik „Zostało: X z Y” tylko w arkuszu potwierdzenia; przy 0 zaproszenia znikają. Nigdy słowa o płatnościach ani planie.
+- Pula: free 3 na zawsze (po skrócie adresu e-mail — „Usuń konto” i ponowna rejestracja tym samym adresem nie odnawia), pro 30/mies. (`app_config`), 5 prób na konto w dobie, 60 tworzeń (bez zwróconych) i 150 prób (ze zwróconymi) na serwer w dobie, jedno naraz (409 `busy`). Wszystko liczone z `media_ledger`, więc usunięcie materiału w trakcie pracy nie zwalnia „busy” ani dobowego bezpiecznika. Porażka po naszej stronie → zwrot (`release_media`, `charged:false`); odmowa AI → naliczone. Materiał usunięty w trakcie pracy: serwer kasuje pliki i zwraca tworzenie po `media_ledger` (gotowe media usunięte później nie wracają do puli).
+- Lektor: przed każdą rolką `tts_budget` (globalny budżet znaków na dobę); ponad budżet rolka wypada, a gdy zostanie ich za mało — porażka `tts_budget` ze zwrotem. Rozdział podcastu rezerwuje znaki przed nagraniem, nienagrane wracają (`tts_refund`).
+- Odczyt wierszy przez PostgREST: dokładnie kolumny `MEDIA_SEL` (`cloud.js`) = `MEDIA_COLUMNS` (`@nauka/shared`); `select=*` jest odrzucane. Pliki: `GET /storage/v1/object/authenticated/media/<uid>/<id>/<plik>`, cache w IndexedDB (LRU 150 MB; indeks LRU zmieniany po kolei przez jedną kolejkę obietnic, bo rolka wczytuje trzy pliki naraz). Usunięcie przedmiotu albo materiału: najpierw lista plików (`mediaFilesWhere`), potem `DELETE` wierszy, na końcu pliki (`mediaDropFiles`, najlepiej jak się da) — przy zerwanym `DELETE` nic nie znika. Usunięcie konta kasuje pliki z wierszy **i** wszystko pod `{uid}/` w buckecie `media` (`mediaFilesAll`, też osierocone), bo `delete_my_account` z 0010 odmawia przy plikach w obu bucketach.
+- Copy kodów (tabela w spec §6): `busy`, `limit_reached` (`lifetime`/`month` → „Rolek i podcastów na razie nie przygotujesz…”, `daily`, `global`), `voices_missing`/`media_unavailable`/`no_config` → „… będzie dostępny wkrótce”, `no_quiz`, `not_found`/`bad_point`, porażka niezaliczona / zaliczona, `unknown_outcome` → „Nie wiem jeszcze, czy przygotowanie ruszyło. Sprawdzam…”.
+
+### 14.7 Testy
+
+- Apka (atrapa, bez sieci): `cd test && node dev/checks/{hub,keypoints,media,fox}.mjs` oraz dotychczasowe `build7-engine`, `cloud-*`; zrzuty `node dev/shoot.mjs --only hub,today,reels,podcast,fox,limits` (konto `mock=msgip`, dzień makiet `clock=2026-10-22`). Parametry atrapy: `test/dev/README.md`.
+- Backend: `npm test` (Anthropic i ElevenLabs zamockowane), `npm run test:db` (0010 na tymczasowym Postgresie), `npm run typecheck`, `npm run build -w @nauka/web` bez env.
+- Nie przetestowane automatycznie: `apps/web/src/lib/media-db.ts` (wywołania Supabase) — sprawdzić raz ręcznie po wgraniu 0010; odtwarzanie Blob audio w WKWebView, dźwięk przy zablokowanym ekranie i wydajność świata rolki na starszym iPhonie — dopiero na symulatorze/urządzeniu z prawdziwym backendem.
+
+### 14.8 Migracja 0010 i kolejność wdrożenia
+
+`backend/0010_media.sql` (idempotentna, wymaga 0007; testy: `cd nauka-backend && npm run test:db` — 0010 wgrana dwa razy na tymczasowy Postgres, 21 kontroli w sekcji 0010). Zawiera:
+
+| Część | Co robi |
+|---|---|
+| `app_config` | wartości domyślne (`on conflict do nothing` — zmiany właściciela zostają): `free_media_lifetime` 3, `pro_media_month` 30, `media_daily_per_user` 5, `media_global_daily_cap` 60, `media_global_daily_attempts` 150, `free_chat_daily` 30, `pro_chat_daily` 200, `chat_global_daily_cap` 5000, `tts_global_daily_chars` 600 000 |
+| tabele | `media`, `media_ledger` (z `email_hash`, `finished_at`), `fox_usage`, `tts_ledger` ([7.3](#73-tabele)) |
+| `reserve_media` | blokady: konto → (free) adres e-mail → serwer; idempotencja po `p_id` (też gdy wiersz `media` zniknął — wtedy `conflict`); temat i przedmiot konta; `busy` (`media_busy`: rezerwacja bez końca pracy < 330 s); 5 prób konta w dobie; pula planu (`media_free_used` po skrócie adresu albo koncie / miesiąc pro); limity globalne — wszystko przed zapisem |
+| `finish_media` / `release_media` / `fail_media` | koniec pracy (`media_ledger.finished_at`); zwrot także bez wiersza `media` (po samym `media_ledger`, gdy praca się nie skończyła); znaki lektora do `tts_ledger` bez tych, które zarezerwował już `tts_budget` (`tts_logged`) |
+| `media_quota` | stan puli dla `/api/me` (`busy.topicId` = null, gdy materiał usunięto w trakcie) |
+| rozdziały podcastu | `claim_podcast_chapter` (stany `claimed` / `ready` / `busy` / `failing` / `not_ready` / `not_found`), `set_podcast_chapter`, `release_podcast_chapter(p_media, p_n, p_failed)` (stara 2-argumentowa wersja usuwana), `tts_budget`, `tts_refund` |
+| rozmowa z lisem | `reserve_chat` / `release_chat` / `chat_quota` |
+| sprzątacz | `sweep_stale_media()` + pg_cron `cramfox-sweep-media` co 5 min |
+| `delete_my_account` | zastąpiona: `files_remaining` także dla bucketu `media` |
+| Storage (ostatnia) | prywatny bucket `media` (25 MB na plik, `audio/mpeg`, `application/json`), polityki: właściciel czyta i usuwa swój folder; pisze tylko serwer |
+
+**Kolejność:** 0010 (CLI; gdy odmówi polityk na `storage.objects` — cały plik w SQL Editor) → zmienne na Vercelu → wdrożenie backendu → build apki (`node build.js`, `cd native && npm run sync`). Sama 0010 niczego nie zmienia w działającej apce; nowa apka na backendzie bez 0010 ukrywa tworzenie mediów i rozmowę z lisem. Szczegóły i sprawdzenia: `nauka-backend/docs/DEPLOY.md`.
+
+**Zmienne (tylko nazwy):** `ELEVENLABS_API_KEY` (bez niej rolki i podcast wyłączone), `ELEVENLABS_VOICE_REEL` (domyślnie „Dawid”), `ELEVENLABS_VOICE_FOX` i `ELEVENLABS_VOICE_SZOP` (bez wartości domyślnych: bez nich trasy podcastu 503 `voices_missing`, apka „Podcast będzie dostępny wkrótce”), `ELEVENLABS_REEL_MODEL` (`eleven_v4`), `ELEVENLABS_PODCAST_MODEL` (`eleven_flash_v2_5`), `ELEVENLABS_REEL_TAGS`, `CRAMFOX_MEDIA_MODEL`, `CRAMFOX_FOX_MODEL`.
+
+### 14.9 Przegląd 2026-10-23 (bezpieczeństwo / koszty, dane, UX)
+
+Poprawione: usunięcie materiału w trakcie tworzenia nie omija już „jednego naraz” ani dobowego bezpiecznika i nie zjada tworzenia (licznik z `media_ledger`, zwrot bez wiersza `media`, sprzątacz sierot, limit prób globalnie); darmowa pula mediów po skrócie adresu e-mail; budżet znaków lektora przed każdą rolką; rozdział podcastu nie do nagrania nie może być ponawiany bez końca (kwestie bez treści odpadają, 3 porażki w dobie, zwrot nienagranych znaków); `delete_my_account` sprawdza bucket `media`; kolejność usuwania (wiersze przed plikami); kolejka indeksu LRU; „Dokończ lekcję” bez zrobionych lekcji; plan dnia = NA TERAZ (egzamin ustny, Szop ≥ 2, krok planu do sprawdzianu, bez nowych rzeczy w dniu i przeddzień sprawdzianu); punkt zastępczy tylko z fiszkami lub pytaniami; egzamin ustny z materiału liczy się na dziś; pozycja podcastu jako jedna wartość; łamanie nazw punktów, cofanie ukrycia punktu, toast u góry w odtwarzaczach, fokus po „Inna propozycja”, przewijanie wyboru punktu u lisa, pauza podcastu do dołu ekranu, pasek dni w dniu sprawdzianu, „Przygotuj rolkę o punkcie „…””, powód karty planu, kontrast scen „cut” w rolkach.
+
+Zostaje (świadomie): globalny limit wiadomości do lisa jest „miękki” (bez blokady globalnej, może przekroczyć o kilka); próby rozdziału liczą się w dobie UTC, a limit lisa w dobie Europe/Warsaw; scalanie `PROGRESS.media.done` dwóch urządzeń daje sumę rozdziałów, a `cp` bierze jedno urządzenie w całości (słuchane rozdziały mogą się minimalnie różnić od pozycji); dzielenie wyrazów na iOS zależy od słownika systemu (bez niego siatka punktów ma jedną kolumnę).

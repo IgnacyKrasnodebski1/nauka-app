@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Cramfox — media.js: laboratorium rolki</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="../../fonts/fonts.css">
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="../../media.css">
+<style>
+  /* tylko dla tej strony: scena rolki 390×844 na środku, panel sterowania pod spodem */
+  html,body{height:auto;overflow:auto}
+  body{padding:16px 0 40px;background:#0E0C1C}
+  #app{display:none}
+  .lab{width:390px;margin:0 auto;display:flex;flex-direction:column;gap:12px;font-family:var(--font-body);color:#F4F2FF}
+  .lab h1{margin:0;font:800 18px/1.2 var(--font-display)}
+  .lab p{margin:0;font:600 13px/1.4 var(--font-body);color:#D6D2F0}
+  #host{position:relative;width:390px;height:844px;overflow:hidden;border-radius:22px;background:#ECE6D9}
+  .bar{display:flex;flex-wrap:wrap;gap:8px}
+  .bar button,.bar select{height:40px;padding:0 12px;border-radius:12px;border:2px solid #2C2850;background:#1B1836;color:#F4F2FF;font:800 13px var(--font-body);cursor:pointer}
+  #st{font:600 12px/1.4 ui-monospace,Menlo,monospace;color:#D6D2F0;white-space:pre-wrap;min-height:60px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div class="lab">
+  <h1>Laboratorium rolki (media.js → Reel.mount)</h1>
+  <p>Silnik rolki z apki na scenariuszach prototypu i atrapy, bez backendu. Parametry: <b>sb</b>=rewolucja|fotosynteza (test/proto/rolka/storyboards) albo <b>fx</b>=media/sb-a|media/sb-b|media/xss/sb-xss (test/fixtures), <b>t</b>=sekunda stopklatki, <b>rate</b>, <b>mute</b>=1. Porównanie z prototypem: test/proto/rolka/?sb=…&amp;t=…&amp;paused=1&amp;cover=0.</p>
+  <div id="host"></div>
+  <div class="bar">
+    <button type="button" id="bPlay">Odtwórz / pauza</button>
+    <button type="button" id="bBack">−2 s</button>
+    <button type="button" id="bFwd">+2 s</button>
+    <button type="button" id="bMute">Lektor</button>
+    <select id="sel" aria-label="Scenariusz">
+      <option value="sb=rewolucja">prototyp: rewolucja (z nagraniem)</option>
+      <option value="sb=fotosynteza">prototyp: fotosynteza (bez nagrania)</option>
+      <option value="fx=media/sb-a">atrapa: sb-a</option>
+      <option value="fx=media/sb-b">atrapa: sb-b</option>
+      <option value="fx=media/xss/sb-xss">atrapa: XSS</option>
+    </select>
+  </div>
+  <div id="st" aria-live="off"></div>
+</div>
+<script>
+/* minimalne zaślepki: media.js rejestruje widoki i słucha chmury przy starcie — tu niepotrzebne, liczy się tylko Reel */
+window.NaukaEngine={registerView:function(){},subjects:function(){return [];},view:'lab'};
+window.NAUKA_CLOUD={on:function(){}};
+</script>
+<script src="../../media.js"></script>
+<script>
+(async function(){
+  'use strict';
+  const q=new URLSearchParams(location.search),host=document.getElementById('host'),st=document.getElementById('st');
+  const sbName=(q.get('sb')||'').replace(/[^a-z0-9_-]/gi,''),fx=(q.get('fx')||'').replace(/[^a-z0-9_/-]/gi,'');
+  const sel=document.getElementById('sel');sel.value=fx?'fx='+fx:'sb='+(sbName||'rewolucja');
+  sel.addEventListener('change',()=>{location.search='?'+sel.value;});
+  const get=async(u,kind)=>{const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error(u+' '+r.status);return kind==='blob'?r.blob():r.json();};
+  let storyboard,words=null,blob=null,rate=1.15;
+  try{
+    if(fx){storyboard=await get('../fixtures/'+fx+'.json');words=await get('../fixtures/'+fx+'.words.json').catch(()=>null);blob=await get('../fixtures/'+fx+'.mp3','blob').catch(()=>null);}
+    else{const n=sbName||'rewolucja';storyboard=await get('../proto/rolka/storyboards/'+n+'.json');const A=storyboard.audio;rate=A&&+A.rate||1;
+      if(A&&typeof A.words==='string'&&/^audio\/[a-z0-9_-]+\.words\.json$/.test(A.words)){words=await get('../proto/rolka/'+A.words).catch(()=>null);blob=await get('../proto/rolka/'+A.src,'blob').catch(()=>null);}}
+  }catch(e){st.textContent='Nie udało się wczytać scenariusza: '+e.message;return;}
+  if(q.get('rate'))rate=+q.get('rate')||rate;
+  const url=blob&&words?URL.createObjectURL(blob):null;
+  const R=window.NaukaMedia._test.reel;
+  const inst=R.mount(host,{storyboard,words,audioUrl:url,rate,muted:q.get('mute')==='1',t:+q.get('t')||0,
+    onEnd:()=>{st.textContent+='\n[koniec narracji → w apce pytanie końcowe]';},onTime:()=>{}});
+  await inst.ready;
+  let muted=q.get('mute')==='1';
+  document.getElementById('bPlay').addEventListener('click',()=>{R.unlock();inst.toggle();});
+  document.getElementById('bBack').addEventListener('click',()=>inst.seek(inst.t()-2));
+  document.getElementById('bFwd').addEventListener('click',()=>inst.seek(inst.t()+2));
+  document.getElementById('bMute').addEventListener('click',()=>{muted=!muted;inst.mute(muted);});
+  host.addEventListener('click',()=>{R.unlock();inst.toggle();});
+  const paint=()=>{const s=inst.state();st.textContent=`t=${s.t.toFixed(2)} / ${s.T.toFixed(2)} s · ${s.playing?'gra':'pauza'} · tryb ${s.mode}`+(s.audioTime!=null?` · audio ${s.audioTime.toFixed(2)} s (różnica ${(Math.abs(s.t-s.audioTime)*1000).toFixed(0)} ms)`:'')+
+    (s.align?` · słowa ${s.align.matched}/${s.align.tokens}`:'')+(s.calm?' · ograniczone animacje':'');requestAnimationFrame(paint);};paint();
+  window.LAB={inst,state:()=>inst.state()};document.documentElement.dataset.ready='1';
+})();
+</script>
+</body>
+</html>

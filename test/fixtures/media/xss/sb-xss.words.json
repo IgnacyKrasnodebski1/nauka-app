@@ -1,0 +1,19 @@
+{
+  "v": 1,
+  "duration": 6.024,
+  "words": [
+    {"w":"[excited]","start":0.12,"end":0.17,"tag":true},
+    {"w":"Pierwsza","start":0.18,"end":0.653},
+    {"w":"<img","start":0.694,"end":0.923},
+    {"w":"src=x","start":0.943,"end":1.221},
+    {"w":"onerror=\"window.__pwned=1\">","start":1.245,"end":2.254},
+    {"w":"scena","start":2.342,"end":2.669},
+    {"w":"z","start":2.697,"end":2.829},
+    {"w":"XSS.","start":2.84,"end":3.069},
+    {"w":"Druga","start":3.409,"end":3.736},
+    {"w":"scena","start":3.764,"end":4.091},
+    {"w":"bez","start":4.119,"end":4.348},
+    {"w":"niczego","start":4.368,"end":4.792},
+    {"w":"groźnego.","start":4.829,"end":5.302}
+  ]
+}

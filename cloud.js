@@ -82,6 +82,7 @@ const token=()=>refresh(false);
 async function wipeLocal(uid){
   const keys=[];for(let i=0;i<LS.length;i++){const k=LS.key(i);if(k&&(k.endsWith(':'+uid)||k===SKEY))keys.push(k);}
   keys.forEach(k=>LS.removeItem(k));await idbDel('data:'+uid);await idbDel('base:'+uid);
+  await idbDelPrefix('m:'+uid+':');await idbDel('mi:'+uid); // pliki rolek i podcastu z pamięci podręcznej (plan-media §4.6)
 }
 async function signOut(o){ // o.force: wyloguj mimo niewysłanych postępów (UI pyta wcześniej)
   o=o||{};clearTimeout(pushT);
@@ -153,8 +154,8 @@ async function tusUpload(path,blob,mime,onProgress){
     catch(e){if(e.code!=='network')throw e;} // HEAD bez sieci: następna próba PATCH; zły offset → 409 → znów HEAD
   }
 }
-async function storageListAll(prefix){const out=[];for(let off=0;off<10000;off+=100){const page=await storage('object/list/materials',{method:'POST',headers:{'Content-Type':'application/json'},body:{prefix,limit:100,offset:off}});if(!Array.isArray(page)||!page.length)break;page.forEach(f=>{if(f&&f.name)out.push(prefix+'/'+f.name);});if(page.length<100)break;}return out;}
-async function storageRemove(paths){for(let i=0;i<paths.length;i+=100)await storage('object/materials',{method:'DELETE',headers:{'Content-Type':'application/json'},body:{prefixes:paths.slice(i,i+100)}});}
+async function storageListAll(prefix,bucket){bucket=bucket||'materials';const out=[];for(let off=0;off<10000;off+=100){const page=await storage('object/list/'+bucket,{method:'POST',headers:{'Content-Type':'application/json'},body:{prefix,limit:100,offset:off}});if(!Array.isArray(page)||!page.length)break;page.forEach(f=>{if(f&&f.name&&f.id!==null)out.push(prefix+'/'+f.name);});if(page.length<100)break;}return out;}
+async function storageRemove(paths,bucket){bucket=bucket||'materials';for(let i=0;i<paths.length;i+=100)await storage('object/'+bucket,{method:'DELETE',headers:{'Content-Type':'application/json'},body:{prefixes:paths.slice(i,i+100)}});}
 
 /* ---------- API na Vercelu: natywnie (bez CORS), w przeglądarce przez lokalne proxy; 401 → odśwież token i ponów raz (serwer sprawdza sesję przed limitem) ---------- */
 async function api(path,o){
@@ -177,15 +178,24 @@ function idb(){if(!idbP)idbP=new Promise((res,rej)=>{const t=setTimeout(()=>rej(
 async function idbGet(k){try{const db=await idb();return await new Promise((res,rej)=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}catch(e){idbP=null;return jget('cf_'+k,null);}}
 async function idbPut(k,v,lsFallback){try{const db=await idb();await new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error);});}
   catch(e){idbP=null;if(lsFallback){const s=JSON.stringify(v);if(s.length<1500000)lset('cf_'+k,s);}}} // większy cache nie trafia do localStorage — zapchałby miejsce na postępy
+async function idbDelPrefix(pre){try{const db=await idb();await new Promise(res=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').delete(IDBKeyRange.bound(pre,pre+'\uffff'));t.oncomplete=res;t.onerror=res;});}catch(e){idbP=null;}}
+async function idbGetRaw(k){try{const db=await idb();return await new Promise((res,rej)=>{const q=db.transaction('kv').objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}catch(e){idbP=null;return undefined;}} // bez zapasu w localStorage (dane binarne)
+async function idbPutRaw(k,v){try{const db=await idb();await new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=()=>rej(t.error);});return true;}catch(e){idbP=null;return false;}}
 async function idbDel(k){try{LS.removeItem('cf_'+k);const db=await idb();await new Promise(res=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=res;t.onerror=res;});}catch(e){idbP=null;}}
 let DATA={subjects:[],topics:[]};
 async function loadCache(){const d=await idbGet('data:'+UID);if(d&&Array.isArray(d.subjects)&&Array.isArray(d.topics))DATA=d;return !!(d&&d.at);}
 async function saveCache(){DATA.at=Date.now();await idbPut('data:'+UID,DATA,true);}
+const topicsSel=g=>'topics?select=id,subject_id,name,position,created_at,'+(g?'generation_id,':'')+'content&order=position.asc,created_at.asc';
 async function fetchAll(){
   const [subjects,topics]=await Promise.all([
     rest('subjects?select=id,name,emoji,stage,accent,accent2,exam_date,exam_label,position,created_at&order=position.asc,created_at.asc'),
-    rest('topics?select=id,subject_id,name,position,created_at,content&order=position.asc,created_at.asc')]);
-  DATA={subjects:Array.isArray(subjects)?subjects:[],topics:Array.isArray(topics)?topics:[]};await saveCache();emit('subjects');return DATA;
+    rest(topicsSel(true)).catch(e=>e&&e.status===400?rest(topicsSel(false)):Promise.reject(e))]); // starsza baza bez topics.generation_id — bez źródła materiału, reszta działa
+  // źródło materiału (plan-media §4.6): generacja tematu → jej pliki; błąd = bez źródła (nic nie blokuje)
+  let gens=Array.isArray(DATA.gens)?DATA.gens:[],mats=Array.isArray(DATA.mats)?DATA.mats:[];
+  try{const [g,m]=await Promise.all([rest('generations?select=id,material_ids&status=eq.done'),rest('materials?select=id,name,mime,created_at')]);
+    if(Array.isArray(g))gens=g.map(x=>({id:String(obj(x).id||''),material_ids:arr(obj(x).material_ids).map(String)}));
+    if(Array.isArray(m))mats=m.map(x=>({id:String(obj(x).id||''),name:String(obj(x).name||'').slice(0,160),mime:String(obj(x).mime||'').slice(0,120),created_at:String(obj(x).created_at||'')}));}catch(e){}
+  DATA={subjects:Array.isArray(subjects)?subjects:[],topics:Array.isArray(topics)?topics:[],gens,mats,media:arr(DATA.media)};await saveCache();emit('subjects');return DATA;
 }
 
 /* ---------- sanitizer: tylko bezpieczne tagi, jedyny atrybut to class zbox/gradetbl; teksty escapowane także z cudzysłowem ---------- */
@@ -222,7 +232,13 @@ const hash=s=>{let h=0;for(const ch of String(s))h=(h*31+ch.charCodeAt(0))|0;ret
 function paletteFor(sub){const a=String(sub.accent||'').toUpperCase();const i=PALETTE.findIndex(p=>p[0]===a);return PALETTE[i>=0?i:hash(sub.id)%PALETTE.length];}
 const TASK_OK=new Set(['match','fill','order','sort','tf','timeline','finderror','thesis','chain','scenario','swipe','typeterm','chart','mathsteps']); // hotspot: obraz z AI to ryzyko XSS — zostaje w tablicy (indeksy!), ale do pominięcia
 const arr=v=>Array.isArray(v)?v:[];
-function shortOf(name){name=String(name||'');if(name.length<=14)return name;const w=name.split(/\s+/)[0];return w.length<=14?w:w.slice(0,13)+'…';}
+/* krótka nazwa przedmiotu (TopBar centrum, Dziś, „Sprawdzian z …”): do 14 znaków bez zmian; długa nazwa z 3–6 słów treści → skrót z pierwszych liter
+   (spójniki małą literą, jak „Międzynarodowe stosunki gospodarcze i polityczne” → „MSGiP”, spec §3); inaczej pierwsze słowo */
+const SHORT_SMALL=new Set(['i','a','w','z','o','u','na','do','od','po','we','ze','oraz','dla','of','and','in','the','for','to']);
+function shortOf(name){name=String(name||'').replace(/\s+/g,' ').trim();if(name.length<=14)return name;
+  const ws=name.split(' '),content=ws.filter(w=>!SHORT_SMALL.has(w.toLowerCase()));
+  if(name.length>=30&&content.length>=3&&content.length<=6&&ws.every(w=>/^\p{L}/u.test(w)))return ws.map(w=>SHORT_SMALL.has(w.toLowerCase())?w[0].toLowerCase():w[0].toUpperCase()).join('');
+  const w=ws[0];return w.length<=14?w:w.slice(0,13)+'…';}
 const fold=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/\s+/g,' ').trim();
 function gamesAsTasks(games){ // starsze tematy mają `games` zamiast `tasks` — ta sama konwersja co w backendzie (packages/shared/src/tasks.ts)
   const out=[];arr(games).forEach(g=>{if(!g||typeof g!=='object')return;
@@ -274,7 +290,7 @@ function vizText(v){ // zwykły tekst (już escapowany) z wizualizacji — dla t
   return S.join(' ');
 }
 function mapLevel(l,topicId,i,first,used){
-  const base='t'+String(topicId).replace(/-/g,'').slice(0,8)+'_'+String(l&&l.id||('l'+(i+1))).replace(/[^A-Za-z0-9_-]/g,'_');
+  const raw=String(l&&l.id||('l'+(i+1))).replace(/[^A-Za-z0-9_-]/g,'_').slice(0,40),base='t'+String(topicId).replace(/-/g,'').slice(0,8)+'_'+raw;
   let id=base,n=2;while(used.has(id))id=base+'_'+(n++);used.add(id);
   const L=obj(l);
   const feed=arr(L.feed).map(f=>{f=obj(f);const o={...deepEsc(f),body:clean(f.body),real:clean(f.real),mnemo:clean(f.mnemo)};delete o.viz;const v=mapViz(f.viz);if(v)o.viz=v;return o;}); // viz: osobny mapper (deepEsc przepuściłby liczby i nieznane pola)
@@ -282,19 +298,71 @@ function mapLevel(l,topicId,i,first,used){
   const quiz=arr(L.quiz).map(q=>{q=deepEsc(obj(q));const a=arr(q.a).map(x=>typeof x==='string'?x:esc(x));let c=+q.c;if(!(Number.isInteger(c)&&c>=0&&c<a.length))c=0;return {...q,q:String(q.q||''),a,c,e:String(q.e||'')};});
   const own=arr(L.tasks);const src=own.some(t=>t&&TASK_OK.has(t.type))?own:gamesAsTasks(L.games);
   const tasks=src.map(t=>t&&TASK_OK.has(t.type)?deepEsc(t):{type:'_skip'});
-  return {id,title:esc(noEmoji(L.title||'')||('Poziom '+(i+1))),topicId,chapter:!!first,feed,flashcards,quiz,tasks};
+  return {id,raw,title:esc(noEmoji(L.title||'')||('Lekcja '+(i+1))),topicId,chapter:!!first,feed,flashcards,quiz,tasks};
+}
+/* ---------- kluczowe punkty (plan-media §1.1–1.2): TopicContent.keyPoints → punkty silnika; stare tematy (albo złe dane) — jeden punkt na lekcję ----------
+   Odnośniki {kind, level, index} sprawdzane względem zmapowanych tablic (zły poziom / indeks / duplikat wypada, pierwszy punkt wygrywa); pytania i fiszki
+   bez punktu trafiają do punktu zastępczego swojej lekcji; punkt z < 3 elementami albo < 2 pytaniami i fiszkami łączy się z następnym (ostatni z poprzednim);
+   mniej niż 3 punkty = cały temat zastępczo. Napisy przez plain() z limitami schematu. Id bez ':' (klucze postępów dzielą się po ':'). */
+const PT_RAW=/^p\d{1,2}$/;
+const ptxt=(v,n)=>typeof v==='string'?esc(cut(stripEmoji(v,true).replace(/\s+/g,' ').trim(),n)):'';
+function mapPoints(content,topicId,levels,titles){
+  const C=obj(content),pre='t'+String(topicId).replace(/-/g,'').slice(0,8)+'_',byRaw={};
+  levels.forEach(l=>{if(!byRaw[l.raw])byRaw[l.raw]=l;});
+  const lvIdx=l=>levels.indexOf(l);
+  const okTask=(l,i)=>l.tasks[i]&&l.tasks[i].type!=='_skip';
+  const fbOf=(l,j,pts)=>{const raw='L'+l.raw,t=String(titles[j]||'').trim()||('Lekcja '+(j+1));let p=pts.find(x=>x.raw===raw);
+    if(!p){p={raw,t:ptxt(t,120),s:ptxt(t,24),sum:'',fc:[],q:[],tk:[],fb:true,lvHint:l.id};pts.push(p);}return p;};
+  // lekcja bez fiszek i pytań nie daje punktu: nie ma czego „umieć” (stan na zawsze „Nowe”, Umiem X z Y nie doszłoby do Y)
+  const fallback=()=>{const pts=[];levels.forEach((l,j)=>{if(!l.flashcards.length&&!l.quiz.length)return;const p=fbOf(l,j,pts);l.flashcards.forEach((_,i)=>p.fc.push([l.id,i]));l.quiz.forEach((_,i)=>p.q.push([l.id,i]));l.tasks.forEach((_,i)=>{if(okTask(l,i))p.tk.push([l.id,i]);});});return pts;};
+  let pts=[];
+  const kps=arr(C.keyPoints);
+  if(kps.length){
+    const seen=new Set();
+    const vis=v=>typeof v==='string'?stripEmoji(v,true).replace(/[<>]/g,'').trim():''; // jak cleanText na serwerze: tytuł z samych emoji / znaczników = brak tytułu
+    kps.forEach(kp=>{kp=obj(kp);const raw=String(kp.id||'');if(!PT_RAW.test(raw)||pts.some(p=>p.raw===raw))return;
+      const t=vis(kp.title)?kp.title:vis(kp.short)?kp.short:'',sh=vis(kp.short)?kp.short:t;if(!t)return; // bez tytułu punkt wypada (jego elementy idą do punktu lekcji) — tak samo jak topicPoints() na serwerze
+      const p={raw,t:ptxt(t,120),s:ptxt(sh,24),sum:ptxt(kp.summary,300),fc:[],q:[],tk:[],sk:0,fb:false};
+      arr(kp.items).forEach(it=>{it=obj(it);const l=byRaw[String(it.level||'').replace(/[^A-Za-z0-9_-]/g,'_')],i=it.index;if(!l||!Number.isInteger(i)||i<0)return;
+        const k=it.kind+':'+l.id+':'+i;if(seen.has(k))return;
+        if(it.kind==='quiz'&&i<l.quiz.length)p.q.push([l.id,i]);else if(it.kind==='flashcard'&&i<l.flashcards.length)p.fc.push([l.id,i]);
+        else if(it.kind==='task'&&i<l.tasks.length){if(okTask(l,i))p.tk.push([l.id,i]);else p.sk++;} // nieobsługiwane zadanie (_skip): nie w punkcie, ale liczy się do jego wielkości jak na serwerze
+        else return;
+        seen.add(k);});
+      pts.push(p);});
+    levels.forEach((l,j)=>{l.flashcards.forEach((_,i)=>{if(!seen.has('flashcard:'+l.id+':'+i))fbOf(l,j,pts).fc.push([l.id,i]);});l.quiz.forEach((_,i)=>{if(!seen.has('quiz:'+l.id+':'+i))fbOf(l,j,pts).q.push([l.id,i]);});});
+    const weak=p=>p.fc.length+p.q.length+p.tk.length+(p.sk||0)<3||p.fc.length+p.q.length<2;
+    for(let g=0;g<100&&pts.length>1;g++){const k=pts.findIndex(weak);if(k<0)break;const into=pts[k+1<pts.length?k+1:k-1];
+      ['fc','q','tk'].forEach(f=>{into[f]=into[f].concat(pts[k][f]);});into.sk=(into.sk||0)+(pts[k].sk||0);pts.splice(k,1);}
+    if(pts.length<3||pts.some(weak))pts=fallback();
+  }else pts=fallback();
+  return pts.map((p,n)=>{const order=(a,b)=>(lvIdx(levels.find(l=>l.id===a[0]))-lvIdx(levels.find(l=>l.id===b[0])))||(a[1]-b[1]);
+    ['fc','q','tk'].forEach(f=>p[f].sort(order));
+    const lv=[...new Set(p.fc.concat(p.q,p.tk).map(x=>x[0]))].sort((a,b)=>lvIdx(levels.find(l=>l.id===a))-lvIdx(levels.find(l=>l.id===b)));
+    return {id:pre+p.raw,raw:p.raw,topicId,t:p.t,s:p.s||p.t,sum:p.sum,lv:lv.length?lv:[p.lvHint||(levels[0]&&levels[0].id)].filter(Boolean),fc:p.fc,q:p.q,tk:p.tk,fb:!!p.fb,n:n+1};});
+}
+/* źródło materiału: pliki generacji tematu (PDF / zdjęcia / prezentacja / tekst); nazwy przez plain() */
+function sourceOf(t){
+  const g=t.generation_id&&arr(DATA.gens).find(x=>x.id===t.generation_id);if(!g)return null;
+  const mats=arr(g.material_ids).map(id=>arr(DATA.mats).find(m=>m.id===id)).filter(Boolean);if(!mats.length)return null;
+  const kindOf=m=>/^image\//.test(m.mime)?'photos':m.mime==='application/pdf'?'pdf':m.mime===PPTX_MIME?'pptx':/^text\//.test(m.mime)?'text':'mixed';
+  const ks=[...new Set(mats.map(kindOf))];
+  return {kind:ks.length===1?ks[0]:'mixed',files:mats.map(m=>({name:plain(String(m.name||'').slice(0,120)),mime:String(m.mime||'').replace(/[^a-z0-9.+\/-]/gi,'').slice(0,100)})),addedAt:String(t.created_at||'').slice(0,40)};
 }
 function toEngine(){
   const bySub={};DATA.topics.forEach(t=>{(bySub[t.subject_id]=bySub[t.subject_id]||[]).push(t);});
   return DATA.subjects.filter(s=>(bySub[s.id]||[]).length).map(s=>{
     const tps=bySub[s.id];const c0=obj(tps[0]&&tps[0].content);const pal=paletteFor(s);const used=new Set();
-    const levels=[];tps.forEach((t,ti)=>arr(obj(t.content).levels).forEach((l,li)=>levels.push(mapLevel(l,t.id,li,ti>0&&li===0,used))));
+    const levels=[],points=[],tmeta=[];
+    tps.forEach((t,ti)=>{const raw=arr(obj(t.content).levels),mine=raw.map((l,li)=>mapLevel(l,t.id,li,ti>0&&li===0,used));mine.forEach(l=>levels.push(l));
+      const pts=mine.length?mapPoints(t.content,t.id,mine,raw.map(l=>noEmoji(obj(l).title||''))):[];pts.forEach(p=>points.push(p));
+      tmeta.push({id:t.id,name:plain(t.name),createdAt:t.created_at,n:ti+1,points:pts.map(p=>p.id),source:sourceOf(t)});});
     const g=obj(c0.grading);let scale=arr(g.scale).filter(x=>Array.isArray(x)&&x.length===2&&isFinite(+x[0])).map(x=>[+x[0],plain(noEmoji(x[1]))]).filter(x=>x[1]);
     let grading;if(scale.length){scale.sort((a,b)=>b[0]-a[0]);const low=scale[scale.length-1][0]; // każdy próg ze skali to ocena pozytywna — zaliczenie od najniższego
       grading={pass:Math.min(+g.pass||50,low),examMin:Math.max(1,+g.examMin||10),scale,failLabel:plain(noEmoji(g.failLabel||'')||'niezaliczone')};}
     return {id:s.id,name:plain(s.name||c0.name||'Przedmiot'),short:plain(shortOf(s.name||c0.short||c0.name)),tagline:plain(c0.tagline||''),
       accent:pal[0],accent2:pal[0],accentDark:pal[1],onAccent:pal[2],level:STAGE_FROM_DB[s.stage]||'inne',lang:tps.some(t=>obj(t.content).lang),
-      grading,info:tps.map(t=>clean(obj(t.content).info||'')).join(''),levels,topics:tps.map(t=>({id:t.id,name:plain(t.name),createdAt:t.created_at}))};
+      grading,info:tps.map(t=>clean(obj(t.content).info||'')).join(''),levels,points,topics:tmeta};
   });
 }
 const pickable=()=>DATA.subjects.map(s=>{const p=paletteFor(s);return {id:s.id,name:String(s.name||''),stage:STAGE_FROM_DB[s.stage]||'inne',topics:DATA.topics.filter(t=>t.subject_id===s.id).length,accent:p[0],onAccent:p[2]};}); // surowe nazwy — UI wstawia je przez textContent
@@ -582,13 +650,218 @@ async function me(o){ // v.quota (backend/0007): {scope:'lifetime'|'month', used
   const r=await api('/api/me',{timeout:15000});if(r.status>=400)throw errOf(r);const d=obj(r.data),q=d.quota&&typeof d.quota==='object'?d.quota:null;let trial=null;
   if(q)trial=typeof q.trialUntil==='string'&&q.trialUntil||null; // koniec okresu startowego podaje serwer razem z limitem
   else{try{const p=await rest('profiles?select=trial_until&id=eq.'+UID);trial=p&&p[0]&&p[0].trial_until||null;}catch(e){}}
-  const v={...d,trialUntil:trial};meC={at:Date.now(),v};return v;}
+  const v={...d,trialUntil:trial,media:quotaObj(d.media),chat:quotaObj(d.chat),features:featuresOf(d.features)};meC={at:Date.now(),v};return v;}
+/* plan-media §2.7: bloki media / chat / features z /api/me — tylko liczby, daty i flagi (starszy backend albo bez 0010: null i wszystko wyłączone) */
+function quotaObj(q){if(!q||typeof q!=='object'||Array.isArray(q))return null;const o={};
+  ['used','limit','remaining','dailyLeft'].forEach(k=>{if(typeof q[k]==='number'&&isFinite(q[k]))o[k]=q[k];});
+  ['plan','scope','day'].forEach(k=>{if(typeof q[k]==='string'&&/^[a-z0-9-]{1,20}$/i.test(q[k]))o[k]=q[k];});
+  if(typeof q.globalOpen==='boolean')o.globalOpen=q.globalOpen;
+  const b=q.busy;if(b&&typeof b==='object'&&/^[0-9a-f-]{36}$/i.test(String(b.id||'')))o.busy={id:String(b.id),kind:b.kind==='podcast'?'podcast':'reels',topicId:/^[0-9a-f-]{36}$/i.test(String(b.topicId||''))?String(b.topicId):''};else o.busy=null;
+  return o;}
+function featuresOf(f){f=obj(f);return {reels:f.reels===true,podcast:f.podcast===true,fox:f.fox===true};}
 const meCached=maxAge=>meC&&(maxAge==null||Date.now()-meC.at<maxAge)?meC.v:null;
+
+/* ---------- media: rolki i podcast (plan-media §2.2–2.5, §4.6) ----------
+   Wiersze `media` czytane przez PostgREST (RLS: właściciel), pliki z prywatnego bucketu `media` (Bearer) jako Blob, z pamięcią podręczną w IndexedDB (LRU ≤ 150 MB).
+   Tworzenie: dziennik cf_media_job:<uid> zapisany PRZED POST (requestId = klucz idempotencji = media.id); nigdy automatycznego ponawiania POST.
+   Każdy napis z wiersza i manifestu → plain(); nieznane klucze wypadają; nazwy plików /^[a-z0-9.]+$/, odnośniki {level, index} sprawdzone. */
+const MEDIA_SEL='id,owner_id,subject_id,topic_id,kind,status,phase,progress,title,spec,manifest,error,charged,created_at,finished_at';
+const MJOBK='cf_media_job:'+UID;
+const UUID_RE=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,FILE_RE=/^[a-z0-9.]{1,40}$/,REF_LV=/^[A-Za-z0-9_-]{1,40}$/,PID_RE=/^(p\d{1,2}|L[A-Za-z0-9_-]{1,40})$/;
+const REEL_TYPES=new Set(['czym','kto','mit','porownanie','pulapki','sprawdzian']);
+const THUMBS=new Set(['#2F6BFF','#1F8A5B','#E9A23B','#E0483F']);
+const mstr=(v,n)=>typeof v==='string'?esc(cut(stripEmoji(v,true).replace(/\s+/g,' ').trim(),n)):'';
+const mnum=(v,lo,hi)=>typeof v==='number'&&isFinite(v)?Math.max(lo,Math.min(hi,v)):null;
+const mint=(v,lo,hi)=>Number.isInteger(v)&&v>=lo&&v<=hi?v:null;
+const mref=r=>{r=obj(r);const l=String(r.level==null?'':r.level),i=r.index;return REF_LV.test(l)&&Number.isInteger(i)&&i>=0&&i<=59?{level:l,index:i}:null;};
+const mfile=f=>typeof f==='string'&&FILE_RE.test(f)&&!/\.\./.test(f)?f:null;
+const mpids=a=>arr(a).filter(x=>typeof x==='string'&&PID_RE.test(x)).slice(0,30);
+const muuid=v=>UUID_RE.test(String(v||''))?String(v):'';
+function cleanReels(m){m=obj(m);const cv=obj(m.coverage);
+  const reels=arr(m.reels).slice(0,6).map(r=>{r=obj(r);const n=mint(r.n,1,20);if(n==null)return null;const fs=obj(r.files);
+    return {n,type:REEL_TYPES.has(r.type)?r.type:'czym',title:mstr(r.title,80),durSec:mnum(r.durSec,0,600)||0,pointIds:mpids(r.pointIds),quizRef:mref(r.quizRef),feedRef:r.feedRef?mref(r.feedRef):null,
+      files:{storyboard:mfile(fs.storyboard),audio:mfile(fs.audio),words:mfile(fs.words)},rate:mnum(r.rate,.5,2)||1,thumb:THUMBS.has(String(r.thumb||'').toUpperCase())?String(r.thumb).toUpperCase():'#2F6BFF'};}).filter(Boolean);
+  return {v:1,kind:'reels',title:mstr(m.title,120),topicId:muuid(m.topicId),coverage:{points:mint(cv.points,0,99)||0,covered:mint(cv.covered,0,99)||0},reels};}
+function cleanChapter(c){c=obj(c);const n=mint(c.n,1,20);if(n==null)return null;const f=c.files&&typeof c.files==='object'?{audio:mfile(c.files.audio),timing:mfile(c.files.timing)}:null;
+  return {n,title:mstr(c.title,120),pointIds:mpids(c.pointIds),levelIds:arr(c.levelIds).filter(x=>typeof x==='string'&&REF_LV.test(x)).slice(0,30),estSec:mnum(c.estSec,0,7200)||0,durSec:mnum(c.durSec,0,7200),
+    status:['script','synth','ready'].indexOf(c.status)>=0?c.status:'script',
+    pauses:arr(c.pauses).slice(0,8).map(p=>{p=obj(p);const q=mref(p.quizRef),a=mint(p.afterLine,0,400);return q&&a!=null?{afterLine:a,quizRef:q,pointId:typeof p.pointId==='string'&&PID_RE.test(p.pointId)?p.pointId:null,lead:mstr(p.lead,200)}:null;}).filter(Boolean),
+    files:f&&(f.audio||f.timing)?f:null};}
+function cleanPodcast(m){m=obj(m);const fs=obj(m.files);
+  return {v:1,kind:'podcast',title:mstr(m.title,120),topicId:muuid(m.topicId),estSec:mnum(m.estSec,0,7200)||0,files:{script:mfile(fs.script)},chapters:arr(m.chapters).slice(0,12).map(cleanChapter).filter(Boolean)};}
+function cleanMediaRow(r){r=obj(r);if(!UUID_RE.test(String(r.id||''))||(r.kind!=='reels'&&r.kind!=='podcast'))return null;
+  const pg=obj(r.progress),sp=obj(r.spec);
+  return {id:String(r.id),owner_id:muuid(r.owner_id),subject_id:muuid(r.subject_id),topic_id:muuid(r.topic_id),kind:r.kind,status:['running','ready','failed'].indexOf(r.status)>=0?r.status:'failed',
+    phase:mstr(r.phase,20),progress:{step:['plan','script','voice','save'].indexOf(pg.step)>=0?pg.step:'plan',done:mint(pg.done,0,99)||0,total:mint(pg.total,0,99)||0},
+    title:mstr(r.title,120),spec:{types:arr(sp.types).filter(x=>REEL_TYPES.has(x)).slice(0,6),focusPointId:typeof sp.focusPointId==='string'&&PID_RE.test(sp.focusPointId)?sp.focusPointId:null},
+    manifest:r.manifest&&typeof r.manifest==='object'&&!Array.isArray(r.manifest)?(r.kind==='reels'?cleanReels(r.manifest):cleanPodcast(r.manifest)):null,
+    error:mstr(r.error,240),charged:r.charged!==false,created_at:String(r.created_at||'').slice(0,40),finished_at:r.finished_at?String(r.finished_at).slice(0,40):null};}
+let MROWS=null; // oczyszczone wiersze (z surowych DATA.media — surowe zostają w pamięci podręcznej, żeby nie escapować dwa razy)
+const mediaCached=()=>{if(!MROWS)MROWS=arr(DATA.media).map(cleanMediaRow).filter(Boolean);return MROWS.slice();};
+function upsertRaw(raw){const row=cleanMediaRow(raw);if(!row)return null;if(!Array.isArray(DATA.media))DATA.media=[];
+  const i=DATA.media.findIndex(x=>x&&x.id===row.id);if(i>=0)DATA.media[i]=raw;else DATA.media.push(raw);
+  mediaCached();const k=MROWS.findIndex(x=>x.id===row.id);if(k>=0)MROWS[k]=row;else MROWS.push(row);return row;}
+async function mediaList(){
+  let rows;try{rows=await rest('media?select='+MEDIA_SEL+'&order=created_at.asc');}catch(e){if(missing(e)){DATA.media=[];MROWS=[];return [];}throw e;} // bez migracji 0010: brak mediów
+  DATA.media=arr(rows).filter(r=>r&&typeof r==='object');MROWS=null;saveCache().catch(()=>{});emit('media',null);return mediaCached();
+}
+async function mediaGet(id){if(!UUID_RE.test(String(id||'')))return null;
+  const rows=await rest('media?select='+MEDIA_SEL+'&id=eq.'+id);const raw=arr(rows)[0];return raw?upsertRaw(raw):null;}
+const mediaJob=()=>{const j=jget(MJOBK,null);return j&&UUID_RE.test(String(j.id||''))?{id:j.id,kind:j.kind==='podcast'?'podcast':'reels',topicId:muuid(j.topicId),at:+j.at||0}:null;};
+async function mediaCreate(kind,body){
+  if(kind!=='reels'&&kind!=='podcast')throw new CloudError(400,'bad_request','');
+  const b=obj(body),requestId=uuid();
+  if(!jsetHard(MJOBK,{id:requestId,kind,topicId:muuid(b.topicId),at:Date.now()}))throw new CloudError(0,'storage_full','Brak miejsca w pamięci aplikacji',{}); // dziennik przed POST
+  meC=null; // licznik tworzeń zaraz się zmieni
+  let r;
+  try{r=await api('/api/media/'+kind,{method:'POST',body:{...b,requestId},timeout:30000});}
+  catch(e){if(e&&(e.status===401||e.code==='no_session')){LS.removeItem(MJOBK);throw e;} // bez sesji żądanie nie wyszło
+    mediaWatch();throw new CloudError(0,'unknown_outcome','Nie wiadomo, czy przygotowanie ruszyło',{requestId});}
+  const d=r.data,isJson=!!d&&typeof d==='object'&&!Array.isArray(d);
+  if((r.status===202||r.status===200)&&isJson&&d.media){const row=upsertRaw(d.media);LS.removeItem(MJOBK);saveCache().catch(()=>{});if(row)emit('media',row);mediaWatch();return {media:row};}
+  if(r.status>=400&&isJson&&d.code){LS.removeItem(MJOBK);throw new CloudError(r.status,String(d.code),String(d.error||''),d);}
+  mediaWatch();throw new CloudError(r.status,'unknown_outcome','Nie wiadomo, czy przygotowanie ruszyło',{requestId}); // HTML 504, ucięta odpowiedź — wynik sprawdza odpytywanie
+}
+function patchChapter(id,ch){const raw=arr(DATA.media).find(x=>x&&x.id===id);if(!raw||!raw.manifest||!Array.isArray(raw.manifest.chapters))return;
+  const i=raw.manifest.chapters.findIndex(c=>c&&c.n===ch.n);if(i<0)return;raw.manifest.chapters[i]={...raw.manifest.chapters[i],...ch};const row=upsertRaw(raw);saveCache().catch(()=>{});if(row)emit('media',row);}
+async function mediaChapter(mediaId,n){ // rozdział podcastu: synteza na żądanie (nie zużywa tworzenia); 409 chapter_busy → czekam na wiersz co 3 s do 120 s
+  if(!UUID_RE.test(String(mediaId||''))||!Number.isInteger(n))throw new CloudError(400,'bad_request','');
+  const r=await api('/api/media/podcast/chapter',{method:'POST',body:{mediaId,chapter:n},timeout:130000});
+  const d=obj(r.data);
+  if(r.status===200&&d.chapter&&typeof d.chapter==='object'){const ch=cleanChapter(d.chapter);if(ch)patchChapter(mediaId,d.chapter);return {chapter:ch};}
+  if(r.status===409&&d.code==='chapter_busy'){const t0=Date.now();
+    while(Date.now()-t0<120000){await sleep(3000);const row=await mediaGet(mediaId).catch(()=>null);const c=row&&row.manifest&&row.manifest.chapters.find(x=>x.n===n);
+      if(c&&c.status==='ready'){emit('media',row);return {chapter:c};}}
+    throw new CloudError(409,'chapter_busy','',d);}
+  throw new CloudError(r.status,String(d.code||(r.status>=500?'synth_failed':'bad_request')),String(d.error||''),d);
+}
+/* pliki: Blob z bucketu media (Bearer, 401/wygasły token → odświeżenie raz); pamięć podręczna IndexedDB 'm:<uid>:<id>/<plik>' + indeks LRU 'mi:<uid>' */
+const MEDIA_CACHE_MAX=150*1048576;
+/* indeks LRU zmieniany po kolei (jedna kolejka obietnic): rolka wczytuje storyboard, słowa i dźwięk naraz — równoległe odczyt-zmiana-zapis gubiłyby wpisy,
+   a zgubiony wpis nigdy nie liczyłby się do limitu 150 MB */
+let lruQ=Promise.resolve();
+function lruTouch(key,size){const run=()=>lruTouch1(key,size);const p=lruQ.then(run,run);lruQ=p.catch(()=>{});return p;}
+async function lruTouch1(key,size){const k='mi:'+UID;let ix=await idbGetRaw(k);if(!ix||typeof ix!=='object'||!ix.e)ix={e:{}};
+  if(size!=null)ix.e[key]=[size,Date.now()];else if(ix.e[key])ix.e[key][1]=Date.now();else return;
+  let total=Object.values(ix.e).reduce((a,x)=>a+(+x[0]||0),0);
+  const old=Object.keys(ix.e).sort((a,b)=>ix.e[a][1]-ix.e[b][1]);
+  for(const o of old){if(total<=MEDIA_CACHE_MAX)break;if(o===key)continue;total-=+ix.e[o][0]||0;delete ix.e[o];await idbDel(o);}
+  await idbPutRaw(k,ix);}
+async function mediaBlob(owner,id,file){
+  if(!UUID_RE.test(String(owner||''))||!UUID_RE.test(String(id||''))||!mfile(file))throw new CloudError(400,'bad_request','Zły adres pliku');
+  const key='m:'+UID+':'+id+'/'+file,type=/\.mp3$/.test(file)?'audio/mpeg':'application/json';
+  const hit=await idbGetRaw(key);if(hit&&hit.buf){lruTouch(key).catch(()=>{});return new Blob([hit.buf],{type:hit.type||type});}
+  const url=CFG.supabaseUrl+'/storage/v1/object/authenticated/media/'+owner+'/'+id+'/'+file;
+  const get=async tok=>{const ac=typeof AbortController==='function'?new AbortController():null,tm=ac&&setTimeout(()=>ac.abort(),90000);
+    try{return await fetch(url,{headers:{apikey:CFG.anonKey,Authorization:'Bearer '+tok},signal:ac?ac.signal:undefined});}catch(e){throw new CloudError(0,'network','Brak połączenia z internetem');}finally{if(tm)clearTimeout(tm);}};
+  let res=await get(await token());
+  if(!res.ok){let t='';try{t=await res.text();}catch(e){}
+    if(res.status===401||((res.status===400||res.status===403)&&/jwt|exp|token/i.test(t))){res=await get(await refresh(true));if(!res.ok)try{t=await res.text();}catch(e){}}
+    if(!res.ok)throw new CloudError(res.status,res.status===404||res.status===400?'not_found':'storage_failed','Nie udało się pobrać pliku',{});}
+  const buf=await res.arrayBuffer();
+  if(await idbPutRaw(key,{buf,type,size:buf.byteLength,at:Date.now()}))lruTouch(key,buf.byteLength).catch(()=>{});
+  return new Blob([buf],{type});
+}
+async function mediaJson(owner,id,file){const b=await mediaBlob(owner,id,file);const t=typeof b.text==='function'?await b.text():await new Response(b).text();
+  try{return JSON.parse(t);}catch(e){throw new CloudError(0,'bad_file','Uszkodzony plik',{});}}
+/* odpytywanie wierszy w toku (i dziennika z niepewnym wynikiem): co 4 s przy widocznej apce, co 15 s w tle, wiersz najwyżej 9 min (serwer zamyka go po 8) */
+let mwT=null;const mwSeen={};
+function mediaWatch(){
+  clearTimeout(mwT);mwT=null;if(!UID)return;
+  const job=mediaJob(),now=Date.now();
+  const run=mediaCached().filter(r=>r.status==='running');run.forEach(r=>{if(!mwSeen[r.id])mwSeen[r.id]=now;});
+  if(!job&&!run.some(r=>now-mwSeen[r.id]<540000))return;
+  mwT=setTimeout(mediaPoll,document.visibilityState==='hidden'?15000:4000);
+}
+async function mediaPoll(){
+  mwT=null;
+  try{
+    const job=mediaJob(),now=Date.now();
+    const ids=mediaCached().filter(r=>r.status==='running'&&now-(mwSeen[r.id]||now)<540000).map(r=>r.id);
+    if(job&&ids.indexOf(job.id)<0)ids.push(job.id);
+    if(ids.length){
+      const rows=arr(await rest('media?select='+MEDIA_SEL+'&id=in.('+ids.join(',')+')'));
+      rows.forEach(raw=>{const before=mediaCached().find(x=>x.id===raw.id),row=upsertRaw(raw);if(!row)return;
+        const fromJob=job&&row.id===job.id;if(fromJob)LS.removeItem(MJOBK);
+        if(!before||before.status!==row.status||before.phase!==row.phase||JSON.stringify(before.progress)!==JSON.stringify(row.progress))emit('media',row);
+        if(row.status==='ready'&&((before&&before.status==='running')||(!before&&fromJob)))emit('mediaReady',row);
+        if(row.status==='failed'&&((before&&before.status==='running')||(!before&&fromJob)))emit('mediaFailed',row);});
+      if(job&&!rows.some(x=>x&&x.id===job.id)&&now-job.at>120000){LS.removeItem(MJOBK);emit('mediaLost',job);} // POST nie dotarł: nic nie ruszyło, tworzenie nietknięte
+      saveCache().catch(()=>{});
+    }
+  }catch(e){}
+  mediaWatch();
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&mwT){clearTimeout(mwT);mwT=null;mediaPoll();}});
+/* rozmowa z lisem: POST /api/fox (60 s), bez ponawiania; napisy w odpowiedzi NIE są escapowane — media.js escapuje przy wstawianiu */
+async function fox(body){
+  const r=await api('/api/fox',{method:'POST',body:obj(body),timeout:60000});
+  const d=r.data;
+  if(r.status===200&&d&&typeof d==='object'&&!Array.isArray(d)){if(d.quota&&meC&&meC.v)meC.v={...meC.v,chat:quotaObj(d.quota)};return d;}
+  const o=obj(d);throw new CloudError(r.status,String(o.code||(r.status>=500?'fox_failed':'bad_request')),String(o.error||''),o);
+}
+/* pliki rolek i podcastu z bucketu media (przed usunięciem wierszy — kaskada w bazie nie rusza Storage); lista folderu, a bez niej nazwy z manifestu */
+function manifestFiles(r){const m=r.manifest,out=[];if(!m)return out;
+  if(r.kind==='reels')m.reels.forEach(x=>['storyboard','audio','words'].forEach(k=>{if(x.files[k])out.push(x.files[k]);}));
+  else{if(m.files.script)out.push(m.files.script);m.chapters.forEach(c=>{out.push('c'+c.n+'.mp3','c'+c.n+'.json');});}
+  return out;}
+/* pliki mediów wybranych wierszy: najpierw sama lista (nic nie kasuje), potem — PO usunięciu wierszy w bazie — mediaDropFiles. Odwrotna kolejność
+   przy zerwanym DELETE zostawiała wiersze „gotowe” bez plików (rolka się nie wczytuje, rozdział 404 na zawsze). */
+async function mediaFilesWhere(pred){
+  const rows=(await mediaList()).filter(pred);const paths=[];
+  for(const r of rows){if(!r.owner_id)continue;const pre=r.owner_id+'/'+r.id;let files=[];
+    try{files=await storageListAll(pre,'media');}catch(e){files=manifestFiles(r).map(f=>pre+'/'+f);}
+    if(!files.length)files=manifestFiles(r).map(f=>pre+'/'+f);files.forEach(f=>paths.push(f));}
+  return {ids:rows.map(r=>r.id),paths};
+}
+async function mediaDropFiles(plan){ // najlepiej jak się da: błąd niczego nie blokuje (pliki bez wiersza i tak znikną z kontem — deleteAccount)
+  for(const id of plan.ids)await idbDelPrefix('m:'+UID+':'+id+'/');
+  if(plan.paths.length)try{await storageRemove(plan.paths,'media');}catch(e){}
+}
+/* wszystkie pliki konta w buckecie media ({uid}/{mediaId}/{plik}) — także bez wiersza w bazie (przerwane sprzątanie): katalogi mają id null */
+async function mediaFilesAll(){const out=[];
+  for(let off=0;off<10000;off+=100){const page=await storage('object/list/media',{method:'POST',headers:{'Content-Type':'application/json'},body:{prefix:UID,limit:100,offset:off}});
+    if(!Array.isArray(page)||!page.length)break;
+    for(const f of page){if(!f||!f.name)continue;if(f.id!==null&&f.id!==undefined)out.push(UID+'/'+f.name);else if(UUID_RE.test(f.name))(await storageListAll(UID+'/'+f.name,'media')).forEach(x=>out.push(x));}
+    if(page.length<100)break;}
+  return out;}
+/* pliki materiałów generacji tematów (sprzątanie po usunięciu przedmiotu / materiału; błąd niczego nie blokuje) */
+async function materialsOfTopics(tps){const gids=tps.map(t=>t.generation_id).filter(x=>UUID_RE.test(String(x||'')));if(!gids.length)return [];
+  try{const g=arr(await rest('generations?select=material_ids&id=in.('+gids.join(',')+')'));const ids=[...new Set(g.flatMap(x=>arr(obj(x).material_ids)).filter(x=>UUID_RE.test(String(x))))];if(!ids.length)return [];
+    return arr(await rest('materials?select=id,storage_path&id=in.('+ids.join(',')+')')).map(m=>({id:m.id,path:m.storage_path})).filter(m=>m.id&&m.path);}catch(e){return [];}}
+async function dropMaterials(ms){if(!ms.length)return;try{await rest('materials?id=in.('+ms.map(m=>m.id).join(',')+')',{method:'DELETE'});}catch(e){}try{await storageRemove(ms.map(m=>m.path));}catch(e){}}
+async function deleteSubject(id){
+  if(!UUID_RE.test(String(id||'')))throw new CloudError(400,'bad_request','');
+  const tps=DATA.topics.filter(t=>t.subject_id===id),ms=await materialsOfTopics(tps);
+  const mf=await mediaFilesWhere(r=>r.subject_id===id); // lista plików przed usunięciem (bez sieci: błąd tu, nic nie skasowane)
+  await rest('subjects?id=eq.'+id,{method:'DELETE'}); // tematy i media znikają kaskadą (RLS: tylko własne)
+  DATA.subjects=DATA.subjects.filter(s=>s.id!==id);DATA.topics=DATA.topics.filter(t=>t.subject_id!==id);DATA.media=arr(DATA.media).filter(r=>r&&r.subject_id!==id);MROWS=null;
+  await saveCache();emit('subjects');emit('media',null);
+  mediaDropFiles(mf);dropMaterials(ms);
+}
+async function renameTopic(id,name){
+  const nm=String(name||'').replace(/\s+/g,' ').trim().slice(0,120);if(!UUID_RE.test(String(id||''))||!nm)throw new CloudError(400,'bad_request','');
+  const rows=await rest('topics?id=eq.'+id,{method:'PATCH',prefer:'return=representation',body:{name:nm}});
+  const t=DATA.topics.find(x=>x.id===id);if(t)t.name=rows&&rows[0]&&rows[0].name||nm;await saveCache();emit('subjects');
+}
+async function deleteTopic(id){
+  if(!UUID_RE.test(String(id||'')))throw new CloudError(400,'bad_request','');
+  const t=DATA.topics.find(x=>x.id===id);const sid=t&&t.subject_id;const ms=t?await materialsOfTopics([t]):[];
+  if(sid&&!DATA.topics.some(x=>x.subject_id===sid&&x.id!==id))return deleteSubject(sid); // ostatni materiał = cały przedmiot
+  const mf=await mediaFilesWhere(r=>r.topic_id===id);
+  await rest('topics?id=eq.'+id,{method:'DELETE'});
+  DATA.topics=DATA.topics.filter(x=>x.id!==id);DATA.media=arr(DATA.media).filter(r=>r&&r.topic_id!==id);MROWS=null;
+  await saveCache();emit('subjects');emit('media',null);
+  mediaDropFiles(mf);dropMaterials(ms);
+}
 
 /* ---------- usunięcie konta: sprawdzenie na serwerze → pliki → RPC (kaskada w bazie) → dane lokalne ---------- */
 async function deleteAccount(){
   await rest('rpc/delete_my_account',{method:'POST',body:{p_dry_run:true}}); // odmowa serwera (AUDYT P1-25) albo brak funkcji → nic jeszcze nie skasowaliśmy
   const files=await storageListAll(UID);if(files.length)await storageRemove(files);
+  // pliki rolek i podcastu (bucket media; delete_my_account z 0010 odmawia, gdy zostały): z wierszy media i wszystko pod {uid}/ (także osierocone)
+  const mf=await mediaFilesWhere(()=>true);let more=[];try{more=await mediaFilesAll();}catch(e){}
+  const all=[...new Set(mf.paths.concat(more))];if(all.length)await storageRemove(all,'media');
   await rest('rpc/delete_my_account',{method:'POST',body:{p_dry_run:false}});
   clearTimeout(pushT);syncOff=true;await wipeLocal(UID);try{LS.removeItem(SEENK);}catch(e){}
 }
@@ -602,5 +875,6 @@ window.NAUKA_CLOUD={CloudError,on,uid:UID,email:()=>session&&session.user.email|
   signUp,signIn,signOut,token,loadCache,fetchAll,toEngine,pickable,subjectName,clean,plain,esc,
   dirty,flush,pull,bindEngine,hasLocalState,hasPending:()=>!!pending,applyPending,syncAvailable:()=>!syncOff,storeFull:()=>storeFull,
   prepareFiles,createSubject,updateSubject,uploadMaterial,discard,generate,job,recoverJob,me,meCached,deleteAccount,PALETTE,OK_MIME,PPTX_MIME,mimeOf,vizText,
+  api,mediaList,mediaGet,mediaCreate,mediaChapter,mediaBlob,mediaJson,mediaWatch,mediaCached,mediaJob,fox,deleteSubject,renameTopic,deleteTopic, // plan-media §4.6
   _merge3:merge3,_mapViz:mapViz,_lostLocal:lostLocal,_stripEmoji:stripEmoji,_upFail:upFail};
 })();

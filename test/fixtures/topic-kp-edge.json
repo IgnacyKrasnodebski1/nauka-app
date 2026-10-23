@@ -1,0 +1,443 @@
+{
+  "name": "Punkty — przypadki brzegowe",
+  "short": "Punkty",
+  "tagline": "",
+  "grading": {
+    "pass": 50,
+    "examMin": 20,
+    "scale": [
+      [
+        90,
+        "5"
+      ],
+      [
+        80,
+        "4,5"
+      ],
+      [
+        70,
+        "4"
+      ],
+      [
+        60,
+        "3,5"
+      ],
+      [
+        50,
+        "3"
+      ]
+    ],
+    "failLabel": "2"
+  },
+  "levels": [
+    {
+      "id": "a1",
+      "title": "Poziom A1",
+      "emoji": "🧪",
+      "feed": [
+        {
+          "title": "Część 1",
+          "body": "Treść części 1."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "Pojęcie a1.0",
+          "d": "Definicja a1.0"
+        },
+        {
+          "t": "Pojęcie a1.1",
+          "d": "Definicja a1.1"
+        },
+        {
+          "t": "Pojęcie a1.2",
+          "d": "Definicja a1.2"
+        },
+        {
+          "t": "Pojęcie a1.3",
+          "d": "Definicja a1.3"
+        },
+        {
+          "t": "Pojęcie a1.4",
+          "d": "Definicja a1.4"
+        },
+        {
+          "t": "Pojęcie a1.5",
+          "d": "Definicja a1.5"
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Pytanie a1.0?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a1.1?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a1.2?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a1.3?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a1.4?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a1.5?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        }
+      ],
+      "tasks": [
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "Zdanie",
+              "v": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "a2",
+      "title": "Poziom A2",
+      "emoji": "🧪",
+      "feed": [
+        {
+          "title": "Część 1",
+          "body": "Treść części 1."
+        }
+      ],
+      "flashcards": [
+        {
+          "t": "Pojęcie a2.0",
+          "d": "Definicja a2.0"
+        },
+        {
+          "t": "Pojęcie a2.1",
+          "d": "Definicja a2.1"
+        },
+        {
+          "t": "Pojęcie a2.2",
+          "d": "Definicja a2.2"
+        },
+        {
+          "t": "Pojęcie a2.3",
+          "d": "Definicja a2.3"
+        },
+        {
+          "t": "Pojęcie a2.4",
+          "d": "Definicja a2.4"
+        },
+        {
+          "t": "Pojęcie a2.5",
+          "d": "Definicja a2.5"
+        }
+      ],
+      "quiz": [
+        {
+          "q": "Pytanie a2.0?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a2.1?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a2.2?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a2.3?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a2.4?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        },
+        {
+          "q": "Pytanie a2.5?",
+          "a": [
+            "Tak",
+            "Nie",
+            "Może"
+          ],
+          "c": 0,
+          "e": "Bo tak."
+        }
+      ],
+      "tasks": [
+        {
+          "type": "tf",
+          "statements": [
+            {
+              "s": "Zdanie",
+              "v": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "keyPoints": [
+    {
+      "id": "p1",
+      "title": "Punkt <img src=x onerror=\"window.__pwned=1\"> pierwszy 🔥",
+      "short": "<b>XSS</b> 🔥",
+      "summary": "<script>window.__pwned=1</script>Opis",
+      "levels": [
+        "a1"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "a1",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "a1",
+          "index": 1
+        },
+        {
+          "kind": "quiz",
+          "level": "a1",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "a1",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "title": "Punkt ze złymi odwołaniami",
+      "short": "Złe odwołania",
+      "levels": [
+        "a1",
+        "zz"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "zz",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "a1",
+          "index": 99
+        },
+        {
+          "kind": "quiz",
+          "level": "a1",
+          "index": -1
+        },
+        {
+          "kind": "flashcard",
+          "level": "a1",
+          "index": 2
+        },
+        {
+          "kind": "quiz",
+          "level": "a1",
+          "index": 2
+        },
+        {
+          "kind": "quiz",
+          "level": "a1",
+          "index": 3
+        }
+      ]
+    },
+    {
+      "id": "p3",
+      "title": "Punkt z duplikatem",
+      "short": "Duplikat",
+      "levels": [
+        "a1"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "a1",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "a1",
+          "index": 3
+        }
+      ]
+    },
+    {
+      "id": "p4",
+      "title": "Punkt czwarty",
+      "short": "Czwarty",
+      "levels": [
+        "a1"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "a1",
+          "index": 4
+        },
+        {
+          "kind": "quiz",
+          "level": "a1",
+          "index": 4
+        },
+        {
+          "kind": "task",
+          "level": "a1",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p5",
+      "title": "Punkt piąty",
+      "short": "Piąty",
+      "levels": [
+        "a2"
+      ],
+      "items": [
+        {
+          "kind": "flashcard",
+          "level": "a2",
+          "index": 0
+        },
+        {
+          "kind": "flashcard",
+          "level": "a2",
+          "index": 1
+        },
+        {
+          "kind": "flashcard",
+          "level": "a2",
+          "index": 2
+        },
+        {
+          "kind": "flashcard",
+          "level": "a2",
+          "index": 3
+        },
+        {
+          "kind": "quiz",
+          "level": "a2",
+          "index": 0
+        },
+        {
+          "kind": "quiz",
+          "level": "a2",
+          "index": 1
+        }
+      ]
+    },
+    {
+      "id": "p6",
+      "title": "Punkt z samym zadaniem",
+      "short": "Zadanie",
+      "levels": [
+        "a2"
+      ],
+      "items": [
+        {
+          "kind": "task",
+          "level": "a2",
+          "index": 0
+        }
+      ]
+    },
+    {
+      "id": "p7",
+      "title": "",
+      "short": "",
+      "levels": [],
+      "items": [
+        {
+          "kind": "video",
+          "level": "a2",
+          "index": 0
+        },
+        "x",
+        null
+      ]
+    }
+  ]
+}

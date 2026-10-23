@@ -1,0 +1,51 @@
+{
+  "_": "Odpowiedzi atrapy POST /api/fox (test/dev/mock-backend.js). {short} / {title} = punkt z keyPoints tematu (albo punkt zastępczy). Ocena odpowiedzi w atrapie: „nie wiem” albo < 8 znaków = wrong, ≥ 30 znaków = ok, reszta = partial.",
+  "explain": {
+    "start": "Wytłumacz mi własnymi słowami, czym zajmuje się {short}. Wyobraź sobie, że mówisz to komuś z pierwszego roku.",
+    "react": { "ok": "Dobrze to ujmujesz.", "partial": "Jest dobry początek.", "wrong": "Spróbujmy jeszcze raz, krok po kroku." },
+    "feedback": {
+      "p9": {
+        "good": ["Pożyczki dla państw w kryzysie i dbanie o stabilne waluty — to sedno MFW."],
+        "gap": ["Nie padło, skąd MFW ma pieniądze: z wpłat państw członkowskich."],
+        "wrong": ["Drogi i szkoły finansuje Bank Światowy, nie MFW. To częsta pułapka na sprawdzianie."],
+        "source": { "level": "l3", "feed": 1 }
+      },
+      "*": {
+        "good": ["Główną myśl punktu „{short}” masz."],
+        "gap": ["Zabrakło przykładu z wykładu."],
+        "wrong": [],
+        "source": null
+      }
+    },
+    "followup": { "p9": "Dopytam: państwo dostaje pożyczkę z MFW. Czego MFW zwykle oczekuje w zamian?", "*": "Dopytam: podaj jeden przykład z wykładu, który pasuje do punktu „{short}”." },
+    "end": { "ok": "Tak, właśnie o to chodzi. Ten punkt masz w małym palcu.", "partial": "Prawie. Wróć jeszcze raz do lekcji i spróbuj za kilka dni.", "wrong": "Tym razem nie. Przeczytaj tę część lekcji jeszcze raz — wróćmy do tego jutro." },
+    "hint": "Podpowiem: pomyśl, kto gasi pożar w kryzysie, a kto buduje nowe drogi.",
+    "idk": "Nic straconego. {title}: zajrzyj do lekcji, a potem spróbuj opowiedzieć to jeszcze raz.",
+    "finish": "Kończymy. Dobra robota — wróć do tego punktu jutro."
+  },
+  "quiz": {
+    "intro": "Zaczynamy. Pięć pytań otwartych, odpowiadaj własnymi słowami.",
+    "questions": [
+      "Czym różnią się MSG od MSP?",
+      "Co napędza globalizację?",
+      "Do kogo kraj idzie po pożyczkę w kryzysie płatniczym i dlaczego?",
+      "Czym zajmuje się WTO?",
+      "Czym NGO różni się od organizacji międzyrządowej?"
+    ],
+    "comment": { "ok": "Dobrze.", "partial": "Prawie — zabrakło jednego szczegółu.", "wrong": "Nie tym razem." },
+    "end": "To wszystkie pytania. Wynik masz poniżej."
+  },
+  "exam": {
+    "intro": "Egzamin ustny: trzy pytania, każde z jednym dopytaniem. Odpowiadaj pełnymi zdaniami.",
+    "questions": [
+      { "q": "Czym różnią się MSG od MSP?", "follow": "Podaj przykład zjawiska, które łączy oba obszary.", "notes": { "ok": "Jasna definicja i dobry przykład.", "partial": "Definicja poprawna, zabrakło przykładu.", "wrong": "Pomylone obszary." } },
+      { "q": "Jaką rolę w kryzysach pełni MFW?", "follow": "A czym w takim razie zajmuje się Bank Światowy?", "notes": { "ok": "Dobrze rozróżnione role.", "partial": "Przy dopytaniu pomylone z Bankiem Światowym.", "wrong": "Rola MFW pomylona." } },
+      { "q": "Czy korporacja jest podmiotem MSGiP?", "follow": "Podaj przykład takiego wpływu.", "notes": { "ok": "Dobry argument i przykład.", "partial": "Dobry argument, zabrakło przykładu.", "wrong": "Zabrakło uzasadnienia." } }
+    ],
+    "gaps": [
+      { "title": "MFW a Bank Światowy: kto co robi", "level": "l3", "feed": 1, "point": "p9" },
+      { "title": "Przykład korporacji jako podmiotu", "level": "l4", "feed": 0, "point": "p11" }
+    ],
+    "end": "To wszystko. Ocenę i to, co warto poprawić, masz poniżej."
+  }
+}

@@ -8,7 +8,7 @@ import {execFileSync} from 'node:child_process';
 import {start,page,close,check,section,done,shot,ROOT,sleep} from './cloud-lib.mjs';
 
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'cramfox-build-'));
-for(const f of ['build.js','cloud-config.js','cloud.js','engine.js','cloud-ui.js','styles.css'])fs.copyFileSync(path.join(ROOT,f),path.join(tmp,f));
+for(const f of ['build.js','cloud-config.js','cloud.js','engine.js','cloud-ui.js','styles.css','media.js','media.css'])if(fs.existsSync(path.join(ROOT,f)))fs.copyFileSync(path.join(ROOT,f),path.join(tmp,f)); // media.* (plan-media §4.2) — gdy są
 fs.cpSync(path.join(ROOT,'fonts'),path.join(tmp,'fonts'),{recursive:true});
 execFileSync(process.execPath,['build.js'],{cwd:tmp,stdio:'pipe'});
 const out=path.join(tmp,'build','nauka-all.html');const html=fs.readFileSync(out,'utf8');
